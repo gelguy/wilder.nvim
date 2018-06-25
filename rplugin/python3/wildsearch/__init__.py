@@ -1,16 +1,103 @@
-import neovim
 import time
 import multiprocessing
+import functools
+import importlib
+import concurrent.futures
+import threading
+import neovim
 
 @neovim.plugin
 class Wildsearch(object):
-    def __init__(self, vim):
-        self.vim = vim
+    def __init__(self, nvim):
+        self.nvim = nvim
+        self.event = None
 
-    @neovim.function('_wildsearch_sleep')
-    def wildsearch_sleep(self, args):
-        time.sleep(args[1])
-        self.vim.call('wildsearch#do', args[0], args[2])
+    def do(self, ctx, x):
+        self.nvim.session.threadsafe_call(lambda: self.nvim.call('wildsearch#pipeline#do', ctx, x))
 
-        #  args[0]['error_message'] = '123123'
-        #  self.vim.call('wildsearch#do', args[0], False)
+    def echo(self, x):
+        self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
+
+    def run_in_background(self, fn, args):
+        if self.event:
+            self.event.set()
+
+        self.event = threading.Event()
+        self.nvim.loop.run_in_executor(
+            None,
+            functools.partial(
+                fn,
+                self.event,
+                *args,
+            )
+        )
+
+    @neovim.function('_wildsearch_init', sync=True)
+    def init(self, args):
+        self.nvim.command('let g:wildsearch_init = 1')
+        self.nvim.session.threadsafe_call(lambda: self.nvim.command('let g:wildsearch_init = 1'))
+
+    @neovim.function('_wildsearch_python_sleep', sync=True)
+    def sleep(self, args):
+        self.run_in_background(self.sleep_handler, args)
+        return None
+
+    def sleep_handler(self, event, t, ctx, x):
+        for _ in range(t):
+            if event.is_set():
+                return
+            time.sleep(1)
+        self.do(ctx, x)
+
+    @neovim.function('_wildsearch_python_search_async', sync=True)
+    def search_async(self, args):
+        buf = self.nvim.current.buffer[:].copy()
+        self.run_in_background(self.search_handler_async, [buf] + args)
+        return None
+
+    @neovim.function('_wildsearch_python_search_sync', sync=True)
+    def search_sync(self, args):
+        try:
+            buf = self.nvim.current.buffer[:].copy()
+            candidates, success = self.search_handler(threading.Event(), buf, *args)
+            if not success:
+                return False
+            return candidates
+        except Exception as e:
+            return {'wildsearch_error': str(e)}
+
+    def search_handler_async(self, event, buf, opts, ctx, x):
+        try:
+            candidates, success = self.search_handler(event, buf, opts, ctx, x)
+            if not success:
+                self.do(ctx, False)
+                return
+            self.do(ctx, candidates)
+        except Exception as e:
+            self.do(ctx, {'wildsearch_error': str(e)})
+
+    def search_handler(self, event, buf, opts, ctx, x):
+        module_name = opts['engine'] if 'engine' in opts else 're'
+        max_candidates = opts['max_candidates'] if 'max_candidates' in opts else -1
+
+        candidates = []
+        re = importlib.import_module(module_name)
+        pattern = re.compile(x)
+
+        for line in buf:
+            for match in pattern.finditer(line):
+                candidates.append(match.group())
+                if max_candidates > 0 and len(candidates) >= max_candidates:
+                    return candidates, True
+            if event.is_set():
+                ctx['error_message'] = 'Cancelled'
+                return [], False
+
+        return candidates, True
+
+    @neovim.function('_wildsearch_python_uniq', sync=True)
+    def uniq(self, args):
+        try:
+            return list(set(args[1]))
+        except Exception as e:
+            return {'wildsearch_error': str(e)}
