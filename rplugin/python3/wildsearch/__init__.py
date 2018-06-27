@@ -3,31 +3,24 @@ import multiprocessing
 import functools
 import importlib
 import concurrent.futures
-import threading
 import neovim
 
 @neovim.plugin
 class Wildsearch(object):
     def __init__(self, nvim):
         self.nvim = nvim
-        self.event = None
 
     def do(self, ctx, x):
-        self.nvim.session.threadsafe_call(lambda: self.nvim.call('wildsearch#pipeline#do', ctx, x))
+        self.nvim.async_call(lambda: self.nvim.call('wildsearch#pipeline#do', ctx, x))
 
     def echo(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
 
     def run_in_background(self, fn, args):
-        if self.event:
-            self.event.set()
-
-        self.event = threading.Event()
         self.nvim.loop.run_in_executor(
             None,
             functools.partial(
                 fn,
-                self.event,
                 *args,
             )
         )
@@ -42,14 +35,12 @@ class Wildsearch(object):
         self.run_in_background(self.sleep_handler, args)
         return None
 
-    def sleep_handler(self, event, t, ctx, x):
+    def sleep_handler(self, t, ctx, x):
         for _ in range(t):
-            if event.is_set():
-                return
             time.sleep(1)
         self.do(ctx, x)
 
-    @neovim.function('_wildsearch_python_search_async', sync=True)
+    @neovim.function('_wildsearch_python_search_async', sync=True, allow_nested=True)
     def search_async(self, args):
         buf = self.nvim.current.buffer[:].copy()
         self.run_in_background(self.search_handler_async, [buf] + args)
@@ -59,16 +50,16 @@ class Wildsearch(object):
     def search_sync(self, args):
         try:
             buf = self.nvim.current.buffer[:].copy()
-            candidates, success = self.search_handler(threading.Event(), buf, *args)
+            candidates, success = self.search_handler(buf, *args)
             if not success:
                 return False
             return candidates
         except Exception as e:
             return {'wildsearch_error': str(e)}
 
-    def search_handler_async(self, event, buf, opts, ctx, x):
+    def search_handler_async(self, buf, opts, ctx, x):
         try:
-            candidates, success = self.search_handler(event, buf, opts, ctx, x)
+            candidates, success = self.search_handler(buf, opts, ctx, x)
             if not success:
                 self.do(ctx, False)
                 return
@@ -76,7 +67,7 @@ class Wildsearch(object):
         except Exception as e:
             self.do(ctx, {'wildsearch_error': str(e)})
 
-    def search_handler(self, event, buf, opts, ctx, x):
+    def search_handler(self, buf, opts, ctx, x):
         module_name = opts['engine'] if 'engine' in opts else 're'
         max_candidates = opts['max_candidates'] if 'max_candidates' in opts else -1
 
@@ -89,9 +80,6 @@ class Wildsearch(object):
                 candidates.append(match.group())
                 if max_candidates > 0 and len(candidates) >= max_candidates:
                     return candidates, True
-            if event.is_set():
-                ctx['error_message'] = 'Cancelled'
-                return [], False
 
         return candidates, True
 
