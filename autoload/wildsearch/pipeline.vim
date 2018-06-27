@@ -2,7 +2,7 @@ let s:pipeline = []
 let s:func_index = 0
 let s:funcs = {}
 
-function! wildsearch#pipeline#ok(...)
+function! wildsearch#pipeline#null(...)
   return v:null
 endfunction
 
@@ -49,8 +49,7 @@ function! wildsearch#pipeline#start(x)
     call wildsearch#pipeline#set(wildsearch#pipeline#default())
   endif
 
-  if !get(s:, 'wildsearch_init', 0)
-    let s:wildsearch_init = 1
+  if !get(g:, 'wildsearch_init', 0)
     call _wildsearch_init()
   endif
 
@@ -105,7 +104,7 @@ function! wildsearch#pipeline#funcs()
   echom string(s:funcs)
 endfunction
 
-let g:opts = {'engine': 're', 'max_candidates': 500, 'sync': 0}
+let g:opts = {'engine': 're', 'max_candidates': 100}
 function! wildsearch#pipeline#default()
   return [wildsearch#python_search(g:opts), wildsearch#python_uniq(), {_, d -> join(d, ' ')}]
 

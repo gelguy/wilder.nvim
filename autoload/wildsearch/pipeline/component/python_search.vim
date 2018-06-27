@@ -1,14 +1,5 @@
 function! wildsearch#pipeline#component#python_search#make(opts)
-  return {ctx, x -> s:search(a:opts, ctx, x)}
-endfunction
-
-function! s:search(opts, ctx, x)
-  if get(a:opts, 'sync', 0)
-    return _wildsearch_python_search_sync(a:opts, a:ctx, a:x)
-  endif
-
-  call _wildsearch_python_search_async(a:opts, a:ctx, a:x)
-  return v:null
+  return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_search(a:opts, ctx, x))}
 endfunction
 
 " function! s:search(opts, ctx, x)

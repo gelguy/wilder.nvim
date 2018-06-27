@@ -1,5 +1,5 @@
 function! wildsearch#sleep(t)
-  return {ctx, x -> wildsearch#pipeline#ok(_wildsearch_python_sleep(a:t, ctx, x))}
+  return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_sleep(a:t, ctx, x))}
 endfunction
 
 function! wildsearch#branch(...)
@@ -17,5 +17,5 @@ function! wildsearch#vim_search(...)
 endfunction
 
 function! wildsearch#python_uniq()
-  return {ctx, x -> _wildsearch_python_uniq(ctx, x)}
+  return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_uniq(ctx, x))}
 endfunction
