@@ -19,3 +19,8 @@ endfunction
 function! wildsearch#python_uniq()
   return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_uniq(ctx, x))}
 endfunction
+
+function! wildsearch#python_sort(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#pipeline#component#python_sort#make(l:args)
+endfunction
