@@ -37,7 +37,14 @@ function! s:branch_start(args, ctx, x)
 endfunction
 
 function! s:branch_error(args, ctx, x)
-  if type(a:x) == v:t_dict && has_key(a:x, 'wildsearch_error')
+  call wildsearch#pipeline#do_error(a:args.original_ctx, a:x)
+endfunction
+
+function! s:branch_finish(args, ctx, x)
+  if a:x isnot v:false
+    call wildsearch#pipeline#unregister_func(a:args.on_error_key)
+    call wildsearch#pipeline#unregister_func(a:args.on_finish_key)
+
     call wildsearch#pipeline#do(a:args.original_ctx, a:x)
     return
   endif
@@ -58,11 +65,4 @@ function! s:branch_error(args, ctx, x)
   let l:ctx.on_finish = a:args.on_finish_key
 
   call wildsearch#pipeline#do(l:ctx, a:args.original_x)
-endfunction
-
-function! s:branch_finish(args, ctx, x)
-  call wildsearch#pipeline#unregister_func(a:args.on_error_key)
-  call wildsearch#pipeline#unregister_func(a:args.on_finish_key)
-
-  call wildsearch#pipeline#do(a:args.original_ctx, a:x)
 endfunction

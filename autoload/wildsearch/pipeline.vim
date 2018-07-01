@@ -56,6 +56,7 @@ function! wildsearch#pipeline#start(ctx, x)
   let l:ctx = copy(a:ctx)
   let l:ctx.fs = s:pipeline
   let l:ctx.input = a:x
+  let l:ctx.step = 0
   let l:ctx.start_time = reltime()
   " let l:ctx = {
         " \ 'fs': s:pipeline,
@@ -74,8 +75,8 @@ function! wildsearch#pipeline#do(ctx, x)
   if a:x is v:null
     " skip
     return
-  elseif a:x is v:false || type(a:x) == v:t_dict && has_key(a:x, 'wildsearch_error')
-    call wildsearch#pipeline#call(a:ctx.on_error, l:ctx, a:x)
+  elseif a:x is v:false
+    call wildsearch#pipeline#call(l:ctx.on_finish, l:ctx, a:x)
     return
   endif
 
@@ -86,31 +87,45 @@ function! wildsearch#pipeline#do(ctx, x)
 
   let l:f = l:ctx.fs[0]
   let l:ctx.fs = l:ctx.fs[1:]
+  let l:ctx.step += 1
 
   let l:res = wildsearch#pipeline#call(l:f, l:ctx, a:x)
   call wildsearch#pipeline#do(l:ctx, l:res)
 endfunction
 
-function! wildsearch#pipeline#funcs()
-  echom string(s:funcs)
+function! wildsearch#pipeline#do_error(ctx, x)
+    call wildsearch#pipeline#call(a:ctx.on_error, a:ctx, a:x)
 endfunction
 
-let g:opts = {'engine': 're', 'max_candidates': 100}
+function! wildsearch#pipeline#funcs()
+  return copy(s:funcs)
+endfunction
+
+let g:opts = {'engine': 're', 'max_candidates': 500, 'fuzzy': 0}
 function! wildsearch#pipeline#default()
-  return [wildsearch#python_search(g:opts), wildsearch#python_uniq(), wildsearch#python_sort(), {_, d -> join(d, ' ')}]
+  return [
+        \ wildsearch#check({_, x -> !empty(x)}),
+        \ wildsearch#python_substring(),
+        \ wildsearch#python_search(g:opts),
+        \ wildsearch#python_sort(g:opts),
+        \ ]
 
-  " return [wildsearch#vim_search(g:opts), wildsearch#python_uniq(), {_, d -> join(d, ' ')}]
+  " return [wildsearch#vim_search(g:opts), wildsearch#python_uniq()]
 
-  " return [wildsearch#sleep(3), {_, x -> x + 2}, {_, x -> x * 2}, {_, x -> x + 2}]
-  "
-  " return [wildsearch#branch()]
+  " return [wildsearch#sleep(3), {_, x -> x . 'a'}, {_, x -> x . 'b' }, {_, x -> x . 'c'}, {_, x -> [x]}]
+
+  " return [wildsearch#branch(), {_, x -> [x]}]
+
+  " return [{_, __ -> v:false}, {_, x -> [x]}]
 
   " return [
+      " \ {_, x -> str2nr(x)},
       " \ wildsearch#branch(
       " \  [{_, x -> x + 1}, {_, x -> x + 1}],
       " \ ),
       " \ {_, x -> x + 1},
       " \ {_, x -> x + 1},
+      " \ {_, x -> [string(x)]},
       " \ ]
 
   " return [
@@ -124,6 +139,7 @@ function! wildsearch#pipeline#default()
       " \]
 
   " return [
+      " \ {_, x -> str2nr(x)},
       " \ wildsearch#branch(
       " \   [wildsearch#branch(
       " \     [wildsearch#sleep(1), {_, __ -> v:false}],
@@ -134,5 +150,6 @@ function! wildsearch#pipeline#default()
       " \ {_, x -> x * 2},
       " \ wildsearch#sleep(0),
       " \ {_, x -> x + 2},
+      " \ {_, x -> [string(x)]},
       " \]
 endfunction

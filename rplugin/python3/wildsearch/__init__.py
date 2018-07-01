@@ -16,8 +16,11 @@ class Wildsearch(object):
         self.lock = threading.Lock()
         self.executor = None
 
-    def do(self, ctx, x):
-        self.nvim.call('wildsearch#pipeline#do', ctx, x)
+        self.checked_fuzzy = False
+        self.has_fuzzy = False
+
+    def do(self, ctx, x, command='do'):
+        self.nvim.call('wildsearch#pipeline#' + command, ctx, x)
 
     def echo(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
@@ -33,9 +36,24 @@ class Wildsearch(object):
     def consumer(self):
         while True:
             args = self.queue.get()
+
+            ctx = args[0]
+            res = args[1]
             while not self.queue.empty():
-                args = self.queue.get_nowait()
-            self.nvim.async_call(self.do, args[0], args[1])
+                new_args = self.queue.get_nowait()
+                new_ctx = new_args[0]
+
+                if (new_ctx['run_id'] > ctx['run_id'] or
+                        (new_ctx['run_id'] == ctx['run_id'] and new_ctx['step'] > ctx['step'])):
+                    args = new_args
+                    ctx = args[0]
+                    res = args[1]
+
+            if len(args) > 2:
+                command = args[2]
+                self.nvim.async_call(self.do, ctx, res, command=command)
+            else:
+                self.nvim.async_call(self.do, ctx, res)
 
     @neovim.function('_wildsearch_init', sync=True, allow_nested=True)
     def init(self, args):
@@ -49,7 +67,7 @@ class Wildsearch(object):
 
     def sleep_handler(self, t, ctx, x):
         time.sleep(t)
-        self.do(ctx, x)
+        self.queue.put((ctx, x,))
 
     @neovim.function('_wildsearch_python_search', sync=False, allow_nested=True)
     def search(self, args):
@@ -77,11 +95,15 @@ class Wildsearch(object):
     def search_handler(self, event, buf, opts, ctx, x):
         if event.is_set():
             return
-        
+
         module_name = opts['engine'] if 'engine' in opts else 're'
         max_candidates = opts['max_candidates'] if 'max_candidates' in opts else -1
+        unique = opts['unique'] if 'unique' in opts else True
 
-        candidates = []
+        if unique:
+            candidates = set()
+        else:
+            candidates = []
 
         try:
             re = importlib.import_module(module_name)
@@ -93,13 +115,16 @@ class Wildsearch(object):
                 for match in pattern.finditer(line):
                     if event.is_set():
                         return
-                    candidates.append(match.group())
+                    if unique:
+                        candidates.add(match.group())
+                    else:
+                        candidates.append(match.group())
                     if max_candidates > 0 and len(candidates) >= max_candidates:
-                        self.queue.put((ctx, candidates,))
+                        self.queue.put((ctx, list(candidates),))
                         return
-            self.queue.put((ctx, candidates,))
+            self.queue.put((ctx, list(candidates),))
         except Exception as e:
-            self.queue.put((ctx, {'wildsearch_error': str(e)},))
+            self.queue.put((ctx, str(e), 'do_error',))
         finally:
             with self.lock:
                 self.events.remove(event)
@@ -112,22 +137,35 @@ class Wildsearch(object):
         try:
             self.queue.put((ctx, list(set(items)),))
         except Exception as e:
-            self.queue.put((ctx, {'wildsearch_error': str(e)},))
+            self.queue.put((ctx, str(e), 'do_error',))
 
     @neovim.function('_wildsearch_python_sort', sync=False, allow_nested=True)
     def sort(self, args):
         opts = args[0]
         ctx = args[1]
         items = args[2]
-        use_fuzzy = opts['fuzzy'] if 'fuzzy' in opts else False
 
         try:
+            use_fuzzy = opts['fuzzy'] if 'fuzzy' in opts else self.check_fuzzy()
+
             if use_fuzzy:
                 fuzz = importlib.import_module('fuzzywuzzy.fuzz')
-                res = sorted(items, key=lambda x: fuzz.ratio(ctx['input'], x))
+                res = sorted(items, key=lambda x: -fuzz.ratio(ctx['input'], x))
             else:
                 res = sorted(items)
 
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, {'wildsearch_error': str(e)},))
+            self.queue.put((ctx, str(e), 'do_error',))
+
+    def check_fuzzy(self):
+        if self.checked_fuzzy:
+            return self.has_fuzzy
+
+        try:
+            importlib.import_module('fuzzywuzzy.fuzz')
+            self.has_fuzzy = True
+        except ImportError:
+            self.has_fuzzy = False
+
+        self.checked_fuzzy = True
