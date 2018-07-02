@@ -1,3 +1,5 @@
+scriptencoding utf-8
+
 function! Shell(ctx, x)
   let l:args = {
         \ 'ctx': a:ctx,
@@ -45,7 +47,7 @@ endfunction
 
 " call wildsearch#pipeline#set_pipeline([
         " \ wildsearch#check({_, x -> len(x) > 1}),
-        " \ wildsearch#python_fuzzy_match(),
+        " \ wildsearch#python_fuzzy_match({'char': {_, __ -> wildsearch#iskeyword_to_python_regex()}}),
         " \ {ctx, x -> '\b' . x},
         " \ wildsearch#python_search(),
         " \ wildsearch#python_fuzzy_sort(),

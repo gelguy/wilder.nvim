@@ -1,8 +1,18 @@
 function! wildsearch#pipeline#component#python_fuzzy_match#make(args)
-  return {ctx, x -> s:make(ctx, x)}
+  return {ctx, x -> s:make(a:args, ctx, x)}
 endfunction
 
-function! s:make(ctx, x)
+function! s:make(args, ctx, x)
+  if has_key(a:args, 'char')
+    if type(a:args.char) == v:t_string
+      let l:char = a:args.char
+    else
+      let l:char = a:args.char(a:ctx, a:x)
+    endif
+  else
+    let l:char = '\w'
+  endif
+
   let l:res = ''
   let l:i = 0
 
@@ -15,7 +25,7 @@ function! s:make(ctx, x)
       let l:i += 1
     endif
 
-    let l:res .= '\w*'
+    let l:res .= l:char . '*'
 
     if l:i < len(a:x)
       let l:res .= '?'

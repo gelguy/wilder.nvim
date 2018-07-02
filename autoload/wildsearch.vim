@@ -12,7 +12,7 @@ endfunction
 
 function! wildsearch#python_fuzzy_match(...)
   let l:args = a:0 > 0 ? a:1 : {}
-  return wildsearch#pipeline#component#python_fuzzy_match#make(a:000)
+  return wildsearch#pipeline#component#python_fuzzy_match#make(l:args)
 endfunction
 
 function! wildsearch#python_substring()
@@ -80,4 +80,34 @@ endfunction
 function! wildsearch#next_arrow(...)
   let l:args = a:0 > 0 ? a:1 : {}
   return wildsearch#render#component#arrows#make_next(l:args)
+endfunction
+
+function! wildsearch#iskeyword_to_python_regex()
+  let l:chars = []
+
+  let l:keywords = split(&iskeyword, ',')
+
+  for l:keyword in l:keywords
+     let l:matches = matchlist(l:keyword, '\(\d\+\)-\(\d\+\)')
+     if !empty(l:matches)
+       let l:from = l:matches[1]
+       let l:to = l:matches[2]
+
+       call add(l:chars, '[' . nr2char(l:from) . '-' . nr2char(l:to) . ']')
+     elseif match(l:keyword, '^\d\+$') >= 0
+       call add(l:chars, '[' . nr2char(l:keyword) . ']')
+     elseif l:keyword ==# '@'
+       call add(l:chars, '\w')
+     elseif l:keyword ==# '@-@'
+       call add(l:chars, '[@]')
+     else
+       call add(l:chars, '[' . l:keyword . ']')
+     endif
+  endfor
+
+  if empty(l:chars)
+    return '\w'
+  endif
+
+  return '(?:' . join(l:chars, '|') . ')'
 endfunction
