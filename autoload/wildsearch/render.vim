@@ -1,21 +1,57 @@
+scriptencoding utf-8
+
+let s:hl_index = 0
+let s:hl_map = {}
+
+let s:opts = {
+      \ 'hl': 'StatusLine',
+      \ 'selected_hl': 'WildMenu',
+      \ }
+
+function! wildsearch#render#set_option(key, value)
+  let s:opts[a:key] = a:value
+endfunction
+
+function! wildsearch#render#set_options(opts)
+  let s:opts = extend(s:opts, a:opts)
+endfunction
+
 function! wildsearch#render#make_page(ctx, candidates)
   if empty(a:candidates)
     return [-1, -1]
   endif
 
-  let l:index = a:ctx.index
+  let l:direction = a:ctx.direction
+  let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
   let l:separator = a:ctx.separator
 
-  if l:page != [-1, -1] && l:index >= l:page[0] && l:index <= l:page[1]
+  if l:page != [-1, -1] && l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
     return l:page
   endif
 
-  let l:start = l:index
+  let l:selected = l:selected == -1 ? 0 : l:selected
+
+  if l:page == [-1, -1]
+    return wildsearch#render#make_page_from_start(a:ctx, a:candidates, l:selected)
+  endif
+
+  if l:direction < 0
+    return wildsearch#render#make_page_from_end(a:ctx, a:candidates, l:selected)
+  endif
+
+  return wildsearch#render#make_page_from_start(a:ctx, a:candidates, l:selected)
+endfunction
+
+function! wildsearch#render#make_page_from_start(ctx, candidates, start)
+  let l:space = a:ctx.space
+  let l:separator = a:ctx.separator
+
+  let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(a:candidates[l:index])
+  let l:width = strdisplaywidth(a:candidates[l:start])
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(l:separator)
 
@@ -24,6 +60,27 @@ function! wildsearch#render#make_page(ctx, candidates)
     let l:space -= strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
 
     let l:end += 1
+  endwhile
+
+  return [l:start, l:end]
+endfunction
+
+function! wildsearch#render#make_page_from_end(ctx, candidates, end)
+  let l:space = a:ctx.space
+  let l:separator = a:ctx.separator
+
+  let l:end = a:end
+  let l:start = l:end
+
+  let l:width = strdisplaywidth(a:candidates[l:start])
+  let l:space = l:space - l:width
+  let l:separator_width = strdisplaywidth(l:separator)
+
+  while l:start - 1 >= 0 &&
+        \ l:space > strdisplaywidth(a:candidates[l:start - 1]) + l:separator_width
+    let l:space -= strdisplaywidth(a:candidates[l:start - 1]) + l:separator_width
+
+    let l:start -= 1
   endwhile
 
   return [l:start, l:end]
@@ -46,15 +103,15 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   let l:separator = a:ctx.separator
 
   if l:page == [-1, -1]
-    return repeat('.', l:space)
+    return repeat(' ', l:space)
   endif
 
   let l:start = l:page[0]
   let l:end = l:page[1]
-  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end+1]), {_, x -> strtrans(x)})
+  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> strtrans(x)})
 
   let l:current = l:start
-  let l:res = '%#StatusLine#'
+  let l:res = '%#' . s:opts.hl . '#'
   let l:len = 0
 
   while l:current <= l:end
@@ -64,16 +121,18 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
     endif
 
     if l:current == l:selected
-      let l:res .= '%#WildMenu#%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}%#StatusLine#'
+      let l:res .= '%#' . s:opts.selected_hl .
+            \ '#%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}' .
+            \ '%#' . s:opts.hl . '#'
     else
       let l:res .= '%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}'
     endif
 
-    let l:len += strdisplaywidth(a:candidates[l:current-l:start])
+    let l:len += strdisplaywidth(a:candidates[l:current])
     let l:current += 1
   endwhile
 
-  return l:res . repeat('.', l:space - l:len)
+  return l:res . repeat(' ', l:space - l:len)
 endfunction
 
 function! wildsearch#render#draw_components(components, ctx, candidates)
@@ -81,12 +140,12 @@ function! wildsearch#render#draw_components(components, ctx, candidates)
 
   for l:component in a:components
     if type(l:component) == v:t_string
-      let l:res .= '%#StatusLine#'
+      let l:res .= '%#' . s:opts.hl . '#'
       let l:res .= l:component
       continue
     endif
 
-    let l:res .= '%#' . get(l:component, 'hl', 'StatusLine') . '#'
+    let l:res .= '%#' . get(l:component, 'hl', s:opts.hl) . '#'
 
     if type(l:component.f) == v:t_func
       let l:res .= l:component.f(a:ctx, a:candidates)
@@ -133,9 +192,6 @@ function! wildsearch#render#set_components(args)
   let s:left = a:args.left
   let s:right = a:args.right
 endfunction
-
-let s:hl_index = 0
-let s:hl_map = {}
 
 function! wildsearch#render#exe_hl()
   for l:hl_name in keys(s:hl_map)
@@ -210,8 +266,8 @@ endfunction
 function! wildsearch#render#default()
   let l:search_hl = wildsearch#render#make_hl([[0, 0], ['#fdf6e3', '#b58900', 'bold']])
   return {
-        \ 'left': [wildsearch#string(' SEARCH ', l:search_hl), wildsearch#separator('', l:search_hl, 'StatusLine'), ' '],
-        \ 'right': [' ', wildsearch#index(), ' '],
+        \ 'left': [],
+        \ 'right': [wildsearch#index()],
         \ }
+        " \ 'left': [wildsearch#string(' SEARCH ', l:search_hl), wildsearch#separator('', l:search_hl, 'StatusLine'), ' '],
 endfunction
-

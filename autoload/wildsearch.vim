@@ -10,6 +10,11 @@ function! wildsearch#check(...)
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
 
+function! wildsearch#python_fuzzy_match(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#pipeline#component#python_fuzzy_match#make(a:000)
+endfunction
+
 function! wildsearch#python_substring()
   return {_, x -> x . '\w*'}
 endfunction
@@ -28,9 +33,12 @@ function! wildsearch#python_uniq()
   return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_uniq(ctx, x))}
 endfunction
 
-function! wildsearch#python_sort(...)
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wildsearch#pipeline#component#python_sort#make(l:args)
+function! wildsearch#python_sort()
+  return wildsearch#pipeline#component#python_sort#make()
+endfunction
+
+function! wildsearch#python_fuzzy_sort()
+  return wildsearch#pipeline#component#python_fuzzy_sort#make()
 endfunction
 
 function! wildsearch#index(...)
@@ -62,4 +70,14 @@ function! wildsearch#separator(str, from_hl, to_hl)
         \ 'f': a:str,
         \ 'hl': l:hl_name,
         \ }
+endfunction
+
+function! wildsearch#previous_arrow(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#render#component#arrows#make_previous(l:args)
+endfunction
+
+function! wildsearch#next_arrow(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#render#component#arrows#make_next(l:args)
 endfunction

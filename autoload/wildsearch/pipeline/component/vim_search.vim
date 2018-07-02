@@ -4,14 +4,11 @@ endfunction
 
 function! s:search(opts, ctx, x)
   let l:cursor_pos = getcurpos()
-  let l:candidates = []
-  let l:callback = has_key(a:opts, 'max_candidates') && a:opts.max_candidates > 0 ?
-        \ 'len(candidates) < ' . a:opts.max_candidates . ' ? ' .
-        \   'add(candidates, submatch(0)) : ' .
-        \   's:throw()' :
-        \ 'add(candidates, submatch(0))'
+  let l:candidates = {}
+  let l:max_candidates = get(a:opts, 'max_candidates', 300)
+
   try
-    silent exe 'keeppatterns %s/' . a:x . '/\=' . l:callback . '/gne'
+    silent exe 'keeppatterns %s/' . a:x . '/\=s:add(submatch(0), l:candidates, l:max_candidates)/gne'
   catch /^Wildsearch: Max candidates reached/
     return l:candidates
   catch
@@ -19,7 +16,16 @@ function! s:search(opts, ctx, x)
   finally
     call setpos('.', l:cursor_pos)
   endtry
+
   return l:candidates
+endfunction
+
+function! s:add(match, candidates, max_candidates)
+  let a:candidates[a:match] = 1
+
+  if a:max_candidates > 0 && len(a:candidates) >= a:max_candidates
+    call s:throw()
+  endif
 endfunction
 
 function! s:throw()

@@ -37,7 +37,7 @@ function! wildsearch#pipeline#call(key, ctx, x)
   endif
 endfunction
 
-function! wildsearch#pipeline#set(pipeline)
+function! wildsearch#pipeline#set_pipeline(pipeline)
   call wildsearch#pipeline#reset_funcs()
 
   let s:pipeline = wildsearch#pipeline#register_funcs(a:pipeline)
@@ -45,7 +45,7 @@ endfunction
 
 function! wildsearch#pipeline#start(ctx, x)
   if len(s:pipeline) == 0
-    call wildsearch#pipeline#set(wildsearch#pipeline#default())
+    call wildsearch#pipeline#set_pipeline(wildsearch#pipeline#default())
   endif
 
   if !get(s:, 'wildsearch_init', 0)
@@ -101,13 +101,11 @@ function! wildsearch#pipeline#funcs()
   return copy(s:funcs)
 endfunction
 
-let g:opts = {'engine': 're', 'max_candidates': 500, 'fuzzy': 0}
 function! wildsearch#pipeline#default()
   return [
-        \ wildsearch#check({_, x -> !empty(x)}),
         \ wildsearch#python_substring(),
-        \ wildsearch#python_search(g:opts),
-        \ wildsearch#python_sort(g:opts),
+        \ wildsearch#python_search(),
+        \ wildsearch#python_sort(),
         \ ]
 
   " return [wildsearch#vim_search(g:opts), wildsearch#python_uniq()]
