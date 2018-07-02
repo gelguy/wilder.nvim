@@ -164,8 +164,10 @@ function! wildsearch#main#step(num_steps)
   let l:len = len(s:candidates)
   if l:len == 0
     let s:selected = -1
+    let s:selection = ''
   elseif l:len == 1
     let s:selected = 0
+    let s:selection = s:candidates[0]
   else
     let l:selected = s:selected + a:num_steps
 
