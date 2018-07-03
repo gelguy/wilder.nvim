@@ -219,7 +219,22 @@ function! wildsearch#main#step(num_steps)
   call wildsearch#main#draw(a:num_steps)
 
   if s:selected != -1
-    call feedkeys("\<C-E>\<C-U>" . s:candidates[s:selected], 'n')
+    let l:keys = "\<C-E>\<C-U>"
+
+    let l:candidates = s:candidates[s:selected]
+
+    let l:i = 0
+    while l:i < len(l:candidates)
+      if match(l:candidates[l:i], '[\x00-\x1F]') >= 0
+        let l:keys .= "\<C-Q>"
+      endif
+
+      let l:keys .= l:candidates[l:i]
+
+      let l:i += 1
+    endwhile
+    echom l:keys
+    call feedkeys(l:keys, 'n')
   endif
 
   " returning '' seems to prevent the async completions from finishing
