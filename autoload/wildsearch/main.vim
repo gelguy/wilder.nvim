@@ -11,7 +11,7 @@ let s:completion = ''
 let s:page = [-1, -1]
 
 let s:opts = {
-      \ 'separator': ' ',
+      \ 'interval': 100,
       \ }
 
 function! wildsearch#main#set_option(key, value)
@@ -59,7 +59,7 @@ endfunction
 
 function! wildsearch#main#start(...)
   if !exists('s:timer')
-    let s:timer = timer_start(100, function('wildsearch#main#do'), {'repeat': -1})
+    let s:timer = timer_start(s:opts.interval, function('wildsearch#main#do'), {'repeat': -1})
   endif
 
   call wildsearch#render#exe_hl()
@@ -118,10 +118,10 @@ function! wildsearch#main#do(...)
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
-  if !s:auto && !l:has_completion && l:input_changed
-    call wildsearch#main#stop()
-    return
-  endif
+  " if !s:auto && !l:has_completion && l:input_changed
+    " call wildsearch#main#stop()
+    " return
+  " endif
 
   if !l:has_completion && (l:input_changed || l:is_new_input)
     let s:previous_cmdline = l:input
