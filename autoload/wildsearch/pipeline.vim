@@ -48,7 +48,7 @@ function! wildsearch#pipeline#start(ctx, x)
     call wildsearch#pipeline#set_pipeline(wildsearch#pipeline#default())
   endif
 
-  if !get(s:, 'wildsearch_init', 0)
+  if has('nvim') && !get(s:, 'wildsearch_init', 0)
     let s:wildsearch_init = 1
     call _wildsearch_init()
   endif
@@ -58,13 +58,6 @@ function! wildsearch#pipeline#start(ctx, x)
   let l:ctx.input = a:x
   let l:ctx.step = 0
   let l:ctx.start_time = reltime()
-  " let l:ctx = {
-        " \ 'fs': s:pipeline,
-        " \ 'input': a:x,
-        " \ 'on_finish': 'wildsearch#pipeline#on_finish',
-        " \ 'on_error': 'wildsearch#pipeline#on_error',
-        " \ 'start_time': reltime(),
-        " \}
 
   call wildsearch#pipeline#do(l:ctx, a:x)
 endfunction
@@ -103,7 +96,7 @@ function! wildsearch#pipeline#funcs()
 endfunction
 
 function! wildsearch#pipeline#default()
-  if !has('nvim')
+  if has('nvim')
     return [
           \ wildsearch#check_empty(),
           \ wildsearch#python_substring(),
