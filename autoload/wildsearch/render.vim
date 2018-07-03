@@ -84,6 +84,16 @@ function! wildsearch#render#make_page_from_end(ctx, candidates, end)
     let l:start -= 1
   endwhile
 
+  " moving from page [5,10] ends in [0,4]
+  " but there might be leftover space, so we increase l:end to fill up the
+  " space e.g. to [0,6]
+  while l:end +1 < len(a:candidates) &&
+        \ l:space > strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
+    let l:space -= strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
+
+    let l:end += 1
+  endwhile
+
   return [l:start, l:end]
 endfunction
 

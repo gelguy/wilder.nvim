@@ -202,6 +202,10 @@ function! wildsearch#main#step(num_steps)
     let s:selected = 0
     let s:completion = s:candidates[0]
   else
+    if s:selected < 0 && a:num_steps < 0
+      let s:selected = 0
+    endif
+
     let l:selected = s:selected + a:num_steps
 
     while l:selected < 0
