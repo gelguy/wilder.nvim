@@ -10,12 +10,9 @@ function! wildsearch#check(...)
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
 
-function! wildsearch#history(...)
-  if a:0 > 0
-    return wildsearch#pipeline#component#history#make(a:1)
-  else
-    return wildsearch#pipeline#component#history#make()
-  endif
+function! wildsearch#vim_search(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#pipeline#component#vim_search#make(l:args)
 endfunction
 
 function! wildsearch#python_substring()
@@ -32,11 +29,6 @@ function! wildsearch#python_search(...)
   return wildsearch#pipeline#component#python_search#make(l:args)
 endfunction
 
-function! wildsearch#vim_search(...)
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wildsearch#pipeline#component#vim_search#make(l:args)
-endfunction
-
 function! wildsearch#python_uniq()
   return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_uniq(ctx, x))}
 endfunction
@@ -47,6 +39,14 @@ endfunction
 
 function! wildsearch#python_fuzzy_sort()
   return wildsearch#pipeline#component#python_fuzzy_sort#make()
+endfunction
+
+function! wildsearch#history(...)
+  if a:0 > 0
+    return wildsearch#pipeline#component#history#make(a:1)
+  else
+    return wildsearch#pipeline#component#history#make()
+  endif
 endfunction
 
 function! wildsearch#index(...)

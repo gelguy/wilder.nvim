@@ -277,8 +277,8 @@ endfunction
 function! wildsearch#render#default()
   let l:search_hl = wildsearch#render#make_hl([[0, 0], ['#fdf6e3', '#b58900', 'bold']])
   return {
-        \ 'left': [],
-        \ 'right': [wildsearch#index()],
+        \ 'left': [wildsearch#previous_arrow()],
+        \ 'right': [wildsearch#next_arrow()],
         \ }
         " \ 'left': [wildsearch#string(' SEARCH ', l:search_hl), wildsearch#separator('', l:search_hl, 'StatusLine'), ' '],
 endfunction
