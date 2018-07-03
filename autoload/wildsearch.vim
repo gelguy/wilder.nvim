@@ -1,4 +1,4 @@
-function! wildsearch#sleep(t)
+function! wildsearch#_sleep(t)
   return {ctx, x -> wildsearch#pipeline#null(_wildsearch_python_sleep(a:t, ctx, x))}
 endfunction
 
@@ -10,9 +10,21 @@ function! wildsearch#check(...)
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
 
+function! wildsearch#check_empty()
+  return {_, x -> empty(x) ? v:false : x}
+endfunction
+
+function! wildsearch#vim_substring()
+  return {_, x -> x . '\k*'}
+endfunction
+
 function! wildsearch#vim_search(...)
   let l:args = a:0 > 0 ? a:1 : {}
   return wildsearch#pipeline#component#vim_search#make(l:args)
+endfunction
+
+function! wildsearch#vim_sort()
+  return {_, x -> sort(copy(x))}
 endfunction
 
 function! wildsearch#python_substring()

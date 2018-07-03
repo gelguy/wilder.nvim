@@ -12,8 +12,7 @@ function! s:search(opts, ctx, x)
   catch /^Wildsearch: Max candidates reached/
     return keys(l:candidates)
   catch
-    call wildsearch#pipeline#do_error(a:ctx, v:exception)
-    return v:false
+    return wildsearch#pipeline#do_error(a:ctx, v:exception)
   finally
     call setpos('.', l:cursor_pos)
   endtry
