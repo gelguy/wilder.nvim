@@ -1,12 +1,13 @@
 scriptencoding utf-8
 
-let s:running = 0
+let s:auto = 0
+let s:active = 0
 let s:run_id = 0
 let s:result_run_id = 0
 
 let s:candidates = []
 let s:selected = -1
-let s:selection = ''
+let s:completion = ''
 let s:page = [-1, -1]
 
 let s:opts = {
@@ -21,14 +22,39 @@ function! wildsearch#main#set_options(opts)
   let s:opts = extend(s:opts, a:opts)
 endfunction
 
-function! wildsearch#main#init()
-  if !exists('#Wildsearch')
-    augroup Wildsearch
-      autocmd!
-      autocmd CmdlineEnter * call wildsearch#main#start()
-      autocmd CmdlineLeave * call wildsearch#main#stop()
-    augroup END
+function! wildsearch#main#in_context()
+  return s:active && (getcmdtype() ==# '/' || getcmdtype() ==# '?')
+endfunction
+
+function! wildsearch#main#set_auto(...)
+  let l:start = a:0 > 0 ? a:1 : 1
+
+  if l:start
+    if !exists('#Wildsearch')
+      augroup Wildsearch
+        autocmd!
+        autocmd CmdlineEnter * call wildsearch#main#start_auto()
+        autocmd CmdlineLeave * call wildsearch#main#stop_auto()
+      augroup END
+    endif
+  else
+    if exists('#Wildsearch')
+      augroup Wildsearch
+        autocmd!
+      augroup END
+      augroup! Wildsearch
+    endif
   endif
+endfunction
+
+function! wildsearch#main#start_auto()
+  let s:auto = 1
+  call wildsearch#main#start()
+endfunction
+
+function! wildsearch#main#stop_auto()
+  let s:auto = 0
+  call wildsearch#main#stop()
 endfunction
 
 function! wildsearch#main#start(...)
@@ -38,9 +64,10 @@ function! wildsearch#main#start(...)
 
   call wildsearch#render#exe_hl()
 
+  let s:active = 1
   let s:candidates = []
   let s:selected = -1
-  let s:selection = ''
+  let s:completion = ''
   let s:page = [-1, -1]
 
   if has_key(s:opts, 'pre_hook')
@@ -55,9 +82,12 @@ function! wildsearch#main#start(...)
 endfunction
 
 function! wildsearch#main#stop()
-  if !exists('s:timer')
-    return
+  if exists('s:timer')
+    call timer_stop(s:timer)
+    unlet s:timer
   endif
+
+  let s:active = 0
 
   if exists('s:previous_cmdline')
     unlet s:previous_cmdline
@@ -70,34 +100,37 @@ function! wildsearch#main#stop()
       call s:opts.post_hook()
     endif
   endif
-
-  call timer_stop(s:timer)
-  unlet s:timer
 endfunction
 
 function! wildsearch#main#do(...)
-  if !get(s:, 'timer', 0)
+  if !s:active
     return
   endif
 
-  if getcmdtype() !=# '/'
+  if !wildsearch#main#in_context()
     call wildsearch#main#stop()
     return
   endif
 
   let l:input = getcmdline()
-  let g:a = l:input
 
-  let l:has_selection = s:selection !=# '' && l:input ==# s:selection
-  let l:cmdline_changed = !exists('s:previous_cmdline') || s:previous_cmdline != l:input
+  let l:has_completion = !empty(s:completion) && l:input ==# s:completion
+  let l:is_new_input = !exists('s:previous_cmdline')
+  let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
-  if !l:has_selection && l:cmdline_changed
+  if !s:auto && !l:has_completion && l:input_changed
+    call wildsearch#main#stop()
+    return
+  endif
+
+  if !l:has_completion && (l:input_changed || l:is_new_input)
     let s:previous_cmdline = l:input
 
     let l:ctx = {
         \ 'on_finish': 'wildsearch#main#on_finish',
         \ 'on_error': 'wildsearch#main#on_error',
         \ 'run_id': s:run_id,
+        \ 'auto': s:auto,
         \ }
 
     let s:run_id += 1
@@ -107,7 +140,7 @@ function! wildsearch#main#do(...)
 endfunction
 
 function! wildsearch#main#on_finish(ctx, x)
-  if !exists('s:timer')
+  if !s:active
     return
   endif
 
@@ -119,8 +152,24 @@ function! wildsearch#main#on_finish(ctx, x)
 
   let s:candidates = a:x is v:false ? [] : a:x
   let s:selected = -1
+  let s:completion = ''
 
   call wildsearch#main#draw()
+endfunction
+
+function! wildsearch#main#on_error(ctx, x)
+  if !s:active
+    return
+  endif
+
+  if a:ctx.run_id < s:result_run_id
+    return
+  endif
+
+  let s:result_run_id = a:ctx.run_id
+
+  call setwinvar(0, '&statusline', 'E:' . a:ctx.run_id . ':' . split(reltimestr(reltime(a:ctx.start_time)))[0] . ': ' . a:x)
+  redrawstatus
 endfunction
 
 function! wildsearch#main#draw(...)
@@ -128,7 +177,6 @@ function! wildsearch#main#draw(...)
 
   let l:ctx = {
         \ 'selected': s:selected,
-        \ 'separator': s:opts.separator,
         \ 'direction': l:direction,
         \ }
 
@@ -145,29 +193,14 @@ function! wildsearch#main#draw(...)
   redrawstatus
 endfunction
 
-function! wildsearch#main#on_error(ctx, x)
-  if !exists('s:timer')
-    return
-  endif
-
-  if a:ctx.run_id < s:result_run_id
-    return
-  endif
-
-  let s:result_run_id = a:ctx.run_id
-
-  call setwinvar(0, '&statusline', 'E:' . a:ctx.run_id . ':' . split(reltimestr(reltime(a:ctx.start_time)))[0] . ': ' . a:x)
-  redrawstatus
-endfunction
-
 function! wildsearch#main#step(num_steps)
   let l:len = len(s:candidates)
   if l:len == 0
     let s:selected = -1
-    let s:selection = ''
+    let s:completion = ''
   elseif l:len == 1
     let s:selected = 0
-    let s:selection = s:candidates[0]
+    let s:completion = s:candidates[0]
   else
     let l:selected = s:selected + a:num_steps
 
@@ -176,7 +209,7 @@ function! wildsearch#main#step(num_steps)
     endwhile
 
     let s:selected = l:selected % l:len
-    let s:selection = s:candidates[s:selected]
+    let s:completion = s:candidates[s:selected]
   endif
 
   call wildsearch#main#draw(a:num_steps)
@@ -190,5 +223,5 @@ function! wildsearch#main#step(num_steps)
 endfunction
 
 function! wildsearch#main#active()
-  return exists('s:timer')
+  return s:active
 endfunction

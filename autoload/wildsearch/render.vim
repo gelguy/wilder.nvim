@@ -5,6 +5,7 @@ let s:hl_map = {}
 
 let s:opts = {
       \ 'hl': 'StatusLine',
+      \ 'separator': ' ',
       \ 'selected_hl': 'WildMenu',
       \ }
 
@@ -25,7 +26,7 @@ function! wildsearch#render#make_page(ctx, candidates)
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = a:ctx.separator
+  let l:separator = s:opts.separator
 
   if l:page != [-1, -1] && l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
     return l:page
@@ -46,7 +47,7 @@ endfunction
 
 function! wildsearch#render#make_page_from_start(ctx, candidates, start)
   let l:space = a:ctx.space
-  let l:separator = a:ctx.separator
+  let l:separator = s:opts.separator
 
   let l:start = a:start
   let l:end = l:start
@@ -67,7 +68,7 @@ endfunction
 
 function! wildsearch#render#make_page_from_end(ctx, candidates, end)
   let l:space = a:ctx.space
-  let l:separator = a:ctx.separator
+  let l:separator = s:opts.separator
 
   let l:end = a:end
   let l:start = l:end
@@ -100,7 +101,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = a:ctx.separator
+  let l:separator = s:opts.separator
 
   if l:page == [-1, -1]
     return repeat(' ', l:space)

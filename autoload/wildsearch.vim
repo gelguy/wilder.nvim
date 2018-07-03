@@ -84,22 +84,35 @@ endfunction
 
 function! wildsearch#iskeyword_to_python_regex()
   let l:chars = []
+  let l:not_match = []
 
   let l:keywords = split(&iskeyword, ',')
 
   for l:keyword in l:keywords
-     let l:matches = matchlist(l:keyword, '\(\d\+\)-\(\d\+\)')
+     let l:matches = matchlist(l:keyword, '\(.\+\)-\(.\+\)')
      if !empty(l:matches)
        let l:from = l:matches[1]
        let l:to = l:matches[2]
 
-       call add(l:chars, '[' . nr2char(l:from) . '-' . nr2char(l:to) . ']')
+       if match(l:from, '^\d\+$') >= 0
+         let l:from = nr2char(l:from)
+       endif
+
+       if match(l:to, '^\d\+$') >= 0
+         let l:to = nr2char(l:to)
+       endif
+
+       call add(l:chars, '[' . l:from . '-' . l:to . ']')
+     elseif match(l:keyword, '^\^') >= 0
+       call add(l:not_match, '[' . l:keyword[1:] . ']')
      elseif match(l:keyword, '^\d\+$') >= 0
        call add(l:chars, '[' . nr2char(l:keyword) . ']')
      elseif l:keyword ==# '@'
        call add(l:chars, '\w')
      elseif l:keyword ==# '@-@'
        call add(l:chars, '[@]')
+     elseif empty(l:keyword)
+       call add(l:chars, '[,]')
      else
        call add(l:chars, '[' . l:keyword . ']')
      endif
@@ -109,5 +122,13 @@ function! wildsearch#iskeyword_to_python_regex()
     return '\w'
   endif
 
-  return '(?:' . join(l:chars, '|') . ')'
+  let l:res = '('
+
+  if len(l:not_match) > 0
+    let l:res .= '(?=(?!' . join(l:not_match, '|') . '))'
+  endif
+
+  let l:res .= '(' . join(l:chars, '|') . ')'
+
+  return l:res . ')'
 endfunction
