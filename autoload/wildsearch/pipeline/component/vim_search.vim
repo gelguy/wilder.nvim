@@ -10,14 +10,15 @@ function! s:search(opts, ctx, x)
   try
     silent exe 'keeppatterns %s/' . a:x . '/\=s:add(submatch(0), l:candidates, l:max_candidates)/gne'
   catch /^Wildsearch: Max candidates reached/
-    return l:candidates
+    return keys(l:candidates)
   catch
-    return {'wildsearch_error': v:exception}
+    call wildsearch#pipeline#do_error(a:ctx, v:exception)
+    return v:false
   finally
     call setpos('.', l:cursor_pos)
   endtry
 
-  return l:candidates
+  return keys(l:candidates)
 endfunction
 
 function! s:add(match, candidates, max_candidates)
