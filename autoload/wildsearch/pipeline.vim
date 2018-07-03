@@ -95,6 +95,7 @@ endfunction
 
 function! wildsearch#pipeline#do_error(ctx, x)
     call wildsearch#pipeline#call(a:ctx.on_error, a:ctx, a:x)
+    return v:null
 endfunction
 
 function! wildsearch#pipeline#funcs()
@@ -102,52 +103,19 @@ function! wildsearch#pipeline#funcs()
 endfunction
 
 function! wildsearch#pipeline#default()
-  return [
-        \ wildsearch#python_substring(),
-        \ wildsearch#python_search(),
-        \ wildsearch#python_sort(),
-        \ ]
-
-  " return [wildsearch#vim_search(g:opts), wildsearch#python_uniq()]
-
-  " return [wildsearch#sleep(3), {_, x -> x . 'a'}, {_, x -> x . 'b' }, {_, x -> x . 'c'}, {_, x -> [x]}]
-
-  " return [wildsearch#branch(), {_, x -> [x]}]
-
-  " return [{_, __ -> v:false}, {_, x -> [x]}]
-
-  " return [
-      " \ {_, x -> str2nr(x)},
-      " \ wildsearch#branch(
-      " \  [{_, x -> x + 1}, {_, x -> x + 1}],
-      " \ ),
-      " \ {_, x -> x + 1},
-      " \ {_, x -> x + 1},
-      " \ {_, x -> [string(x)]},
-      " \ ]
-
-  " return [
-      " \ wildsearch#branch(
-      " \  [{_, __ -> v:false}],
-      " \  [{_, __ -> v:false}],
-      " \  [{_, x -> x + 1}, {_, x -> x * 2}, {_, x -> x + 1}]
-      " \ ),
-      " \ wildsearch#sleep(0),
-      " \ {_, x -> x + 1},
-      " \]
-
-  " return [
-      " \ {_, x -> str2nr(x)},
-      " \ wildsearch#branch(
-      " \   [wildsearch#branch(
-      " \     [wildsearch#sleep(1), {_, __ -> v:false}],
-      " \     [wildsearch#sleep(1), {_, x -> x + 1}, {_, __ -> v:false}],
-      " \   )],
-      " \   [wildsearch#sleep(2), {_, x -> x + 1}],
-      " \ ),
-      " \ {_, x -> x * 2},
-      " \ wildsearch#sleep(0),
-      " \ {_, x -> x + 2},
-      " \ {_, x -> [string(x)]},
-      " \]
+  if !has('nvim')
+    return [
+          \ wildsearch#check_empty(),
+          \ wildsearch#python_substring(),
+          \ wildsearch#python_search(),
+          \ wildsearch#python_sort(),
+          \ ]
+  else
+    return [
+          \ wildsearch#check_empty(),
+          \ wildsearch#vim_substring(),
+          \ wildsearch#vim_search(),
+          \ wildsearch#vim_sort(),
+          \ ]
+  endif
 endfunction
