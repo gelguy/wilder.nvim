@@ -10,13 +10,21 @@ function! wildsearch#check(...)
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
 
-function! wildsearch#python_fuzzy_match(...)
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wildsearch#pipeline#component#python_fuzzy_match#make(l:args)
+function! wildsearch#history(...)
+  if a:0 > 0
+    return wildsearch#pipeline#component#history#make(a:1)
+  else
+    return wildsearch#pipeline#component#history#make()
+  endif
 endfunction
 
 function! wildsearch#python_substring()
   return {_, x -> x . '\w*'}
+endfunction
+
+function! wildsearch#python_fuzzy_match(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#pipeline#component#python_fuzzy_match#make(l:args)
 endfunction
 
 function! wildsearch#python_search(...)
