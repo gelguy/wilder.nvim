@@ -119,7 +119,32 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
 
   let l:start = l:page[0]
   let l:end = l:page[1]
-  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> strtrans(x)})
+
+  let g:_wildsearch_candidates = []
+
+  let l:i = l:start
+  while l:i <= l:end
+    let l:candidate = a:candidates[l:i]
+
+    let l:transformed = ''
+
+    let l:len = strchars(l:candidate)
+    let l:j = 0
+    while l:j < l:len
+      let l:char = strcharpart(l:candidate, l:j, 1)
+      if has_key(s:high_control_characters, l:char)
+        let l:char = s:high_control_characters[l:char]
+      elseif match(l:char, '[\x00-\x1F]') >= 0
+        let l:char = strtrans(l:char)
+      endif
+
+      let l:transformed .= l:char
+      let l:j += 1
+    endwhile
+
+    call add(g:_wildsearch_candidates, l:transformed)
+    let l:i += 1
+  endwhile
 
   let l:current = l:start
   let l:res = '%#' . s:opts.hl . '#'
@@ -139,7 +164,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
       let l:res .= '%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}'
     endif
 
-    let l:len += s:strdisplaywidth(a:candidates[l:current])
+    let l:len += s:strdisplaywidth(g:_wildsearch_candidates[l:current-l:start])
     let l:current += 1
   endwhile
 
@@ -290,3 +315,39 @@ function! s:strdisplaywidth(x)
     return strdisplaywidth(a:x)
   endif
 endfunction
+
+let s:high_control_characters = {
+      \ '': '<7F>',
+      \ '': '<80>',
+      \ '': '<81>',
+      \ '': '<82>',
+      \ '': '<83>',
+      \ '': '<84>',
+      \ '': '<85>',
+      \ '': '<86>',
+      \ '': '<87>',
+      \ '': '<88>',
+      \ '': '<89>',
+      \ '': '<8a>',
+      \ '': '<8b>',
+      \ '': '<8c>',
+      \ '': '<8d>',
+      \ '': '<8e>',
+      \ '': '<8f>',
+      \ '': '<90>',
+      \ '': '<91>',
+      \ '': '<92>',
+      \ '': '<93>',
+      \ '': '<94>',
+      \ '': '<95>',
+      \ '': '<96>',
+      \ '': '<97>',
+      \ '': '<98>',
+      \ '': '<99>',
+      \ '': '<9a>',
+      \ '': '<9b>',
+      \ '': '<9c>',
+      \ '': '<9d>',
+      \ '': '<9e>',
+      \ '': '<9f>',
+      \}
