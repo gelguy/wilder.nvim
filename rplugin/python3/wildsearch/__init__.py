@@ -72,7 +72,9 @@ class Wildsearch(object):
             self.do(args[1], [])
             return
 
-        buf = self.nvim.current.buffer[:].copy()
+        line_num = self.nvim.current.window.cursor[0] - 1
+        current_buf = self.nvim.current.buffer
+        buf = current_buf[line_num:] + current_buf[:line_num]
 
         event = threading.Event()
 
@@ -96,7 +98,8 @@ class Wildsearch(object):
         module_name = opts['engine'] if 'engine' in opts else 're'
         max_candidates = opts['max_candidates'] if 'max_candidates' in opts else 300
 
-        candidates = set()
+        seen = set()
+        candidates = []
 
         try:
             re = importlib.import_module(module_name)
@@ -108,11 +111,14 @@ class Wildsearch(object):
                 for match in pattern.finditer(line):
                     if event.is_set():
                         return
-                    candidates.add(match.group())
-                    if max_candidates > 0 and len(candidates) >= max_candidates:
-                        self.queue.put((ctx, list(candidates),))
-                        return
-            self.queue.put((ctx, list(candidates),))
+                    candidate = match.group()
+                    if not candidate in seen:
+                        seen.add(candidate)
+                        candidates.append(candidate)
+                        if max_candidates > 0 and len(candidates) >= max_candidates:
+                            self.queue.put((ctx, candidates,))
+                            return
+            self.queue.put((ctx, candidates,))
         except Exception as e:
             self.queue.put((ctx, str(e), 'do_error',))
         finally:
@@ -124,8 +130,11 @@ class Wildsearch(object):
         ctx = args[0]
         items = args[1]
 
+        seen = set()
+
         try:
-            self.queue.put((ctx, list(set(items)),))
+            res = [x for x in items if not (x in seen or seen.add(x))]
+            self.queue.put((ctx, res,))
         except Exception as e:
             self.queue.put((ctx, str(e), 'do_error',))
 
