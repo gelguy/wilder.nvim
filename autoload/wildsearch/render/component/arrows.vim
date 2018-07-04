@@ -14,7 +14,7 @@ endfunction
 function! wildsearch#render#component#arrows#make_next(args)
   let l:res = {
         \ 'f': {ctx, candidates -> s:right(ctx, candidates)},
-        \ 'len': 2,
+        \ 'len': 3,
         \ }
 
   if has_key(a:args, 'hl')
@@ -29,7 +29,9 @@ function! s:left(ctx, candidates)
 endfunction
 
 function! s:right(ctx, candidates)
-  let l:next_page_arrow = a:ctx.page[1] < len(a:candidates) - 1 ? ' >' : '  '
-  let l:width_needed = a:ctx.page[0] > 0 ? 2 : 4
-  return repeat(' ', l:width_needed - 2) . l:next_page_arrow
+  let l:next_page_arrow = a:ctx.page[1] < len(a:candidates) - 1 ? ' > ' : '   '
+
+  let l:res = a:ctx.page[0] > 0 ? '' : '  '
+  let l:res .= l:next_page_arrow
+  return l:res
 endfunction
