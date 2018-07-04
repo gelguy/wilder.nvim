@@ -114,7 +114,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   let l:separator = s:opts.separator
 
   if l:page == [-1, -1]
-    return repeat(' ', l:space)
+    return '%#' . s:opts.hl . '#' . repeat(' ', l:space)
   endif
 
   let l:start = l:page[0]
