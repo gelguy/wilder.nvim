@@ -114,7 +114,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   let l:separator = wildsearch#render#to_printable(s:opts.separator)
 
   if l:page == [-1, -1]
-    return '%#' . s:opts.hl . '#' . repeat('.', l:space)
+    return '%#' . s:opts.hl . '#' . repeat(' ', l:space)
   endif
 
   let l:start = l:page[0]
@@ -144,7 +144,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
     let l:current += 1
   endwhile
 
-  return l:res . repeat('.', l:space - l:len)
+  return l:res . repeat(' ', l:space - l:len)
 endfunction
 
 function! wildsearch#render#draw_components(components, ctx, candidates)
