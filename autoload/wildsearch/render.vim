@@ -5,8 +5,9 @@ let s:hl_map = {}
 
 let s:opts = {
       \ 'hl': 'StatusLine',
-      \ 'separator': ' ',
       \ 'selected_hl': 'WildMenu',
+      \ 'separator': ' ',
+      \ 'ellipsis': '...',
       \ }
 
 function! wildsearch#render#set_option(key, value)
@@ -119,6 +120,28 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
 
   let l:start = l:page[0]
   let l:end = l:page[1]
+
+  " only 1 candidate, possible that it exceeds l:space
+  if l:start == l:end
+    let l:candidate = wildsearch#render#to_printable(a:candidates[l:start])
+
+    if len(l:candidate) > l:space
+      let l:ellipsis = wildsearch#render#to_printable(s:opts.ellipsis)
+      let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
+
+      let g:_wildsearch_candidates = [l:candidate[:l:space_minus_ellipsis - 1] . l:ellipsis]
+
+      if l:start == l:selected
+        let l:res = '%#' . s:opts.selected_hl . '#'
+      else
+        let l:res = '%#' . s:opts.hl . '#'
+      endif
+
+      let l:res .= '%{g:_wildsearch_candidates[0]}'
+
+      return l:res
+    endif
+  endif
 
   let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> wildsearch#render#to_printable(x)})
 
