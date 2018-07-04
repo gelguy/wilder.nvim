@@ -52,13 +52,13 @@ function! wildsearch#render#make_page_from_start(ctx, candidates, start)
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = s:strdisplaywidth(a:candidates[l:start])
+  let l:width = strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start]))
   let l:space = l:space - l:width
-  let l:separator_width = s:strdisplaywidth(l:separator)
+  let l:separator_width = strdisplaywidth(wildsearch#render#to_printable(l:separator))
 
   while l:end + 1 < len(a:candidates) &&
-        \ l:space > s:strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
-    let l:space -= s:strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
+        \ l:space > strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
+    let l:space -= strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
 
     let l:end += 1
   endwhile
@@ -68,18 +68,18 @@ endfunction
 
 function! wildsearch#render#make_page_from_end(ctx, candidates, end)
   let l:space = a:ctx.space
-  let l:separator = s:opts.separator
+  let l:separator = wildsearch#render#to_printable(s:opts.separator)
 
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = s:strdisplaywidth(a:candidates[l:start])
+  let l:width = strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start]))
   let l:space = l:space - l:width
-  let l:separator_width = s:strdisplaywidth(l:separator)
+  let l:separator_width = strdisplaywidth(l:separator)
 
   while l:start - 1 >= 0 &&
-        \ l:space > s:strdisplaywidth(a:candidates[l:start - 1]) + l:separator_width
-    let l:space -= s:strdisplaywidth(a:candidates[l:start - 1]) + l:separator_width
+        \ l:space > strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start - 1])) + l:separator_width
+    let l:space -= strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start - 1])) + l:separator_width
 
     let l:start -= 1
   endwhile
@@ -88,8 +88,8 @@ function! wildsearch#render#make_page_from_end(ctx, candidates, end)
   " but there might be leftover space, so we increase l:end to fill up the
   " space e.g. to [0,6]
   while l:end +1 < len(a:candidates) &&
-        \ l:space > s:strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
-    let l:space -= s:strdisplaywidth(a:candidates[l:end + 1]) + l:separator_width
+        \ l:space > strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
+    let l:space -= strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
 
     let l:end += 1
   endwhile
@@ -111,40 +111,16 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = s:opts.separator
+  let l:separator = wildsearch#render#to_printable(s:opts.separator)
 
   if l:page == [-1, -1]
-    return '%#' . s:opts.hl . '#' . repeat(' ', l:space)
+    return '%#' . s:opts.hl . '#' . repeat('.', l:space)
   endif
 
   let l:start = l:page[0]
   let l:end = l:page[1]
 
-  let g:_wildsearch_candidates = []
-
-  let l:i = l:start
-  while l:i <= l:end
-    let l:candidate = a:candidates[l:i]
-
-    let l:transformed = ''
-
-    let l:len = strchars(l:candidate)
-    let l:j = 0
-    while l:j < l:len
-      let l:char = strcharpart(l:candidate, l:j, 1)
-      if has_key(s:high_control_characters, l:char)
-        let l:char = s:high_control_characters[l:char]
-      elseif match(l:char, '[\x00-\x1F]') >= 0
-        let l:char = strtrans(l:char)
-      endif
-
-      let l:transformed .= l:char
-      let l:j += 1
-    endwhile
-
-    call add(g:_wildsearch_candidates, l:transformed)
-    let l:i += 1
-  endwhile
+  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> wildsearch#render#to_printable(x)})
 
   let l:current = l:start
   let l:res = '%#' . s:opts.hl . '#'
@@ -153,7 +129,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   while l:current <= l:end
     if l:current != l:start
       let l:res .= l:separator
-      let l:len += s:strdisplaywidth(l:separator)
+      let l:len += strdisplaywidth(l:separator)
     endif
 
     if l:current == l:selected
@@ -164,11 +140,11 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
       let l:res .= '%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}'
     endif
 
-    let l:len += s:strdisplaywidth(g:_wildsearch_candidates[l:current-l:start])
+    let l:len += strdisplaywidth(g:_wildsearch_candidates[l:current-l:start])
     let l:current += 1
   endwhile
 
-  return l:res . repeat(' ', l:space - l:len)
+  return l:res . repeat('.', l:space - l:len)
 endfunction
 
 function! wildsearch#render#draw_components(components, ctx, candidates)
@@ -203,7 +179,7 @@ function! wildsearch#render#space_used(ctx, candidates)
   let l:components = s:left + s:right
   for l:component in l:components
     if type(l:component) == v:t_string
-      let l:len += s:strdisplaywidth(l:component)
+      let l:len += strdisplaywidth(l:component)
     elseif has_key(l:component, 'len')
       if type(l:component.len) == v:t_func
         let l:len += l:component.len(a:ctx, a:candidates)
@@ -217,7 +193,7 @@ function! wildsearch#render#space_used(ctx, candidates)
         let l:res = l:component.f
       endif
 
-      let l:len += s:strdisplaywidth(l:res)
+      let l:len += strdisplaywidth(l:res)
     endif
   endfor
 
@@ -308,12 +284,24 @@ function! wildsearch#render#default()
         " \ 'left': [wildsearch#string(' SEARCH ', l:search_hl), wildsearch#separator('', l:search_hl, 'StatusLine'), ' '],
 endfunction
 
-function! s:strdisplaywidth(x)
-  if match(a:x, '[\x00-\x1F]') > 0
-    return strdisplaywidth(strtrans(a:x))
-  else
-    return strdisplaywidth(a:x)
-  endif
+function! wildsearch#render#to_printable(x)
+  let l:res = ''
+
+  let l:len = strchars(a:x)
+  let l:i = 0
+  while l:i < l:len
+    let l:char = strcharpart(a:x, l:i, 1)
+    if has_key(s:high_control_characters, l:char)
+      let l:char = s:high_control_characters[l:char]
+    elseif match(l:char, '[\x00-\x1F]') >= 0
+      let l:char = strtrans(l:char)
+    endif
+
+    let l:res .= l:char
+    let l:i += 1
+  endwhile
+
+  return l:res
 endfunction
 
 let s:high_control_characters = {
