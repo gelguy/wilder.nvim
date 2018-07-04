@@ -73,7 +73,9 @@ function! wildsearch#main#start(...)
   let s:old_statusline = &statusline
 
   if has_key(s:opts, 'pre_hook')
-    if type(s:opts.pre_hook) == v:t_string
+    if s:opts.post_hook ==# ''
+      " pass
+    elseif type(s:opts.pre_hook) == v:t_string
       call function(s:opts.pre_hook)()
     else
       call s:opts.pre_hook()
@@ -96,7 +98,9 @@ function! wildsearch#main#stop()
   endif
 
   if has_key(s:opts, 'post_hook')
-    if type(s:opts.post_hook) == v:t_string
+    if s:opts.post_hook ==# ''
+      " pass
+    elseif type(s:opts.post_hook) == v:t_string
       call function(s:opts.post_hook)()
     else
       call s:opts.post_hook()
@@ -235,7 +239,7 @@ function! wildsearch#main#step(num_steps)
 
       let l:i += 1
     endwhile
-    echom l:keys
+
     call feedkeys(l:keys, 'n')
   endif
 
