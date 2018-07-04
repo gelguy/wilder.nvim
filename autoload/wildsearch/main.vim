@@ -12,6 +12,7 @@ let s:page = [-1, -1]
 
 let s:opts = {
       \ 'interval': 100,
+      \ 'post_hook': 'wildsearch#main#restore_statusline',
       \ }
 
 function! wildsearch#main#set_option(key, value)
@@ -69,6 +70,7 @@ function! wildsearch#main#start(...)
   let s:selected = -1
   let s:completion = ''
   let s:page = [-1, -1]
+  let s:old_statusline = &statusline
 
   if has_key(s:opts, 'pre_hook')
     if type(s:opts.pre_hook) == v:t_string
@@ -239,6 +241,11 @@ function! wildsearch#main#step(num_steps)
 
   " returning '' seems to prevent the async completions from finishing
   return "\<Insert>\<Insert>"
+endfunction
+
+function! wildsearch#main#restore_statusline()
+  let &statusline = s:old_statusline
+  redrawstatus
 endfunction
 
 function! wildsearch#main#active()
