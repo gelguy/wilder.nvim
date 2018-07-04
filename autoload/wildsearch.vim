@@ -36,6 +36,11 @@ function! wildsearch#python_fuzzy_match(...)
   return wildsearch#pipeline#component#python_fuzzy_match#make(l:args)
 endfunction
 
+function! wildsearch#python_fuzzy_delimiter(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#pipeline#component#python_fuzzy_delimiter#make(l:args)
+endfunction
+
 function! wildsearch#python_search(...)
   let l:args = a:0 > 0 ? a:1 : {}
   return wildsearch#pipeline#component#python_search#make(l:args)
