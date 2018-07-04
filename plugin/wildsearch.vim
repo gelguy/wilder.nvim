@@ -1,5 +1,9 @@
 scriptencoding utf-8
 
+if &compatible
+  finish
+endif
+
 function! Shell(ctx, x)
   let l:args = {
         \ 'ctx': a:ctx,
