@@ -71,6 +71,11 @@ function! wildsearch#index(...)
   return wildsearch#render#component#index#make(l:args)
 endfunction
 
+function! wildsearch#spinner(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#render#component#spinner#make(l:args)
+endfunction
+
 function! wildsearch#string(str, ...)
   let l:res = {
         \ 'f': a:str,

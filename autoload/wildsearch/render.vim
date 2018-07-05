@@ -98,6 +98,18 @@ function! wildsearch#render#make_page_from_end(ctx, candidates, end)
   return [l:start, l:end]
 endfunction
 
+function! wildsearch#render#need_redraw(ctx, x)
+  for l:Component in s:left + s:right
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'need_redraw')
+      if l:Component.need_redraw(a:ctx, a:x)
+        return 1
+      endif
+    endif
+  endfor
+
+  return 0
+endfunction
+
 function! wildsearch#render#draw(ctx, candidates)
   let l:res = ''
 
@@ -173,19 +185,23 @@ endfunction
 function! wildsearch#render#draw_components(components, ctx, candidates)
   let l:res = ''
 
-  for l:component in a:components
-    if type(l:component) == v:t_string
-      let l:res .= '%#' . s:opts.hl . '#'
-      let l:res .= l:component
+  for l:Component in a:components
+    if type(l:Component) == v:t_func
+      let l:res .= l:Component(a:ctx, a:candidates)
+      continue
+    elseif type(l:Component) == v:t_string
+      let l:res .= l:Component
       continue
     endif
 
-    let l:res .= '%#' . get(l:component, 'hl', s:opts.hl) . '#'
+    if has_key(l:Component, 'hl')
+      let l:res .= '%#' . l:Component.hl . '#'
+    endif
 
-    if type(l:component.f) == v:t_func
-      let l:res .= l:component.f(a:ctx, a:candidates)
+    if type(l:Component.f) == v:t_func
+      let l:res .= l:Component.f(a:ctx, a:candidates)
     else
-      let l:res .= l:component.f
+      let l:res .= l:Component.f
     endif
   endfor
 
@@ -199,21 +215,22 @@ function! wildsearch#render#space_used(ctx, candidates)
 
   let l:len = 0
 
-  let l:components = s:left + s:right
-  for l:component in l:components
-    if type(l:component) == v:t_string
-      let l:len += strdisplaywidth(l:component)
-    elseif has_key(l:component, 'len')
-      if type(l:component.len) == v:t_func
-        let l:len += l:component.len(a:ctx, a:candidates)
+  for l:Component in s:left + s:right
+    if type(l:Component) == v:t_func
+      let l:len += strdisplaywidth(l:Component(a:ctx, a:candidates))
+    elseif type(l:Component) == v:t_string
+      let l:len += strdisplaywidth(l:Component)
+    elseif has_key(l:Component, 'len')
+      if type(l:Component.len) == v:t_func
+        let l:len += l:Component.len(a:ctx, a:candidates)
       else
-        let l:len += l:component.len
+        let l:len += l:Component.len
       endif
     else
-      if type(l:component.f) == v:t_func
-        let l:res = l:component.f(a:ctx, a:candidates)
+      if type(l:Component.f) == v:t_func
+        let l:res = l:Component.f(a:ctx, a:candidates)
       else
-        let l:res = l:component.f
+        let l:res = l:Component.f
       endif
 
       let l:len += strdisplaywidth(l:res)
@@ -328,7 +345,7 @@ function! wildsearch#render#to_printable(x)
 endfunction
 
 let s:high_control_characters = {
-      \ '': '<7F>',
+      \ '': '^?',
       \ '': '<80>',
       \ '': '<81>',
       \ '': '<82>',

@@ -101,14 +101,12 @@ function! wildsearch#pipeline#default()
           \ wildsearch#check_empty(),
           \ wildsearch#python_substring(),
           \ wildsearch#python_search(),
-          \ wildsearch#python_sort(),
           \ ]
   else
     return [
           \ wildsearch#check_empty(),
           \ wildsearch#vim_substring(),
           \ wildsearch#vim_search(),
-          \ wildsearch#vim_sort(),
           \ ]
   endif
 endfunction

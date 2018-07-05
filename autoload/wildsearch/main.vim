@@ -3,7 +3,7 @@ scriptencoding utf-8
 let s:auto = 0
 let s:active = 0
 let s:run_id = 0
-let s:result_run_id = 0
+let s:result_run_id = -1
 
 let s:candidates = []
 let s:selected = -1
@@ -12,6 +12,7 @@ let s:page = [-1, -1]
 
 let s:opts = {
       \ 'interval': 100,
+      \ 'pre_hook': 'wildsearch#main#save_statusline',
       \ 'post_hook': 'wildsearch#main#restore_statusline',
       \ }
 
@@ -70,7 +71,6 @@ function! wildsearch#main#start(...)
   let s:selected = -1
   let s:completion = ''
   let s:page = [-1, -1]
-  let s:old_statusline = &statusline
 
   if has_key(s:opts, 'pre_hook')
     if s:opts.post_hook ==# ''
@@ -143,6 +143,16 @@ function! wildsearch#main#do(...)
 
     call wildsearch#pipeline#start(l:ctx, l:input)
   endif
+
+  let l:ctx = {
+        \ 'selected': s:selected,
+        \ 'direction': 0,
+        \ 'done': s:run_id - 1 == s:result_run_id,
+        \ }
+
+  if l:is_new_input || wildsearch#render#need_redraw(l:ctx, s:candidates)
+    call wildsearch#main#draw()
+  endif
 endfunction
 
 function! wildsearch#main#on_finish(ctx, x)
@@ -183,6 +193,7 @@ function! wildsearch#main#draw(...)
   let l:ctx = {
         \ 'selected': s:selected,
         \ 'direction': l:direction,
+        \ 'done': s:run_id - 1 == s:result_run_id,
         \ }
 
   let l:space_used = wildsearch#render#space_used(l:ctx, s:candidates)
@@ -246,7 +257,15 @@ function! wildsearch#main#step(num_steps)
   return "\<Insert>\<Insert>"
 endfunction
 
+function! wildsearch#main#save_statusline()
+  let s:old_laststatus = &laststatus
+  let &laststatus = 2
+
+  let s:old_statusline = &statusline
+endfunction
+
 function! wildsearch#main#restore_statusline()
+  let &laststatus = s:old_laststatus
   let &statusline = s:old_statusline
   redrawstatus
 endfunction
