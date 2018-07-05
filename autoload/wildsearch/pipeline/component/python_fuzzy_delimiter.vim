@@ -10,7 +10,7 @@ function! s:make(args, ctx, x)
       let l:delimiter = a:args.delimiter(a:ctx, a:x)
     endif
   else
-    let l:delimiter = '[#_-]'
+    let l:delimiter = '[_-]'
   endif
 
   if has_key(a:args, 'word')
