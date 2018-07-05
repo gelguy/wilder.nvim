@@ -50,9 +50,9 @@ function! s:make(args, ctx, x)
     endif
 
     if !l:escaped && match(l:char, '[[:upper:]]') >= 0
-      let l:res .= '(?:' . l:char . '|(?:' . l:word . '*?(?:' . l:delimiter . '|' . l:char . ')))'
+      let l:res .= '(?:(?:' . l:word . '*?(?:' . l:delimiter . '|' . l:char . '))|' . l:char . ')'
     else
-      let l:res .= '(?:' . l:char . '|(?:' . l:word . '*?(?:' . l:delimiter . l:char . '|' . toupper(l:char) . ')))'
+      let l:res .= '(?:(?:' . l:word . '*?(?:' . l:delimiter . l:char . '|' . toupper(l:char) . '))|' . l:char . ')'
     endif
   endwhile
 
