@@ -158,7 +158,6 @@ function! wildsearch#main#on_finish(ctx, x)
 
   let s:candidates = a:x is v:false ? [] : a:x
   let s:selected = -1
-  let s:completion = ''
 
   call wildsearch#main#draw()
 endfunction
