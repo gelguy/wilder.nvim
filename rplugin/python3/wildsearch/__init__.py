@@ -54,7 +54,9 @@ class Wildsearch(object):
 
     @neovim.function('_wildsearch_init', sync=True, allow_nested=True)
     def init(self, args):
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        opts = args[0]
+
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=opts['num_workers'])
         t = threading.Thread(target=self.consumer, daemon=True)
         t.start()
 

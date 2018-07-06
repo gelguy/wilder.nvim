@@ -1,5 +1,6 @@
 scriptencoding utf-8
 
+let s:init = 0
 let s:auto = 0
 let s:active = 0
 let s:run_id = 0
@@ -15,6 +16,7 @@ let s:opts = {
       \ 'interval': 100,
       \ 'pre_hook': 'wildsearch#main#save_statusline',
       \ 'post_hook': 'wildsearch#main#restore_statusline',
+      \ 'num_workers': 2,
       \ }
 
 function! wildsearch#main#set_option(key, value)
@@ -65,6 +67,11 @@ function! wildsearch#main#stop_auto()
 endfunction
 
 function! wildsearch#main#start(...)
+  if has('nvim') && !s:init
+    let s:init = 1
+    call _wildsearch_init({'num_workers': s:opts.num_workers})
+  endif
+
   if !exists('s:timer')
     let s:timer = timer_start(s:opts.interval, function('wildsearch#main#do'), {'repeat': -1})
   endif

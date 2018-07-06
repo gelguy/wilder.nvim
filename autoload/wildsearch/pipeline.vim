@@ -48,11 +48,6 @@ function! wildsearch#pipeline#start(ctx, x)
     call wildsearch#pipeline#set_pipeline(wildsearch#pipeline#default())
   endif
 
-  if has('nvim') && !get(s:, 'wildsearch_init', 0)
-    let s:wildsearch_init = 1
-    call _wildsearch_init()
-  endif
-
   let l:ctx = copy(a:ctx)
   let l:ctx.fs = s:pipeline
   let l:ctx.input = a:x
