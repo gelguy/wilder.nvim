@@ -24,6 +24,10 @@ function! wildsearch#main#set_options(opts)
   let s:opts = extend(s:opts, a:opts)
 endfunction
 
+function! wildsearch#main#get_option(key)
+  return s:opts[a:key]
+endfunction
+
 function! wildsearch#main#in_context()
   return s:active && (getcmdtype() ==# '/' || getcmdtype() ==# '?')
 endfunction

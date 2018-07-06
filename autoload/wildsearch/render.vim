@@ -18,6 +18,10 @@ function! wildsearch#render#set_options(opts)
   let s:opts = extend(s:opts, a:opts)
 endfunction
 
+function! wildsearch#render#get_option(key)
+  return s:opts[a:key]
+endfunction
+
 function! wildsearch#render#make_page(ctx, candidates)
   if empty(a:candidates)
     return [-1, -1]
