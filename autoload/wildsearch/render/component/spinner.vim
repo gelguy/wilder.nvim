@@ -1,15 +1,20 @@
 function! wildsearch#render#component#spinner#make(args)
-  let l:chars = get(a:args, 'chars', ['/', '|', '\', '-'])
+  let l:chars = get(a:args, 'chars', ['-', '\', '|', '/'])
   if type(l:chars) == v:t_string
     let l:chars = split(l:chars, '\zs')
   endif
 
   let l:done = get(a:args, 'done', ' ')
+  let l:delay = get(a:args, 'delay', wildsearch#main#get_option('interval') * 2)
 
   let l:state = {
         \ 'chars': l:chars,
         \ 'index': 0,
         \ 'done': l:done,
+        \ 'delay': l:delay,
+        \ 'current_char': l:done,
+        \ 'was_done': 1,
+        \ 'start_time': reltime(),
         \ }
 
   let l:res = {
@@ -27,13 +32,28 @@ endfunction
 
 function! s:get_char(state, ctx, candidates)
   if a:ctx.done
+    let a:state.was_done = 1
+    let a:state.current_char = a:state.done
     return a:state.done
   endif
 
+  if a:state.was_done == 1
+    let a:state.start_time = reltime()
+    let a:state.was_done = 0
+  endif
+
+  if reltimefloat(reltime(a:state.start_time)) < (a:state.delay / 1000.0)
+    let a:state.current_char = a:state.done
+    return a:state.done
+  endif
+
+  " set current_char here so it is consistent with the actual render char
+  " due to reltime(), the char might be changed since len is called earlier
+  let a:state.index = (a:state.index + 1) % len(a:state.chars)
+  let a:state.current_char = a:state.chars[a:state.index]
   return a:state.chars[a:state.index]
 endfunction
 
 function! s:spinner(state, ctx, candidates)
-  let a:state.index = (a:state.index + 1) % len(a:state.chars)
-  return s:get_char(a:state, a:ctx, a:candidates)
+  return a:state.current_char
 endfunction
