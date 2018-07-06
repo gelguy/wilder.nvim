@@ -4,6 +4,7 @@ let s:auto = 0
 let s:active = 0
 let s:run_id = 0
 let s:result_run_id = -1
+let s:draw_done = 0
 
 let s:candidates = []
 let s:selected = -1
@@ -133,6 +134,8 @@ function! wildsearch#main#do(...)
     " return
   " endif
 
+  let s:draw_done = 0
+
   if !l:has_completion && (l:input_changed || l:is_new_input)
     let s:previous_cmdline = l:input
 
@@ -154,7 +157,7 @@ function! wildsearch#main#do(...)
         \ 'done': s:run_id - 1 == s:result_run_id,
         \ }
 
-  if l:is_new_input || wildsearch#render#need_redraw(l:ctx, s:candidates)
+  if !s:draw_done && (l:is_new_input || wildsearch#render#need_redraw(l:ctx, s:candidates))
     call wildsearch#main#draw()
   endif
 endfunction
@@ -192,6 +195,8 @@ function! wildsearch#main#on_error(ctx, x)
 endfunction
 
 function! wildsearch#main#draw(...)
+  let s:draw_done = 1
+
   let l:direction = a:0 == 0 ? 0 : a:1
 
   let l:ctx = {
