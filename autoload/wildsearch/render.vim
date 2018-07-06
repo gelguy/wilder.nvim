@@ -104,8 +104,8 @@ endfunction
 
 function! wildsearch#render#need_redraw(ctx, x)
   for l:Component in s:left + s:right
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'need_redraw')
-      if l:Component.need_redraw(a:ctx, a:x)
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'redraw')
+      if l:Component.redraw(a:ctx, a:x)
         return 1
       endif
     endif
@@ -202,10 +202,10 @@ function! wildsearch#render#draw_components(components, ctx, candidates)
       let l:res .= '%#' . l:Component.hl . '#'
     endif
 
-    if type(l:Component.f) == v:t_func
-      let l:res .= l:Component.f(a:ctx, a:candidates)
+    if type(l:Component.stl) == v:t_func
+      let l:res .= l:Component.stl(a:ctx, a:candidates)
     else
-      let l:res .= l:Component.f
+      let l:res .= l:Component.stl
     endif
   endfor
 
@@ -231,10 +231,10 @@ function! wildsearch#render#space_used(ctx, candidates)
         let l:len += l:Component.len
       endif
     else
-      if type(l:Component.f) == v:t_func
-        let l:res = l:Component.f(a:ctx, a:candidates)
+      if type(l:Component.stl) == v:t_func
+        let l:res = l:Component.stl(a:ctx, a:candidates)
       else
-        let l:res = l:Component.f
+        let l:res = l:Component.stl
       endif
 
       let l:len += strdisplaywidth(l:res)

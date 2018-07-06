@@ -1,6 +1,6 @@
 function! wildsearch#render#component#arrows#make_previous(args)
   let l:res = {
-        \ 'f': {ctx, candidates -> s:left(ctx, candidates)},
+        \ 'stl': {ctx, candidates -> s:left(ctx, candidates)},
         \ 'len': 2,
         \ }
 
@@ -13,7 +13,7 @@ endfunction
 
 function! wildsearch#render#component#arrows#make_next(args)
   let l:res = {
-        \ 'f': {ctx, candidates -> s:right(ctx, candidates)},
+        \ 'stl': {ctx, candidates -> s:right(ctx, candidates)},
         \ 'len': 3,
         \ }
 

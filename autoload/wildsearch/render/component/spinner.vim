@@ -18,9 +18,9 @@ function! wildsearch#render#component#spinner#make(args)
         \ }
 
   let l:res = {
-        \ 'f': {ctx, x -> s:spinner(l:state, ctx, x)},
+        \ 'stl': {ctx, x -> s:spinner(l:state, ctx, x)},
         \ 'len': {ctx, x -> strdisplaywidth(s:get_char(l:state, ctx, x))},
-        \ 'need_redraw': {ctx, x -> !ctx.done},
+        \ 'redraw': {ctx, x -> !ctx.done},
         \ }
 
   if has_key(a:args, 'hl')

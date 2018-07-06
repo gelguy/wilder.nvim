@@ -14,7 +14,7 @@ function! wildsearch#check(...)
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
 
-function! wildsearch#check_empty()
+function! wildsearch#check_not_empty()
   return {_, x -> empty(x) ? v:false : x}
 endfunction
 
@@ -82,7 +82,7 @@ endfunction
 
 function! wildsearch#string(str, ...)
   let l:res = {
-        \ 'f': a:str,
+        \ 'stl': a:str,
         \ }
 
   if a:0 > 0
@@ -101,7 +101,7 @@ function! wildsearch#separator(str, from_hl, to_hl)
   let l:hl_name = wildsearch#render#make_hl(l:colors)
 
   return {
-        \ 'f': a:str,
+        \ 'stl': a:str,
         \ 'hl': l:hl_name,
         \ }
 endfunction

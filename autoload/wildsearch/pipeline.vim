@@ -93,13 +93,13 @@ endfunction
 function! wildsearch#pipeline#default()
   if has('nvim')
     return [
-          \ wildsearch#check_empty(),
+          \ wildsearch#check_not_empty(),
           \ wildsearch#python_substring(),
           \ wildsearch#python_search(),
           \ ]
   else
     return [
-          \ wildsearch#check_empty(),
+          \ wildsearch#check_not_empty(),
           \ wildsearch#vim_substring(),
           \ wildsearch#vim_search(),
           \ ]
