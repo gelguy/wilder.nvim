@@ -269,8 +269,7 @@ function! wildsearch#main#step(num_steps)
     call feedkeys(l:keys, 'n')
   endif
 
-  " returning '' seems to prevent the async completions from finishing
-  return "\<Insert>\<Insert>"
+  return ''
 endfunction
 
 function! wildsearch#main#save_statusline()
