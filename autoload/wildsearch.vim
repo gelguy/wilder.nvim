@@ -6,6 +6,10 @@ function! wildsearch#branch(...)
   return wildsearch#pipeline#component#branch#make(a:000)
 endfunction
 
+function! wildsearch#concat(...)
+  return wildsearch#pipeline#component#concat#make(a:000)
+endfunction
+
 function! wildsearch#check(...)
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
