@@ -93,17 +93,7 @@ function! wildsearch#string(str, ...)
 endfunction
 
 function! wildsearch#separator(str, from_hl, to_hl)
-  let l:from_bg = wildsearch#render#get_background_colors(a:from_hl)
-  let l:to_bg = wildsearch#render#get_background_colors(a:to_hl)
-
-  let l:colors = [[l:from_bg[0], l:to_bg[0]], [l:from_bg[1], l:to_bg[1]]]
-
-  let l:hl_name = wildsearch#render#make_hl(l:colors)
-
-  return {
-        \ 'stl': a:str,
-        \ 'hl': l:hl_name,
-        \ }
+  return wildsearch#render#component#separator#make(a:str, a:from_hl, a:to_hl)
 endfunction
 
 function! wildsearch#previous_arrow(...)

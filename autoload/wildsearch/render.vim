@@ -1,6 +1,5 @@
 scriptencoding utf-8
 
-let s:hl_index = 0
 let s:hl_map = {}
 
 let s:opts = {
@@ -245,26 +244,59 @@ function! wildsearch#render#space_used(ctx, candidates)
 endfunction
 
 function! wildsearch#render#set_components(args)
-  let s:left = a:args.left
-  let s:right = a:args.right
+  let s:left = wildsearch#render#check_hl_func(a:args.left)
+  let s:right = wildsearch#render#check_hl_func(a:args.right)
+endfunction
+
+function! wildsearch#render#check_hl_func(components)
+  let l:components = copy(a:components)
+
+  for l:Component in l:components
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'hl') && type(l:Component.hl) == v:t_func
+      let l:Component.make_hl = l:Component.hl
+      let l:Component.hl = ''
+    endif
+  endfor
+
+  return l:components
 endfunction
 
 function! wildsearch#render#exe_hl()
-  for l:hl_name in keys(s:hl_map)
-    exe s:hl_map[l:hl_name]
+  for l:key in keys(s:hl_map)
+    exe s:hl_map[l:key]
+  endfor
+
+  for l:Component in s:left + s:right
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'make_hl')
+      let l:Component.hl = l:Component.make_hl()
+    endif
+  endfor
+
+  for l:key in keys(s:hl_map)
+    exe s:hl_map[l:key]
   endfor
 endfunction
 
-function! wildsearch#render#make_hl(args)
+function! wildsearch#render#make_hl(name, args)
+  let l:type = type(a:args)
+  if l:type == v:t_string
+    return wildsearch#render#make_hl_from_string(a:name, a:args)
+  else
+    return wildsearch#render#make_hl_from_list(a:name, a:args)
+  endif
+endfunction
+
+function! wildsearch#render#make_hl_from_string(name, args)
+  let l:cmd = 'hi! ' . a:name . ' link ' . a:args
+endfunction
+
+function! wildsearch#render#make_hl_from_list(name, args)
   let l:ctermfg = a:args[0][0]
   let l:ctermbg = a:args[0][1]
   let l:guifg = a:args[1][0]
   let l:guibg = a:args[1][1]
 
-  let l:hl_name = 'Wildsearch_' . s:hl_index
-  let s:hl_index += 1
-
-  let l:cmd = 'hi ' . l:hl_name . ' '
+  let l:cmd = 'hi! ' . a:name . ' '
 
   if len(a:args[0]) > 2
     let l:cmd .= 'cterm=' . a:args[0][2] . ' '
@@ -280,35 +312,37 @@ function! wildsearch#render#make_hl(args)
   let l:cmd .= 'guifg=' . l:guifg . ' '
   let l:cmd .= 'guibg=' . l:guibg
 
-  exe l:cmd
-
-  let s:hl_map[l:hl_name] = l:cmd
-  return l:hl_name
+  let s:hl_map[a:name] = l:cmd
+  return a:name
 endfunction
 
-function! wildsearch#render#get_background_colors(group, ) abort
-  redir => l:highlight
-  silent execute 'silent highlight ' . a:group
-  redir END
+function! wildsearch#render#get_background_colors(group) abort
+  try
+    redir => l:highlight
+    silent execute 'silent highlight ' . a:group
+    redir END
 
-  let l:link_matches = matchlist(l:highlight, 'links to \(\S\+\)')
-  if len(l:link_matches) > 0 " follow the link
-    return wildsearch#render#get_background_colors(l:link_matches[1])
-  endif
+    let l:link_matches = matchlist(l:highlight, 'links to \(\S\+\)')
+    if len(l:link_matches) > 0 " follow the link
+      return wildsearch#render#get_background_colors(l:link_matches[1])
+    endif
 
-  if !empty(matchlist(l:highlight, 'cterm=\S\*reverse\S\*'))
-    let l:ctermbg = wildsearch#render#match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
-  else
-    let l:ctermbg = wildsearch#render#match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
-  endif
+    if !empty(matchlist(l:highlight, 'cterm=\S\*reverse\S\*'))
+      let l:ctermbg = wildsearch#render#match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
+    else
+      let l:ctermbg = wildsearch#render#match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
+    endif
 
-  if !empty(matchlist(l:highlight, 'gui=\S*reverse\S*'))
-    let l:guibg = wildsearch#render#match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
-  else
-    let l:guibg = wildsearch#render#match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
-  endif
+    if !empty(matchlist(l:highlight, 'gui=\S*reverse\S*'))
+      let l:guibg = wildsearch#render#match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
+    else
+      let l:guibg = wildsearch#render#match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
+    endif
 
-  return [l:ctermbg, l:guibg]
+    return [l:ctermbg, l:guibg]
+  catch
+    return ['NONE', 'NONE']
+  endtry
 endfunction
 
 function! wildsearch#render#match_highlight(highlight, pattern) abort
@@ -320,12 +354,10 @@ function! wildsearch#render#match_highlight(highlight, pattern) abort
 endfunction
 
 function! wildsearch#render#default()
-  let l:search_hl = wildsearch#render#make_hl([[0, 0], ['#fdf6e3', '#b58900', 'bold']])
   return {
         \ 'left': [wildsearch#previous_arrow()],
         \ 'right': [wildsearch#next_arrow()],
         \ }
-        " \ 'left': [wildsearch#string(' SEARCH ', l:search_hl), wildsearch#separator('', l:search_hl, 'StatusLine'), ' '],
 endfunction
 
 function! wildsearch#render#to_printable(x)

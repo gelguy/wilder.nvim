@@ -76,8 +76,6 @@ function! wildsearch#main#start(...)
     let s:timer = timer_start(s:opts.interval, function('wildsearch#main#do'), {'repeat': -1})
   endif
 
-  call wildsearch#render#exe_hl()
-
   let s:active = 1
   let s:candidates = []
   let s:selected = -1
@@ -94,6 +92,7 @@ function! wildsearch#main#start(...)
     endif
   endif
 
+  call wildsearch#render#exe_hl()
   call wildsearch#main#do()
 endfunction
 
@@ -182,6 +181,7 @@ function! wildsearch#main#on_finish(ctx, x)
 
   let s:candidates = a:x is v:false ? [] : a:x
   let s:selected = -1
+  " keep previous completion
 
   call wildsearch#main#draw()
 endfunction
