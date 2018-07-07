@@ -40,8 +40,8 @@ function! wildsearch#main#enable_auto(...)
   if !exists('#Wildsearch')
     augroup Wildsearch
       autocmd!
-      autocmd CmdlineEnter * call wildsearch#main#start_auto()
-      autocmd CmdlineLeave * call wildsearch#main#stop_auto()
+      autocmd CmdlineEnter * call wildsearch#main#start_auto(expand('<afile>'))
+      autocmd CmdlineLeave * call wildsearch#main#stop_auto(expand('<afile>'))
     augroup END
   endif
 endfunction
@@ -55,29 +55,17 @@ function! wildsearch#main#disable_auto()
   endif
 endfunction
 
-function! wildsearch#main#start_auto()
-  let s:auto = 1
-
-  call wildsearch#main#start()
-endfunction
-
-function! wildsearch#main#stop_auto()
-  if !s:active
+function! wildsearch#main#start_auto(cmdtype)
+  if index(s:modes, a:cmdtype) == -1
     return
   endif
 
-  let s:auto = 0
+  let s:auto = 1
 
-  call wildsearch#main#stop()
+  call s:start()
 endfunction
 
-function! wildsearch#main#start_manual()
-  call wildsearch#main#start(0)
-
-  return ''
-endfunction
-
-function! wildsearch#main#start(...)
+function! s:start(...)
   if has('nvim') && !s:init
     let s:init = 1
     call _wildsearch_init({'num_workers': s:opts.num_workers})
@@ -85,7 +73,7 @@ function! wildsearch#main#start(...)
 
   if !exists('s:timer')
     let s:timer = timer_start(s:opts.interval,
-          \ {_ -> wildsearch#main#do_with_check_context()}, {'repeat': -1})
+          \ {_ -> s:do_with_check()}, {'repeat': -1})
   endif
 
   let s:active = 1
@@ -97,10 +85,10 @@ function! wildsearch#main#start(...)
   if has_key(s:opts, 'pre_hook')
     if s:opts.post_hook ==# ''
       " pass
-    elseif type(s:opts.pre_hook) == v:t_string
-      call function(s:opts.pre_hook)()
-    else
+    elseif type(s:opts.pre_hook) == v:t_func
       call s:opts.pre_hook()
+    else
+      call function(s:opts.pre_hook)()
     endif
   endif
 
@@ -109,13 +97,31 @@ function! wildsearch#main#start(...)
 
   let l:check = a:0 > 0 ? a:1 : 1
   if l:check
-    call wildsearch#main#do_with_check_context()
+    call s:do_with_check()
   else
-    call wildsearch#main#do()
+    call s:do()
   endif
 endfunction
 
-function! wildsearch#main#stop()
+function! wildsearch#main#stop_auto(cmdtype)
+  if index(s:modes, a:cmdtype) == -1
+    " exiting from nested cmdline e.g. <C-R>=
+    if index(s:modes, getcmdtype()) >= 0 && !s:active
+      call wildsearch#main#start_auto(getcmdtype())
+    endif
+    return
+  endif
+
+  if !s:active
+    return
+  endif
+
+  let s:auto = 0
+
+  call s:stop()
+endfunction
+
+function! s:stop()
   if exists('s:timer')
     call timer_stop(s:timer)
     unlet s:timer
@@ -130,24 +136,24 @@ function! wildsearch#main#stop()
   if has_key(s:opts, 'post_hook')
     if s:opts.post_hook ==# ''
       " pass
-    elseif type(s:opts.post_hook) == v:t_string
-      call function(s:opts.post_hook)()
-    else
+    elseif type(s:opts.post_hook) == v:t_func
       call s:opts.post_hook()
+    else
+      call function(s:opts.post_hook)()
     endif
   endif
 endfunction
 
-function! wildsearch#main#do_with_check_context()
+function! s:do_with_check()
   if !wildsearch#main#in_context()
-    call wildsearch#main#stop()
+    call s:stop()
     return
   endif
 
-  call wildsearch#main#do()
+  call s:do()
 endfunction
 
-function! wildsearch#main#do()
+function! s:do()
   if !s:active
     return
   endif
@@ -157,11 +163,6 @@ function! wildsearch#main#do()
   let l:has_completion = !empty(s:completion) && l:input ==# s:completion
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
-
-  " if !s:auto && !l:has_completion && l:input_changed
-    " call wildsearch#main#stop()
-    " return
-  " endif
 
   let s:draw_done = 0
 
@@ -186,7 +187,7 @@ function! wildsearch#main#do()
         \ }
 
   if !s:draw_done && (l:is_new_input || wildsearch#render#need_redraw(l:ctx, s:candidates))
-    call wildsearch#main#draw()
+    call s:draw()
   endif
 endfunction
 
@@ -205,7 +206,7 @@ function! wildsearch#main#on_finish(ctx, x)
   let s:selected = -1
   " keep previous completion
 
-  call wildsearch#main#draw()
+  call s:draw()
 endfunction
 
 function! wildsearch#main#on_error(ctx, x)
@@ -223,7 +224,8 @@ function! wildsearch#main#on_error(ctx, x)
   redrawstatus
 endfunction
 
-function! wildsearch#main#draw(...)
+let g:a = []
+function! s:draw(...)
   let s:draw_done = 1
 
   let l:direction = a:0 == 0 ? 0 : a:1
@@ -245,6 +247,12 @@ function! wildsearch#main#draw(...)
 
   call setwinvar(0, '&statusline', l:statusline)
   redrawstatus
+endfunction
+
+function! wildsearch#main#profile()
+  for l:a in g:a
+    echom l:a
+  endfor
 endfunction
 
 function! wildsearch#main#step(num_steps)
@@ -270,7 +278,7 @@ function! wildsearch#main#step(num_steps)
     let s:completion = s:candidates[s:selected]
   endif
 
-  call wildsearch#main#draw(a:num_steps)
+  call s:draw(a:num_steps)
 
   if s:selected != -1
     let l:keys = "\<C-E>\<C-U>"

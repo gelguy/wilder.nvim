@@ -31,6 +31,10 @@ function! wildsearch#vim_sort()
   return {_, x -> sort(copy(x))}
 endfunction
 
+function! wildsearch#vim_uniq()
+  return wildsearch#pipeline#component#vim_uniq#make()
+endfunction
+
 function! wildsearch#python_substring()
   return {_, x -> x . '\w*'}
 endfunction

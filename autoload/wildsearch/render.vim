@@ -45,62 +45,86 @@ function! wildsearch#render#make_page(ctx, candidates)
   let l:selected = l:selected == -1 ? 0 : l:selected
 
   if l:page == [-1, -1]
-    return wildsearch#render#make_page_from_start(a:ctx, a:candidates, l:selected)
+    return s:make_page_from_start(a:ctx, a:candidates, l:selected)
   endif
 
   if l:direction < 0
-    return wildsearch#render#make_page_from_end(a:ctx, a:candidates, l:selected)
+    return s:make_page_from_end(a:ctx, a:candidates, l:selected)
   endif
 
-  return wildsearch#render#make_page_from_start(a:ctx, a:candidates, l:selected)
+  return s:make_page_from_start(a:ctx, a:candidates, l:selected)
 endfunction
 
-function! wildsearch#render#make_page_from_start(ctx, candidates, start)
+function! s:make_page_from_start(ctx, candidates, start)
   let l:space = a:ctx.space
   let l:separator = s:opts.separator
 
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start]))
+  let l:width = strdisplaywidth(s:to_printable(a:candidates[l:start]))
   let l:space = l:space - l:width
-  let l:separator_width = strdisplaywidth(wildsearch#render#to_printable(l:separator))
+  let l:separator_width = strdisplaywidth(s:to_printable(l:separator))
 
-  while l:end + 1 < len(a:candidates) &&
-        \ l:space > strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
-    let l:space -= strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
+  while 1
+    if l:end + 1 >= len(a:candidates)
+      break
+    endif
 
+    let l:width = strdisplaywidth(s:to_printable(a:candidates[l:end + 1]))
+
+    if l:width + l:separator_width > l:space
+      break
+    endif
+
+    let l:space -= l:width + l:separator_width
     let l:end += 1
   endwhile
 
   return [l:start, l:end]
 endfunction
 
-function! wildsearch#render#make_page_from_end(ctx, candidates, end)
+function! s:make_page_from_end(ctx, candidates, end)
   let l:space = a:ctx.space
-  let l:separator = wildsearch#render#to_printable(s:opts.separator)
+  let l:separator = s:to_printable(s:opts.separator)
 
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start]))
+  let l:width = strdisplaywidth(s:to_printable(a:candidates[l:start]))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(l:separator)
 
-  while l:start - 1 >= 0 &&
-        \ l:space > strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start - 1])) + l:separator_width
-    let l:space -= strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:start - 1])) + l:separator_width
+  while 1
+    if l:start - 1 < 0
+      break
+    endif
 
+    let l:width = strdisplaywidth(s:to_printable(a:candidates[l:start - 1]))
+
+    if l:width + l:separator_width > l:space
+      break
+    endif
+
+    let l:space -= l:width + l:separator_width
     let l:start -= 1
   endwhile
 
   " moving from page [5,10] ends in [0,4]
   " but there might be leftover space, so we increase l:end to fill up the
   " space e.g. to [0,6]
-  while l:end +1 < len(a:candidates) &&
-        \ l:space > strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
-    let l:space -= strdisplaywidth(wildsearch#render#to_printable(a:candidates[l:end + 1])) + l:separator_width
+  while 1
+    if l:end + 1 >= len(a:candidates)
+      break
+    endif
 
+    let l:width = strdisplaywidth(s:to_printable(a:candidates[l:end + 1]))
+
+    if l:width + l:separator_width > l:space
+      break
+    endif
+
+    let l:space -= l:width + l:separator_width
     let l:end += 1
   endwhile
 
@@ -122,18 +146,19 @@ endfunction
 function! wildsearch#render#draw(ctx, candidates)
   let l:res = ''
 
-  let l:res .= wildsearch#render#draw_components(s:left, a:ctx, a:candidates)
-  let l:res .= wildsearch#render#draw_candidates(a:ctx, a:candidates)
-  let l:res .= wildsearch#render#draw_components(s:right, a:ctx, a:candidates)
+  let l:res .= s:draw_components(s:left, a:ctx, a:candidates)
+  let l:res .= s:draw_candidates(a:ctx, a:candidates)
+  let l:res .= s:draw_components(s:right, a:ctx, a:candidates)
 
   return l:res
 endfunction
 
-function! wildsearch#render#draw_candidates(ctx, candidates)
+function! s:draw_candidates(ctx, candidates)
+  let s:cmdline = getcmdline()
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = wildsearch#render#to_printable(s:opts.separator)
+  let l:separator = s:to_printable(s:opts.separator)
 
   if l:page == [-1, -1]
     return '%#' . s:opts.hl . '#' . repeat(' ', l:space)
@@ -144,10 +169,10 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
 
   " only 1 candidate, possible that it exceeds l:space
   if l:start == l:end
-    let l:candidate = wildsearch#render#to_printable(a:candidates[l:start])
+    let l:candidate = s:to_printable(a:candidates[l:start])
 
     if len(l:candidate) > l:space
-      let l:ellipsis = wildsearch#render#to_printable(s:opts.ellipsis)
+      let l:ellipsis = s:to_printable(s:opts.ellipsis)
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
       let g:_wildsearch_candidates = [l:candidate[:l:space_minus_ellipsis - 1] . l:ellipsis]
@@ -164,7 +189,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
     endif
   endif
 
-  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> wildsearch#render#to_printable(x)})
+  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> s:to_printable(x)})
 
   let l:current = l:start
   let l:res = '%#' . s:opts.hl . '#'
@@ -191,7 +216,7 @@ function! wildsearch#render#draw_candidates(ctx, candidates)
   return l:res . repeat(' ', l:space - l:len)
 endfunction
 
-function! wildsearch#render#draw_components(components, ctx, candidates)
+function! s:draw_components(components, ctx, candidates)
   let l:res = ''
 
   for l:Component in a:components
@@ -246,11 +271,11 @@ function! wildsearch#render#space_used(ctx, candidates)
 endfunction
 
 function! wildsearch#render#set_components(args)
-  let s:left = wildsearch#render#check_hl_func(a:args.left)
-  let s:right = wildsearch#render#check_hl_func(a:args.right)
+  let s:left = s:check_hl_func(a:args.left)
+  let s:right = s:check_hl_func(a:args.right)
 endfunction
 
-function! wildsearch#render#check_hl_func(components)
+function! s:check_hl_func(components)
   let l:components = copy(a:components)
 
   for l:Component in l:components
@@ -264,6 +289,8 @@ function! wildsearch#render#check_hl_func(components)
 endfunction
 
 function! wildsearch#render#exe_hl()
+  " exe before and after components since there might be components which
+  " depend on existing highlights
   for l:key in keys(s:hl_map)
     exe s:hl_map[l:key]
   endfor
@@ -281,18 +308,21 @@ endfunction
 
 function! wildsearch#render#make_hl(name, args)
   let l:type = type(a:args)
-  if l:type == v:t_string
-    return wildsearch#render#make_hl_from_string(a:name, a:args)
+  if l:type == v:t_list
+    return s:make_hl_from_list(a:name, a:args)
   else
-    return wildsearch#render#make_hl_from_list(a:name, a:args)
+    return s:make_hl_from_string(a:name, a:args)
   endif
 endfunction
 
-function! wildsearch#render#make_hl_from_string(name, args)
+function! s:make_hl_from_string(name, args)
   let l:cmd = 'hi! ' . a:name . ' link ' . a:args
+
+  let s:hl_map[a:name] = l:cmd
+  return a:name
 endfunction
 
-function! wildsearch#render#make_hl_from_list(name, args)
+function! s:make_hl_from_list(name, args)
   let l:ctermfg = a:args[0][0]
   let l:ctermbg = a:args[0][1]
   let l:guifg = a:args[1][0]
@@ -318,7 +348,50 @@ function! wildsearch#render#make_hl_from_list(name, args)
   return a:name
 endfunction
 
-function! wildsearch#render#get_background_colors(group) abort
+function! wildsearch#render#get_colors(group)
+  if has('nvim')
+    return wildsearch#render#get_colors_nvim(a:group)
+  else
+    return wildsearch#render#get_colors_vim(a:group)
+  endif
+endfunction
+
+function! wildsearch#render#get_colors_nvim(group)
+  try
+    let l:cterm_colors = nvim_get_hl_by_name(a:group, 0)
+    let l:gui_colors = nvim_get_hl_by_name(a:group, 1)
+
+    if get(l:cterm_colors, 'reverse', 0)
+      let l:cterm_res = [get(l:cterm_colors, 'background', 'NONE'), get(l:cterm_colors, 'foreground', 'NONE')]
+    else
+      let l:cterm_res = [get(l:cterm_colors, 'foreground', 'NONE'), get(l:cterm_colors, 'background', 'NONE')]
+    endif
+
+    if has_key(l:gui_colors, 'foreground')
+      let l:gui_fg = printf('#%06x', l:gui_colors.foreground)
+    else
+      let l:gui_fg = 'NONE'
+    endif
+
+    if has_key(l:gui_colors, 'background')
+      let l:gui_bg = printf('#%06x', l:gui_colors.background)
+    else
+      let l:gui_bg = 'NONE'
+    endif
+
+    if has_key(l:gui_colors, 'reverse')
+      let l:gui_res = [l:gui_bg, l:gui_fg]
+    else
+      let l:gui_res = [l:gui_fg, l:gui_bg]
+    endif
+
+    return [l:cterm_res, l:gui_res]
+  catch
+    return [['NONE', 'NONE'], ['NONE', 'NONE']]
+  endtry
+endfunction
+
+function! wildsearch#render#get_colors_vim(group) abort
   try
     redir => l:highlight
     silent execute 'silent highlight ' . a:group
@@ -330,24 +403,28 @@ function! wildsearch#render#get_background_colors(group) abort
     endif
 
     if !empty(matchlist(l:highlight, 'cterm=\S\*reverse\S\*'))
-      let l:ctermbg = wildsearch#render#match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
+      let l:ctermfg = s:match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
+      let l:ctermbg = s:match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
     else
-      let l:ctermbg = wildsearch#render#match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
+      let l:ctermfg = s:match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
+      let l:ctermbg = s:match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
     endif
 
     if !empty(matchlist(l:highlight, 'gui=\S*reverse\S*'))
-      let l:guibg = wildsearch#render#match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
+      let l:guifg = s:match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
+      let l:guibg = s:match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
     else
-      let l:guibg = wildsearch#render#match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
+      let l:guifg = s:match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
+      let l:guibg = s:match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
     endif
 
-    return [l:ctermbg, l:guibg]
+    return [[l:ctermfg, l:ctermbg], [l:guifg, l:guibg]]
   catch
-    return ['NONE', 'NONE']
+    return [['NONE', 'NONE'], ['NONE', 'NONE']]
   endtry
 endfunction
 
-function! wildsearch#render#match_highlight(highlight, pattern) abort
+function! s:match_highlight(highlight, pattern) abort
   let l:matches = matchlist(a:highlight, a:pattern)
   if len(l:matches) == 0
     return 'NONE'
@@ -362,7 +439,7 @@ function! wildsearch#render#default()
         \ }
 endfunction
 
-function! wildsearch#render#to_printable(x)
+function! s:to_printable(x)
   let l:res = ''
 
   let l:len = strchars(a:x)

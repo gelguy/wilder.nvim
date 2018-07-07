@@ -17,7 +17,7 @@ endfunction
 
 function! wildsearch#pipeline#register_func(f)
   let s:func_index += 1
-  let s:funcs[s:func_index] = type(a:f) == v:t_string ? function(a:f) : a:f
+  let s:funcs[s:func_index] = type(a:f) == v:t_func ? a:f : function(a:f)
   return s:func_index
 endfunction
 

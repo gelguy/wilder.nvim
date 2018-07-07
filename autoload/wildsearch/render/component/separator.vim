@@ -13,10 +13,10 @@ function! wildsearch#render#component#separator#make(str, from_hl, to_hl)
 endfunction
 
 function! s:hl(name, from_hl, to_hl)
-  let l:from_bg = wildsearch#render#get_background_colors(a:from_hl)
-  let l:to_bg = wildsearch#render#get_background_colors(a:to_hl)
+  let l:from = wildsearch#render#get_colors(a:from_hl)
+  let l:to = wildsearch#render#get_colors(a:to_hl)
 
-  let l:colors = [[l:from_bg[0], l:to_bg[0]], [l:from_bg[1], l:to_bg[1]]]
+  let l:colors = [[l:from[0][1], l:to[0][1]], [l:from[1][1], l:to[1][1]]]
 
   return wildsearch#render#make_hl(a:name, l:colors)
 endfunction
