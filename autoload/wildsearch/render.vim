@@ -442,19 +442,15 @@ endfunction
 function! s:to_printable(x)
   let l:res = ''
 
-  let l:len = strchars(a:x)
-  let l:i = 0
-  while l:i < l:len
-    let l:char = strcharpart(a:x, l:i, 1)
+  for l:char in split(a:x, '\zs')
     if has_key(s:high_control_characters, l:char)
       let l:char = s:high_control_characters[l:char]
-    elseif match(l:char, '[\x00-\x1F]') >= 0
+    elseif l:char <# ' '
       let l:char = strtrans(l:char)
     endif
 
     let l:res .= l:char
-    let l:i += 1
-  endwhile
+  endfor
 
   return l:res
 endfunction

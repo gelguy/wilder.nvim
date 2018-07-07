@@ -24,7 +24,8 @@ function! s:make(args, ctx, x)
   endif
 
   let l:res = ''
-  let l:len = strchars(a:x)
+  let l:chars = split(a:x, '\zs')
+  let l:len = len(l:chars)
 
   if l:len == 0
   endif
@@ -32,10 +33,10 @@ function! s:make(args, ctx, x)
   let l:first = 1
   let l:i = 0
   while l:i < l:len
-    let l:char = strcharpart(a:x, l:i, 1)
+    let l:char = l:chars[l:i]
 
     if l:char ==# '\'
-      let l:char = strcharpart(a:x, l:i, 2)
+      let l:char .= l:chars[l:i+1]
       let l:i += 2
       let l:escaped = 1
     else

@@ -106,6 +106,7 @@ endfunction
 function! wildsearch#main#stop_auto(cmdtype)
   if index(s:modes, a:cmdtype) == -1
     " exiting from nested cmdline e.g. <C-R>=
+    " only works if nested mode is cancelled
     if index(s:modes, getcmdtype()) >= 0 && !s:active
       call wildsearch#main#start_auto(getcmdtype())
     endif
@@ -224,7 +225,6 @@ function! wildsearch#main#on_error(ctx, x)
   redrawstatus
 endfunction
 
-let g:a = []
 function! s:draw(...)
   let s:draw_done = 1
 
@@ -247,12 +247,6 @@ function! s:draw(...)
 
   call setwinvar(0, '&statusline', l:statusline)
   redrawstatus
-endfunction
-
-function! wildsearch#main#profile()
-  for l:a in g:a
-    echom l:a
-  endfor
 endfunction
 
 function! wildsearch#main#step(num_steps)

@@ -14,14 +14,15 @@ function! s:fuzzy_match(args, ctx, x)
   endif
 
   let l:res = ''
-  let l:len = strchars(a:x)
+  let l:chars = split(a:x, '\zs')
+  let l:len = len(l:chars)
 
   let l:i = 0
   while l:i < l:len
-    let l:char = strcharpart(a:x, l:i, 1)
+    let l:char = l:chars[l:i]
 
     if l:char ==# '\'
-      let l:res .= strcharpart(a:x, l:i, 2)
+      let l:res .= l:chars[l:i+1]
       let l:i += 2
     else
       let l:res .= l:char
