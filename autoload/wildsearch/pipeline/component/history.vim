@@ -4,7 +4,9 @@ function! wildsearch#pipeline#component#history#make(...)
 endfunction
 
 function! s:history(num_history)
-  let l:max = histnr('/')
+  let l:cmdtype = getcmdtype()
+
+  let l:max = histnr(l:cmdtype)
   if a:num_history <= 0
     let l:num_history = l:max
   else
@@ -15,7 +17,7 @@ function! s:history(num_history)
 
   let l:i = 0
   while l:i < l:num_history
-    let l:entry = histget('/', -(l:i + 1))
+    let l:entry = histget(l:cmdtype, -(l:i + 1))
     if !empty(l:entry)
       call add(l:res, l:entry)
     endif

@@ -6,6 +6,7 @@ let s:active = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
+let s:modes = ['/', '?']
 
 let s:candidates = []
 let s:selected = -1
@@ -32,38 +33,48 @@ function! wildsearch#main#get_option(key)
 endfunction
 
 function! wildsearch#main#in_context()
-  return s:active && (getcmdtype() ==# '/' || getcmdtype() ==# '?')
+  return index(s:modes, getcmdtype()) >= 0
 endfunction
 
-function! wildsearch#main#set_auto(...)
-  let l:start = a:0 > 0 ? a:1 : 1
+function! wildsearch#main#enable_auto(...)
+  if !exists('#Wildsearch')
+    augroup Wildsearch
+      autocmd!
+      autocmd CmdlineEnter * call wildsearch#main#start_auto()
+      autocmd CmdlineLeave * call wildsearch#main#stop_auto()
+    augroup END
+  endif
+endfunction
 
-  if l:start
-    if !exists('#Wildsearch')
-      augroup Wildsearch
-        autocmd!
-        autocmd CmdlineEnter * call wildsearch#main#start_auto()
-        autocmd CmdlineLeave * call wildsearch#main#stop_auto()
-      augroup END
-    endif
-  else
-    if exists('#Wildsearch')
-      augroup Wildsearch
-        autocmd!
-      augroup END
-      augroup! Wildsearch
-    endif
+function! wildsearch#main#disable_auto()
+  if exists('#Wildsearch')
+    augroup Wildsearch
+      autocmd!
+    augroup END
+    augroup! Wildsearch
   endif
 endfunction
 
 function! wildsearch#main#start_auto()
   let s:auto = 1
+
   call wildsearch#main#start()
 endfunction
 
 function! wildsearch#main#stop_auto()
+  if !s:active
+    return
+  endif
+
   let s:auto = 0
+
   call wildsearch#main#stop()
+endfunction
+
+function! wildsearch#main#start_manual()
+  call wildsearch#main#start(0)
+
+  return ''
 endfunction
 
 function! wildsearch#main#start(...)
@@ -73,7 +84,8 @@ function! wildsearch#main#start(...)
   endif
 
   if !exists('s:timer')
-    let s:timer = timer_start(s:opts.interval, function('wildsearch#main#do'), {'repeat': -1})
+    let s:timer = timer_start(s:opts.interval,
+          \ {_ -> wildsearch#main#do_with_check_context()}, {'repeat': -1})
   endif
 
   let s:active = 1
@@ -92,8 +104,15 @@ function! wildsearch#main#start(...)
     endif
   endif
 
+  call wildsearch#render#init()
   call wildsearch#render#exe_hl()
-  call wildsearch#main#do()
+
+  let l:check = a:0 > 0 ? a:1 : 1
+  if l:check
+    call wildsearch#main#do_with_check_context()
+  else
+    call wildsearch#main#do()
+  endif
 endfunction
 
 function! wildsearch#main#stop()
@@ -119,13 +138,17 @@ function! wildsearch#main#stop()
   endif
 endfunction
 
-function! wildsearch#main#do(...)
-  if !s:active
+function! wildsearch#main#do_with_check_context()
+  if !wildsearch#main#in_context()
+    call wildsearch#main#stop()
     return
   endif
 
-  if !wildsearch#main#in_context()
-    call wildsearch#main#stop()
+  call wildsearch#main#do()
+endfunction
+
+function! wildsearch#main#do()
+  if !s:active
     return
   endif
 
@@ -149,7 +172,6 @@ function! wildsearch#main#do(...)
         \ 'on_finish': 'wildsearch#main#on_finish',
         \ 'on_error': 'wildsearch#main#on_error',
         \ 'run_id': s:run_id,
-        \ 'auto': s:auto,
         \ }
 
     let s:run_id += 1

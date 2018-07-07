@@ -8,7 +8,7 @@ function! wildsearch#render#component#separator#make(str, from_hl, to_hl)
 
   return {
         \ 'stl': a:str,
-        \ 'hl': {-> s:hl(l:name, a:from_hl, a:to_hl)}
+        \ 'hl': {_ -> s:hl(l:name, a:from_hl, a:to_hl)}
         \ }
 endfunction
 

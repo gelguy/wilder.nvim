@@ -1,6 +1,6 @@
 function! wildsearch#pipeline#component#concat#make(args)
   if len(a:args) == 0
-    return {_, x -> x}
+    return {_, x -> []}
   endif
 
   return {ctx, x -> s:concat_start({

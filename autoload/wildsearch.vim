@@ -63,10 +63,10 @@ function! wildsearch#python_fuzzy_sort()
 endfunction
 
 function! wildsearch#history(...)
-  if a:0 > 0
-    return wildsearch#pipeline#component#history#make(a:1)
-  else
+  if a:0 == 0
     return wildsearch#pipeline#component#history#make()
+  else
+    return wildsearch#pipeline#component#history#make(a:1)
   endif
 endfunction
 

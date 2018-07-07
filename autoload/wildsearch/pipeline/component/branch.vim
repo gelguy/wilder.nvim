@@ -1,6 +1,6 @@
 function! wildsearch#pipeline#component#branch#make(args)
   if len(a:args) == 0
-    return {_, x -> x}
+    return {_, x -> v:false}
   endif
 
   return {ctx, x -> s:branch_start({

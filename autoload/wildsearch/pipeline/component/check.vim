@@ -5,15 +5,11 @@ endfunction
 function s:check(checks, ctx, x)
   let l:i = 0
 
-  while l:i < len(a:checks)
-    let l:ok = a:checks[l:i](a:ctx, a:x)
-
-    if !l:ok
+  for l:Check in a:checks
+    if !l:Check(a:ctx, a:x)
       return v:false
     endif
-
-    let l:i += 1
-  endwhile
+  endfor
 
   return a:x
 endfunction

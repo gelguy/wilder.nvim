@@ -21,6 +21,12 @@ function! wildsearch#render#get_option(key)
   return s:opts[a:key]
 endfunction
 
+function! wildsearch#render#init()
+  if !exists('s:left') && !exists('s:right')
+    call wildsearch#render#set_components(wildsearch#render#default())
+  endif
+endfunction
+
 function! wildsearch#render#make_page(ctx, candidates)
   if empty(a:candidates)
     return [-1, -1]
@@ -212,10 +218,6 @@ function! wildsearch#render#draw_components(components, ctx, candidates)
 endfunction
 
 function! wildsearch#render#space_used(ctx, candidates)
-  if !exists('s:left') && !exists('s:right')
-    call wildsearch#render#set_components(wildsearch#render#default())
-  endif
-
   let l:len = 0
 
   for l:Component in s:left + s:right
@@ -268,7 +270,7 @@ function! wildsearch#render#exe_hl()
 
   for l:Component in s:left + s:right
     if type(l:Component) == v:t_dict && has_key(l:Component, 'make_hl')
-      let l:Component.hl = l:Component.make_hl()
+      let l:Component.hl = l:Component.make_hl({})
     endif
   endfor
 
