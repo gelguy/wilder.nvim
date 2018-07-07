@@ -96,8 +96,8 @@ function! wildsearch#string(str, ...)
   return l:res
 endfunction
 
-function! wildsearch#separator(str, from_hl, to_hl)
-  return wildsearch#render#component#separator#make(a:str, a:from_hl, a:to_hl)
+function! wildsearch#separator(str, fg, bg)
+  return wildsearch#render#component#separator#make(a:str, a:fg, a:bg)
 endfunction
 
 function! wildsearch#previous_arrow(...)

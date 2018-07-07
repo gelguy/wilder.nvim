@@ -1,6 +1,6 @@
 let s:index = 0
 
-function! wildsearch#render#component#separator#make(str, from_hl, to_hl)
+function! wildsearch#render#component#separator#make(str, fg, bg)
   let l:index = s:index
   let s:index += 1
 
@@ -8,15 +8,15 @@ function! wildsearch#render#component#separator#make(str, from_hl, to_hl)
 
   return {
         \ 'stl': a:str,
-        \ 'hl': {_ -> s:hl(l:name, a:from_hl, a:to_hl)}
+        \ 'hl': {_ -> s:hl(l:name, a:fg, a:bg)}
         \ }
 endfunction
 
-function! s:hl(name, from_hl, to_hl)
-  let l:from = wildsearch#render#get_colors(a:from_hl)
-  let l:to = wildsearch#render#get_colors(a:to_hl)
+function! s:hl(name, fg, bg)
+  let l:fg_hl = wildsearch#render#get_colors(a:fg)
+  let l:bg_hl = wildsearch#render#get_colors(a:bg)
 
-  let l:colors = [[l:from[0][1], l:to[0][1]], [l:from[1][1], l:to[1][1]]]
+  let l:colors = [[l:fg_hl[0][1], l:bg_hl[0][1]], [l:fg_hl[1][1], l:bg_hl[1][1]]]
 
   return wildsearch#render#make_hl(a:name, l:colors)
 endfunction
