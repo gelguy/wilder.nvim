@@ -165,11 +165,15 @@ function! s:do()
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
+  let s:previous_cmdline = l:input
+
+  if !l:has_completion
+    let s:completion = ''
+  endif
+
   let s:draw_done = 0
 
   if !l:has_completion && (l:input_changed || l:is_new_input)
-    let s:previous_cmdline = l:input
-
     let l:ctx = {
         \ 'on_finish': 'wildsearch#main#on_finish',
         \ 'on_error': 'wildsearch#main#on_error',
