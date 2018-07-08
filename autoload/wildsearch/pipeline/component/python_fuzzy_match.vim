@@ -22,8 +22,12 @@ function! s:fuzzy_match(args, ctx, x)
     let l:char = l:chars[l:i]
 
     if l:char ==# '\'
-      let l:res .= l:chars[l:i+1]
-      let l:i += 2
+      if l:i+1 < len(l:chars)
+        let l:res .= l:chars[l:i+1]
+        let l:i += 2
+      else
+        let l:i += 1
+      endif
     else
       let l:res .= l:char
       let l:i += 1

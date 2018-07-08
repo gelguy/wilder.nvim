@@ -36,8 +36,12 @@ function! s:make(args, ctx, x)
     let l:char = l:chars[l:i]
 
     if l:char ==# '\'
-      let l:char .= l:chars[l:i+1]
-      let l:i += 2
+      if l:i+1 < len(l:chars)
+        let l:char .= l:chars[l:i+1]
+        let l:i += 2
+      else
+        let l:i += 1
+      endif
       let l:escaped = 1
     else
       let l:i += 1
