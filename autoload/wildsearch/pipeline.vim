@@ -77,13 +77,16 @@ function! wildsearch#pipeline#do(ctx, x)
   let l:ctx.fs = l:ctx.fs[1:]
   let l:ctx.step += 1
 
-  let l:res = wildsearch#pipeline#call(l:f, l:ctx, a:x)
-  call wildsearch#pipeline#do(l:ctx, l:res)
+  try
+    let l:res = wildsearch#pipeline#call(l:f, l:ctx, a:x)
+    call wildsearch#pipeline#do(l:ctx, l:res)
+  catch
+    call wildsearch#pipeline#do_error(l:ctx, v:exception)
+  endtry
 endfunction
 
 function! wildsearch#pipeline#do_error(ctx, x)
-    call wildsearch#pipeline#call(a:ctx.on_error, a:ctx, a:x)
-    return v:null
+  call wildsearch#pipeline#call(a:ctx.on_error, a:ctx, a:x)
 endfunction
 
 function! wildsearch#pipeline#funcs()
