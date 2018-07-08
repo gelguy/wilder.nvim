@@ -1,5 +1,5 @@
 function! wildsearch#pipeline#component#history#make(...)
-  let l:num_history = a:0 > 0 ? a:1 : 100
+  let l:num_history = a:0 > 0 ? a:1 : 50
   return {ctx, x -> s:history(l:num_history)}
 endfunction
 
