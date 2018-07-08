@@ -36,12 +36,12 @@ function! wildsearch#main#in_context()
   return index(s:modes, getcmdtype()) >= 0
 endfunction
 
-function! wildsearch#main#enable_auto(...)
+function! wildsearch#main#enable_auto()
   if !exists('#Wildsearch')
     augroup Wildsearch
       autocmd!
-      autocmd CmdlineEnter * call wildsearch#main#start_auto(expand('<afile>'))
-      autocmd CmdlineLeave * call wildsearch#main#stop_auto(expand('<afile>'))
+      autocmd CmdlineEnter * call wildsearch#main#start_auto()
+      autocmd CmdlineLeave * call wildsearch#main#stop()
     augroup END
   endif
 endfunction
@@ -55,17 +55,28 @@ function! wildsearch#main#disable_auto()
   endif
 endfunction
 
-function! wildsearch#main#start_auto(cmdtype)
-  if index(s:modes, a:cmdtype) == -1
+function! wildsearch#main#start_auto()
+  if index(s:modes, getcmdtype()) == -1
     return
   endif
 
   let s:auto = 1
 
-  call s:start()
+  call s:start(1)
+
+  return "\<Insert>\<Insert>"
 endfunction
 
-function! s:start(...)
+function! wildsearch#main#start_from_normal_mode()
+  let s:auto = 1
+
+  " skip check since it is still normal mode
+  call s:start(0)
+
+  return ''
+endfunction
+
+function! s:start(check)
   if has('nvim') && !s:init
     let s:init = 1
     call _wildsearch_init({'num_workers': s:opts.num_workers})
@@ -73,7 +84,7 @@ function! s:start(...)
 
   if !exists('s:timer')
     let s:timer = timer_start(s:opts.interval,
-          \ {_ -> s:do_with_check()}, {'repeat': -1})
+          \ {_ -> s:do(1)}, {'repeat': -1})
   endif
 
   let s:active = 1
@@ -95,40 +106,21 @@ function! s:start(...)
   call wildsearch#render#init()
   call wildsearch#render#exe_hl()
 
-  let l:check = a:0 > 0 ? a:1 : 1
-  if l:check
-    call s:do_with_check()
-  else
-    call s:do()
-  endif
+  call s:do(a:check)
 endfunction
 
-function! wildsearch#main#stop_auto(cmdtype)
-  if index(s:modes, a:cmdtype) == -1
-    " exiting from nested cmdline e.g. <C-R>=
-    " only works if nested mode is cancelled
-    if index(s:modes, getcmdtype()) >= 0 && !s:active
-      call wildsearch#main#start_auto(getcmdtype())
-    endif
-    return
-  endif
-
+function! wildsearch#main#stop()
   if !s:active
     return
   endif
 
-  let s:auto = 0
-
-  call s:stop()
-endfunction
-
-function! s:stop()
   if exists('s:timer')
     call timer_stop(s:timer)
     unlet s:timer
   endif
 
   let s:active = 0
+  let s:auto = 0
 
   if exists('s:previous_cmdline')
     unlet s:previous_cmdline
@@ -145,16 +137,12 @@ function! s:stop()
   endif
 endfunction
 
-function! s:do_with_check()
-  if !wildsearch#main#in_context()
-    call s:stop()
+function! s:do(check)
+  if a:check && !wildsearch#main#in_context()
+    call wildsearch#main#stop()
     return
   endif
 
-  call s:do()
-endfunction
-
-function! s:do()
   if !s:active
     return
   endif
@@ -166,6 +154,11 @@ function! s:do()
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
   let s:previous_cmdline = l:input
+
+  if !s:auto && !l:is_new_input && !l:has_completion && l:input_changed
+    call wildsearch#main#stop()
+    return
+  endif
 
   if !l:has_completion
     let s:completion = ''
@@ -253,9 +246,25 @@ function! s:draw(...)
   redrawstatus
 endfunction
 
+function! wildsearch#main#next()
+  return wildsearch#main#step(1)
+endfunction
+
+function! wildsearch#main#previous()
+  return wildsearch#main#step(-1)
+endfunction
+
 function! wildsearch#main#step(num_steps)
+  if !s:active
+    call s:start(1)
+    " returning '' seems to prevent async completions from finishing
+    return "\<Insert>\<Insert>"
+  endif
+
   let l:len = len(s:candidates)
-  if l:len == 0
+  if a:num_steps == 0
+    " pass
+  elseif l:len == 0
     let s:selected = -1
     let s:completion = ''
   elseif l:len == 1
@@ -297,7 +306,7 @@ function! wildsearch#main#step(num_steps)
     call feedkeys(l:keys, 'n')
   endif
 
-  return ''
+  return "\<Insert>\<Insert>"
 endfunction
 
 function! wildsearch#main#save_statusline()
