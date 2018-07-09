@@ -50,7 +50,11 @@ function! s:make(args, ctx, x)
 
     if l:first
       let l:first = 0
-      let l:res .= l:char
+      if match(l:char, '[[:upper:]]') >= 0
+        let l:res .= l:char
+      else
+        let l:res .= '[' . l:char . '|' . toupper(l:char) . ']'
+      endif
       continue
     endif
 
