@@ -271,21 +271,8 @@ function! wildsearch#render#space_used(ctx, candidates)
 endfunction
 
 function! wildsearch#render#set_components(args)
-  let s:left = s:check_hl_func(a:args.left)
-  let s:right = s:check_hl_func(a:args.right)
-endfunction
-
-function! s:check_hl_func(components)
-  let l:components = copy(a:components)
-
-  for l:Component in l:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'hl') && type(l:Component.hl) == v:t_func
-      let l:Component.make_hl = l:Component.hl
-      let l:Component.hl = ''
-    endif
-  endfor
-
-  return l:components
+  let s:left = a:args.left
+  let s:right = a:args.right
 endfunction
 
 function! wildsearch#render#exe_hl()
@@ -297,7 +284,7 @@ function! wildsearch#render#exe_hl()
 
   for l:Component in s:left + s:right
     if type(l:Component) == v:t_dict && has_key(l:Component, 'make_hl')
-      let l:Component.hl = l:Component.make_hl({})
+      call l:Component.make_hl({})
     endif
   endfor
 
