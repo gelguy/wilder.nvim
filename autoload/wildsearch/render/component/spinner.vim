@@ -5,16 +5,19 @@ function! wildsearch#render#component#spinner#make(args)
   endif
 
   let l:done = get(a:args, 'done', ' ')
-  let l:delay = get(a:args, 'delay', wildsearch#main#get_option('interval') * 2)
+  let l:delay = get(a:args, 'delay', 0) / 1000.0
+  let l:interval = get(a:args, 'interval', 0) / 1000.0
 
   let l:state = {
         \ 'frames': l:frames,
-        \ 'index': 0,
         \ 'done': l:done,
         \ 'delay': l:delay,
+        \ 'interval': l:interval,
+        \ 'index': 0,
         \ 'current_char': l:done,
         \ 'was_done': 1,
         \ 'start_time': reltime(),
+        \ 'last_new_state_time': reltime(),
         \ }
 
   let l:res = {
@@ -38,20 +41,31 @@ function! s:get_char(state, ctx, candidates)
   endif
 
   if a:state.was_done == 1
-    let a:state.start_time = reltime()
     let a:state.was_done = 0
     let a:state.index = -1
+
+    if a:state.delay > 0
+      let a:state.start_time = reltime()
+    endif
   endif
 
-  if reltimefloat(reltime(a:state.start_time)) < (a:state.delay / 1000.0)
+  if a:state.delay > 0 && reltimefloat(reltime(a:state.start_time)) < a:state.delay
     let a:state.current_char = a:state.done
     return a:state.done
   endif
 
-  " set current_char here so it is consistent with the actual render char
-  " due to reltime(), the char might be changed since len is called earlier
-  let a:state.index = (a:state.index + 1) % len(a:state.frames)
-  let a:state.current_char = a:state.frames[a:state.index]
+  if a:state.interval <= 0 || reltimefloat(reltime(a:state.last_new_state_time)) > a:state.interval
+    " set current_char in here so it is consistent with the actual rendered
+    " char. Due to reltime(), the char might be changed since len is called
+    " earlier
+    let a:state.index = (a:state.index + 1) % len(a:state.frames)
+    let a:state.current_char = a:state.frames[a:state.index]
+
+    if a:state.interval > 0
+      let a:state.last_new_state_time = reltime()
+    endif
+  endif
+
   return a:state.frames[a:state.index]
 endfunction
 
