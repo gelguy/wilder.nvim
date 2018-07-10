@@ -9,7 +9,7 @@ function! wildsearch#render#component#separator#make(str, fg, bg)
   return {
         \ 'stl': a:str,
         \ 'hl': l:name,
-        \ 'make_hl': {_ -> s:hl(l:name, a:fg, a:bg)}
+        \ 'init': {_ -> s:hl(l:name, a:fg, a:bg)}
         \ }
 endfunction
 
@@ -19,5 +19,5 @@ function! s:hl(name, fg, bg)
 
   let l:colors = [[l:fg_hl[0][1], l:bg_hl[0][1]], [l:fg_hl[1][1], l:bg_hl[1][1]]]
 
-  return wildsearch#render#make_hl(a:name, l:colors)
+  call wildsearch#render#make_hl(a:name, l:colors)
 endfunction

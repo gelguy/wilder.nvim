@@ -283,8 +283,8 @@ function! wildsearch#render#exe_hl()
   endfor
 
   for l:Component in s:left + s:right
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'make_hl')
-      call l:Component.make_hl({})
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'init')
+      call l:Component.init({})
     endif
   endfor
 
