@@ -427,16 +427,30 @@ function! wildsearch#render#default()
 endfunction
 
 function! s:to_printable(x)
+  if !has('nvim')
+    return strtrans(a:x)
+  endif
+
+  let l:transformed = strtrans(a:x)
+  if strdisplaywidth(a:x) == strdisplaywidth(l:transformed)
+    return strtrans(a:x)
+  endif
+
   let l:res = ''
 
   for l:char in split(a:x, '\zs')
-    if has_key(s:high_control_characters, l:char)
-      let l:char = s:high_control_characters[l:char]
-    elseif l:char <# ' '
-      let l:char = strtrans(l:char)
-    endif
+    let l:transformed_char = strtrans(l:char)
 
-    let l:res .= l:char
+    let l:transformed_width = strdisplaywidth(l:transformed_char)
+    let l:width = strdisplaywidth(l:char)
+
+    if l:transformed_width == l:width
+      let l:res .= l:transformed_char
+    elseif l:transformed_width < l:width
+      let l:res .= l:char
+    else
+      let l:res .= '<' . printf('%x', char2nr(l:char)) . '>'
+    endif
   endfor
 
   return l:res
