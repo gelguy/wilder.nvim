@@ -79,11 +79,6 @@ function! wildsearch#index(...)
   return wildsearch#render#component#index#make(l:args)
 endfunction
 
-function! wildsearch#spinner(...)
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wildsearch#render#component#spinner#make(l:args)
-endfunction
-
 function! wildsearch#string(str, ...)
   let l:res = {
         \ 'stl': a:str,
@@ -96,10 +91,6 @@ function! wildsearch#string(str, ...)
   return l:res
 endfunction
 
-function! wildsearch#separator(str, fg, bg)
-  return wildsearch#render#component#separator#make(a:str, a:fg, a:bg)
-endfunction
-
 function! wildsearch#previous_arrow(...)
   let l:args = a:0 > 0 ? a:1 : {}
   return wildsearch#render#component#arrows#make_previous(l:args)
@@ -108,4 +99,18 @@ endfunction
 function! wildsearch#next_arrow(...)
   let l:args = a:0 > 0 ? a:1 : {}
   return wildsearch#render#component#arrows#make_next(l:args)
+endfunction
+
+function! wildsearch#separator(str, fg, bg)
+  return wildsearch#render#component#separator#make(a:str, a:fg, a:bg)
+endfunction
+
+function! wildsearch#spinner(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wildsearch#render#component#spinner#make(l:args)
+endfunction
+
+function! wildsearch#condition(predicate, if_true, ...)
+  let l:if_false = a:0 > 0 ? a:1 : []
+  return wildsearch#render#component#condition#make(a:predicate, a:if_true, l:if_false)
 endfunction

@@ -12,6 +12,8 @@ let s:candidates = []
 let s:selected = -1
 let s:completion = ''
 let s:page = [-1, -1]
+let s:error = ''
+let s:has_error = 0
 
 let s:opts = {
       \ 'interval': 100,
@@ -92,6 +94,8 @@ function! s:start(check)
   let s:selected = -1
   let s:completion = ''
   let s:page = [-1, -1]
+  let s:error = ''
+  let s:has_error = 0
 
   if has_key(s:opts, 'pre_hook')
     if s:opts.post_hook ==# ''
@@ -104,7 +108,6 @@ function! s:start(check)
   endif
 
   call wildsearch#render#init()
-  call wildsearch#render#exe_hl()
 
   call s:do(a:check)
 endfunction
@@ -184,7 +187,8 @@ function! s:do(check)
         \ 'done': s:run_id - 1 == s:result_run_id,
         \ }
 
-  if !s:draw_done && (l:is_new_input || wildsearch#render#need_redraw(l:ctx, s:candidates))
+  if !s:draw_done && (l:is_new_input ||
+        \ wildsearch#render#need_redraw(wildsearch#render#get_components(), l:ctx, s:candidates))
     call s:draw()
   endif
 endfunction
@@ -204,6 +208,9 @@ function! wildsearch#main#on_finish(ctx, x)
   let s:selected = -1
   " keep previous completion
 
+  let s:has_error = 0
+  let s:error = ''
+
   call s:draw()
 endfunction
 
@@ -218,8 +225,14 @@ function! wildsearch#main#on_error(ctx, x)
 
   let s:result_run_id = a:ctx.run_id
 
-  call setwinvar(0, '&statusline', 'E:' . a:ctx.run_id . ':' . split(reltimestr(reltime(a:ctx.start_time)))[0] . ': ' . a:x)
-  redrawstatus
+  let s:candidates = []
+  let s:selected = -1
+  " keep previous completion
+
+  let s:has_error = 1
+  let s:error = a:x
+
+  call s:draw()
 endfunction
 
 function! s:draw(...)
@@ -231,16 +244,32 @@ function! s:draw(...)
         \ 'selected': s:selected,
         \ 'direction': l:direction,
         \ 'done': s:run_id - 1 == s:result_run_id,
+        \ 'has_error': s:has_error,
         \ }
 
-  let l:space_used = wildsearch#render#space_used(l:ctx, s:candidates)
+  let l:candidates = s:has_error ? [] : s:candidates
+
+  let l:left_components = wildsearch#render#get_components('left')
+  let l:right_components = wildsearch#render#get_components('right')
+
+  let l:space_used = wildsearch#render#len(
+        \ l:left_components + l:right_components,
+        \ l:ctx, l:candidates)
   let l:ctx.space = winwidth(0) - l:space_used
   let l:ctx.page = s:page
 
-  let s:page = wildsearch#render#make_page(l:ctx, s:candidates)
+  let s:page = wildsearch#render#make_page(l:ctx, l:candidates)
   let l:ctx.page = s:page
 
-  let l:statusline = wildsearch#render#draw(l:ctx, s:candidates)
+  if s:has_error
+    let l:statusline = wildsearch#render#draw_error(
+          \ l:left_components, l:right_components,
+          \ l:ctx, s:error)
+  else
+    let l:statusline = wildsearch#render#draw(
+          \ l:left_components, l:right_components,
+          \ l:ctx, l:candidates)
+  endif
 
   call setwinvar(0, '&statusline', l:statusline)
   redrawstatus

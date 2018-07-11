@@ -5,6 +5,7 @@ let s:hl_map = {}
 let s:opts = {
       \ 'hl': 'StatusLine',
       \ 'selected_hl': 'WildMenu',
+      \ 'error_hl': 'StatusLine',
       \ 'separator': ' ',
       \ 'ellipsis': '...',
       \ }
@@ -19,12 +20,6 @@ endfunction
 
 function! wildsearch#render#get_option(key)
   return s:opts[a:key]
-endfunction
-
-function! wildsearch#render#init()
-  if !exists('s:left') && !exists('s:right')
-    call wildsearch#render#set_components(wildsearch#render#default())
-  endif
 endfunction
 
 function! wildsearch#render#make_page(ctx, candidates)
@@ -131,8 +126,8 @@ function! s:make_page_from_end(ctx, candidates, end)
   return [l:start, l:end]
 endfunction
 
-function! wildsearch#render#need_redraw(ctx, x)
-  for l:Component in s:left + s:right
+function! wildsearch#render#need_redraw(components, ctx, x)
+  for l:Component in a:components
     if type(l:Component) == v:t_dict && has_key(l:Component, 'redraw')
       if l:Component.redraw(a:ctx, a:x)
         return 1
@@ -143,12 +138,22 @@ function! wildsearch#render#need_redraw(ctx, x)
   return 0
 endfunction
 
-function! wildsearch#render#draw(ctx, candidates)
+function! wildsearch#render#draw(left, right, ctx, candidates)
   let l:res = ''
 
-  let l:res .= s:draw_components(s:left, a:ctx, a:candidates)
+  let l:res .= wildsearch#render#draw_components(a:left, a:ctx, a:candidates)
   let l:res .= s:draw_candidates(a:ctx, a:candidates)
-  let l:res .= s:draw_components(s:right, a:ctx, a:candidates)
+  let l:res .= wildsearch#render#draw_components(a:right, a:ctx, a:candidates)
+
+  return l:res
+endfunction
+
+function! wildsearch#render#draw_error(left, right, ctx, error)
+  let l:res = ''
+
+  let l:res .= wildsearch#render#draw_components(a:left, a:ctx, [])
+  let l:res .= s:draw_error(a:ctx, a:error)
+  let l:res .= wildsearch#render#draw_components(a:right, a:ctx, [])
 
   return l:res
 endfunction
@@ -216,7 +221,25 @@ function! s:draw_candidates(ctx, candidates)
   return l:res . repeat(' ', l:space - l:len)
 endfunction
 
-function! s:draw_components(components, ctx, candidates)
+function! s:draw_error(ctx, error)
+  let l:space = a:ctx.space
+  let l:error = s:to_printable(a:error)
+
+  if strdisplaywidth(l:error) > a:ctx.space
+    let l:ellipsis = s:to_printable(s:opts.ellipsis)
+    let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
+
+    let g:_wildsearch_error = l:error[:l:space_minus_ellipsis - 1] . l:ellipsis
+  else
+    let g:_wildsearch_error = l:error
+  endif
+
+  let l:res = '%#' . s:opts.error_hl . '#%{g:_wildsearch_error}%#' . s:opts.hl . '#'
+
+  return l:res . repeat(' ', l:space - strdisplaywidth(g:_wildsearch_error))
+endfunction
+
+function! wildsearch#render#draw_components(components, ctx, candidates)
   let l:res = ''
 
   for l:Component in a:components
@@ -242,10 +265,10 @@ function! s:draw_components(components, ctx, candidates)
   return l:res
 endfunction
 
-function! wildsearch#render#space_used(ctx, candidates)
+function! wildsearch#render#len(components, ctx, candidates)
   let l:len = 0
 
-  for l:Component in s:left + s:right
+  for l:Component in a:components
     if type(l:Component) == v:t_func
       let l:len += strdisplaywidth(l:Component(a:ctx, a:candidates))
     elseif type(l:Component) == v:t_string
@@ -275,21 +298,37 @@ function! wildsearch#render#set_components(args)
   let s:right = a:args.right
 endfunction
 
-function! wildsearch#render#exe_hl()
+function! wildsearch#render#get_components(...)
+  if !exists('s:left') && !exists('s:right')
+    call wildsearch#render#set_components(wildsearch#render#default())
+  endif
+
+  if a:0 == 0
+    return s:left + s:right
+  endif
+
+  return a:1 ==# 'left' ? s:left : s:right
+endfunction
+
+function! wildsearch#render#init()
   " exe before and after components since there might be components which
   " depend on existing highlights
   for l:key in keys(s:hl_map)
     exe s:hl_map[l:key]
   endfor
 
-  for l:Component in s:left + s:right
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'init')
-      call l:Component.init({})
-    endif
-  endfor
+  call wildsearch#render#init_components(wildsearch#render#get_components(), {})
 
   for l:key in keys(s:hl_map)
     exe s:hl_map[l:key]
+  endfor
+endfunction
+
+function! wildsearch#render#init_components(components, ctx)
+  for l:Component in a:components
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'init')
+      call l:Component.init(a:ctx)
+    endif
   endfor
 endfunction
 
