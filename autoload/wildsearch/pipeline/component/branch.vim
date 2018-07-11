@@ -3,11 +3,13 @@ function! wildsearch#pipeline#component#branch#make(args)
     return {_, x -> v:false}
   endif
 
-  return {ctx, x -> s:branch_start({
+  let l:args = {
         \ 'branches': a:args,
         \ 'fs_list': [],
         \ 'initialised': 0,
-        \ }, ctx, x)}
+        \ }
+
+  return {ctx, x -> s:branch_start(l:args, ctx, x)}
 endfunction
 
 function! s:branch_start(args, ctx, x)
@@ -37,6 +39,9 @@ function! s:branch_start(args, ctx, x)
 endfunction
 
 function! s:branch_error(args, ctx, x)
+  call wildsearch#pipeline#unregister_func(a:args.on_error)
+  call wildsearch#pipeline#unregister_func(a:args.on_finish)
+
   call wildsearch#pipeline#do_error(a:args.original_ctx, a:x)
 endfunction
 
