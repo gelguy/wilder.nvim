@@ -17,6 +17,7 @@ let s:has_error = 0
 
 let s:opts = {
       \ 'interval': 100,
+      \ 'use_cmdlinechanged': 0,
       \ 'pre_hook': 'wildsearch#main#save_statusline',
       \ 'post_hook': 'wildsearch#main#restore_statusline',
       \ 'num_workers': 2,
@@ -39,21 +40,20 @@ function! wildsearch#main#in_context()
 endfunction
 
 function! wildsearch#main#enable_auto()
-  if !exists('#Wildsearch')
-    augroup Wildsearch
+  if !exists('#WildsearchCmdlineEnter')
+    augroup WildsearchCmdlineEnter
       autocmd!
       autocmd CmdlineEnter * call wildsearch#main#start_auto()
-      autocmd CmdlineLeave * call wildsearch#main#stop()
     augroup END
   endif
 endfunction
 
 function! wildsearch#main#disable_auto()
-  if exists('#Wildsearch')
-    augroup Wildsearch
+  if exists('#WildsearchCmdlineEnter')
+    augroup WildsearchCmdlineEnter
       autocmd!
     augroup END
-    augroup! Wildsearch
+    augroup! WildsearchCmdlineEnter
   endif
 endfunction
 
@@ -84,9 +84,24 @@ function! s:start(check)
     call _wildsearch_init({'num_workers': s:opts.num_workers})
   endif
 
-  if !exists('s:timer')
-    let s:timer = timer_start(s:opts.interval,
-          \ {_ -> s:do(1)}, {'repeat': -1})
+  if s:opts.use_cmdlinechanged
+    if !exists('#WildsearchCmdlineChanged')
+      augroup WildsearchCmdlineChanged
+        autocmd!
+        " directly calling s:do makes getcmdline return an empty string
+        autocmd CmdlineChanged * call timer_start(0, {-> s:do(1)})
+      augroup END
+    endif
+  elseif !exists('s:timer')
+      let s:timer = timer_start(s:opts.interval,
+            \ {_ -> s:do(1)}, {'repeat': -1})
+  endif
+
+  if !exists('#WildsearchCmdlineLeave')
+    augroup WildsearchCmdlineLeave
+      autocmd!
+      autocmd CmdlineLeave * call wildsearch#main#stop()
+    augroup END
   endif
 
   let s:active = 1
@@ -115,6 +130,20 @@ endfunction
 function! wildsearch#main#stop()
   if !s:active
     return
+  endif
+
+  if exists('#WildsearchCmdlineChanged')
+    augroup WildsearchCmdlineChanged
+      autocmd!
+    augroup END
+    augroup! WildsearchCmdlineChanged
+  endif
+
+  if exists('#WildsearchCmdlineLeave')
+    augroup WildsearchCmdlineLeave
+      autocmd!
+    augroup END
+    augroup! WildsearchCmdlineLeave
   endif
 
   if exists('s:timer')
