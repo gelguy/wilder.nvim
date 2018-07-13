@@ -11,6 +11,7 @@ import neovim
 class Wildsearch(object):
     def __init__(self, nvim):
         self.nvim = nvim
+        self.has_init = False
         self.queue = multiprocessing.Queue()
         self.events = []
         self.lock = threading.Lock()
@@ -54,6 +55,11 @@ class Wildsearch(object):
 
     @neovim.function('_wildsearch_init', sync=True, allow_nested=True)
     def init(self, args):
+        if self.has_init:
+            return
+
+        self.has_init = True
+
         opts = args[0]
 
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=opts['num_workers'])
