@@ -157,16 +157,3 @@ class Wildsearch(object):
             self.queue.put((ctx, res,))
         except Exception as e:
             self.queue.put((ctx, str(e), 'do_error',))
-
-    @neovim.function('_wildsearch_python_fuzzy_sort', sync=False, allow_nested=True)
-    def fuzzy_sort(self, args):
-        ctx = args[0]
-        items = args[1]
-
-        try:
-            fuzz = importlib.import_module('fuzzywuzzy.fuzz')
-            res = sorted(items, key=lambda x: -fuzz.ratio(ctx['input'], x))
-
-            self.queue.put((ctx, res,))
-        except Exception as e:
-            self.queue.put((ctx, str(e), 'do_error',))
