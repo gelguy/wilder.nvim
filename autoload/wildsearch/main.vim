@@ -348,15 +348,16 @@ function! wildsearch#main#step(num_steps)
   if s:selected != -1
     let l:keys = "\<C-E>\<C-U>"
 
-    let l:candidates = s:candidates[s:selected]
+    let l:candidate = s:candidates[s:selected]
 
     let l:i = 0
-    while l:i < len(l:candidates)
-      if match(l:candidates[l:i], '[\x00-\x1F]') >= 0
+    while l:i < len(l:candidate)
+      " control character
+      if l:candidate[l:i] <# ' '
         let l:keys .= "\<C-Q>"
       endif
 
-      let l:keys .= l:candidates[l:i]
+      let l:keys .= l:candidate[l:i]
 
       let l:i += 1
     endwhile
