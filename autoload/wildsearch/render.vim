@@ -1,6 +1,7 @@
 scriptencoding utf-8
 
 let s:hl_map = {}
+let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
 let s:opts = {
       \ 'hl': 'StatusLine',
@@ -466,7 +467,7 @@ function! wildsearch#render#default()
 endfunction
 
 function! s:to_printable(x)
-  if !has('nvim')
+  if !s:has_strtrans_issue
     return strtrans(a:x)
   endif
 
@@ -488,7 +489,7 @@ function! s:to_printable(x)
     elseif l:transformed_width < l:width
       let l:res .= l:char
     else
-      let l:res .= '<' . printf('%x', char2nr(l:char)) . '>'
+      let l:res .= '<' . printf('%02x', char2nr(l:char)) . '>'
     endif
   endfor
 
