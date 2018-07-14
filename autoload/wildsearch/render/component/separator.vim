@@ -17,7 +17,34 @@ function! s:hl(name, fg, bg)
   let l:fg_hl = wildsearch#render#get_colors(a:fg)
   let l:bg_hl = wildsearch#render#get_colors(a:bg)
 
-  let l:colors = [[l:fg_hl[0][1], l:bg_hl[0][1]], [l:fg_hl[1][1], l:bg_hl[1][1]]]
+  let l:cterm_hl = {}
+  let l:gui_hl = {}
+
+  if get(l:fg_hl[1], 'reverse', 0)
+    let l:cterm_hl.foreground = get(l:fg_hl[1], 'foreground', 'NONE')
+  else
+    let l:cterm_hl.foreground = get(l:fg_hl[1], 'background', 'NONE')
+  endif
+
+  if get(l:bg_hl[1], 'reverse', 0)
+    let l:cterm_hl.background = get(l:bg_hl[1], 'foreground', 'NONE')
+  else
+    let l:cterm_hl.background = get(l:bg_hl[1], 'background', 'NONE')
+  endif
+
+  if get(l:fg_hl[2], 'reverse', 0)
+    let l:gui_hl.foreground = get(l:fg_hl[2], 'foreground', 'NONE')
+  else
+    let l:gui_hl.foreground = get(l:fg_hl[2], 'background', 'NONE')
+  endif
+
+  if get(l:bg_hl[2], 'reverse', 0)
+    let l:gui_hl.background = get(l:bg_hl[2], 'foreground', 'NONE')
+  else
+    let l:gui_hl.background = get(l:bg_hl[2], 'background', 'NONE')
+  endif
+
+  let l:colors = [{}, l:cterm_hl, l:gui_hl]
 
   call wildsearch#render#make_hl(a:name, l:colors)
 endfunction

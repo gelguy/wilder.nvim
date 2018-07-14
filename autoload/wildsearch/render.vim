@@ -336,7 +336,11 @@ endfunction
 function! wildsearch#render#make_hl(name, args)
   let l:type = type(a:args)
   if l:type == v:t_list
-    return s:make_hl_from_list(a:name, a:args)
+    if type(a:args[0]) == v:t_list
+      return s:make_hl_from_list_list(a:name, a:args)
+    endif
+
+    return s:make_hl_from_dict_list(a:name, a:args)
   else
     return s:make_hl_from_string(a:name, a:args)
   endif
@@ -349,30 +353,87 @@ function! s:make_hl_from_string(name, args)
   return a:name
 endfunction
 
-function! s:make_hl_from_list(name, args)
-  let l:ctermfg = a:args[0][0]
-  let l:ctermbg = a:args[0][1]
-  let l:guifg = a:args[1][0]
-  let l:guibg = a:args[1][1]
+function! s:make_hl_from_dict_list(name, args)
+  let l:term_hl = s:get_attrs_as_list(a:args[0])
+
+  let l:cterm_hl = [
+        \ get(a:args[1], 'foreground', 'NONE'),
+        \ get(a:args[1], 'background', 'NONE')
+        \ ] + s:get_attrs_as_list(a:args[1])
+
+  let l:gui_hl = [
+        \ get(a:args[2], 'foreground', 'NONE'),
+        \ get(a:args[2], 'background', 'NONE')
+        \ ] + s:get_attrs_as_list(a:args[2])
+
+  return s:make_hl_from_list_list(a:name, [l:term_hl, l:cterm_hl, l:gui_hl])
+endfunction
+
+function! s:make_hl_from_list_list(name, args)
+  let l:term_hl = a:args[0]
+  let l:cterm_hl = a:args[1]
+  let l:gui_hl = a:args[2]
 
   let l:cmd = 'hi! ' . a:name . ' '
 
-  if len(a:args[0]) > 2
-    let l:cmd .= 'cterm=' . a:args[0][2] . ' '
+  if len(l:term_hl) > 2
+    let l:cmd .= 'term=' . join(l:term_hl[2:], ',') . ' '
   endif
 
-  let l:cmd .= 'ctermfg=' . l:ctermfg . ' '
-  let l:cmd .= 'ctermbg=' . l:ctermbg . ' '
-
-  if len(a:args[1]) > 2
-    let l:cmd .= 'gui=' . a:args[1][2] . ' '
+  if len(l:cterm_hl) > 2
+    let l:cmd .= 'cterm=' . join(l:cterm_hl[2:], ',') . ' '
   endif
 
-  let l:cmd .= 'guifg=' . l:guifg . ' '
-  let l:cmd .= 'guibg=' . l:guibg
+  let l:cmd .= 'ctermfg=' . get(l:cterm_hl, 0, 'NONE') . ' '
+  let l:cmd .= 'ctermbg=' . get(l:cterm_hl, 1, 'NONE') . ' '
+
+  if len(l:gui_hl) > 2
+    let l:cmd .= 'gui=' . join(l:gui_hl[2:], ',') . ' '
+  endif
+
+  if len(l:gui_hl) >= 1
+    if type(l:gui_hl[0]) == v:t_number
+      let l:cmd .= 'guifg=' . printf('#%06x', l:gui_hl[0]) . ' '
+    else
+      let l:cmd .= 'guifg=' . l:gui_hl[0] . ' '
+    endif
+
+    if len(l:gui_hl) >= 2
+      if type(l:gui_hl[1]) == v:t_number
+        let l:cmd .= 'guibg=' . printf('#%06x', l:gui_hl[1]) . ' '
+      else
+        let l:cmd .= 'guibg=' . l:gui_hl[1] . ' '
+      endif
+    endif
+  endif
 
   let s:hl_map[a:name] = l:cmd
   return a:name
+endfunction
+
+function! s:get_attrs_as_list(attrs)
+  let l:res = []
+
+  if get(a:attrs, 'bold', 0)
+    call add(l:res, 'bold')
+  endif
+  if get(a:attrs, 'italic', 0)
+    call add(l:res, 'italic')
+  endif
+  if get(a:attrs, 'reverse', 0)
+    call add(l:res, 'reverse')
+  endif
+  if get(a:attrs, 'standout', 0)
+    call add(l:res, 'standout')
+  endif
+  if get(a:attrs, 'underline', 0)
+    call add(l:res, 'underline')
+  endif
+  if get(a:attrs, 'undercurl', 0)
+    call add(l:res, 'undercurl')
+  endif
+
+  return l:res
 endfunction
 
 function! wildsearch#render#get_colors(group)
@@ -385,36 +446,12 @@ endfunction
 
 function! wildsearch#render#get_colors_nvim(group)
   try
-    let l:cterm_colors = nvim_get_hl_by_name(a:group, 0)
-    let l:gui_colors = nvim_get_hl_by_name(a:group, 1)
+    let l:cterm_hl = nvim_get_hl_by_name(a:group, 0)
+    let l:gui_hl = nvim_get_hl_by_name(a:group, 1)
 
-    if get(l:cterm_colors, 'reverse', 0)
-      let l:cterm_res = [get(l:cterm_colors, 'background', 'NONE'), get(l:cterm_colors, 'foreground', 'NONE')]
-    else
-      let l:cterm_res = [get(l:cterm_colors, 'foreground', 'NONE'), get(l:cterm_colors, 'background', 'NONE')]
-    endif
-
-    if has_key(l:gui_colors, 'foreground')
-      let l:gui_fg = printf('#%06x', l:gui_colors.foreground)
-    else
-      let l:gui_fg = 'NONE'
-    endif
-
-    if has_key(l:gui_colors, 'background')
-      let l:gui_bg = printf('#%06x', l:gui_colors.background)
-    else
-      let l:gui_bg = 'NONE'
-    endif
-
-    if has_key(l:gui_colors, 'reverse')
-      let l:gui_res = [l:gui_bg, l:gui_fg]
-    else
-      let l:gui_res = [l:gui_fg, l:gui_bg]
-    endif
-
-    return [l:cterm_res, l:gui_res]
+    return [{}, l:cterm_hl, l:gui_hl]
   catch
-    return [['NONE', 'NONE'], ['NONE', 'NONE']]
+    return [{}, {}, {}]
   endtry
 endfunction
 
@@ -426,37 +463,43 @@ function! wildsearch#render#get_colors_vim(group) abort
 
     let l:link_matches = matchlist(l:highlight, 'links to \(\S\+\)')
     if len(l:link_matches) > 0 " follow the link
-      return wildsearch#render#get_background_colors(l:link_matches[1])
+      return wildsearch#render#get_colors_vim(l:link_matches[1])
     endif
 
-    if !empty(matchlist(l:highlight, 'cterm=\S\*reverse\S\*'))
-      let l:ctermfg = s:match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
-      let l:ctermbg = s:match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
-    else
-      let l:ctermfg = s:match_highlight(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)')
-      let l:ctermbg = s:match_highlight(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)')
+    let l:term_hl = {}
+    if match(l:highlight, 'term=\S*') >= 0
+      call s:get_hl_attrs(l:term_hl, 'term', l:highlight)
     endif
 
-    if !empty(matchlist(l:highlight, 'gui=\S*reverse\S*'))
-      let l:guifg = s:match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
-      let l:guibg = s:match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
-    else
-      let l:guifg = s:match_highlight(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)')
-      let l:guibg = s:match_highlight(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)')
+    let l:cterm_hl = {}
+    if match(l:highlight, 'cterm=\S*') >= 0
+      call s:get_hl_attrs(l:cterm_hl, 'cterm', l:highlight)
     endif
 
-    return [[l:ctermfg, l:ctermbg], [l:guifg, l:guibg]]
+    let l:cterm_hl.background = get(matchlist(l:highlight, 'ctermbg=\([0-9A-Za-z]\+\)'), 1, 'NONE')
+    let l:cterm_hl.foreground = get(matchlist(l:highlight, 'ctermfg=\([0-9A-Za-z]\+\)'), 1, 'NONE')
+
+    let l:gui_hl = {}
+    if match(l:highlight, 'gui=\S*') >= 0
+      call s:get_hl_attrs(l:gui_hl, 'gui', l:highlight)
+    endif
+
+    let l:gui_hl.background = get(matchlist(l:highlight, 'guibg=\([#0-9A-Za-z]\+\)'), 1, 'NONE')
+    let l:gui_hl.foreground = get(matchlist(l:highlight, 'guifg=\([#0-9A-Za-z]\+\)'), 1, 'NONE')
+
+    return [l:term_hl, l:cterm_hl, l:gui_hl]
   catch
-    return [['NONE', 'NONE'], ['NONE', 'NONE']]
+    return [{}, {}, {}]
   endtry
 endfunction
 
-function! s:match_highlight(highlight, pattern) abort
-  let l:matches = matchlist(a:highlight, a:pattern)
-  if len(l:matches) == 0
-    return 'NONE'
-  endif
-  return l:matches[1]
+function! s:get_hl_attrs(attrs, key, hl)
+  let a:attrs.bold = match(a:hl, a:key . '=\S*bold\S*') >= 0
+  let a:attrs.italic = match(a:hl, a:key . '=\S*italic\S*') >= 0
+  let a:attrs.reverse = match(a:hl, a:key . '=\S*reverse\S*') >= 0
+  let a:attrs.standout = match(a:hl, a:key . '=\S*standout\S*') >= 0
+  let a:attrs.underline = match(a:hl, a:key . '=\S*underline\S*') >= 0
+  let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
 endfunction
 
 function! wildsearch#render#default()
@@ -499,8 +542,8 @@ function! s:to_printable(x)
     if l:transformed_width == l:width
       " strtrans is ok
       let l:res .= l:transformed_char
-    elseif l:transformed_width < l:width
-      " strtrans returns empty character, fallback to original
+    elseif l:transformed_width == 0
+      " strtrans returns empty character, use original char
       if l:first && strdisplaywidth(' ' . l:char) == strdisplaywidth(l:char)
         " check if first character is combining character
         let l:res .= ' ' . l:char
@@ -508,7 +551,7 @@ function! s:to_printable(x)
         let l:res .= l:char
       endif
     else
-      " strtrans returns extra characters, fallback to hex representation
+      " fallback to hex representation
       let l:res .= '<' . printf('%02x', char2nr(l:char)) . '>'
     endif
 
