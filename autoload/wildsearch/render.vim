@@ -468,15 +468,27 @@ endfunction
 
 function! s:to_printable(x)
   if !s:has_strtrans_issue
+    " check if first character is a combining character
+    if strdisplaywidth(' ' . a:x) == strdisplaywidth(a:x)
+      return strtrans(' ' . a:x)
+    endif
+
     return strtrans(a:x)
   endif
 
   let l:transformed = strtrans(a:x)
+  " strtrans is ok
   if strdisplaywidth(a:x) == strdisplaywidth(l:transformed)
+    " check if first character is a combining character
+    if strdisplaywidth(' ' . a:x) == strdisplaywidth(a:x)
+      return strtrans(' ' . a:x)
+    endif
+
     return strtrans(a:x)
   endif
 
   let l:res = ''
+  let l:first = 1
 
   for l:char in split(a:x, '\zs')
     let l:transformed_char = strtrans(l:char)
@@ -485,12 +497,22 @@ function! s:to_printable(x)
     let l:width = strdisplaywidth(l:char)
 
     if l:transformed_width == l:width
+      " strtrans is ok
       let l:res .= l:transformed_char
     elseif l:transformed_width < l:width
-      let l:res .= l:char
+      " strtrans returns empty character, fallback to original
+      if l:first && strdisplaywidth(' ' . l:char) == strdisplaywidth(l:char)
+        " check if first character is combining character
+        let l:res .= ' ' . l:char
+      else
+        let l:res .= l:char
+      endif
     else
+      " strtrans returns extra characters, fallback to hex representation
       let l:res .= '<' . printf('%02x', char2nr(l:char)) . '>'
     endif
+
+    let l:first = 0
   endfor
 
   return l:res
