@@ -10,7 +10,6 @@ let s:modes = ['/', '?']
 
 let s:candidates = []
 let s:selected = -1
-let s:completion = ''
 let s:page = [-1, -1]
 let s:error = ''
 let s:has_error = 0
@@ -107,7 +106,6 @@ function! s:start(check)
   let s:active = 1
   let s:candidates = []
   let s:selected = -1
-  let s:completion = ''
   let s:page = [-1, -1]
   let s:error = ''
   let s:has_error = 0
@@ -158,6 +156,10 @@ function! wildsearch#main#stop()
     unlet s:previous_cmdline
   endif
 
+  if exists('s:completion')
+    unlet s:completion
+  endif
+
   if has_key(s:opts, 'post_hook')
     if s:opts.post_hook ==# ''
       " pass
@@ -181,7 +183,7 @@ function! s:do(check)
 
   let l:input = getcmdline()
 
-  let l:has_completion = !empty(s:completion) && l:input ==# s:completion
+  let l:has_completion = exists('s:completion') && l:input ==# s:completion
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
@@ -192,8 +194,8 @@ function! s:do(check)
     return
   endif
 
-  if !l:has_completion
-    let s:completion = ''
+  if !l:has_completion && exists('s:completion')
+    unlet s:completion
   endif
 
   let s:draw_done = 0
@@ -324,7 +326,10 @@ function! wildsearch#main#step(num_steps)
     " pass
   elseif l:len == 0
     let s:selected = -1
-    let s:completion = ''
+
+    if exists('s:completion')
+      unlet s:completion
+    endif
   elseif l:len == 1
     let s:selected = 0
     let s:completion = s:candidates[0]
@@ -345,22 +350,19 @@ function! wildsearch#main#step(num_steps)
 
   call s:draw(a:num_steps)
 
-  if s:selected != -1
+  if exists('s:completion')
     let l:keys = "\<C-E>\<C-U>"
 
-    let l:candidate = s:candidates[s:selected]
+    let l:chars = split(s:completion, '\zs')
 
-    let l:i = 0
-    while l:i < len(l:candidate)
-      " control character
-      if l:candidate[l:i] <# ' '
+    for l:char in l:chars
+      " control characters
+      if l:char <# ' '
         let l:keys .= "\<C-Q>"
       endif
 
-      let l:keys .= l:candidate[l:i]
-
-      let l:i += 1
-    endwhile
+      let l:keys .= l:char
+    endfor
 
     call feedkeys(l:keys, 'n')
   endif
