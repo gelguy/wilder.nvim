@@ -384,8 +384,15 @@ function! s:make_hl_from_list_list(name, args)
     let l:cmd .= 'cterm=' . join(l:cterm_hl[2:], ',') . ' '
   endif
 
-  let l:cmd .= 'ctermfg=' . get(l:cterm_hl, 0, 'NONE') . ' '
-  let l:cmd .= 'ctermbg=' . get(l:cterm_hl, 1, 'NONE') . ' '
+  if len(l:cterm_hl) >= 1
+    if l:cterm_hl[0] >= 0
+      let l:cmd .= 'ctermfg=' . l:cterm_hl[0] . ' '
+    endif
+
+    if len(l:cterm_hl) >= 2 && l:cterm_hl[1] >= 0
+      let l:cmd .= 'ctermbg=' . l:cterm_hl[1] . ' '
+    endif
+  endif
 
   if len(l:gui_hl) > 2
     let l:cmd .= 'gui=' . join(l:gui_hl[2:], ',') . ' '
