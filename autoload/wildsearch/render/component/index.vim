@@ -1,7 +1,7 @@
 function! wildsearch#render#component#index#make(args)
   let l:res = {
         \ 'stl': {ctx, candidates -> s:stl(a:args, ctx, candidates)},
-        \ 'len': {_, candidates -> len(len(candidates)) * 2 + 1 + 2},
+        \ 'len': {ctx, candidates -> len(len(candidates)) * 2 + 1 + 2},
         \ }
 
   if has_key(a:args, 'hl')

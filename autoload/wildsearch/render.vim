@@ -317,8 +317,8 @@ function! wildsearch#render#components_draw(components, ctx, candidates)
 endfunction
 
 function! wildsearch#render#set_components(args)
-  let s:left = a:args.left
-  let s:right = a:args.right
+  let s:left = get(a:args, 'left', [])
+  let s:right = get(a:args, 'right', [])
 endfunction
 
 function! wildsearch#render#get_components(...)

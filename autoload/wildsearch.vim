@@ -97,8 +97,8 @@ function! wildsearch#next_arrow(...)
   return wildsearch#render#component#arrows#make_next(l:args)
 endfunction
 
-function! wildsearch#separator(str, fg, bg)
-  return wildsearch#render#component#separator#make(a:str, a:fg, a:bg)
+function! wildsearch#separator(str, from, to)
+  return wildsearch#render#component#separator#make(a:str, a:from, a:to)
 endfunction
 
 function! wildsearch#spinner(...)
