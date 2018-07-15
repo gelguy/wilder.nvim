@@ -1,7 +1,11 @@
 function! wildsearch#render#component#arrows#make_previous(args)
+  let l:state = {
+        \ 'previous': get(a:args, 'previous', '< '),
+        \ }
+
   let l:res = {
-        \ 'stl': {ctx, candidates -> s:left(ctx, candidates)},
-        \ 'len': 2,
+        \ 'stl': {ctx, candidates -> s:left(l:state, ctx, candidates)},
+        \ 'len': strdisplaywidth(l:state.previous),
         \ }
 
   if has_key(a:args, 'hl')
@@ -12,9 +16,14 @@ function! wildsearch#render#component#arrows#make_previous(args)
 endfunction
 
 function! wildsearch#render#component#arrows#make_next(args)
+  let l:state = {
+        \ 'previous': get(a:args, 'previous', '< '),
+        \ 'next': get(a:args, 'next', ' >'),
+        \ }
+
   let l:res = {
-        \ 'stl': {ctx, candidates -> s:right(ctx, candidates)},
-        \ 'len': 2,
+        \ 'stl': {ctx, candidates -> s:right(l:state, ctx, candidates)},
+        \ 'len': strdisplaywidth(l:state.next),
         \ }
 
   if has_key(a:args, 'hl')
@@ -24,14 +33,17 @@ function! wildsearch#render#component#arrows#make_next(args)
   return l:res
 endfunction
 
-function! s:left(ctx, candidates)
-  return a:ctx.page[0] > 0 ? '< ' : ''
+function! s:left(state, ctx, candidates)
+  return a:ctx.page[0] > 0 ? a:state.previous : ''
 endfunction
 
-function! s:right(ctx, candidates)
-  let l:next_page_arrow = a:ctx.page[1] < len(a:candidates) - 1 ? ' >' : '  '
+function! s:right(state, ctx, candidates)
+  let l:next_page_arrow = a:ctx.page[1] < len(a:candidates) - 1 ?
+        \ a:state.next :
+        \ repeat(' ', strdisplaywidth(a:state.next))
 
-  let l:res = a:ctx.page[0] > 0 ? '' : '  '
+  " add padding if previous arrow is empty
+  let l:res = a:ctx.page[0] > 0 ? '' : repeat(' ', strdisplaywidth(a:state.previous))
   let l:res .= l:next_page_arrow
   return l:res
 endfunction
