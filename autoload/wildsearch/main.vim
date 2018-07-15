@@ -78,6 +78,11 @@ function! wildsearch#main#start_from_normal_mode()
 endfunction
 
 function! s:start(check)
+  if a:check && !wildsearch#main#in_context()
+    call wildsearch#main#stop()
+    return
+  endif
+
   if has('nvim') && !s:init
     let s:init = 1
     call _wildsearch_init({'num_workers': s:opts.num_workers})
@@ -122,7 +127,7 @@ function! s:start(check)
 
   call wildsearch#render#init()
 
-  call s:do(a:check)
+  call s:do(0)
 endfunction
 
 function! wildsearch#main#stop()
@@ -267,8 +272,6 @@ function! wildsearch#main#on_error(ctx, x)
 endfunction
 
 function! s:draw(...)
-  let s:draw_done = 1
-
   let l:direction = a:0 == 0 ? 0 : a:1
 
   let l:ctx = {
@@ -304,6 +307,8 @@ function! s:draw(...)
 
   call setwinvar(0, '&statusline', l:statusline)
   redrawstatus
+
+  let s:draw_done = 1
 endfunction
 
 function! wildsearch#main#next()
