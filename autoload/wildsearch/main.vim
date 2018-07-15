@@ -219,7 +219,7 @@ function! s:do(check)
         \ }
 
   if !s:draw_done && (l:is_new_input ||
-        \ wildsearch#render#need_redraw(wildsearch#render#get_components(), l:ctx, s:candidates))
+        \ wildsearch#render#components_need_redraw(wildsearch#render#get_components(), l:ctx, s:candidates))
     call s:draw()
   endif
 endfunction
@@ -283,7 +283,7 @@ function! s:draw(...)
   let l:left_components = wildsearch#render#get_components('left')
   let l:right_components = wildsearch#render#get_components('right')
 
-  let l:space_used = wildsearch#render#len(
+  let l:space_used = wildsearch#render#components_len(
         \ l:left_components + l:right_components,
         \ l:ctx, l:candidates)
   let l:ctx.space = winwidth(0) - l:space_used

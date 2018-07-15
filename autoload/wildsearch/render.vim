@@ -23,6 +23,56 @@ function! wildsearch#render#get_option(key)
   return s:opts[a:key]
 endfunction
 
+function! wildsearch#render#components_len(components, ctx, candidates)
+  let l:len = 0
+
+  for l:Component in a:components
+    if type(l:Component) == v:t_func
+      let l:len += strdisplaywidth(l:Component(a:ctx, a:candidates))
+    elseif type(l:Component) == v:t_string
+      let l:len += strdisplaywidth(l:Component)
+    elseif has_key(l:Component, 'len')
+      if type(l:Component.len) == v:t_func
+        let l:len += l:Component.len(a:ctx, a:candidates)
+      else
+        let l:len += l:Component.len
+      endif
+    else
+      if type(l:Component.stl) == v:t_func
+        let l:res = l:Component.stl(a:ctx, a:candidates)
+      else
+        let l:res = l:Component.stl
+      endif
+
+      let l:len += strdisplaywidth(l:res)
+    endif
+  endfor
+
+  return l:len
+endfunction
+
+function! wildsearch#render#init()
+  " exe before and after components since there might be components which
+  " depend on existing highlights
+  for l:key in keys(s:hl_map)
+    exe s:hl_map[l:key]
+  endfor
+
+  call wildsearch#render#components_on_start(wildsearch#render#get_components(), {})
+
+  for l:key in keys(s:hl_map)
+    exe s:hl_map[l:key]
+  endfor
+endfunction
+
+function! wildsearch#render#components_on_start(components, ctx)
+  for l:Component in a:components
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'on_start')
+      call l:Component.on_start(a:ctx)
+    endif
+  endfor
+endfunction
+
 function! wildsearch#render#make_page(ctx, candidates)
   if empty(a:candidates)
     return [-1, -1]
@@ -127,7 +177,7 @@ function! s:make_page_from_end(ctx, candidates, end)
   return [l:start, l:end]
 endfunction
 
-function! wildsearch#render#need_redraw(components, ctx, x)
+function! wildsearch#render#components_need_redraw(components, ctx, x)
   for l:Component in a:components
     if type(l:Component) == v:t_dict && has_key(l:Component, 'redraw')
       if l:Component.redraw(a:ctx, a:x)
@@ -142,9 +192,9 @@ endfunction
 function! wildsearch#render#draw(left, right, ctx, candidates)
   let l:res = ''
 
-  let l:res .= wildsearch#render#draw_components(a:left, a:ctx, a:candidates)
+  let l:res .= wildsearch#render#components_draw(a:left, a:ctx, a:candidates)
   let l:res .= s:draw_candidates(a:ctx, a:candidates)
-  let l:res .= wildsearch#render#draw_components(a:right, a:ctx, a:candidates)
+  let l:res .= wildsearch#render#components_draw(a:right, a:ctx, a:candidates)
 
   return l:res
 endfunction
@@ -152,9 +202,9 @@ endfunction
 function! wildsearch#render#draw_error(left, right, ctx, error)
   let l:res = ''
 
-  let l:res .= wildsearch#render#draw_components(a:left, a:ctx, [])
+  let l:res .= wildsearch#render#components_draw(a:left, a:ctx, [])
   let l:res .= s:draw_error(a:ctx, a:error)
-  let l:res .= wildsearch#render#draw_components(a:right, a:ctx, [])
+  let l:res .= wildsearch#render#components_draw(a:right, a:ctx, [])
 
   return l:res
 endfunction
@@ -240,7 +290,7 @@ function! s:draw_error(ctx, error)
   return l:res . repeat(' ', l:space - strdisplaywidth(g:_wildsearch_error))
 endfunction
 
-function! wildsearch#render#draw_components(components, ctx, candidates)
+function! wildsearch#render#components_draw(components, ctx, candidates)
   let l:res = ''
 
   for l:Component in a:components
@@ -266,34 +316,6 @@ function! wildsearch#render#draw_components(components, ctx, candidates)
   return l:res
 endfunction
 
-function! wildsearch#render#len(components, ctx, candidates)
-  let l:len = 0
-
-  for l:Component in a:components
-    if type(l:Component) == v:t_func
-      let l:len += strdisplaywidth(l:Component(a:ctx, a:candidates))
-    elseif type(l:Component) == v:t_string
-      let l:len += strdisplaywidth(l:Component)
-    elseif has_key(l:Component, 'len')
-      if type(l:Component.len) == v:t_func
-        let l:len += l:Component.len(a:ctx, a:candidates)
-      else
-        let l:len += l:Component.len
-      endif
-    else
-      if type(l:Component.stl) == v:t_func
-        let l:res = l:Component.stl(a:ctx, a:candidates)
-      else
-        let l:res = l:Component.stl
-      endif
-
-      let l:len += strdisplaywidth(l:res)
-    endif
-  endfor
-
-  return l:len
-endfunction
-
 function! wildsearch#render#set_components(args)
   let s:left = a:args.left
   let s:right = a:args.right
@@ -309,28 +331,6 @@ function! wildsearch#render#get_components(...)
   endif
 
   return a:1 ==# 'left' ? s:left : s:right
-endfunction
-
-function! wildsearch#render#init()
-  " exe before and after components since there might be components which
-  " depend on existing highlights
-  for l:key in keys(s:hl_map)
-    exe s:hl_map[l:key]
-  endfor
-
-  call wildsearch#render#init_components(wildsearch#render#get_components(), {})
-
-  for l:key in keys(s:hl_map)
-    exe s:hl_map[l:key]
-  endfor
-endfunction
-
-function! wildsearch#render#init_components(components, ctx)
-  for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'init')
-      call l:Component.init(a:ctx)
-    endif
-  endfor
 endfunction
 
 function! wildsearch#render#make_hl(name, args)

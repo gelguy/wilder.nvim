@@ -9,7 +9,7 @@ function! wildsearch#render#component#separator#make(str, fg, bg)
   return {
         \ 'stl': a:str,
         \ 'hl': l:name,
-        \ 'init': {_ -> s:hl(l:name, a:fg, a:bg)}
+        \ 'on_start': {_ -> s:hl(l:name, a:fg, a:bg)}
         \ }
 endfunction
 

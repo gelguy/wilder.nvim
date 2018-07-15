@@ -10,16 +10,16 @@ function! wildsearch#render#component#condition#make(predicate, if_true, if_fals
         \ 'stl': {ctx, x -> s:stl(l:args, ctx, x)},
         \ 'len': {ctx, x -> s:len(l:args, ctx, x)},
         \ 'redraw': {ctx, x -> s:redraw(l:args, ctx, x)},
-        \ 'init': {ctx -> s:init(l:args, ctx)},
+        \ 'on_start': {ctx -> s:on_start(l:args, ctx)},
         \ }
 endfunction
 
-function! s:init(args, ctx)
-  call wildsearch#render#init_components(a:args.if_true + a:args.if_false, a:ctx)
+function! s:on_start(args, ctx)
+  call wildsearch#render#components_on_start(a:args.if_true + a:args.if_false, a:ctx)
 endfunction
 
 function! s:redraw(args, ctx, x)
-  return wildsearch#render#need_redraw(a:args.if_true + a:args.if_false, a:ctx, a:x)
+  return wildsearch#render#components_need_redraw(a:args.if_true + a:args.if_false, a:ctx, a:x)
 endfunction
 
 function! s:len(args, ctx, candidates)
@@ -28,9 +28,9 @@ function! s:len(args, ctx, candidates)
         \ a:args.if_true :
         \ a:args.if_false
 
-  return wildsearch#render#len(a:args.chosen, a:ctx, a:candidates)
+  return wildsearch#render#components_len(a:args.chosen, a:ctx, a:candidates)
 endfunction
 
 function! s:stl(args, ctx, candidates)
-  return wildsearch#render#draw_components(a:args.chosen, a:ctx, a:candidates)
+  return wildsearch#render#components_draw(a:args.chosen, a:ctx, a:candidates)
 endfunction
