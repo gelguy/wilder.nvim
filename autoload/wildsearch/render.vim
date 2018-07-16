@@ -347,7 +347,7 @@ function! wildsearch#render#make_hl(name, args)
 endfunction
 
 function! s:make_hl_from_string(name, args)
-  let l:cmd = 'hi! ' . a:name . ' link ' . a:args
+  let l:cmd = 'hi! link ' . a:name . ' ' . a:args
 
   let s:hl_map[a:name] = l:cmd
   return a:name
