@@ -6,8 +6,8 @@ function! wildsearch#branch(...)
   return wildsearch#pipeline#component#branch#make(a:000)
 endfunction
 
-function! wildsearch#concat(...)
-  return wildsearch#pipeline#component#concat#make(a:000)
+function! wildsearch#all(...)
+  return wildsearch#pipeline#component#all#make(a:000)
 endfunction
 
 function! wildsearch#check(...)
@@ -60,6 +60,10 @@ endfunction
 
 function! wildsearch#python_sort()
   return wildsearch#pipeline#component#python_sort#make()
+endfunction
+
+function! wildsearch#concat()
+  return wildsearch#pipeline#component#concat#make()
 endfunction
 
 function! wildsearch#history(...)
