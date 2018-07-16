@@ -142,16 +142,16 @@ function! wildsearch#main#stop()
     augroup! WildsearchCmdlineChanged
   endif
 
+  if exists('s:timer')
+    call timer_stop(s:timer)
+    unlet s:timer
+  endif
+
   if exists('#WildsearchCmdlineLeave')
     augroup WildsearchCmdlineLeave
       autocmd!
     augroup END
     augroup! WildsearchCmdlineLeave
-  endif
-
-  if exists('s:timer')
-    call timer_stop(s:timer)
-    unlet s:timer
   endif
 
   let s:active = 0
@@ -164,6 +164,8 @@ function! wildsearch#main#stop()
   if exists('s:completion')
     unlet s:completion
   endif
+
+  call wildsearch#render#finish()
 
   if has_key(s:opts, 'post_hook')
     if s:opts.post_hook ==# ''

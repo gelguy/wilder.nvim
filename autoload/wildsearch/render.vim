@@ -65,10 +65,22 @@ function! wildsearch#render#init()
   endfor
 endfunction
 
+function! wildsearch#render#finish()
+  call wildsearch#render#components_on_end(wildsearch#render#get_components(), {})
+endfunction
+
 function! wildsearch#render#components_on_start(components, ctx)
   for l:Component in a:components
     if type(l:Component) == v:t_dict && has_key(l:Component, 'on_start')
       call l:Component.on_start(a:ctx)
+    endif
+  endfor
+endfunction
+
+function! wildsearch#render#components_on_end(components, ctx)
+  for l:Component in a:components
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'on_end')
+      call l:Component.on_end(a:ctx)
     endif
   endfor
 endfunction
