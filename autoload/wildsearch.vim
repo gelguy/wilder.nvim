@@ -62,10 +62,6 @@ function! wildsearch#python_sort()
   return wildsearch#pipeline#component#python_sort#make()
 endfunction
 
-function! wildsearch#concat()
-  return wildsearch#pipeline#component#concat#make()
-endfunction
-
 function! wildsearch#history(...)
   if a:0 == 0
     return wildsearch#pipeline#component#history#make()
