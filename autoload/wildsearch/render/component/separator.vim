@@ -9,7 +9,7 @@ function! wildsearch#render#component#separator#make(str, fg, bg)
   return {
         \ 'stl': a:str,
         \ 'hl': l:name,
-        \ 'on_start': {ctx -> s:hl(l:name, a:fg, a:bg)},
+        \ 'pre_hook': {ctx -> s:hl(l:name, a:fg, a:bg)},
         \ }
 endfunction
 

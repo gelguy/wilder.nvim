@@ -58,7 +58,7 @@ function! wildsearch#render#init()
     exe s:hl_map[l:key]
   endfor
 
-  call wildsearch#render#components_on_start(wildsearch#render#get_components(), {})
+  call wildsearch#render#components_pre_hook(wildsearch#render#get_components(), {})
 
   for l:key in keys(s:hl_map)
     exe s:hl_map[l:key]
@@ -66,21 +66,21 @@ function! wildsearch#render#init()
 endfunction
 
 function! wildsearch#render#finish()
-  call wildsearch#render#components_on_end(wildsearch#render#get_components(), {})
+  call wildsearch#render#components_post_hook(wildsearch#render#get_components(), {})
 endfunction
 
-function! wildsearch#render#components_on_start(components, ctx)
+function! wildsearch#render#components_pre_hook(components, ctx)
   for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'on_start')
-      call l:Component.on_start(a:ctx)
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
+      call l:Component.pre_hook(a:ctx)
     endif
   endfor
 endfunction
 
-function! wildsearch#render#components_on_end(components, ctx)
+function! wildsearch#render#components_post_hook(components, ctx)
   for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'on_end')
-      call l:Component.on_end(a:ctx)
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
+      call l:Component.post_hook(a:ctx)
     endif
   endfor
 endfunction

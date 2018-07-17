@@ -10,17 +10,17 @@ function! wildsearch#render#component#condition#make(predicate, if_true, if_fals
         \ 'stl': {ctx, x -> s:stl(l:state, ctx, x)},
         \ 'len': {ctx, x -> s:len(l:state, ctx, x)},
         \ 'redraw': {ctx, x -> s:redraw(l:state, ctx, x)},
-        \ 'on_start': {ctx -> s:on_start(l:state, ctx)},
-        \ 'on_end': {ctx -> s:on_end(l:state, ctx)},
+        \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
+        \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
-function! s:on_start(state, ctx)
-  call wildsearch#render#components_on_start(a:state.if_true + a:state.if_false, a:ctx)
+function! s:pre_hook(state, ctx)
+  call wildsearch#render#components_pre_hook(a:state.if_true + a:state.if_false, a:ctx)
 endfunction
 
-function! s:on_end(state, ctx)
-  call wildsearch#render#components_on_end(a:state.if_true + a:state.if_false, a:ctx)
+function! s:post_hook(state, ctx)
+  call wildsearch#render#components_post_hook(a:state.if_true + a:state.if_false, a:ctx)
 endfunction
 
 function! s:redraw(state, ctx, x)
