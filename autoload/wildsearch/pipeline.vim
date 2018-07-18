@@ -73,12 +73,12 @@ function! wildsearch#pipeline#do(ctx, x)
     return
   endif
 
-  let l:f = l:ctx.fs[0]
+  let l:F = l:ctx.fs[0]
   let l:ctx.fs = l:ctx.fs[1:]
   let l:ctx.step += 1
 
   try
-    let l:res = wildsearch#pipeline#call(l:f, l:ctx, a:x)
+    let l:res = wildsearch#pipeline#call(l:F, l:ctx, a:x)
     call wildsearch#pipeline#do(l:ctx, l:res)
   catch
     call wildsearch#pipeline#do_error(l:ctx, v:exception)
