@@ -243,7 +243,9 @@ function! s:draw_candidates(ctx, candidates)
       let l:ellipsis = s:to_printable(s:opts.ellipsis)
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      let g:_wildsearch_candidates = [l:candidate[:l:space_minus_ellipsis - 1] . l:ellipsis]
+      let l:candidate = s:truncate(l:space_minus_ellipsis, l:candidate)
+
+      let g:_wildsearch_candidates = [l:candidate . l:ellipsis]
 
       if l:start == l:selected
         let l:res = '%#' . s:opts.selected_hl . '#'
@@ -253,7 +255,7 @@ function! s:draw_candidates(ctx, candidates)
 
       let l:res .= '%{g:_wildsearch_candidates[0]}'
 
-      return l:res
+      return l:res . '%#' . s:opts.hl . '#'
     endif
   endif
 
@@ -292,7 +294,9 @@ function! s:draw_error(ctx, error)
     let l:ellipsis = s:to_printable(s:opts.ellipsis)
     let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-    let g:_wildsearch_error = l:error[:l:space_minus_ellipsis - 1] . l:ellipsis
+    let l:error = s:truncate(l:space_minus_ellipsis, l:error)
+
+    let g:_wildsearch_error = l:error . l:ellipsis
   else
     let g:_wildsearch_error = l:error
   endif
@@ -578,6 +582,25 @@ function! s:to_printable(x)
   endfor
 
   return l:res
+endfunction
+
+function! s:truncate(len, str)
+  " assumes to_printable has been called on str
+  let l:chars = split(a:str, '\zs')
+  let l:width = strdisplaywidth(a:str)
+
+  if l:width <= a:len
+    return a:str
+  endif
+
+  let l:index = len(l:chars) - 1
+  while l:width > a:len && l:index >= 0
+    let l:width -= strdisplaywidth(l:chars[l:index])
+
+    let l:index -= 1
+  endwhile
+
+  return join(l:chars[:l:index], '')
 endfunction
 
 let s:high_control_characters = {
