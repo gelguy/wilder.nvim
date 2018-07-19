@@ -52,8 +52,8 @@ function! wildsearch#render#components_len(components, ctx, candidates)
 endfunction
 
 function! wildsearch#render#init()
-  " exe before and after components since there might be components which
-  " depend on existing highlights
+  " create highlight before and after components since there might be
+  " components which depend on existing highlights
   for l:key in keys(s:hl_map)
     exe s:hl_map[l:key]
   endfor
