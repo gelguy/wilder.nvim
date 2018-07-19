@@ -99,7 +99,7 @@ function! s:start(check)
             \ {_ -> s:do(1)}, {'repeat': -1})
   endif
 
-  if !exists('#WildsearchCmdlineLeave')
+  if s:auto && !exists('#WildsearchCmdlineLeave')
     augroup WildsearchCmdlineLeave
       autocmd!
       autocmd CmdlineLeave * call wildsearch#main#stop()
