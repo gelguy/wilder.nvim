@@ -36,7 +36,7 @@ function! wildsearch#main#in_context()
   return index(s:modes, getcmdtype()) >= 0
 endfunction
 
-function! wildsearch#main#enable_auto()
+function! wildsearch#main#enable_cmdline_enter()
   if !exists('#WildsearchCmdlineEnter')
     augroup WildsearchCmdlineEnter
       autocmd!
@@ -45,7 +45,7 @@ function! wildsearch#main#enable_auto()
   endif
 endfunction
 
-function! wildsearch#main#disable_auto()
+function! wildsearch#main#disable_cmdline_enter()
   if exists('#WildsearchCmdlineEnter')
     augroup WildsearchCmdlineEnter
       autocmd!
