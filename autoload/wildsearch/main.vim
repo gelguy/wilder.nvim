@@ -107,13 +107,6 @@ function! s:start(check)
   endif
 
   let s:active = 1
-  let s:candidates = []
-  let s:selected = -1
-  let s:page = [-1, -1]
-
-  if exists('s:error')
-    unlet s:error
-  endif
 
   if has_key(s:opts, 'pre_hook')
     if s:opts.post_hook ==# ''
@@ -156,6 +149,9 @@ function! wildsearch#main#stop()
 
   let s:active = 0
   let s:auto = 0
+  let s:candidates = []
+  let s:selected = -1
+  let s:page = [-1, -1]
 
   if exists('s:previous_cmdline')
     unlet s:previous_cmdline
@@ -163,6 +159,10 @@ function! wildsearch#main#stop()
 
   if exists('s:completion')
     unlet s:completion
+  endif
+
+  if exists('s:error')
+    unlet s:error
   endif
 
   call wildsearch#render#finish()
@@ -179,12 +179,12 @@ function! wildsearch#main#stop()
 endfunction
 
 function! s:do(check)
-  if a:check && !wildsearch#main#in_context()
-    call wildsearch#main#stop()
+  if !s:active
     return
   endif
 
-  if !s:active
+  if a:check && !wildsearch#main#in_context()
+    call wildsearch#main#stop()
     return
   endif
 
