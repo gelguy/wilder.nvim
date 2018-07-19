@@ -11,8 +11,6 @@ let s:modes = ['/', '?']
 let s:candidates = []
 let s:selected = -1
 let s:page = [-1, -1]
-let s:error = ''
-let s:has_error = 0
 
 let s:opts = {
       \ 'interval': 100,
@@ -112,8 +110,10 @@ function! s:start(check)
   let s:candidates = []
   let s:selected = -1
   let s:page = [-1, -1]
-  let s:error = ''
-  let s:has_error = 0
+
+  if exists('s:error')
+    unlet s:error
+  endif
 
   if has_key(s:opts, 'pre_hook')
     if s:opts.post_hook ==# ''
@@ -225,6 +225,10 @@ function! s:do(check)
         \ 'done': s:run_id - 1 == s:result_run_id,
         \ }
 
+  if exists('s:error')
+    let l:ctx.error = s:error
+  endif
+
   if !s:draw_done && (l:is_new_input ||
         \ wildsearch#render#components_need_redraw(wildsearch#render#get_components(), l:ctx, s:candidates))
     call s:draw()
@@ -246,8 +250,9 @@ function! wildsearch#main#on_finish(ctx, x)
   let s:selected = -1
   " keep previous completion
 
-  let s:has_error = 0
-  let s:error = ''
+  if exists('s:error')
+    unlet s:error
+  endif
 
   call s:draw()
 endfunction
@@ -267,7 +272,6 @@ function! wildsearch#main#on_error(ctx, x)
   let s:selected = -1
   " keep previous completion
 
-  let s:has_error = 1
   let s:error = a:x
 
   call s:draw()
@@ -280,10 +284,15 @@ function! s:draw(...)
         \ 'selected': s:selected,
         \ 'direction': l:direction,
         \ 'done': s:run_id - 1 == s:result_run_id,
-        \ 'has_error': s:has_error,
         \ }
 
-  let l:candidates = s:has_error ? [] : s:candidates
+  let l:has_error = exists('s:error')
+
+  if l:has_error
+    let l:ctx.error = s:error
+  endif
+
+  let l:candidates = l:has_error ? [] : s:candidates
 
   let l:left_components = wildsearch#render#get_components('left')
   let l:right_components = wildsearch#render#get_components('right')
@@ -297,7 +306,7 @@ function! s:draw(...)
   let s:page = wildsearch#render#make_page(l:ctx, l:candidates)
   let l:ctx.page = s:page
 
-  if s:has_error
+  if l:has_error
     let l:statusline = wildsearch#render#draw_error(
           \ l:left_components, l:right_components,
           \ l:ctx, s:error)
