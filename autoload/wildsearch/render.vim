@@ -85,28 +85,41 @@ function! wildsearch#render#components_post_hook(components, ctx)
   endfor
 endfunction
 
-function! wildsearch#render#make_page(ctx, candidates)
+function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resized)
   if empty(a:candidates)
     return [-1, -1]
   endif
 
-  let l:direction = a:ctx.direction
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
-  let l:page = a:ctx.page
   let l:separator = s:opts.separator
 
-  if l:page != [-1, -1] && l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
-    return l:page
+  " if selected is within old page
+  if a:page != [-1, -1] && l:selected != -1 && l:selected >= a:page[0] && l:selected <= a:page[1]
+    " check if page_start to selected still fits within winwidth
+    if a:has_resized
+      let l:rendered_candidates = map(copy(a:candidates[a:page[0] : l:selected]), {_, x -> s:to_printable(x)})
+      let l:separator = s:to_printable(s:opts.separator)
+
+      let l:width = strdisplaywidth(join(l:rendered_candidates, l:separator))
+
+      if l:width <= l:space
+        return s:make_page_from_start(a:ctx, a:candidates, a:page[0])
+      endif
+
+      " else make new page
+    else
+      return a:page
+    endif
   endif
 
   let l:selected = l:selected == -1 ? 0 : l:selected
 
-  if l:page == [-1, -1]
+  if a:page == [-1, -1]
     return s:make_page_from_start(a:ctx, a:candidates, l:selected)
   endif
 
-  if l:direction < 0
+  if a:direction < 0
     return s:make_page_from_end(a:ctx, a:candidates, l:selected)
   endif
 

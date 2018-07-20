@@ -6,6 +6,7 @@ let s:active = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
+
 let s:modes = ['/', '?']
 
 let s:candidates = []
@@ -91,7 +92,7 @@ function! s:start(check)
       augroup WildsearchCmdlineChanged
         autocmd!
         " directly calling s:do makes getcmdline return an empty string
-        autocmd CmdlineChanged * call timer_start(0, {-> s:do(1)})
+        autocmd CmdlineChanged * call timer_start(0, {_ -> s:do(1)})
       augroup END
     endif
   elseif !exists('s:timer')
@@ -103,6 +104,13 @@ function! s:start(check)
     augroup WildsearchCmdlineLeave
       autocmd!
       autocmd CmdlineLeave * call wildsearch#main#stop()
+    augroup END
+  endif
+
+  if !exists('#WildsearchVimResized')
+    augroup WildsearchVimResized
+      autocmd!
+        autocmd VimResized * call timer_start(0, {_ -> s:draw_resized()})
     augroup END
   endif
 
@@ -145,6 +153,13 @@ function! wildsearch#main#stop()
       autocmd!
     augroup END
     augroup! WildsearchCmdlineLeave
+  endif
+
+  if exists('#WildsearchVimResized')
+    augroup WildsearchVimResized
+      autocmd!
+    augroup END
+    augroup! WildsearchVimResized
   endif
 
   let s:active = 0
@@ -221,7 +236,6 @@ function! s:do(check)
 
   let l:ctx = {
         \ 'selected': s:selected,
-        \ 'direction': 0,
         \ 'done': s:run_id - 1 == s:result_run_id,
         \ }
 
@@ -277,12 +291,16 @@ function! wildsearch#main#on_error(ctx, x)
   call s:draw()
 endfunction
 
+function! s:draw_resized()
+  call s:draw(0, 1)
+endfunction
+
 function! s:draw(...)
-  let l:direction = a:0 == 0 ? 0 : a:1
+  let l:direction = a:0 >= 1 ? a:1 : 0
+  let l:has_resized = a:0 >= 2 ? a:2 : 0
 
   let l:ctx = {
         \ 'selected': s:selected,
-        \ 'direction': l:direction,
         \ 'done': s:run_id - 1 == s:result_run_id,
         \ }
 
@@ -301,9 +319,8 @@ function! s:draw(...)
         \ l:left_components + l:right_components,
         \ l:ctx, l:candidates)
   let l:ctx.space = winwidth(0) - l:space_used
-  let l:ctx.page = s:page
 
-  let s:page = wildsearch#render#make_page(l:ctx, l:candidates)
+  let s:page = wildsearch#render#make_page(l:ctx, l:candidates, s:page, l:direction, l:has_resized)
   let l:ctx.page = s:page
 
   if l:has_error
