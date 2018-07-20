@@ -117,7 +117,7 @@ function! s:start(check)
   let s:active = 1
 
   if has_key(s:opts, 'pre_hook')
-    if s:opts.post_hook ==# ''
+    if s:opts.pre_hook ==# ''
       " pass
     elseif type(s:opts.pre_hook) == v:t_func
       call s:opts.pre_hook()
