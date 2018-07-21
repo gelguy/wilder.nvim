@@ -1,10 +1,14 @@
 let s:index = 0
 
-function! wildsearch#render#component#separator#make(str, fg, bg) abort
-  let l:index = s:index
-  let s:index += 1
+function! wildsearch#render#component#separator#make(str, fg, bg, ...) abort
+  if a:0 == 0
+    let l:key = s:index
+    let s:index += 1
+  else
+    let l:key = a:0
+  endif
 
-  let l:name = 'WildsearchSeparator' . l:index
+  let l:name = 'WildsearchSeparator' . l:key
 
   return {
         \ 'stl': a:str,

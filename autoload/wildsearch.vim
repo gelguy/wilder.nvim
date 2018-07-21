@@ -97,8 +97,12 @@ function! wildsearch#next_arrow(...) abort
   return wildsearch#render#component#arrows#make_next(l:args)
 endfunction
 
-function! wildsearch#separator(str, from, to) abort
-  return wildsearch#render#component#separator#make(a:str, a:from, a:to)
+function! wildsearch#separator(str, from, to, ...) abort
+  if a:0 > 0
+    return wildsearch#render#component#separator#make(a:str, a:from, a:to, a:1)
+  else
+    return wildsearch#render#component#separator#make(a:str, a:from, a:to)
+  endif
 endfunction
 
 function! wildsearch#spinner(...) abort
