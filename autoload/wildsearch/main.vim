@@ -21,23 +21,23 @@ let s:opts = {
       \ 'num_workers': 2,
       \ }
 
-function! wildsearch#main#set_option(key, value)
+function! wildsearch#main#set_option(key, value) abort
   let s:opts[a:key] = a:value
 endfunction
 
-function! wildsearch#main#set_options(opts)
+function! wildsearch#main#set_options(opts) abort
   let s:opts = extend(s:opts, a:opts)
 endfunction
 
-function! wildsearch#main#get_option(key)
+function! wildsearch#main#get_option(key) abort
   return s:opts[a:key]
 endfunction
 
-function! wildsearch#main#in_context()
+function! wildsearch#main#in_context() abort
   return index(s:modes, getcmdtype()) >= 0
 endfunction
 
-function! wildsearch#main#enable_cmdline_enter()
+function! wildsearch#main#enable_cmdline_enter() abort
   if !exists('#WildsearchCmdlineEnter')
     augroup WildsearchCmdlineEnter
       autocmd!
@@ -46,7 +46,7 @@ function! wildsearch#main#enable_cmdline_enter()
   endif
 endfunction
 
-function! wildsearch#main#disable_cmdline_enter()
+function! wildsearch#main#disable_cmdline_enter() abort
   if exists('#WildsearchCmdlineEnter')
     augroup WildsearchCmdlineEnter
       autocmd!
@@ -55,7 +55,7 @@ function! wildsearch#main#disable_cmdline_enter()
   endif
 endfunction
 
-function! wildsearch#main#start_auto()
+function! wildsearch#main#start_auto() abort
   if index(s:modes, getcmdtype()) == -1
     return
   endif
@@ -67,7 +67,7 @@ function! wildsearch#main#start_auto()
   return "\<Insert>\<Insert>"
 endfunction
 
-function! wildsearch#main#start_from_normal_mode()
+function! wildsearch#main#start_from_normal_mode() abort
   let s:auto = 1
 
   " skip check since it is still normal mode
@@ -76,7 +76,7 @@ function! wildsearch#main#start_from_normal_mode()
   return ''
 endfunction
 
-function! s:start(check)
+function! s:start(check) abort
   if a:check && !wildsearch#main#in_context()
     call wildsearch#main#stop()
     return
@@ -131,7 +131,7 @@ function! s:start(check)
   call s:do(0)
 endfunction
 
-function! wildsearch#main#stop()
+function! wildsearch#main#stop() abort
   if !s:active
     return
   endif
@@ -193,7 +193,7 @@ function! wildsearch#main#stop()
   endif
 endfunction
 
-function! s:do(check)
+function! s:do(check) abort
   if !s:active
     return
   endif
@@ -249,7 +249,7 @@ function! s:do(check)
   endif
 endfunction
 
-function! wildsearch#main#on_finish(ctx, x)
+function! wildsearch#main#on_finish(ctx, x) abort
   if !s:active
     return
   endif
@@ -271,7 +271,7 @@ function! wildsearch#main#on_finish(ctx, x)
   call s:draw()
 endfunction
 
-function! wildsearch#main#on_error(ctx, x)
+function! wildsearch#main#on_error(ctx, x) abort
   if !s:active
     return
   endif
@@ -291,11 +291,11 @@ function! wildsearch#main#on_error(ctx, x)
   call s:draw()
 endfunction
 
-function! s:draw_resized()
+function! s:draw_resized() abort
   call s:draw(0, 1)
 endfunction
 
-function! s:draw(...)
+function! s:draw(...) abort
   let l:direction = a:0 >= 1 ? a:1 : 0
   let l:has_resized = a:0 >= 2 ? a:2 : 0
 
@@ -339,15 +339,15 @@ function! s:draw(...)
   let s:draw_done = 1
 endfunction
 
-function! wildsearch#main#next()
+function! wildsearch#main#next() abort
   return wildsearch#main#step(1)
 endfunction
 
-function! wildsearch#main#previous()
+function! wildsearch#main#previous() abort
   return wildsearch#main#step(-1)
 endfunction
 
-function! wildsearch#main#step(num_steps)
+function! wildsearch#main#step(num_steps) abort
   if !s:active
     call s:start(1)
     " returning '' seems to prevent async completions from finishing
@@ -403,19 +403,19 @@ function! wildsearch#main#step(num_steps)
   return "\<Insert>\<Insert>"
 endfunction
 
-function! wildsearch#main#save_statusline()
+function! wildsearch#main#save_statusline() abort
   let s:old_laststatus = &laststatus
   let &laststatus = 2
 
   let s:old_statusline = &statusline
 endfunction
 
-function! wildsearch#main#restore_statusline()
+function! wildsearch#main#restore_statusline() abort
   let &laststatus = s:old_laststatus
   let &statusline = s:old_statusline
   redrawstatus
 endfunction
 
-function! wildsearch#main#active()
+function! wildsearch#main#active() abort
   return s:active
 endfunction

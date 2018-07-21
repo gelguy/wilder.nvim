@@ -1,8 +1,8 @@
-function! wildsearch#pipeline#component#check#make(args)
+function! wildsearch#pipeline#component#check#make(args) abort
   return {ctx, x -> s:check(a:args, ctx, x)}
 endfunction
 
-function s:check(checks, ctx, x)
+function! s:check(checks, ctx, x)
   let l:i = 0
 
   for l:Check in a:checks

@@ -1,8 +1,8 @@
-function! wildsearch#pipeline#component#python_fuzzy_match#make(args)
+function! wildsearch#pipeline#component#python_fuzzy_match#make(args) abort
   return {ctx, x -> s:fuzzy_match(a:args, ctx, x)}
 endfunction
 
-function! s:fuzzy_match(args, ctx, x)
+function! s:fuzzy_match(args, ctx, x) abort
   if has_key(a:args, 'word')
     if type(a:args.word) == v:t_string
       let l:word = a:args.word

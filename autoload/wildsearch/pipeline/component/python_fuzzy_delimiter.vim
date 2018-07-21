@@ -1,8 +1,8 @@
-function! wildsearch#pipeline#component#python_fuzzy_delimiter#make(args)
+function! wildsearch#pipeline#component#python_fuzzy_delimiter#make(args) abort
   return {ctx, x -> s:make(a:args, ctx, x)}
 endfunction
 
-function! s:make(args, ctx, x)
+function! s:make(args, ctx, x) abort
   if has_key(a:args, 'delimiter')
     if type(a:args.delimiter) == v:t_string
       let l:delimiter = a:args.delimiter

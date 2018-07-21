@@ -2,34 +2,34 @@ let s:pipeline = []
 let s:func_index = 0
 let s:funcs = {}
 
-function! wildsearch#pipeline#null(...)
+function! wildsearch#pipeline#null(...) abort
   return v:null
 endfunction
 
-function! wildsearch#pipeline#fail(...)
+function! wildsearch#pipeline#fail(...) abort
   return v:false
 endfunction
 
-function! wildsearch#pipeline#reset_funcs()
+function! wildsearch#pipeline#reset_funcs() abort
   let s:func_index = 0
   let s:funcs = {}
 endfunction
 
-function! wildsearch#pipeline#register_func(f)
+function! wildsearch#pipeline#register_func(f) abort
   let s:func_index += 1
   let s:funcs[s:func_index] = type(a:f) == v:t_func ? a:f : function(a:f)
   return s:func_index
 endfunction
 
-function! wildsearch#pipeline#register_funcs(fs)
+function! wildsearch#pipeline#register_funcs(fs) abort
   return map(copy(a:fs), {idx, f -> wildsearch#pipeline#register_func(f)})
 endfunction
 
-function! wildsearch#pipeline#unregister_func(key)
+function! wildsearch#pipeline#unregister_func(key) abort
   unlet s:funcs[a:key]
 endfunction
 
-function! wildsearch#pipeline#call(key, ctx, x)
+function! wildsearch#pipeline#call(key, ctx, x) abort
   if type(a:key) == v:t_string
     return function(a:key)(a:ctx, a:x)
   else
@@ -37,13 +37,13 @@ function! wildsearch#pipeline#call(key, ctx, x)
   endif
 endfunction
 
-function! wildsearch#pipeline#set_pipeline(pipeline)
+function! wildsearch#pipeline#set_pipeline(pipeline) abort
   call wildsearch#pipeline#reset_funcs()
 
   let s:pipeline = wildsearch#pipeline#register_funcs(a:pipeline)
 endfunction
 
-function! wildsearch#pipeline#start(ctx, x)
+function! wildsearch#pipeline#start(ctx, x) abort
   if len(s:pipeline) == 0
     call wildsearch#pipeline#set_pipeline(wildsearch#pipeline#default())
   endif
@@ -57,7 +57,7 @@ function! wildsearch#pipeline#start(ctx, x)
   call wildsearch#pipeline#do(l:ctx, a:x)
 endfunction
 
-function! wildsearch#pipeline#do(ctx, x)
+function! wildsearch#pipeline#do(ctx, x) abort
   let l:ctx = copy(a:ctx)
 
   if a:x is v:null
@@ -85,15 +85,15 @@ function! wildsearch#pipeline#do(ctx, x)
   endtry
 endfunction
 
-function! wildsearch#pipeline#do_error(ctx, x)
+function! wildsearch#pipeline#do_error(ctx, x) abort
   call wildsearch#pipeline#call(a:ctx.on_error, a:ctx, a:x)
 endfunction
 
-function! wildsearch#pipeline#funcs()
+function! wildsearch#pipeline#funcs() abort
   return copy(s:funcs)
 endfunction
 
-function! wildsearch#pipeline#default()
+function! wildsearch#pipeline#default() abort
   if has('nvim')
     return [
           \ wildsearch#check_not_empty(),

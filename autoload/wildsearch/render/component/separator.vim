@@ -1,6 +1,6 @@
 let s:index = 0
 
-function! wildsearch#render#component#separator#make(str, fg, bg)
+function! wildsearch#render#component#separator#make(str, fg, bg) abort
   let l:index = s:index
   let s:index += 1
 
@@ -13,7 +13,7 @@ function! wildsearch#render#component#separator#make(str, fg, bg)
         \ }
 endfunction
 
-function! s:hl(name, from, to)
+function! s:hl(name, from, to) abort
   let l:from_hl = wildsearch#render#get_colors(a:from)
   let l:to_hl = wildsearch#render#get_colors(a:to)
 

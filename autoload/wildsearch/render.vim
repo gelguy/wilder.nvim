@@ -11,19 +11,19 @@ let s:opts = {
       \ 'ellipsis': '...',
       \ }
 
-function! wildsearch#render#set_option(key, value)
+function! wildsearch#render#set_option(key, value) abort
   let s:opts[a:key] = a:value
 endfunction
 
-function! wildsearch#render#set_options(opts)
+function! wildsearch#render#set_options(opts) abort
   let s:opts = extend(s:opts, a:opts)
 endfunction
 
-function! wildsearch#render#get_option(key)
+function! wildsearch#render#get_option(key) abort
   return s:opts[a:key]
 endfunction
 
-function! wildsearch#render#components_len(components, ctx, candidates)
+function! wildsearch#render#components_len(components, ctx, candidates) abort
   let l:len = 0
 
   for l:Component in a:components
@@ -51,7 +51,7 @@ function! wildsearch#render#components_len(components, ctx, candidates)
   return l:len
 endfunction
 
-function! wildsearch#render#init()
+function! wildsearch#render#init() abort
   " create highlight before and after components since there might be
   " components which depend on existing highlights
   for l:key in keys(s:hl_map)
@@ -65,11 +65,11 @@ function! wildsearch#render#init()
   endfor
 endfunction
 
-function! wildsearch#render#finish()
+function! wildsearch#render#finish() abort
   call wildsearch#render#components_post_hook(wildsearch#render#get_components(), {})
 endfunction
 
-function! wildsearch#render#components_pre_hook(components, ctx)
+function! wildsearch#render#components_pre_hook(components, ctx) abort
   for l:Component in a:components
     if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
       call l:Component.pre_hook(a:ctx)
@@ -77,7 +77,7 @@ function! wildsearch#render#components_pre_hook(components, ctx)
   endfor
 endfunction
 
-function! wildsearch#render#components_post_hook(components, ctx)
+function! wildsearch#render#components_post_hook(components, ctx) abort
   for l:Component in a:components
     if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
       call l:Component.post_hook(a:ctx)
@@ -85,7 +85,7 @@ function! wildsearch#render#components_post_hook(components, ctx)
   endfor
 endfunction
 
-function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resized)
+function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resized) abort
   if empty(a:candidates)
     return [-1, -1]
   endif
@@ -126,7 +126,7 @@ function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resi
   return s:make_page_from_start(a:ctx, a:candidates, l:selected)
 endfunction
 
-function! s:make_page_from_start(ctx, candidates, start)
+function! s:make_page_from_start(ctx, candidates, start) abort
   let l:space = a:ctx.space
   let l:separator = s:opts.separator
 
@@ -155,7 +155,7 @@ function! s:make_page_from_start(ctx, candidates, start)
   return [l:start, l:end]
 endfunction
 
-function! s:make_page_from_end(ctx, candidates, end)
+function! s:make_page_from_end(ctx, candidates, end) abort
   let l:space = a:ctx.space
   let l:separator = s:to_printable(s:opts.separator)
 
@@ -202,7 +202,7 @@ function! s:make_page_from_end(ctx, candidates, end)
   return [l:start, l:end]
 endfunction
 
-function! wildsearch#render#components_need_redraw(components, ctx, x)
+function! wildsearch#render#components_need_redraw(components, ctx, x) abort
   for l:Component in a:components
     if type(l:Component) == v:t_dict && has_key(l:Component, 'redraw')
       if l:Component.redraw(a:ctx, a:x)
@@ -214,7 +214,7 @@ function! wildsearch#render#components_need_redraw(components, ctx, x)
   return 0
 endfunction
 
-function! wildsearch#render#draw(left, right, ctx, candidates)
+function! wildsearch#render#draw(left, right, ctx, candidates) abort
   let l:res = ''
 
   let l:res .= wildsearch#render#components_draw(a:left, a:ctx, a:candidates)
@@ -224,7 +224,7 @@ function! wildsearch#render#draw(left, right, ctx, candidates)
   return l:res
 endfunction
 
-function! wildsearch#render#draw_error(left, right, ctx, error)
+function! wildsearch#render#draw_error(left, right, ctx, error) abort
   let l:res = ''
 
   let l:res .= wildsearch#render#components_draw(a:left, a:ctx, [])
@@ -234,7 +234,7 @@ function! wildsearch#render#draw_error(left, right, ctx, error)
   return l:res
 endfunction
 
-function! s:draw_candidates(ctx, candidates)
+function! s:draw_candidates(ctx, candidates) abort
   let s:cmdline = getcmdline()
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
@@ -299,7 +299,7 @@ function! s:draw_candidates(ctx, candidates)
   return l:res . repeat(' ', l:space - l:len)
 endfunction
 
-function! s:draw_error(ctx, error)
+function! s:draw_error(ctx, error) abort
   let l:space = a:ctx.space
   let l:error = s:to_printable(a:error)
 
@@ -319,7 +319,7 @@ function! s:draw_error(ctx, error)
   return l:res . repeat(' ', l:space - strdisplaywidth(g:_wildsearch_error))
 endfunction
 
-function! wildsearch#render#components_draw(components, ctx, candidates)
+function! wildsearch#render#components_draw(components, ctx, candidates) abort
   let l:res = ''
 
   for l:Component in a:components
@@ -345,12 +345,12 @@ function! wildsearch#render#components_draw(components, ctx, candidates)
   return l:res
 endfunction
 
-function! wildsearch#render#set_components(args)
+function! wildsearch#render#set_components(args) abort
   let s:left = get(a:args, 'left', [])
   let s:right = get(a:args, 'right', [])
 endfunction
 
-function! wildsearch#render#get_components(...)
+function! wildsearch#render#get_components(...) abort
   if !exists('s:left') && !exists('s:right')
     call wildsearch#render#set_components(wildsearch#render#default())
   endif
@@ -362,7 +362,7 @@ function! wildsearch#render#get_components(...)
   return a:1 ==# 'left' ? s:left : s:right
 endfunction
 
-function! wildsearch#render#make_hl(name, args)
+function! wildsearch#render#make_hl(name, args) abort
   let l:type = type(a:args)
   if l:type == v:t_list
     if type(a:args[0]) == v:t_list
@@ -375,14 +375,14 @@ function! wildsearch#render#make_hl(name, args)
   endif
 endfunction
 
-function! s:make_hl_from_string(name, args)
+function! s:make_hl_from_string(name, args) abort
   let l:cmd = 'hi! link ' . a:name . ' ' . a:args
 
   let s:hl_map[a:name] = l:cmd
   return a:name
 endfunction
 
-function! s:make_hl_from_dict_list(name, args)
+function! s:make_hl_from_dict_list(name, args) abort
   let l:term_hl = s:get_attrs_as_list(a:args[0])
 
   let l:cterm_hl = [
@@ -398,7 +398,7 @@ function! s:make_hl_from_dict_list(name, args)
   return s:make_hl_from_list_list(a:name, [l:term_hl, l:cterm_hl, l:gui_hl])
 endfunction
 
-function! s:make_hl_from_list_list(name, args)
+function! s:make_hl_from_list_list(name, args) abort
   let l:term_hl = a:args[0]
   let l:cterm_hl = a:args[1]
   let l:gui_hl = a:args[2]
@@ -447,7 +447,7 @@ function! s:make_hl_from_list_list(name, args)
   return a:name
 endfunction
 
-function! s:get_attrs_as_list(attrs)
+function! s:get_attrs_as_list(attrs) abort
   let l:res = []
 
   if get(a:attrs, 'bold', 0)
@@ -472,7 +472,7 @@ function! s:get_attrs_as_list(attrs)
   return l:res
 endfunction
 
-function! wildsearch#render#get_colors(group)
+function! wildsearch#render#get_colors(group) abort
   if has('nvim')
     return wildsearch#render#get_colors_nvim(a:group)
   else
@@ -480,7 +480,7 @@ function! wildsearch#render#get_colors(group)
   endif
 endfunction
 
-function! wildsearch#render#get_colors_nvim(group)
+function! wildsearch#render#get_colors_nvim(group) abort
   try
     let l:cterm_hl = nvim_get_hl_by_name(a:group, 0)
     let l:gui_hl = nvim_get_hl_by_name(a:group, 1)
@@ -491,7 +491,7 @@ function! wildsearch#render#get_colors_nvim(group)
   endtry
 endfunction
 
-function! wildsearch#render#get_colors_vim(group) abort
+function! wildsearch#render#get_colors_vim(group) abort abort
   try
     redir => l:highlight
     silent execute 'silent highlight ' . a:group
@@ -529,7 +529,7 @@ function! wildsearch#render#get_colors_vim(group) abort
   endtry
 endfunction
 
-function! s:get_hl_attrs(attrs, key, hl)
+function! s:get_hl_attrs(attrs, key, hl) abort
   let a:attrs.bold = match(a:hl, a:key . '=\S*bold\S*') >= 0
   let a:attrs.italic = match(a:hl, a:key . '=\S*italic\S*') >= 0
   let a:attrs.reverse = match(a:hl, a:key . '=\S*reverse\S*') >= 0
@@ -538,14 +538,14 @@ function! s:get_hl_attrs(attrs, key, hl)
   let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
 endfunction
 
-function! wildsearch#render#default()
+function! wildsearch#render#default() abort
   return {
         \ 'left': [wildsearch#previous_arrow()],
         \ 'right': [wildsearch#next_arrow()],
         \ }
 endfunction
 
-function! s:to_printable(x)
+function! s:to_printable(x) abort
   if !s:has_strtrans_issue
     " check if first character is a combining character
     if strdisplaywidth(' ' . a:x) == strdisplaywidth(a:x)
@@ -597,7 +597,7 @@ function! s:to_printable(x)
   return l:res
 endfunction
 
-function! s:truncate(len, str)
+function! s:truncate(len, str) abort
   " assumes to_printable has been called on str
   let l:chars = split(a:str, '\zs')
   let l:width = strdisplaywidth(a:str)

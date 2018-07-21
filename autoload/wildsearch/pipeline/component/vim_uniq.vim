@@ -1,8 +1,8 @@
-function! wildsearch#pipeline#component#vim_uniq#make()
+function! wildsearch#pipeline#component#vim_uniq#make() abort
   return {ctx, x -> s:uniq(ctx, x)}
 endfunction
 
-function! s:uniq(ctx, x)
+function! s:uniq(ctx, x) abort
   let l:seen = {}
   let l:res = []
 

@@ -1,8 +1,8 @@
-function! wildsearch#pipeline#component#vim_search#make(opts)
+function! wildsearch#pipeline#component#vim_search#make(opts) abort
   return {ctx, x -> s:search(a:opts, ctx, x)}
 endfunction
 
-function! s:search(opts, ctx, x)
+function! s:search(opts, ctx, x) abort
   let l:cursor_pos = getcurpos()
   let l:candidates = []
   let l:candidates_set = {}
@@ -21,7 +21,7 @@ function! s:search(opts, ctx, x)
   return l:candidates
 endfunction
 
-function! s:add(match, candidates, candidates_set, max_candidates)
+function! s:add(match, candidates, candidates_set, max_candidates) abort
   if has_key(a:candidates_set, a:match)
     return
   endif
@@ -34,6 +34,6 @@ function! s:add(match, candidates, candidates_set, max_candidates)
   endif
 endfunction
 
-function! s:throw()
+function! s:throw() abort
   throw 'Wildsearch: Max candidates reached'
 endfunction

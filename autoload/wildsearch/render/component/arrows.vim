@@ -1,4 +1,4 @@
-function! wildsearch#render#component#arrows#make_previous(args)
+function! wildsearch#render#component#arrows#make_previous(args) abort
   let l:state = {
         \ 'previous': get(a:args, 'previous', '< '),
         \ }
@@ -15,7 +15,7 @@ function! wildsearch#render#component#arrows#make_previous(args)
   return l:res
 endfunction
 
-function! wildsearch#render#component#arrows#make_next(args)
+function! wildsearch#render#component#arrows#make_next(args) abort
   let l:state = {
         \ 'previous': get(a:args, 'previous', '< '),
         \ 'next': get(a:args, 'next', ' >'),
@@ -33,11 +33,11 @@ function! wildsearch#render#component#arrows#make_next(args)
   return l:res
 endfunction
 
-function! s:left(state, ctx, candidates)
+function! s:left(state, ctx, candidates) abort
   return a:ctx.page[0] > 0 ? a:state.previous : ''
 endfunction
 
-function! s:right(state, ctx, candidates)
+function! s:right(state, ctx, candidates) abort
   let l:next_page_arrow = a:ctx.page[1] < len(a:candidates) - 1 ?
         \ a:state.next :
         \ repeat(' ', strdisplaywidth(a:state.next))

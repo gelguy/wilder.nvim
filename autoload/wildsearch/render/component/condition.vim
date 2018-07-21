@@ -1,4 +1,4 @@
-function! wildsearch#render#component#condition#make(predicate, if_true, if_false)
+function! wildsearch#render#component#condition#make(predicate, if_true, if_false) abort
   let l:state = {
         \ 'predicate': a:predicate,
         \ 'if_true': a:if_true,
@@ -15,19 +15,19 @@ function! wildsearch#render#component#condition#make(predicate, if_true, if_fals
         \ }
 endfunction
 
-function! s:pre_hook(state, ctx)
+function! s:pre_hook(state, ctx) abort
   call wildsearch#render#components_pre_hook(a:state.if_true + a:state.if_false, a:ctx)
 endfunction
 
-function! s:post_hook(state, ctx)
+function! s:post_hook(state, ctx) abort
   call wildsearch#render#components_post_hook(a:state.if_true + a:state.if_false, a:ctx)
 endfunction
 
-function! s:redraw(state, ctx, x)
+function! s:redraw(state, ctx, x) abort
   return wildsearch#render#components_need_redraw(a:state.if_true + a:state.if_false, a:ctx, a:x)
 endfunction
 
-function! s:len(state, ctx, candidates)
+function! s:len(state, ctx, candidates) abort
   " choose branch here
   let a:state.chosen = a:state.predicate(a:ctx, a:candidates) ?
         \ a:state.if_true :
@@ -36,6 +36,6 @@ function! s:len(state, ctx, candidates)
   return wildsearch#render#components_len(a:state.chosen, a:ctx, a:candidates)
 endfunction
 
-function! s:stl(state, ctx, candidates)
+function! s:stl(state, ctx, candidates) abort
   return wildsearch#render#components_draw(a:state.chosen, a:ctx, a:candidates)
 endfunction

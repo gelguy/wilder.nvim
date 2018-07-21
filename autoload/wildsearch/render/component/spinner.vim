@@ -1,4 +1,4 @@
-function! wildsearch#render#component#spinner#make(args)
+function! wildsearch#render#component#spinner#make(args) abort
   let l:frames = get(a:args, 'frames', ['-', '\', '|', '/'])
   if type(l:frames) == v:t_string
     let l:frames = split(l:frames, '\zs')
@@ -33,7 +33,7 @@ function! wildsearch#render#component#spinner#make(args)
   return l:res
 endfunction
 
-function! s:get_char(state, ctx, candidates)
+function! s:get_char(state, ctx, candidates) abort
   if a:ctx.done
     let a:state.was_done = 1
     let a:state.current_char = a:state.done
@@ -69,6 +69,6 @@ function! s:get_char(state, ctx, candidates)
   return a:state.frames[a:state.index]
 endfunction
 
-function! s:spinner(state, ctx, candidates)
+function! s:spinner(state, ctx, candidates) abort
   return a:state.current_char
 endfunction

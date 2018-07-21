@@ -1,4 +1,4 @@
-function! wildsearch#pipeline#component#all#make(args)
+function! wildsearch#pipeline#component#all#make(args) abort
   if len(a:args) == 0
     return {_, x -> []}
   endif
@@ -11,7 +11,7 @@ function! wildsearch#pipeline#component#all#make(args)
   return {ctx, x -> s:start(l:args, ctx, x)}
 endfunction
 
-function s:start(args, ctx, x)
+function! s:start(args, ctx, x)
   if !a:args.initialised
       let a:args.fs_list = map(copy(a:args.fs_list), {_, fs -> wildsearch#pipeline#register_funcs(copy(fs))})
 
@@ -38,14 +38,14 @@ function s:start(args, ctx, x)
   return v:null
 endfunction
 
-function! s:on_error(state, ctx, x)
+function! s:on_error(state, ctx, x) abort
   call wildsearch#pipeline#unregister_func(a:state.on_error)
   call wildsearch#pipeline#unregister_func(a:state.on_finish)
 
   call wildsearch#pipeline#do_error(a:state.original_ctx, a:x)
 endfunction
 
-function! s:on_finish(state, ctx, x)
+function! s:on_finish(state, ctx, x) abort
   if a:x is v:false
     call wildsearch#pipeline#do(a:state.original_ctx, a:x)
     return

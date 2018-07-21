@@ -1,9 +1,9 @@
-function! wildsearch#pipeline#component#history#make(cmdtype, ...)
+function! wildsearch#pipeline#component#history#make(cmdtype, ...) abort
   let l:num_history = a:0 > 0 ? a:1 : 50
   return {ctx, x -> s:history(a:cmdtype, l:num_history)}
 endfunction
 
-function! s:history(cmdtype, num_history)
+function! s:history(cmdtype, num_history) abort
   let l:max = histnr(a:cmdtype)
   if a:num_history <= 0
     let l:num_history = l:max
