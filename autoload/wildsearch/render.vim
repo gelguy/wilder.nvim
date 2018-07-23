@@ -90,14 +90,14 @@ function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resi
     return [-1, -1]
   endif
 
-  let l:selected = a:ctx.selected
-  let l:space = a:ctx.space
-  let l:separator = s:opts.separator
-
   " if selected is within old page
   if a:page != [-1, -1] && l:selected != -1 && l:selected >= a:page[0] && l:selected <= a:page[1]
-    " check if page_start to selected still fits within winwidth
+    " check if page_start to selected still fits within space
     if a:has_resized
+      let l:selected = a:ctx.selected
+      let l:space = a:ctx.space
+      let l:separator = s:opts.separator
+
       let l:rendered_candidates = map(copy(a:candidates[a:page[0] : l:selected]), {_, x -> s:to_printable(x)})
       let l:separator = s:to_printable(s:opts.separator)
 

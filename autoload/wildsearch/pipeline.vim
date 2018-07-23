@@ -22,7 +22,7 @@ function! wildsearch#pipeline#register_func(f) abort
 endfunction
 
 function! wildsearch#pipeline#register_funcs(fs) abort
-  return map(copy(a:fs), {idx, f -> wildsearch#pipeline#register_func(f)})
+  return map(copy(a:fs), {_, f -> wildsearch#pipeline#register_func(f)})
 endfunction
 
 function! wildsearch#pipeline#unregister_func(key) abort
@@ -89,7 +89,7 @@ function! wildsearch#pipeline#do_error(ctx, x) abort
   call wildsearch#pipeline#call(a:ctx.on_error, a:ctx, a:x)
 endfunction
 
-function! wildsearch#pipeline#funcs() abort
+function! wildsearch#pipeline#_funcs() abort
   return copy(s:funcs)
 endfunction
 

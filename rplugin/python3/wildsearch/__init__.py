@@ -94,10 +94,6 @@ class Wildsearch(object):
             self.events.append(event)
 
         self.run_in_background(self.search_handler, [event, buf] + args)
-        #  t = threading.Thread(target=lambda: self.search_handler(event, buf, *args))
-        #  t.start()
-        #  with self.executor as executor:
-            #  executor.submit(self.search_handler(event, buf, *args))
 
     def search_handler(self, event, buf, opts, ctx, x):
         if event.is_set():
