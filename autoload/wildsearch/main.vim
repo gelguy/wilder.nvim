@@ -16,8 +16,10 @@ let s:page = [-1, -1]
 let s:opts = {
       \ 'interval': 100,
       \ 'use_cmdlinechanged': 0,
-      \ 'pre_hook': 'wildsearch#main#save_statusline',
-      \ 'post_hook': 'wildsearch#main#restore_statusline',
+      \ 'hooks': {
+      \    'pre': 'wildsearch#main#save_statusline',
+      \    'post': 'wildsearch#main#restore_statusline',
+      \  },
       \ 'num_workers': 2,
       \ }
 
@@ -116,13 +118,13 @@ function! s:start(check) abort
 
   let s:active = 1
 
-  if has_key(s:opts, 'pre_hook')
-    if s:opts.pre_hook ==# ''
-      " pass
-    elseif type(s:opts.pre_hook) == v:t_func
-      call s:opts.pre_hook()
-    else
-      call function(s:opts.pre_hook)()
+  if has_key(s:opts, 'hooks')
+    if has_key(s:opts.hooks, 'pre')
+      if type(s:opts.hooks.pre) == v:t_func
+        call s:opts.hooks.pre()
+      else
+        call function(s:opts.hooks.pre)()
+      endif
     endif
   endif
 
@@ -182,13 +184,13 @@ function! wildsearch#main#stop() abort
 
   call wildsearch#render#finish()
 
-  if has_key(s:opts, 'post_hook')
-    if s:opts.post_hook ==# ''
-      " pass
-    elseif type(s:opts.post_hook) == v:t_func
-      call s:opts.post_hook()
-    else
-      call function(s:opts.post_hook)()
+  if has_key(s:opts, 'hooks')
+    if has_key(s:opts.hooks, 'post')
+      if type(s:opts.hooks.post) == v:t_func
+        call s:opts.hooks.post()
+      else
+        call function(s:opts.hooks.post)()
+      endif
     endif
   endif
 endfunction
