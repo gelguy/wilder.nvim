@@ -4,10 +4,10 @@ endfunction
 
 function! s:fuzzy_match(args, ctx, x) abort
   if has_key(a:args, 'word')
-    if type(a:args.word) == v:t_string
-      let l:word = a:args.word
-    else
+    if type(a:args.word) == v:t_func
       let l:word = a:args.word(a:ctx, a:x)
+    else
+      let l:word = a:args.word
     endif
   else
     let l:word = '\w'
