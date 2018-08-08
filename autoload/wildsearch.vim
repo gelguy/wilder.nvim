@@ -62,11 +62,11 @@ function! wildsearch#python_sort() abort
   return wildsearch#pipeline#component#python_sort#make()
 endfunction
 
-function! wildsearch#history(...) abort
+function! wildsearch#history(cmdtype, ...) abort
   if a:0 == 0
-    return wildsearch#pipeline#component#history#make()
+    return wildsearch#pipeline#component#history#make(a:cmdtype)
   else
-    return wildsearch#pipeline#component#history#make(a:1)
+    return wildsearch#pipeline#component#history#make(a:cmdtype, a:1)
   endif
 endfunction
 
