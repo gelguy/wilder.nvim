@@ -52,7 +52,7 @@ function! s:make(args, ctx, x) abort
       if l:escaped || l:char ==# toupper(l:char)
         let l:res .= l:char
       else
-        let l:res .= '[' . l:char . '|' . toupper(l:char) . ']'
+        let l:res .= '(?:(?:(?<=' . l:delimiter . ')|\b)'. l:char . '|' . toupper(l:char) . ')'
       endif
 
       let l:first = 0
@@ -60,9 +60,13 @@ function! s:make(args, ctx, x) abort
     endif
 
     if !l:escaped && l:char ==# toupper(l:char)
-      let l:res .= '(?:' . l:word . '*?(?:' . l:delimiter . l:char . '|' . l:char . '))'
+      let l:res .= '(?:' . l:word . '*?' . l:delimiter . '?' . l:char . ')'
     else
-      let l:res .= '(?:' . l:char . '|(?:' . l:word . '*?(?:' . l:delimiter . l:char . '|' . toupper(l:char) . ')))'
+      let l:res .= '(?:' . l:char . '|' .
+            \ toupper(l:char) . '|' .
+            \ l:word . '*?' . toupper(l:char) . '|' .
+            \ l:word . '*?' . l:delimiter . l:char . '|' .
+            \ l:word . '*?' . l:delimiter . toupper(l:char) . ')'
     endif
   endwhile
 
