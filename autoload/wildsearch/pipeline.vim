@@ -99,12 +99,14 @@ function! wildsearch#pipeline#default() abort
           \ wildsearch#check_not_empty(),
           \ wildsearch#python_substring(),
           \ wildsearch#python_search(),
+          \ wildsearch#escape('^$.*~[]\'),
           \ ]
   else
     return [
           \ wildsearch#check_not_empty(),
           \ wildsearch#vim_substring(),
           \ wildsearch#vim_search(),
+          \ wildsearch#escape('^$.*~[]\'),
           \ ]
   endif
 endfunction
