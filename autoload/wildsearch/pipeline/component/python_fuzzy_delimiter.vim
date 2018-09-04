@@ -59,7 +59,7 @@ function! s:make(args, ctx, x) abort
       continue
     endif
 
-    if !l:escaped && l:char ==# toupper(l:char)
+    if l:escaped || l:char ==# toupper(l:char)
       let l:res .= '(?:' . l:word . '*?' . l:delimiter . '?' . l:char . ')'
     else
       let l:res .= '(?:' . l:char . '|' .
