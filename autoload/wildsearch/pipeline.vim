@@ -6,7 +6,11 @@ function! wildsearch#pipeline#null(...) abort
   return v:null
 endfunction
 
-function! wildsearch#pipeline#fail(...) abort
+function! wildsearch#pipeline#true(...) abort
+  return v:true
+endfunction
+
+function! wildsearch#pipeline#false(...) abort
   return v:false
 endfunction
 
@@ -63,7 +67,7 @@ function! wildsearch#pipeline#do(ctx, x) abort
   if a:x is v:null
     " skip
     return
-  elseif a:x is v:false
+  elseif a:x is v:false || a:x is v:true
     call wildsearch#pipeline#call(l:ctx.on_finish, l:ctx, a:x)
     return
   endif

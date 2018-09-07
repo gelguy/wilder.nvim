@@ -3,15 +3,16 @@ scriptencoding utf-8
 let s:init = 0
 let s:auto = 0
 let s:active = 0
+let s:hidden = 1
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
 
-let s:modes = ['/', '?']
-
 let s:candidates = []
 let s:selected = -1
 let s:page = [-1, -1]
+
+let s:modes = ['/', '?']
 
 let s:opts = {
       \ 'interval': 100,
@@ -35,8 +36,12 @@ function! wildsearch#main#get_option(key) abort
   return s:opts[a:key]
 endfunction
 
-function! wildsearch#main#in_context() abort
+function! wildsearch#main#in_mode() abort
   return index(s:modes, getcmdtype()) >= 0
+endfunction
+
+function! wildsearch#main#in_context() abort
+  return wildsearch#main#in_mode() && !s:hidden
 endfunction
 
 function! wildsearch#main#enable_cmdline_enter() abort
@@ -58,7 +63,7 @@ function! wildsearch#main#disable_cmdline_enter() abort
 endfunction
 
 function! wildsearch#main#start_auto() abort
-  if index(s:modes, getcmdtype()) == -1
+  if !wildsearch#main#in_mode()
     return
   endif
 
@@ -79,7 +84,7 @@ function! wildsearch#main#start_from_normal_mode() abort
 endfunction
 
 function! s:start(check) abort
-  if a:check && !wildsearch#main#in_context()
+  if a:check && !wildsearch#main#in_mode()
     call wildsearch#main#stop()
     return
   endif
@@ -117,18 +122,9 @@ function! s:start(check) abort
   endif
 
   let s:active = 1
+  let s:hidden = 0
 
-  if has_key(s:opts, 'hooks')
-    if has_key(s:opts.hooks, 'pre')
-      if type(s:opts.hooks.pre) == v:t_func
-        call s:opts.hooks.pre()
-      else
-        call function(s:opts.hooks.pre)()
-      endif
-    endif
-  endif
-
-  call wildsearch#render#init()
+  call s:pre_hook()
 
   call s:do(0)
 endfunction
@@ -182,15 +178,33 @@ function! wildsearch#main#stop() abort
     unlet s:error
   endif
 
+  if !s:hidden
+    let s:hidden = 1
+
+    call s:post_hook()
+  endif
+endfunction
+
+function! s:pre_hook() abort
+  if has_key(s:opts, 'hooks') && has_key(s:opts.hooks, 'pre')
+    if type(s:opts.hooks.pre) == v:t_func
+      call s:opts.hooks.pre()
+    else
+      call function(s:opts.hooks.pre)()
+    endif
+  endif
+
+  call wildsearch#render#init()
+endfunction
+
+function! s:post_hook() abort
   call wildsearch#render#finish()
 
-  if has_key(s:opts, 'hooks')
-    if has_key(s:opts.hooks, 'post')
-      if type(s:opts.hooks.post) == v:t_func
-        call s:opts.hooks.post()
-      else
-        call function(s:opts.hooks.post)()
-      endif
+  if has_key(s:opts, 'hooks') && has_key(s:opts.hooks, 'post')
+    if type(s:opts.hooks.post) == v:t_func
+      call s:opts.hooks.post()
+    else
+      call function(s:opts.hooks.post)()
     endif
   endif
 endfunction
@@ -200,7 +214,7 @@ function! s:do(check) abort
     return
   endif
 
-  if a:check && !wildsearch#main#in_context()
+  if a:check && !wildsearch#main#in_mode()
     call wildsearch#main#stop()
     return
   endif
@@ -262,12 +276,28 @@ function! wildsearch#main#on_finish(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:candidates = a:x is v:false ? [] : a:x
+  let s:candidates = (a:x is v:false || a:x is v:true) ? [] : a:x
   let s:selected = -1
   " keep previous completion
 
   if exists('s:error')
     unlet s:error
+  endif
+
+  if a:x is v:true
+    if !s:hidden
+      let s:hidden = 1
+
+      call s:post_hook()
+    endif
+
+    return
+  endif
+
+  if s:hidden
+    let s:hidden = 0
+
+    call s:pre_hook()
   endif
 
   call s:draw()
@@ -294,10 +324,18 @@ function! wildsearch#main#on_error(ctx, x) abort
 endfunction
 
 function! s:draw_resized() abort
+  if !s:active
+    return
+  endif
+
   call s:draw(0, 1)
 endfunction
 
 function! s:draw(...) abort
+  if s:hidden
+    return
+  endif
+
   let l:direction = a:0 >= 1 ? a:1 : 0
   let l:has_resized = a:0 >= 2 ? a:2 : 0
 
@@ -353,6 +391,10 @@ function! wildsearch#main#step(num_steps) abort
   if !s:active
     call s:start(1)
     " returning '' seems to prevent async completions from finishing
+    return "\<Insert>\<Insert>"
+  endif
+
+  if s:hidden
     return "\<Insert>\<Insert>"
   endif
 
