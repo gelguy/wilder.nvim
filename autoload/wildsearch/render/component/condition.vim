@@ -27,15 +27,15 @@ function! s:redraw(state, ctx, x) abort
   return wildsearch#render#components_need_redraw(a:state.if_true + a:state.if_false, a:ctx, a:x)
 endfunction
 
-function! s:len(state, ctx, candidates) abort
+function! s:len(state, ctx, xs) abort
   " choose branch here
-  let a:state.chosen = a:state.predicate(a:ctx, a:candidates) ?
+  let a:state.chosen = a:state.predicate(a:ctx, a:xs) ?
         \ a:state.if_true :
         \ a:state.if_false
 
-  return wildsearch#render#components_len(a:state.chosen, a:ctx, a:candidates)
+  return wildsearch#render#components_len(a:state.chosen, a:ctx, a:xs)
 endfunction
 
-function! s:stl(state, ctx, candidates) abort
-  return wildsearch#render#components_draw(a:state.chosen, a:ctx, a:candidates)
+function! s:stl(state, ctx, xs) abort
+  return wildsearch#render#components_draw(a:state.chosen, a:ctx, a:xs)
 endfunction

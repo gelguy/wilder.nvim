@@ -33,7 +33,7 @@ function! wildsearch#render#component#spinner#make(args) abort
   return l:res
 endfunction
 
-function! s:get_char(state, ctx, candidates) abort
+function! s:get_char(state, ctx, xs) abort
   if a:ctx.done
     let a:state.was_done = 1
     let a:state.current_char = a:state.done
@@ -69,6 +69,6 @@ function! s:get_char(state, ctx, candidates) abort
   return a:state.frames[a:state.index]
 endfunction
 
-function! s:spinner(state, ctx, candidates) abort
+function! s:spinner(state, ctx, xs) abort
   return a:state.current_char
 endfunction

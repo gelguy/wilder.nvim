@@ -23,23 +23,23 @@ function! wildsearch#render#get_option(key) abort
   return s:opts[a:key]
 endfunction
 
-function! wildsearch#render#components_len(components, ctx, candidates) abort
+function! wildsearch#render#components_len(components, ctx, xs) abort
   let l:len = 0
 
   for l:Component in a:components
     if type(l:Component) == v:t_func
-      let l:len += strdisplaywidth(l:Component(a:ctx, a:candidates))
+      let l:len += strdisplaywidth(l:Component(a:ctx, a:xs))
     elseif type(l:Component) == v:t_string
       let l:len += strdisplaywidth(l:Component)
     elseif has_key(l:Component, 'len')
       if type(l:Component.len) == v:t_func
-        let l:len += l:Component.len(a:ctx, a:candidates)
+        let l:len += l:Component.len(a:ctx, a:xs)
       else
         let l:len += l:Component.len
       endif
     else
       if type(l:Component.stl) == v:t_func
-        let l:res = l:Component.stl(a:ctx, a:candidates)
+        let l:res = l:Component.stl(a:ctx, a:xs)
       else
         let l:res = l:Component.stl
       endif
@@ -85,8 +85,8 @@ function! wildsearch#render#components_post_hook(components, ctx) abort
   endfor
 endfunction
 
-function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resized) abort
-  if empty(a:candidates)
+function! wildsearch#render#make_page(ctx, xs, page, direction, has_resized) abort
+  if empty(a:xs)
     return [-1, -1]
   endif
 
@@ -100,13 +100,13 @@ function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resi
       let l:space = a:ctx.space
       let l:separator = s:opts.separator
 
-      let l:rendered_candidates = map(copy(a:candidates[a:page[0] : l:selected]), {_, x -> s:to_printable(x)})
+      let l:rendered_xs = map(copy(a:xs[a:page[0] : l:selected]), {_, x -> s:to_printable(x)})
       let l:separator = s:to_printable(s:opts.separator)
 
-      let l:width = strdisplaywidth(join(l:rendered_candidates, l:separator))
+      let l:width = strdisplaywidth(join(l:rendered_xs, l:separator))
 
       if l:width <= l:space
-        return s:make_page_from_start(a:ctx, a:candidates, a:page[0])
+        return s:make_page_from_start(a:ctx, a:xs, a:page[0])
       endif
 
       " else make new page
@@ -118,33 +118,33 @@ function! wildsearch#render#make_page(ctx, candidates, page, direction, has_resi
   let l:selected = l:selected == -1 ? 0 : l:selected
 
   if a:page == [-1, -1]
-    return s:make_page_from_start(a:ctx, a:candidates, l:selected)
+    return s:make_page_from_start(a:ctx, a:xs, l:selected)
   endif
 
   if a:direction < 0
-    return s:make_page_from_end(a:ctx, a:candidates, l:selected)
+    return s:make_page_from_end(a:ctx, a:xs, l:selected)
   endif
 
-  return s:make_page_from_start(a:ctx, a:candidates, l:selected)
+  return s:make_page_from_start(a:ctx, a:xs, l:selected)
 endfunction
 
-function! s:make_page_from_start(ctx, candidates, start) abort
+function! s:make_page_from_start(ctx, xs, start) abort
   let l:space = a:ctx.space
   let l:separator = s:opts.separator
 
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:to_printable(a:candidates[l:start]))
+  let l:width = strdisplaywidth(s:to_printable(a:xs[l:start]))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(s:to_printable(l:separator))
 
   while 1
-    if l:end + 1 >= len(a:candidates)
+    if l:end + 1 >= len(a:xs)
       break
     endif
 
-    let l:width = strdisplaywidth(s:to_printable(a:candidates[l:end + 1]))
+    let l:width = strdisplaywidth(s:to_printable(a:xs[l:end + 1]))
 
     if l:width + l:separator_width > l:space
       break
@@ -157,14 +157,14 @@ function! s:make_page_from_start(ctx, candidates, start) abort
   return [l:start, l:end]
 endfunction
 
-function! s:make_page_from_end(ctx, candidates, end) abort
+function! s:make_page_from_end(ctx, xs, end) abort
   let l:space = a:ctx.space
   let l:separator = s:to_printable(s:opts.separator)
 
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:to_printable(a:candidates[l:start]))
+  let l:width = strdisplaywidth(s:to_printable(a:xs[l:start]))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(l:separator)
 
@@ -173,7 +173,7 @@ function! s:make_page_from_end(ctx, candidates, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:to_printable(a:candidates[l:start - 1]))
+    let l:width = strdisplaywidth(s:to_printable(a:xs[l:start - 1]))
 
     if l:width + l:separator_width > l:space
       break
@@ -187,11 +187,11 @@ function! s:make_page_from_end(ctx, candidates, end) abort
   " but there might be leftover space, so we increase l:end to fill up the
   " space e.g. to [0,6]
   while 1
-    if l:end + 1 >= len(a:candidates)
+    if l:end + 1 >= len(a:xs)
       break
     endif
 
-    let l:width = strdisplaywidth(s:to_printable(a:candidates[l:end + 1]))
+    let l:width = strdisplaywidth(s:to_printable(a:xs[l:end + 1]))
 
     if l:width + l:separator_width > l:space
       break
@@ -216,12 +216,12 @@ function! wildsearch#render#components_need_redraw(components, ctx, x) abort
   return 0
 endfunction
 
-function! wildsearch#render#draw(left, right, ctx, candidates) abort
+function! wildsearch#render#draw(left, right, ctx, xs) abort
   let l:res = ''
 
-  let l:res .= wildsearch#render#components_draw(a:left, a:ctx, a:candidates)
-  let l:res .= s:draw_candidates(a:ctx, a:candidates)
-  let l:res .= wildsearch#render#components_draw(a:right, a:ctx, a:candidates)
+  let l:res .= wildsearch#render#components_draw(a:left, a:ctx, a:xs)
+  let l:res .= s:draw_xs(a:ctx, a:xs)
+  let l:res .= wildsearch#render#components_draw(a:right, a:ctx, a:xs)
 
   return l:res
 endfunction
@@ -236,7 +236,7 @@ function! wildsearch#render#draw_error(left, right, ctx, error) abort
   return l:res
 endfunction
 
-function! s:draw_candidates(ctx, candidates) abort
+function! s:draw_xs(ctx, xs) abort
   let s:cmdline = getcmdline()
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
@@ -250,17 +250,17 @@ function! s:draw_candidates(ctx, candidates) abort
   let l:start = l:page[0]
   let l:end = l:page[1]
 
-  " only 1 candidate, possible that it exceeds l:space
+  " only 1 x, possible that it exceeds l:space
   if l:start == l:end
-    let l:candidate = s:to_printable(a:candidates[l:start])
+    let l:x = s:to_printable(a:xs[l:start])
 
-    if len(l:candidate) > l:space
+    if len(l:x) > l:space
       let l:ellipsis = s:to_printable(s:opts.ellipsis)
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      let l:candidate = s:truncate(l:space_minus_ellipsis, l:candidate)
+      let l:x = s:truncate(l:space_minus_ellipsis, l:x)
 
-      let g:_wildsearch_candidates = [l:candidate . l:ellipsis]
+      let g:_wildsearch_xs = [l:x . l:ellipsis]
 
       if l:start == l:selected
         let l:res = '%#' . s:opts.selected_hl . '#'
@@ -268,13 +268,13 @@ function! s:draw_candidates(ctx, candidates) abort
         let l:res = '%#' . s:opts.hl . '#'
       endif
 
-      let l:res .= '%{g:_wildsearch_candidates[0]}'
+      let l:res .= '%{g:_wildsearch_xs[0]}'
 
       return l:res . '%#' . s:opts.hl . '#'
     endif
   endif
 
-  let g:_wildsearch_candidates = map(copy(a:candidates[l:start : l:end]), {_, x -> s:to_printable(x)})
+  let g:_wildsearch_xs = map(copy(a:xs[l:start : l:end]), {_, x -> s:to_printable(x)})
 
   let l:current = l:start
   let l:res = '%#' . s:opts.hl . '#'
@@ -288,13 +288,13 @@ function! s:draw_candidates(ctx, candidates) abort
 
     if l:current == l:selected
       let l:res .= '%#' . s:opts.selected_hl .
-            \ '#%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}' .
+            \ '#%{g:_wildsearch_xs[' . string(l:current-l:start) . ']}' .
             \ '%#' . s:opts.hl . '#'
     else
-      let l:res .= '%{g:_wildsearch_candidates[' . string(l:current-l:start) . ']}'
+      let l:res .= '%{g:_wildsearch_xs[' . string(l:current-l:start) . ']}'
     endif
 
-    let l:len += strdisplaywidth(g:_wildsearch_candidates[l:current-l:start])
+    let l:len += strdisplaywidth(g:_wildsearch_xs[l:current-l:start])
     let l:current += 1
   endwhile
 
@@ -321,12 +321,12 @@ function! s:draw_error(ctx, error) abort
   return l:res . repeat(' ', l:space - strdisplaywidth(g:_wildsearch_error))
 endfunction
 
-function! wildsearch#render#components_draw(components, ctx, candidates) abort
+function! wildsearch#render#components_draw(components, ctx, xs) abort
   let l:res = ''
 
   for l:Component in a:components
     if type(l:Component) == v:t_func
-      let l:res .= l:Component(a:ctx, a:candidates)
+      let l:res .= l:Component(a:ctx, a:xs)
       continue
     elseif type(l:Component) == v:t_string
       let l:res .= l:Component
@@ -338,7 +338,7 @@ function! wildsearch#render#components_draw(components, ctx, candidates) abort
     endif
 
     if type(l:Component.stl) == v:t_func
-      let l:res .= l:Component.stl(a:ctx, a:candidates)
+      let l:res .= l:Component.stl(a:ctx, a:xs)
     else
       let l:res .= l:Component.stl
     endif

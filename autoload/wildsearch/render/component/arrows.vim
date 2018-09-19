@@ -4,7 +4,7 @@ function! wildsearch#render#component#arrows#make_previous(args) abort
         \ }
 
   let l:res = {
-        \ 'stl': {ctx, candidates -> s:left(l:state, ctx, candidates)},
+        \ 'stl': {ctx, xs -> s:left(l:state, ctx, xs)},
         \ 'len': strdisplaywidth(l:state.previous),
         \ }
 
@@ -22,7 +22,7 @@ function! wildsearch#render#component#arrows#make_next(args) abort
         \ }
 
   let l:res = {
-        \ 'stl': {ctx, candidates -> s:right(l:state, ctx, candidates)},
+        \ 'stl': {ctx, xs -> s:right(l:state, ctx, xs)},
         \ 'len': strdisplaywidth(l:state.next),
         \ }
 
@@ -33,12 +33,12 @@ function! wildsearch#render#component#arrows#make_next(args) abort
   return l:res
 endfunction
 
-function! s:left(state, ctx, candidates) abort
+function! s:left(state, ctx, xs) abort
   return a:ctx.page[0] > 0 ? a:state.previous : ''
 endfunction
 
-function! s:right(state, ctx, candidates) abort
-  let l:next_page_arrow = a:ctx.page[1] < len(a:candidates) - 1 ?
+function! s:right(state, ctx, xs) abort
+  let l:next_page_arrow = a:ctx.page[1] < len(a:xs) - 1 ?
         \ a:state.next :
         \ repeat(' ', strdisplaywidth(a:state.next))
 
