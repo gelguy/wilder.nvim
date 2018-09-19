@@ -12,9 +12,8 @@ let s:candidates = []
 let s:selected = -1
 let s:page = [-1, -1]
 
-let s:modes = ['/', '?']
-
 let s:opts = {
+      \ 'modes': ['/', '?'],
       \ 'interval': 100,
       \ 'use_cmdlinechanged': 0,
       \ 'hooks': {
@@ -37,7 +36,7 @@ function! wildsearch#main#get_option(key) abort
 endfunction
 
 function! wildsearch#main#in_mode() abort
-  return index(s:modes, getcmdtype()) >= 0
+  return index(s:opts.modes, getcmdtype()) >= 0
 endfunction
 
 function! wildsearch#main#in_context() abort
@@ -170,6 +169,10 @@ function! wildsearch#main#stop() abort
     unlet s:previous_cmdline
   endif
 
+  if exists('s:previous_cmdpos')
+    unlet s:previous_cmdpos
+  endif
+
   if exists('s:completion')
     unlet s:completion
   endif
@@ -187,7 +190,7 @@ endfunction
 
 function! s:pre_hook() abort
   if has_key(s:opts, 'hooks') && has_key(s:opts.hooks, 'pre')
-    if type(s:opts.hooks.pre) == v:t_func
+    if type(s:opts.hooks.pre) is v:t_func
       call s:opts.hooks.pre()
     else
       call function(s:opts.hooks.pre)()
@@ -201,7 +204,7 @@ function! s:post_hook() abort
   call wildsearch#render#finish()
 
   if has_key(s:opts, 'hooks') && has_key(s:opts.hooks, 'post')
-    if type(s:opts.hooks.post) == v:t_func
+    if type(s:opts.hooks.post) is v:t_func
       call s:opts.hooks.post()
     else
       call function(s:opts.hooks.post)()
@@ -219,13 +222,22 @@ function! s:do(check) abort
     return
   endif
 
-  let l:input = getcmdline()
+  let l:cmdpos = getcmdpos()
+  let l:cmdline = getcmdline()
+  if l:cmdpos <= 1
+    let l:input = ''
+  else
+    let l:input = l:cmdline[:l:cmdpos - 2]
+  endif
 
   let l:has_completion = exists('s:completion') && l:input ==# s:completion
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
-  let s:previous_cmdline = l:input
+  if !l:has_completion
+    let s:previous_cmdline = l:input
+    let s:previous_cmdpos = l:cmdpos
+  endif
 
   if !s:auto && !l:is_new_input && !l:has_completion && l:input_changed
     call wildsearch#main#stop()
@@ -350,17 +362,18 @@ function! s:draw(...) abort
     let l:ctx.error = s:error
   endif
 
-  let l:candidates = l:has_error ? [] : s:candidates
+  let l:xs = l:has_error ? [] :
+        \ map(copy(s:candidates), {_, x -> type(x) is v:t_dict ? get(x, 'draw', x.result) : x})
 
   let l:left_components = wildsearch#render#get_components('left')
   let l:right_components = wildsearch#render#get_components('right')
 
   let l:space_used = wildsearch#render#components_len(
         \ l:left_components + l:right_components,
-        \ l:ctx, l:candidates)
+        \ l:ctx, l:xs)
   let l:ctx.space = winwidth(0) - l:space_used
 
-  let s:page = wildsearch#render#make_page(l:ctx, l:candidates, s:page, l:direction, l:has_resized)
+  let s:page = wildsearch#render#make_page(l:ctx, l:xs, s:page, l:direction, l:has_resized)
   let l:ctx.page = s:page
 
   if l:has_error
@@ -370,7 +383,7 @@ function! s:draw(...) abort
   else
     let l:statusline = wildsearch#render#draw(
           \ l:left_components, l:right_components,
-          \ l:ctx, l:candidates)
+          \ l:ctx, l:xs)
   endif
 
   call setwinvar(0, '&statusline', l:statusline)
@@ -403,13 +416,8 @@ function! wildsearch#main#step(num_steps) abort
     " pass
   elseif l:len == 0
     let s:selected = -1
-
-    if exists('s:completion')
-      unlet s:completion
-    endif
   elseif l:len == 1
     let s:selected = 0
-    let s:completion = s:candidates[0]
   else
     if s:selected < 0 && a:num_steps < 0
       let s:selected = 0
@@ -422,15 +430,37 @@ function! wildsearch#main#step(num_steps) abort
     endwhile
 
     let s:selected = l:selected % l:len
-    let s:completion = s:candidates[s:selected]
   endif
 
   call s:draw(a:num_steps)
 
-  if exists('s:completion')
-    let l:keys = "\<C-E>\<C-U>"
+  if s:selected >= 0
+    let l:candidate = s:candidates[s:selected]
+    let l:output = type(l:candidate) is v:t_dict ?
+          \ get(l:candidate, 'output', l:candidate.result) :
+          \ l:candidate
+    let l:output = escape(l:output, '\')
 
-    let l:chars = split(s:completion, '\zs')
+    let l:replace = type(l:candidate) is v:t_dict ?
+          \ get(l:candidate, 'replace', '.*') :
+          \ '.*'
+    if l:replace ==# 'line'
+      let l:replace = '.*'
+    elseif l:replace ==# 'word'
+      let l:replace = '\w*$'
+    endif
+
+    let l:cmdpos = s:previous_cmdpos
+    if l:cmdpos <= 2
+      let l:new_cmdline = l:output
+    else
+      let l:cmdline = s:previous_cmdline
+      let l:new_cmdline = substitute(l:cmdline[: l:cmdpos - 2], l:replace, l:output, '')
+    endif
+
+    let l:chars = split(l:new_cmdline, '\zs')
+
+    let l:keys = "\<C-U>"
 
     for l:char in l:chars
       " control characters
@@ -442,6 +472,12 @@ function! wildsearch#main#step(num_steps) abort
     endfor
 
     call feedkeys(l:keys, 'n')
+
+    let s:completion = l:new_cmdline
+  else
+    if exists('s:completion')
+      unlet s:completion
+    endif
   endif
 
   return "\<Insert>\<Insert>"
