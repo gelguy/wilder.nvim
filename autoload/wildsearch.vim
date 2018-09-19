@@ -62,15 +62,11 @@ function! wildsearch#python_sort() abort
   return wildsearch#pipeline#component#python_sort#make()
 endfunction
 
-function! wildsearch#escape(chars) abort
-  return {_, x -> map(copy(x), {_, e -> escape(e, a:chars)})}
-endfunction
-
-function! wildsearch#history(cmdtype, ...) abort
+function! wildsearch#history(...) abort
   if a:0 == 0
-    return wildsearch#pipeline#component#history#make(a:cmdtype)
+    return wildsearch#pipeline#component#history#make()
   else
-    return wildsearch#pipeline#component#history#make(a:cmdtype, a:1)
+    return wildsearch#pipeline#component#history#make(a:1)
   endif
 endfunction
 
