@@ -100,17 +100,27 @@ endfunction
 function! wildsearch#pipeline#default() abort
   if has('nvim')
     return [
-          \ wildsearch#check_not_empty(),
-          \ wildsearch#python_substring(),
-          \ wildsearch#python_search(),
-          \ wildsearch#escape('^$.*~[]\'),
+          \ wildsearch#branch(
+          \   [
+          \     wildsearch#check({-> getcmdtype() ==# ':'}),
+          \     wildsearch#getcompletion(),
+          \     {_, xs -> map(copy(xs), {i, x -> {'result': x, 'replace': 'word'}})},
+          \   ],
+          \   [
+          \     wildsearch#check({_, x -> empty(x)}),
+          \     wildsearch#check_not_empty(),
+          \     wildsearch#python_substring(),
+          \     wildsearch#python_search(),
+          \     {_, xs -> map(copy(xs), {i, x -> {'result': x, 'draw': escape(x, '^$.*~[]\')}})},
+          \   ]
+          \ ),
           \ ]
   else
     return [
-          \ wildsearch#check_not_empty(),
+          \ wildsearch#check({_, x -> empty(x)}),
           \ wildsearch#vim_substring(),
           \ wildsearch#vim_search(),
-          \ wildsearch#escape('^$.*~[]\'),
+          \ {_, xs -> map(copy(xs), {i, x -> {'result': x, 'draw': escape(x, '^$.*~[]\')}})},
           \ ]
   endif
 endfunction

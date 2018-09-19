@@ -14,10 +14,6 @@ function! wildsearch#check(...) abort
   return wildsearch#pipeline#component#check#make(a:000)
 endfunction
 
-function! wildsearch#check_not_empty() abort
-  return {_, x -> empty(x) ? v:false : x}
-endfunction
-
 function! wildsearch#vim_substring() abort
   return {_, x -> x . '\k*'}
 endfunction
@@ -67,6 +63,14 @@ function! wildsearch#history(...) abort
     return wildsearch#pipeline#component#history#make()
   else
     return wildsearch#pipeline#component#history#make(a:1)
+  endif
+endfunction
+
+function! wildsearch#getcompletion(...) abort
+  if a:0 == 0
+    return {_, x -> getcompletion(x, 'cmdline')}
+  else
+    return {_, x -> getcompletion(x, a:1)}
   endif
 endfunction
 
