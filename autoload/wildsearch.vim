@@ -6,8 +6,8 @@ function! wildsearch#branch(...) abort
   return wildsearch#pipeline#component#branch#make(a:000)
 endfunction
 
-function! wildsearch#all(...) abort
-  return wildsearch#pipeline#component#all#make(a:000)
+function! wildsearch#map(...) abort
+  return wildsearch#pipeline#component#map#make(a:000)
 endfunction
 
 function! wildsearch#check(...) abort
