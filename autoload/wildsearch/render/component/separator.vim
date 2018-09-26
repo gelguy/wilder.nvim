@@ -8,7 +8,7 @@ function! wildsearch#render#component#separator#make(str, fg, bg, ...) abort
     let l:key = a:0
   endif
 
-  let l:name = 'WildsearchSeparator' . l:key
+  let l:name = 'WildsearchSeparator_' . l:key
 
   return {
         \ 'stl': a:str,
