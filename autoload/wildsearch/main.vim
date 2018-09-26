@@ -7,6 +7,8 @@ let s:hidden = 1
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
+let s:force = 0
+let s:auto_select = -1
 
 let s:candidates = []
 let s:selected = -1
@@ -122,6 +124,7 @@ function! s:start(check) abort
 
   let s:active = 1
   let s:hidden = 0
+  let s:force = 0
 
   call s:pre_hook()
 
@@ -169,16 +172,28 @@ function! wildsearch#main#stop() abort
     unlet s:previous_cmdline
   endif
 
-  if exists('s:previous_cmdpos')
-    unlet s:previous_cmdpos
-  endif
-
   if exists('s:completion')
     unlet s:completion
   endif
 
   if exists('s:error')
     unlet s:error
+  endif
+
+  if exists('s:replaced_cmdline')
+    unlet s:replaced_cmdline
+  endif
+
+  if exists('s:replaced_cmdpos')
+    unlet s:replaced_cmdpos
+  endif
+
+  if exists('s:menus')
+    unlet s:menus
+  endif
+
+  if exists('s:previous_menu')
+    unlet s:previous_menu
   endif
 
   if !s:hidden
@@ -234,24 +249,36 @@ function! s:do(check) abort
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
 
-  if !l:has_completion
-    let s:previous_cmdline = l:input
-    let s:previous_cmdpos = l:cmdpos
-  endif
-
-  if !s:auto && !l:is_new_input && !l:has_completion && l:input_changed
+  if !s:auto && !s:force && !l:is_new_input && !l:has_completion && l:input_changed
     call wildsearch#main#stop()
     return
   endif
 
-  if !l:has_completion && exists('s:completion')
-    unlet s:completion
+  if s:force || !l:has_completion
+    if exists('s:completion')
+      unlet s:completion
+    endif
+
+    if exists('s:replaced_cmdline')
+      unlet s:replaced_cmdline
+    endif
+
+    if exists('s:replaced_cmdpos')
+      unlet s:replaced_cmdpos
+    endif
+
+    let s:previous_cmdline = l:input
   endif
 
   let s:draw_done = 0
 
-  if !l:has_completion && (l:input_changed || l:is_new_input)
+  if s:force || !l:has_completion && (l:input_changed || l:is_new_input)
+    if !s:force && !l:has_completion && (l:input_changed || l:is_new_input) && exists('s:menus')
+      unlet s:menus
+    endif
+
     let l:ctx = {
+        \ 'input': l:input,
         \ 'on_finish': 'wildsearch#main#on_finish',
         \ 'on_error': 'wildsearch#main#on_error',
         \ 'run_id': s:run_id,
@@ -261,6 +288,8 @@ function! s:do(check) abort
 
     call wildsearch#pipeline#start(l:ctx, l:input)
   endif
+
+  let s:force = 0
 
   let l:ctx = {
         \ 'selected': s:selected,
@@ -275,6 +304,8 @@ function! s:do(check) abort
         \ wildsearch#render#components_need_redraw(wildsearch#render#get_components(), l:ctx, s:candidates))
     call s:draw()
   endif
+
+  let s:auto_select = -1
 endfunction
 
 function! wildsearch#main#on_finish(ctx, x) abort
@@ -313,6 +344,14 @@ function! wildsearch#main#on_finish(ctx, x) abort
   endif
 
   call s:draw()
+
+  if s:auto_select != -1
+    if exists('s:previous_cmdline')
+      unlet s:previous_cmdline
+    endif
+
+    call wildsearch#main#next()
+  endif
 endfunction
 
 function! wildsearch#main#on_error(ctx, x) abort
@@ -411,6 +450,15 @@ function! wildsearch#main#step(num_steps) abort
     return "\<Insert>\<Insert>"
   endif
 
+  if !exists('s:replaced_cmdline')
+    let s:replaced_cmdline = getcmdline()
+    let s:replaced_cmdpos = getcmdpos()
+  endif
+
+  if !exists('s:menus')
+    let s:menus = []
+  endif
+
   let l:len = len(s:candidates)
   if a:num_steps == 0
     " pass
@@ -419,65 +467,135 @@ function! wildsearch#main#step(num_steps) abort
   elseif l:len == 1
     let s:selected = 0
   else
-    if s:selected < 0 && a:num_steps < 0
-      let s:selected = 0
+    if s:selected < 0
+      if a:num_steps > 0
+        let l:selected = a:num_steps - 1
+      else
+        let l:selected = a:num_steps
+      endif
+
+      while l:selected < 0
+        let l:selected += l:len
+      endwhile
+    else
+      let l:selected = s:selected + a:num_steps
+
+      while l:selected < -1
+        let l:selected += l:len
+      endwhile
     endif
 
-    let l:selected = s:selected + a:num_steps
-
-    while l:selected < 0
-      let l:selected += l:len
+    while l:selected > l:len
+      let l:selected -= l:len
     endwhile
 
-    let s:selected = l:selected % l:len
+    let s:selected = l:selected == l:len ? -1 : l:selected
   endif
 
   call s:draw(a:num_steps)
 
-  if s:selected >= 0
-    let l:candidate = s:candidates[s:selected]
-    let l:output = type(l:candidate) is v:t_dict ?
-          \ get(l:candidate, 'output', l:candidate.result) :
-          \ l:candidate
-    let l:output = escape(l:output, '\')
+  if s:selected >= -1
+    if s:selected >= 0
+      let l:candidate = s:candidates[s:selected]
+      let l:output = type(l:candidate) is v:t_dict ?
+            \ get(l:candidate, 'output', l:candidate.result) :
+            \ l:candidate
 
-    let l:replace = type(l:candidate) is v:t_dict ?
-          \ get(l:candidate, 'replace', '.*') :
-          \ '.*'
-    if l:replace ==# 'line'
-      let l:replace = '.*'
-    elseif l:replace ==# 'word'
-      let l:replace = '\w*$'
-    endif
-
-    let l:cmdpos = s:previous_cmdpos
-    if l:cmdpos <= 2
-      let l:new_cmdline = l:output
-    else
-      let l:cmdline = s:previous_cmdline
-      let l:new_cmdline = substitute(l:cmdline[: l:cmdpos - 2], l:replace, l:output, '')
-    endif
-
-    let l:chars = split(l:new_cmdline, '\zs')
-
-    let l:keys = "\<C-U>"
-
-    for l:char in l:chars
-      " control characters
-      if l:char <# ' '
-        let l:keys .= "\<C-Q>"
+      let l:Replace = type(l:candidate) is v:t_dict ?
+            \ get(l:candidate, 'replace', 'all') :
+            \ 'all'
+      if l:Replace ==# 'all'
+        let l:Replace = function('s:replace_all')
+      elseif type(l:Replace) ==# v:t_string
+        let l:Replace = function(l:Replace)
       endif
 
-      let l:keys .= l:char
-    endfor
+      let l:cmdpos = s:replaced_cmdpos
+      if l:cmdpos <= 2
+        let l:cmdline = s:replaced_cmdline
+        let l:new_cmdline = l:output
+      else
+        let l:cmdline = s:replaced_cmdline[: l:cmdpos - 2]
+        let l:new_cmdline = l:Replace({}, l:cmdline, l:output)
+      endif
 
-    call feedkeys(l:keys, 'n')
+      if exists('s:menus') &&
+            \ (empty(s:menus) || s:menus[0] !=# l:cmdline)
+        let s:menus = [l:cmdline] + s:menus
+      endif
+    else
+      let l:cmdpos = s:replaced_cmdpos
+      if l:cmdpos <= 2
+        let l:new_cmdline = ''
+      else
+        let l:cmdline = s:replaced_cmdline
+        let l:new_cmdline = l:cmdline[: l:cmdpos - 2]
+      endif
+    endif
+
+    call s:feedkeys_cmdline(l:new_cmdline)
 
     let s:completion = l:new_cmdline
   else
     if exists('s:completion')
       unlet s:completion
     endif
+  endif
+
+  return "\<Insert>\<Insert>"
+endfunction
+
+function! s:feedkeys_cmdline(cmdline)
+  let l:chars = split(a:cmdline, '\zs')
+
+  let l:keys = "\<C-U>"
+
+  for l:char in l:chars
+    " control characters
+    if l:char <# ' '
+      let l:keys .= "\<C-Q>"
+    endif
+
+    let l:keys .= l:char
+  endfor
+
+  call feedkeys(l:keys, 'n')
+endfunction
+
+function! s:replace_all(ctx, cmdline, x)
+  return a:x
+endfunction
+
+function! wildsearch#main#accept_completion(...) abort
+  let l:should_auto_select = a:0 > 0 ? a:1 : 0
+
+  if exists('s:selected')
+    if s:selected >= 0
+      let s:force = 1
+
+      if l:should_auto_select
+        let s:auto_select = s:run_id
+      endif
+    elseif l:should_auto_select
+      " if exists('s:previous_cmdline')
+        " unlet s:previous_cmdline
+      " endif
+
+      call wildsearch#main#next()
+    endif
+  endif
+
+  return "\<Insert>\<Insert>"
+endfunction
+
+function! wildsearch#main#reject_completion() abort
+  if exists('s:menus') && !empty(s:menus)
+    let s:force = 1
+
+    let s:previous_menu = s:menus[0]
+    let s:menus = s:menus[1 :]
+
+    call s:feedkeys_cmdline(s:previous_menu)
   endif
 
   return "\<Insert>\<Insert>"
