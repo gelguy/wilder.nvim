@@ -273,8 +273,14 @@ function! s:do(check) abort
   let s:draw_done = 0
 
   if s:force || !l:has_completion && (l:input_changed || l:is_new_input)
-    if !s:force && !l:has_completion && (l:input_changed || l:is_new_input) && exists('s:menus')
-      unlet s:menus
+    if !s:force && !l:has_completion && (l:input_changed || l:is_new_input)
+      if exists('s:menus')
+        unlet s:menus
+      endif
+
+      if exists('s:previous_menu')
+        unlet s:previous_menu
+      endif
     endif
 
     let l:ctx = {
@@ -344,15 +350,16 @@ function! wildsearch#main#on_finish(ctx, x) abort
     call s:pre_hook()
   endif
 
-  call s:draw()
-
   if s:auto_select != -1
     if exists('s:previous_cmdline')
       unlet s:previous_cmdline
     endif
 
     call wildsearch#main#next()
+    return
   endif
+
+  call s:draw()
 endfunction
 
 function! wildsearch#main#on_error(ctx, x) abort
@@ -512,7 +519,7 @@ function! wildsearch#main#step(num_steps) abort
       endif
 
       let l:cmdpos = s:replaced_cmdpos
-      if l:cmdpos <= 2
+      if l:cmdpos <= 1
         let l:cmdline = s:replaced_cmdline
         let l:new_cmdline = l:output
       else
@@ -522,11 +529,14 @@ function! wildsearch#main#step(num_steps) abort
 
       if exists('s:menus') &&
             \ (empty(s:menus) || s:menus[0] !=# l:cmdline)
+        let l:menu_candidate = type(l:candidate) == v:t_dict ?
+              \ l:candidate.result :
+              \ l:candidate
         let s:menus = [l:cmdline] + s:menus
       endif
     else
       let l:cmdpos = s:replaced_cmdpos
-      if l:cmdpos <= 2
+      if l:cmdpos <= 1
         let l:new_cmdline = ''
       else
         let l:cmdline = s:replaced_cmdline
@@ -567,36 +577,43 @@ function! s:replace_all(ctx, cmdline, x)
   return a:x
 endfunction
 
-function! wildsearch#main#accept_completion(...) abort
-  let l:should_auto_select = a:0 > 0 ? a:1 : 0
+function! wildsearch#main#can_accept_completion()
+  return wildsearch#main#in_context() &&
+        \ exists('s:selected') && s:selected >= 0
+endfunction
 
+function! wildsearch#main#accept_completion() abort
   if exists('s:selected')
-    if s:selected >= 0
       let s:force = 1
 
-      if l:should_auto_select
-        let s:auto_select = s:run_id
-      endif
-    elseif l:should_auto_select
-      " if exists('s:previous_cmdline')
-        " unlet s:previous_cmdline
-      " endif
-
-      call wildsearch#main#next()
-    endif
+      let s:auto_select = s:run_id
   endif
 
   return "\<Insert>\<Insert>"
 endfunction
 
+function! wildsearch#main#can_reject_completion()
+  return wildsearch#main#in_context() && exists('s:menus')
+endfunction
+
 function! wildsearch#main#reject_completion() abort
-  if exists('s:menus') && !empty(s:menus)
-    let s:force = 1
+  if exists('s:menus')
+    if !empty(s:menus)
+      let s:force = 1
 
-    let s:previous_menu = s:menus[0]
-    let s:menus = s:menus[1 :]
+      let s:previous_menu = s:menus[0]
+      let s:menus = s:menus[1 :]
 
-    call s:feedkeys_cmdline(s:previous_menu)
+      " cmdline did not change, go 1 more step back
+      if !empty(s:menus) && s:previous_menu ==# getcmdline()
+        let s:previous_menu = s:menus[0]
+        let s:menus = s:menus[1 :]
+      endif
+
+      call s:feedkeys_cmdline(s:previous_menu)
+    else
+      unlet s:menus
+    endif
   endif
 
   return "\<Insert>\<Insert>"
