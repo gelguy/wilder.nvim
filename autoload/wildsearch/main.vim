@@ -321,6 +321,7 @@ function! wildsearch#main#on_finish(ctx, x) abort
 
   let s:candidates = (a:x is v:false || a:x is v:true) ? [] : a:x
   let s:selected = -1
+  let s:page = [-1, -1]
   " keep previous completion
 
   if exists('s:error')
