@@ -87,7 +87,7 @@ class Wildsearch(object):
         event = threading.Event()
 
         with self.lock:
-            while len(self.events) > 1:
+            while len(self.events) > 0:
                 e = self.events.pop(0)
                 e.set()
 
