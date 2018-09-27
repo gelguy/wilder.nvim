@@ -1,31 +1,16 @@
 func wildsearch#getcompletion#parse(cmdline) abort
-  if has_key(s:cache, a:cmdline)
-    let l:ctx = s:cache[a:cmdline]
-
-    let l:index = index(s:cache_mru, a:cmdline)
-    call remove(s:cache_mru, l:index)
-    call add(s:cache_mru, a:cmdline)
+  if exists('s:cache_cmdline') && a:cmdline ==# s:cache_cmdline
+    return s:cache
   else
     let l:ctx = {'cmdline': a:cmdline, 'pos': 0, 'cmd': ''}
     call wildsearch#getcompletion#main#do(l:ctx)
 
-    let s:cache[a:cmdline] = l:ctx
-    call add(s:cache_mru, a:cmdline)
-
-    if len(s:cache_mru) > 100
-      let l:removed = remove(s:cache_mru, 0)
-      unlet s:cache[l:removed]
-    endif
+    let s:cache = l:ctx
+    let s:cache_cmdline = a:cmdline
   endif
 
-  return l:ctx
+  return copy(l:ctx)
 endfunc
-
-let s:cache = {}
-let s:cache_mru = []
-
-function! s:check_cache() abort
-endfunction
 
 function! wildsearch#getcompletion#has_file_args(cmd)
   return wildsearch#getcompletion#main#has_file_args(a:cmd)
