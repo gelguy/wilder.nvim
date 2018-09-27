@@ -16,6 +16,44 @@ function! wildsearch#getcompletion#has_file_args(cmd)
   return wildsearch#getcompletion#main#has_file_args(a:cmd)
 endfunction
 
+function! wildsearch#getcompletion#is_user_command(cmd)
+  return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
+endfunction
+
+function! wildsearch#getcompletion#get_user_completion(cmdline)
+  let l:ctx = wildsearch#getcompletion#parse(a:cmdline)
+
+  let l:user_commands = nvim_get_commands({})
+
+  if !has_key(l:user_commands, l:ctx.cmd)
+    return v:false
+  endif
+
+  let l:user_command = l:user_commands[l:ctx.cmd]
+
+  if has_key(l:user_command, 'complete') &&
+        \ l:user_command.complete !=# 'custom' && l:user_command.complete !=# 'customlist'
+    let l:completions = getcompletion(l:ctx.cmdline[l:ctx.pos :], l:user_command.complete)
+
+    if l:user_command.complete ==# 'file' ||
+          \ l:user_command.complete ==# 'file_in_path' ||
+          \ l:user_command.complete ==# 'dir'
+      return map(l:completions, {_, x -> escape(x, ' ')})
+    endif
+
+    return l:completions
+  endif
+
+  if !has_key(l:user_command, 'complete_arg') || l:user_command.complete_arg is v:null
+    return v:false
+  endif
+
+  let l:Completion_func = function(l:user_command.complete_arg)
+
+  " pos + 1 for the command prompt
+  return l:Completion_func(l:ctx.cmdline[l:ctx.pos :], l:ctx.cmdline, l:ctx.pos + 1)
+endfunction
+
 func wildsearch#getcompletion#replace(ctx, cmdline, x) abort
   let l:result = wildsearch#getcompletion#parse(a:cmdline)
 
@@ -30,49 +68,26 @@ func wildsearch#getcompletion#replace(ctx, cmdline, x) abort
   return l:result.cmdline[: l:result.pos - 1] . a:x
 endfunction
 
-func wildsearch#getcompletion#or(...) abort
-  let l:result = 0
+function! wildsearch#getcompletion#pipeline(opts) abort
+  let l:skip = get(a:opts, 'skip', {
+        \ 'substitute': v:true,
+        \ 'smagic': v:true,
+        \ 'snomagic': v:true,
+        \ 'global': v:true,
+        \ 'vglobal': v:true,
+        \ '&': v:true,
+        \ })
 
-  for l:arg in a:000
-    let l:result = or(l:result, l:arg)
-  endfor
-
-  return l:result
-endfunc
-
-func wildsearch#getcompletion#is_whitespace(char)
-  let l:nr = char2nr(a:char)
-  return a:char ==# ' ' || l:nr >= 9 && l:nr <= 13
-endfunc
-
-function! wildsearch#getcompletion#skip_whitespace(ctx) abort
-  if empty(a:ctx.cmdline[a:ctx.pos])
-    return 0
-  endif
-
-  while wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-    let a:ctx.pos += 1
-
-    if empty(a:ctx.cmdline[a:ctx.pos])
-      return 0
-    endif
-  endwhile
-
-  return 1
-endfunction
-
-function! wildsearch#getcompletion#skip_nonwhitespace(ctx) abort
-  if empty(a:ctx.cmdline[a:ctx.pos])
-    return 0
-  endif
-
-  while !wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-    let a:ctx.pos += 1
-
-    if empty(a:ctx.cmdline[a:ctx.pos])
-      return 0
-    endif
-  endwhile
-
-  return 1
+  return [
+      \ wildsearch#check({-> getcmdtype() ==# ':'}),
+      \ {_, x -> wildsearch#getcompletion#parse(x)},
+      \ {_, res -> has_key(l:skip, res.cmd) ? l:skip[res.cmd] : res},
+      \ {_, res -> wildsearch#getcompletion#is_user_command(res.cmd) ?
+      \   wildsearch#getcompletion#get_user_completion(res.cmdline) :
+      \   wildsearch#getcompletion#has_file_args(res.cmd) ?
+      \   map(getcompletion(res.cmdline, 'cmdline'), {_, x -> escape(x, ' ')}) :
+      \   getcompletion(res.cmdline, 'cmdline')
+      \ },
+      \ {_, xs -> map(xs, {_, x -> {'result': x, 'replace': 'wildsearch#getcompletion#replace'}})},
+      \ ]
 endfunction

@@ -6,7 +6,7 @@ function! wildsearch#getcompletion#sign#do(ctx) abort
     return
   endif
 
-  if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -18,7 +18,7 @@ function! wildsearch#getcompletion#sign#do(ctx) abort
   endif
 
   while a:ctx.pos < len(a:ctx.cmdline)
-    if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       return
     endif
 

@@ -24,7 +24,7 @@ function! wildsearch#getcompletion#map#do(ctx) abort
       return
     endif
 
-    call wildsearch#getcompletion#skip_whitespace(a:ctx)
+    call wildsearch#getcompletion#main#skip_whitespace(a:ctx)
   endwhile
 
   let a:ctx.pos = l:arg_start

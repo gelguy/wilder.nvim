@@ -9,7 +9,7 @@ function! wildsearch#getcompletion#highlight#do(ctx) abort
   let l:subcommand = a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]
 
   if l:subcommand ==# 'default'
-    if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       return
     endif
 
@@ -24,7 +24,7 @@ function! wildsearch#getcompletion#highlight#do(ctx) abort
   endif
 
   if l:subcommand ==# 'link' || l:subcommand ==# 'clear'
-    if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       return
     endif
 
@@ -35,7 +35,7 @@ function! wildsearch#getcompletion#highlight#do(ctx) abort
       return
     endif
 
-    if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       return
     endif
 

@@ -5,7 +5,7 @@ function! wildsearch#getcompletion#filter#do(ctx) abort
     return
   endif
 
-  if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
     return
   endif
 

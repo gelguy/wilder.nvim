@@ -9,6 +9,6 @@ function! wildsearch#getcompletion#profile#do(ctx) abort
   let l:subcommand = a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]
 
   if l:subcommand ==# 'start'
-    call wildsearch#getcompletion#skip_whitespace(a:ctx)
+    call wildsearch#getcompletion#main#skip_whitespace(a:ctx)
   endif
 endfunction

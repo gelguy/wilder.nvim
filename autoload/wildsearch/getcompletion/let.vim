@@ -5,7 +5,7 @@ function! wildsearch#getcompletion#let#do(ctx)
     let l:arg_start = a:ctx.pos
 
     while a:ctx.pos < len(a:ctx.cmdline)
-      if wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
         let l:arg_start = a:ctx.pos + 1
       endif
 
@@ -105,8 +105,8 @@ function! wildsearch#getcompletion#let#do(ctx)
 
     let a:ctx.pos += 1
 
-    if wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-      if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
         let l:arg_start = a:ctx.pos
         break
       endif

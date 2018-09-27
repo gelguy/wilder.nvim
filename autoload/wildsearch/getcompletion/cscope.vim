@@ -6,5 +6,5 @@ function! wildsearch#getcompletion#cscope#do(ctx) abort
     return
   endif
 
-  call wildsearch#getcompletion#skip_whitespace(a:ctx)
+  call wildsearch#getcompletion#main#skip_whitespace(a:ctx)
 endfunction

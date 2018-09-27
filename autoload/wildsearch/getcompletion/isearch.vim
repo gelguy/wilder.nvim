@@ -6,7 +6,7 @@ function! wildsearch#getcompletion#isearch#do(ctx) abort
     let a:ctx.pos += 1
   endwhile
 
-  if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -35,7 +35,7 @@ function! wildsearch#getcompletion#isearch#do(ctx) abort
       return
     endif
 
-    if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       return
     endif
 

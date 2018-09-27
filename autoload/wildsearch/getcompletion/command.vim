@@ -6,7 +6,7 @@ function! wildsearch#getcompletion#command#do(ctx) abort
 
     " skip to white space
     while a:ctx.pos < len(a:ctx.cmdline)
-      if wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
         break
       endif
 
@@ -33,7 +33,7 @@ function! wildsearch#getcompletion#command#do(ctx) abort
       return
     endif
 
-    if !wildsearch#getcompletion#skip_whitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       return
     endif
   endwhile
@@ -41,7 +41,7 @@ function! wildsearch#getcompletion#command#do(ctx) abort
   " command name
   " skip to white space
   while a:ctx.pos < len(a:ctx.cmdline)
-    if wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+    if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
       break
     endif
 

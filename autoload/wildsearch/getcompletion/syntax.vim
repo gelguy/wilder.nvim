@@ -3,7 +3,7 @@ function! wildsearch#getcompletion#syntax#do(ctx) abort
   let l:arg_start = a:ctx.pos
   let l:in_subcommand = 1
   while a:ctx.pos < len(a:ctx.cmdline)
-    if wildsearch#getcompletion#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+    if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
       let l:in_subcommand = 0
       break
     endif
@@ -29,5 +29,5 @@ function! wildsearch#getcompletion#syntax#do(ctx) abort
     let a:ctx.pos = len(a:ctx.cmdline)
   endif
 
-  call wildsearch#getcompletion#skip_whitespace(a:ctx)
+  call wildsearch#getcompletion#main#skip_whitespace(a:ctx)
 endfunction

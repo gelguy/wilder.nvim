@@ -10,7 +10,7 @@ function! wildsearch#getcompletion#substitute#do(ctx) abort
   let a:ctx.pos += 1
 
   " delimiter not reached
-  if wildsearch#getcompletion#skip_regex#do(a:ctx, l:delimiter)
+  if !wildsearch#getcompletion#skip_regex#do(a:ctx, l:delimiter)
     let a:ctx.pos = l:arg_start
     return
   endif
@@ -48,6 +48,7 @@ function! wildsearch#getcompletion#substitute#do(ctx) abort
 
       return
     elseif a:ctx.cmdline[a:ctx.pos] ==# '|'
+      let a:ctx.pos += 1
       let a:ctx.cmd = ''
 
       call wildsearch#getcompletion#main#do(a:ctx)
