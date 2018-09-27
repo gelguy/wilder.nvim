@@ -3,7 +3,7 @@ scriptencoding utf-8
 let s:init = 0
 let s:auto = 0
 let s:active = 0
-let s:hidden = 1
+let s:hidden = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
@@ -197,10 +197,10 @@ function! wildsearch#main#stop() abort
   endif
 
   if !s:hidden
-    let s:hidden = 1
-
     call s:post_hook()
   endif
+
+  let s:hidden = 0
 endfunction
 
 function! s:pre_hook() abort
