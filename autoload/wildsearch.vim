@@ -66,14 +66,6 @@ function! wildsearch#history(...) abort
   endif
 endfunction
 
-function! wildsearch#getcompletion(...) abort
-  if a:0 == 0
-    return {_, x -> getcompletion(x, 'cmdline')}
-  else
-    return {_, x -> getcompletion(x, a:1)}
-  endif
-endfunction
-
 function! wildsearch#index(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
   return wildsearch#render#component#index#make(l:args)
@@ -117,4 +109,34 @@ endfunction
 function! wildsearch#condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
   return wildsearch#render#component#condition#make(a:predicate, a:if_true, l:if_false)
+endfunction
+
+function! wildsearch#vim_search_pipeline(...)
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  return [
+        \ wildsearch#check({_, x -> !empty(x)}),
+        \ wildsearch#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
+        \ wildsearch#vim_substring(),
+        \ wildsearch#vim_search(l:opts),
+        \ {_, xs -> map(copy(xs), {i, x -> {'result': x, 'draw': escape(x, '^$.*~[]\')}})},
+        \ ]
+endfunction
+
+function! wildsearch#python_search_pipeline(...)
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  return [
+        \ wildsearch#check({_, x -> !empty(x)}),
+        \ wildsearch#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
+        \ wildsearch#python_substring(),
+        \ wildsearch#python_search(l:opts),
+        \ {_, xs -> map(copy(xs), {i, x -> {'result': x, 'draw': escape(x, '^$.*~[]\')}})},
+        \ ]
+endfunction
+
+function! wildsearch#getcompletion_pipeline(...) abort
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  return wildsearch#getcompletion#pipeline(l:opts)
 endfunction
