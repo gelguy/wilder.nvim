@@ -61,8 +61,10 @@ endfunction
 function! wildsearch#history(...) abort
   if a:0 == 0
     return wildsearch#pipeline#component#history#make()
-  else
+  elseif a:0 == 1
     return wildsearch#pipeline#component#history#make(a:1)
+  else
+    return wildsearch#pipeline#component#history#make(a:1, a:2)
   endif
 endfunction
 
