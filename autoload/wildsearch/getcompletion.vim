@@ -68,20 +68,27 @@ func wildsearch#getcompletion#replace(ctx, cmdline, x) abort
   return l:result.cmdline[: l:result.pos - 1] . a:x
 endfunction
 
+let s:transform = {
+      \ 'substitute': v:true,
+      \ 'smagic': v:true,
+      \ 'snomagic': v:true,
+      \ 'global': v:true,
+      \ 'vglobal': v:true,
+      \ '&': v:true,
+      \ }
+
 function! wildsearch#getcompletion#pipeline(opts) abort
-  let l:skip = get(a:opts, 'skip', {
-        \ 'substitute': v:true,
-        \ 'smagic': v:true,
-        \ 'snomagic': v:true,
-        \ 'global': v:true,
-        \ 'vglobal': v:true,
-        \ '&': v:true,
-        \ })
+  let l:Transform = get(a:opts, 'transform', s:transform)
+
+  if type(l:Transform) == v:t_dict
+    let l:dict = l:Transform
+    let l:Transform = {_, res -> get(l:dict, res.cmd, res)}
+  endif
 
   return [
       \ wildsearch#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wildsearch#getcompletion#parse(x)},
-      \ {_, res -> has_key(l:skip, res.cmd) ? l:skip[res.cmd] : res},
+      \ l:Transform,
       \ {_, res -> wildsearch#getcompletion#is_user_command(res.cmd) ?
       \   wildsearch#getcompletion#get_user_completion(res.cmdline) :
       \   wildsearch#getcompletion#has_file_args(res.cmd) ?
