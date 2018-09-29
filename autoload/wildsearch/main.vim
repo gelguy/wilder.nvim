@@ -1,5 +1,6 @@
 scriptencoding utf-8
 
+let s:enabled = 1
 let s:init = 0
 let s:auto = 0
 let s:active = 0
@@ -42,7 +43,7 @@ function! wildsearch#main#in_mode() abort
 endfunction
 
 function! wildsearch#main#in_context() abort
-  return wildsearch#main#in_mode() && !s:hidden
+  return wildsearch#main#in_mode() && !s:hidden && s:enabled
 endfunction
 
 function! wildsearch#main#enable_cmdline_enter() abort
@@ -64,7 +65,7 @@ function! wildsearch#main#disable_cmdline_enter() abort
 endfunction
 
 function! wildsearch#main#start_auto() abort
-  if !wildsearch#main#in_mode()
+  if !wildsearch#main#in_mode() || !s:enabled
     return
   endif
 
@@ -76,6 +77,10 @@ function! wildsearch#main#start_auto() abort
 endfunction
 
 function! wildsearch#main#start_from_normal_mode() abort
+  if !s:enabled
+    return ''
+  endif
+
   let s:auto = 1
 
   " skip check since it is still normal mode
@@ -85,7 +90,7 @@ function! wildsearch#main#start_from_normal_mode() abort
 endfunction
 
 function! s:start(check) abort
-  if a:check && !wildsearch#main#in_mode()
+  if a:check && !wildsearch#main#in_mode() || !s:enabled
     call wildsearch#main#stop()
     return
   endif
@@ -132,10 +137,6 @@ function! s:start(check) abort
 endfunction
 
 function! wildsearch#main#stop() abort
-  if !s:active
-    return
-  endif
-
   if exists('#WildsearchCmdlineChanged')
     augroup WildsearchCmdlineChanged
       autocmd!
@@ -228,7 +229,7 @@ function! s:post_hook() abort
 endfunction
 
 function! s:do(check) abort
-  if !s:active
+  if !s:active || !s:enabled
     return
   endif
 
@@ -315,7 +316,7 @@ function! s:do(check) abort
 endfunction
 
 function! wildsearch#main#on_finish(ctx, x) abort
-  if !s:active
+  if !s:active || !s:enabled
     return
   endif
 
@@ -363,7 +364,7 @@ function! wildsearch#main#on_finish(ctx, x) abort
 endfunction
 
 function! wildsearch#main#on_error(ctx, x) abort
-  if !s:active
+  if !s:active || !s:enabled
     return
   endif
 
@@ -383,7 +384,7 @@ function! wildsearch#main#on_error(ctx, x) abort
 endfunction
 
 function! s:draw_resized() abort
-  if !s:active
+  if !s:active || !s:enabled
     return
   endif
 
@@ -448,9 +449,14 @@ function! wildsearch#main#previous() abort
 endfunction
 
 function! wildsearch#main#step(num_steps) abort
+  if !s:enabled
+    " returning '' seems to prevent async completions from finishing
+    " or prevent redrawing
+    return "\<Insert>\<Insert>"
+  endif
+
   if !s:active
     call s:start(1)
-    " returning '' seems to prevent async completions from finishing
     return "\<Insert>\<Insert>"
   endif
 
@@ -529,9 +535,6 @@ function! wildsearch#main#step(num_steps) abort
 
       if exists('s:menus') &&
             \ (empty(s:menus) || s:menus[0] !=# l:cmdline)
-        let l:menu_candidate = type(l:candidate) == v:t_dict ?
-              \ l:candidate.result :
-              \ l:candidate
         let s:menus = [l:cmdline] + s:menus
       endif
     else
@@ -632,6 +635,24 @@ function! wildsearch#main#restore_statusline() abort
   redrawstatus
 endfunction
 
-function! wildsearch#main#active() abort
-  return s:active
+function! wildsearch#main#enable()
+  let s:enabled = 1
+
+  return ''
+endfunction
+
+function! wildsearch#main#disable()
+  let s:enabled = 0
+
+  call wildsearch#main#stop()
+
+  return ''
+endfunction
+
+function! wildsearch#main#toggle()
+  if s:enabled
+    return wildsearch#main#disable()
+  endif
+
+  return wildsearch#main#enable()
 endfunction
