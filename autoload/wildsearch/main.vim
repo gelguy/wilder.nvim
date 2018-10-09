@@ -90,7 +90,7 @@ function! wildsearch#main#start_from_normal_mode() abort
 endfunction
 
 function! s:start(check) abort
-  if a:check && !wildsearch#main#in_mode() || !s:enabled
+  if a:check && !wildsearch#main#in_mode()
     call wildsearch#main#stop()
     return
   endif
@@ -137,6 +137,10 @@ function! s:start(check) abort
 endfunction
 
 function! wildsearch#main#stop() abort
+  if !s:active
+    return
+  endif
+
   if exists('#WildsearchCmdlineChanged')
     augroup WildsearchCmdlineChanged
       autocmd!
