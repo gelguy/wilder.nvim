@@ -4,7 +4,7 @@ function! wildsearch#getcompletion#map#do(ctx) abort
   while a:ctx.pos < len(a:ctx.cmdline)
     let l:arg_start = a:ctx.pos
 
-    call wildsearch#getcompletion#skip_nonwhitespace(a:ctx)
+    call wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
 
     if a:ctx.pos == len(a:ctx.cmdline)
       let a:ctx.pos = l:arg_start
