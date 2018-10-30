@@ -1,7 +1,7 @@
 function! wildsearch#getcompletion#sign#do(ctx) abort
   let l:arg_start = a:ctx.pos
 
-  if !wildsearch#getcompletion#skip_nonwhitespace(a:ctx)
+  if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
     let a:ctx.pos = l:arg_start
     return
   endif
@@ -12,7 +12,7 @@ function! wildsearch#getcompletion#sign#do(ctx) abort
 
   let l:arg_start = a:ctx.pos
 
-  if !wildsearch#getcompletion#skip_nonwhitespace(a:ctx)
+  if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
     let a:ctx.pos = l:arg_start
     return
   endif
@@ -24,7 +24,7 @@ function! wildsearch#getcompletion#sign#do(ctx) abort
 
     let l:arg_start = a:ctx.pos
 
-    if !wildsearch#getcompletion#skip_nonwhitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
       break
     endif
   endwhile

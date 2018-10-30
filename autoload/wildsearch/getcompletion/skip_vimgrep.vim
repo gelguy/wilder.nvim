@@ -1,7 +1,7 @@
 function! wildsearch#getcompletion#skip_vimgrep#do(ctx) abort
   " isident
   if match(a:ctx.cmdline[a:ctx.pos], '\i')
-    if !wildsearch#getcompletion#skip_nonwhitespace(a:ctx)
+    if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
       return
     endif
   else

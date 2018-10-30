@@ -4,7 +4,7 @@ function! wildsearch#getcompletion#match#do(ctx) abort
         \ a:ctx.cmdline[a:ctx.pos] !=# '"')
     call wildsearch#getcompletion#highlight#do(a:ctx)
 
-    if wildsearch#getcompletion#skip_nonwhitespace(a:ctx) &&
+    if wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx) &&
           \ wildsearch#getcompletion#main#skip_whitespace(a:ctx)
       let l:delimiter = a:ctx.cmdline[a:ctx.pos]
 
