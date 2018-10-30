@@ -1,6 +1,6 @@
 let s:chars = " \t0123456789.$%'/?-+,;\\"
 
-func wildsearch#getcompletion#skip_range#do(ctx) abort
+func wildsearch#cmdline#skip_range#do(ctx) abort
   while a:ctx.pos < len(a:ctx.cmdline) &&
         \ stridx(s:chars, a:ctx.cmdline[a:ctx.pos]) != -1
     let l:char = a:ctx.cmdline[a:ctx.pos]

@@ -1,30 +1,30 @@
-function! wildsearch#getcompletion#sign#do(ctx) abort
+function! wildsearch#cmdline#sign#do(ctx) abort
   let l:arg_start = a:ctx.pos
 
-  if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_nonwhitespace(a:ctx)
     let a:ctx.pos = l:arg_start
     return
   endif
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
   let l:arg_start = a:ctx.pos
 
-  if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_nonwhitespace(a:ctx)
     let a:ctx.pos = l:arg_start
     return
   endif
 
   while a:ctx.pos < len(a:ctx.cmdline)
-    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
       return
     endif
 
     let l:arg_start = a:ctx.pos
 
-    if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_nonwhitespace(a:ctx)
       break
     endif
   endwhile

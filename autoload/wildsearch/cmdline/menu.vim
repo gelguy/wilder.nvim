@@ -1,4 +1,4 @@
-function! wildsearch#getcompletion#menu#do(ctx) abort
+function! wildsearch#cmdline#menu#do(ctx) abort
   let l:arg_start = a:ctx.pos
 
   while a:ctx.pos < len(a:ctx.cmdline)

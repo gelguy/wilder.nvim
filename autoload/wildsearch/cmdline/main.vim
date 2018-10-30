@@ -1,9 +1,9 @@
-function! wildsearch#getcompletion#main#do(ctx) abort
+function! wildsearch#cmdline#main#do(ctx) abort
   if empty(a:ctx.cmdline[a:ctx.pos :])
     return
   endif
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -14,9 +14,9 @@ function! wildsearch#getcompletion#main#do(ctx) abort
   endif
 
   " skip range
-  call wildsearch#getcompletion#skip_range#do(a:ctx)
+  call wildsearch#cmdline#skip_range#do(a:ctx)
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -31,7 +31,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
     let a:ctx.pos += 1
     let a:ctx.cmd = ''
 
-    call wildsearch#getcompletion#main#do(a:ctx)
+    call wildsearch#cmdline#main#do(a:ctx)
 
     return
   endif
@@ -130,7 +130,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
     let l:force = 1
   endif
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -150,7 +150,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
         let a:ctx.pos += 1
       endif
 
-      if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+      if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
         return
       endif
     endif
@@ -171,7 +171,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
       let a:ctx.pos += 1
     endwhile
 
-    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
       return
     endif
   endif
@@ -179,10 +179,10 @@ function! wildsearch#getcompletion#main#do(ctx) abort
   " +command
   if and(l:flags, s:EDITCMD) &&
         \ !l:use_filter && a:ctx.cmdline[a:ctx.pos] ==# '+'
-    call wildsearch#getcompletion#skip_plus_command#do(a:ctx)
+    call wildsearch#cmdline#skip_plus_command#do(a:ctx)
   endif
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -216,7 +216,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
         let a:ctx.pos = l:lookahead + 1
         let a:ctx.cmd = ''
 
-        call wildsearch#getcompletion#main#do(a:ctx)
+        call wildsearch#cmdline#main#do(a:ctx)
 
         return
       endif
@@ -229,7 +229,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
   " command does not take extra arguments
   if !and(l:flags, s:EXTRA) && !l:is_user_cmd
     " consume whitespace
-    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
       return
     endif
 
@@ -238,7 +238,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
       let a:ctx.pos += 1
       let a:ctx.cmd = ''
 
-      call wildsearch#getcompletion#main#do(a:ctx)
+      call wildsearch#cmdline#main#do(a:ctx)
       return
     else
       " remaining part is either comment or invalid arguments
@@ -248,7 +248,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
     endif
   endif
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -287,33 +287,33 @@ function! wildsearch#getcompletion#main#do(ctx) abort
         \ a:ctx.cmd ==# 'windo'
     let a:ctx.cmd = ''
 
-    call wildsearch#getcompletion#main#do(a:ctx)
+    call wildsearch#cmdline#main#do(a:ctx)
 
     return
   endif
 
   if a:ctx.cmd ==# 'filter'
-    call wildsearch#getcompletion#filter#do(a:ctx)
+    call wildsearch#cmdline#filter#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'match'
-    call wildsearch#getcompletion#match#do(a:ctx)
+    call wildsearch#cmdline#match#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'command'
-    call wildsearch#getcompletion#command#do(a:ctx)
+    call wildsearch#cmdline#command#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'global' || a:ctx.cmd ==# 'vglobal'
-    call wildsearch#getcompletion#global#do(a:ctx)
+    call wildsearch#cmdline#global#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# '&' || a:ctx.cmd ==# 'substitute'
-    call wildsearch#getcompletion#substitute#do(a:ctx)
+    call wildsearch#cmdline#substitute#do(a:ctx)
     return
   endif
 
@@ -326,26 +326,26 @@ function! wildsearch#getcompletion#main#do(ctx) abort
         \ a:ctx.cmd ==# 'djump' ||
         \ a:ctx.cmd ==# 'isplit' ||
         \ a:ctx.cmd ==# 'dsplit'
-    call wildsearch#getcompletion#isearch#do(a:ctx)
+    call wildsearch#cmdline#isearch#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'autocmd' ||
         \ a:ctx.cmd ==# 'doautocmd' ||
         \ a:ctx.cmd ==# 'doautoall'
-    call wildsearch#getcompletion#autocmd#do(a:ctx)
+    call wildsearch#cmdline#autocmd#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'set' ||
         \ a:ctx.cmd ==# 'setglobal' ||
         \ a:ctx.cmd ==# 'setlocal'
-    call wildsearch#getcompletion#set#do(a:ctx)
+    call wildsearch#cmdline#set#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'syntax'
-    call wildsearch#getcompletion#syntax#do(a:ctx)
+    call wildsearch#cmdline#syntax#do(a:ctx)
     return
   endif
 
@@ -367,24 +367,24 @@ function! wildsearch#getcompletion#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lexpr' ||
         \ a:ctx.cmd ==# 'laddexpr' ||
         \ a:ctx.cmd ==# 'lgetexpr'
-    call wildsearch#getcompletion#let#do(a:ctx)
+    call wildsearch#cmdline#let#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'highlight'
-    call wildsearch#getcompletion#highlight#do(a:ctx)
+    call wildsearch#cmdline#highlight#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'cscope' ||
         \ a:ctx.cmd ==# 'lcscope' ||
         \ a:ctx.cmd ==# 'scscope'
-    call wildsearch#getcompletion#cscope#do(a:ctx)
+    call wildsearch#cmdline#cscope#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'sign'
-    call wildsearch#getcompletion#sign#do(a:ctx)
+    call wildsearch#cmdline#sign#do(a:ctx)
     return
   endif
 
@@ -392,17 +392,17 @@ function! wildsearch#getcompletion#main#do(ctx) abort
         \ a:ctx.cmd ==# 'unabbreviate' ||
         \ match(a:ctx.cmd, 'map$') != -1 ||
         \ match(a:ctx.cmd, 'abbrev$') != -1
-    call wildsearch#getcompletion#map#do(a:ctx)
+    call wildsearch#cmdline#map#do(a:ctx)
     return
   endif
 
   if match(a:ctx.cmd, 'menu$') != -1
-    call wildsearch#getcompletion#menu#do(a:ctx)
+    call wildsearch#cmdline#menu#do(a:ctx)
     return
   endif
 
   if a:ctx.cmd ==# 'profile'
-    call wildsearch#getcompletion#profile#do(a:ctx)
+    call wildsearch#cmdline#profile#do(a:ctx)
     return
   endif
 
@@ -453,7 +453,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
   " handle rest of commands including user-defined commands
   " assume arguments are split by whitespace
   " for commands which don't have arguments or have invalid arguments
-  " this is ok, since wildsearch#getcompletion() will return no results
+  " this is ok, since wildsearch#cmdline() will return no results
   let l:arg_start = a:ctx.pos
 
   while a:ctx.pos < len(a:ctx.cmdline)
@@ -463,7 +463,7 @@ function! wildsearch#getcompletion#main#do(ctx) abort
       if a:ctx.pos + 1 < len(a:ctx.cmdline)
         let a:ctx.pos += 1
       endif
-    elseif wildsearch#getcompletion#main#is_whitespace(l:char)
+    elseif wildsearch#cmdline#main#is_whitespace(l:char)
       let l:arg_start = a:ctx.pos + 1
 
     " special case for files
@@ -483,23 +483,23 @@ function! wildsearch#getcompletion#main#do(ctx) abort
   let a:ctx.pos = l:arg_start
 endfunc
 
-function! wildsearch#getcompletion#main#has_file_args(cmd) abort
+function! wildsearch#cmdline#main#has_file_args(cmd) abort
   let l:command = get(s:command_map, a:cmd, {})
   let l:flags = get(l:command, 'flags', 0)
   return and(l:flags, s:XFILE)
 endfunction
 
-func wildsearch#getcompletion#main#is_whitespace(char)
+func wildsearch#cmdline#main#is_whitespace(char)
   let l:nr = char2nr(a:char)
   return a:char ==# ' ' || l:nr >= 9 && l:nr <= 13
 endfunc
 
-function! wildsearch#getcompletion#main#skip_whitespace(ctx) abort
+function! wildsearch#cmdline#main#skip_whitespace(ctx) abort
   if empty(a:ctx.cmdline[a:ctx.pos])
     return 0
   endif
 
-  while wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+  while wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
     let a:ctx.pos += 1
 
     if empty(a:ctx.cmdline[a:ctx.pos])
@@ -510,12 +510,12 @@ function! wildsearch#getcompletion#main#skip_whitespace(ctx) abort
   return 1
 endfunction
 
-function! wildsearch#getcompletion#main#skip_nonwhitespace(ctx) abort
+function! wildsearch#cmdline#main#skip_nonwhitespace(ctx) abort
   if empty(a:ctx.cmdline[a:ctx.pos])
     return 0
   endif
 
-  while !wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+  while !wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
     let a:ctx.pos += 1
 
     if empty(a:ctx.cmdline[a:ctx.pos])

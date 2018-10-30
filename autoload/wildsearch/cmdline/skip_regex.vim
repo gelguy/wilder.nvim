@@ -18,7 +18,7 @@ let s:character_classes = {
       \ }
 
 " TODO: multibyte
-function! wildsearch#getcompletion#skip_regex#do(ctx, delimiter) abort
+function! wildsearch#cmdline#skip_regex#do(ctx, delimiter) abort
   let l:magic = &magic
 
   while a:ctx.pos < len(a:ctx.cmdline)

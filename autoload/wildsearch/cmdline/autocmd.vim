@@ -1,11 +1,11 @@
-function! wildsearch#getcompletion#autocmd#do(ctx) abort
+function! wildsearch#cmdline#autocmd#do(ctx) abort
   let l:group = ''
 
   " check for group name
   let l:arg_start = a:ctx.pos
   let l:in_group = 1
   while a:ctx.pos < len(a:ctx.cmdline)
-    if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos]) ||
+    if wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos]) ||
           \ a:ctx.cmdline[a:ctx.pos] ==# '|'
       let l:in_group = 0
       break
@@ -28,14 +28,14 @@ function! wildsearch#getcompletion#autocmd#do(ctx) abort
     let a:ctx.pos = l:arg_start
     " else move cursor to start of next arg
   else
-    call wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    call wildsearch#cmdline#main#skip_whitespace(a:ctx)
     let l:arg_start = a:ctx.pos
   endif
 
   " handle event name
   let l:arg_start = a:ctx.pos
   while a:ctx.pos < len(a:ctx.cmdline) &&
-        \ !wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+        \ !wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
     " handle ,
     if a:ctx.cmdline[a:ctx.pos] ==# ','
       let l:arg_start = a:ctx.pos + 1
@@ -50,13 +50,13 @@ function! wildsearch#getcompletion#autocmd#do(ctx) abort
     return
   endif
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
   " handle pattern
   while a:ctx.pos < len(a:ctx.cmdline) &&
-        \ !wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+        \ !wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
     if a:ctx.cmdline[a:ctx.pos] ==# '\' &&
           \ a:ctx.pos + 1 < len(a:ctx.cmdline)
       let a:ctx.pos += 1
@@ -70,7 +70,7 @@ function! wildsearch#getcompletion#autocmd#do(ctx) abort
     let a:ctx.pos += 1
     let a:ctx.cmd = ''
 
-    call wildsearch#getcompletion#main#do(a:ctx)
+    call wildsearch#cmdline#main#do(a:ctx)
     return
   endif
 endfunction

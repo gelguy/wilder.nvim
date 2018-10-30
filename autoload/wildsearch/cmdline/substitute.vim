@@ -1,8 +1,8 @@
-function! wildsearch#getcompletion#substitute#do(ctx) abort
-  call wildsearch#getcompletion#substitute#parse(a:ctx)
+function! wildsearch#cmdline#substitute#do(ctx) abort
+  call wildsearch#cmdline#substitute#parse(a:ctx)
 endfunction
 
-function! wildsearch#getcompletion#substitute#parse(ctx) abort
+function! wildsearch#cmdline#substitute#parse(ctx) abort
   " returns [{delimiter}, {from}, {delimiter}, {to}, {delimiter}, {flags}]
 
   if a:ctx.pos >= len(a:ctx.cmdline)
@@ -20,7 +20,7 @@ function! wildsearch#getcompletion#substitute#parse(ctx) abort
   let l:arg_start = a:ctx.pos
 
   " delimiter not reached
-  if !wildsearch#getcompletion#skip_regex#do(a:ctx, l:delimiter)
+  if !wildsearch#cmdline#skip_regex#do(a:ctx, l:delimiter)
     let l:result += [a:ctx.cmdline[l:arg_start :]]
     let a:ctx.pos = l:cmd_start
     return l:result
@@ -71,7 +71,7 @@ function! wildsearch#getcompletion#substitute#parse(ctx) abort
       let a:ctx.pos += 1
       let a:ctx.cmd = ''
 
-      call wildsearch#getcompletion#main#do(a:ctx)
+      call wildsearch#cmdline#main#do(a:ctx)
       return []
     endif
 

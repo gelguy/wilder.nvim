@@ -137,14 +137,14 @@ function! wildsearch#python_search_pipeline(...)
         \ ]
 endfunction
 
-function! wildsearch#getcompletion_pipeline(...) abort
+function! wildsearch#cmdline_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
-  return wildsearch#getcompletion#pipeline(l:opts)
+  return wildsearch#cmdline#pipeline(l:opts)
 endfunction
 
 function! wildsearch#substitute_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
-  return wildsearch#getcompletion#substitute_pipeline(l:opts)
+  return wildsearch#cmdline#substitute_pipeline(l:opts)
 endfunction

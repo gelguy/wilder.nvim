@@ -101,7 +101,7 @@ function! wildsearch#pipeline#default() abort
   if has('nvim')
     return [
           \ wildsearch#branch(
-          \   wildsearch#getcompletion_pipeline(),
+          \   wildsearch#cmdline_pipeline(),
           \   wildsearch#python_search_pipeline(),
           \ ),
           \ ]

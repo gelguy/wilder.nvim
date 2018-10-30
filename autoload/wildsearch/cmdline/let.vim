@@ -1,11 +1,11 @@
-function! wildsearch#getcompletion#let#do(ctx)
+function! wildsearch#cmdline#let#do(ctx)
   if a:ctx.cmd ==# 'let' &&
         \ match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]') == -1
     " let var1 var2 ...
     let l:arg_start = a:ctx.pos
 
     while a:ctx.pos < len(a:ctx.cmdline)
-      if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
         let l:arg_start = a:ctx.pos + 1
       endif
 
@@ -105,8 +105,8 @@ function! wildsearch#getcompletion#let#do(ctx)
 
     let a:ctx.pos += 1
 
-    if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-      if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    if wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
         let l:arg_start = a:ctx.pos
         break
       endif

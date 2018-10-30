@@ -1,4 +1,4 @@
-function! wildsearch#getcompletion#isearch#do(ctx) abort
+function! wildsearch#cmdline#isearch#do(ctx) abort
   " skip count
   while a:ctx.pos < len(a:ctx.cmdline) &&
         \ a:ctx.cmdline[a:ctx.pos] >=# '1' &&
@@ -6,7 +6,7 @@ function! wildsearch#getcompletion#isearch#do(ctx) abort
     let a:ctx.pos += 1
   endwhile
 
-  if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+  if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
     return
   endif
 
@@ -35,7 +35,7 @@ function! wildsearch#getcompletion#isearch#do(ctx) abort
       return
     endif
 
-    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
       return
     endif
 
@@ -43,7 +43,7 @@ function! wildsearch#getcompletion#isearch#do(ctx) abort
       let a:ctx.pos += 1
       let a:ctx.cmd = ''
 
-      call wildsearch#getcompletion#main#do(a:ctx)
+      call wildsearch#cmdline#main#do(a:ctx)
       return
     endif
 

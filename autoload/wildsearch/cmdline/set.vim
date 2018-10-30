@@ -1,4 +1,4 @@
-function! wildsearch#getcompletion#set#do(ctx) abort
+function! wildsearch#cmdline#set#do(ctx) abort
   let l:arg_start = a:ctx.pos
   let l:in_option_arg = 0
 
@@ -10,7 +10,7 @@ function! wildsearch#getcompletion#set#do(ctx) abort
       let a:ctx.pos += 1
     endif
 
-    if wildsearch#getcompletion#main#is_whitespace(l:char)
+    if wildsearch#cmdline#main#is_whitespace(l:char)
       let l:arg_start = a:ctx.pos + 1
       let l:in_option_arg = 0
     endif

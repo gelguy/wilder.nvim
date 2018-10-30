@@ -1,4 +1,4 @@
-function! wildsearch#getcompletion#command#do(ctx) abort
+function! wildsearch#cmdline#command#do(ctx) abort
   " check for -attr
   while a:ctx.cmdline[a:ctx.pos] ==# '-'
     let a:ctx.pos += 1
@@ -6,7 +6,7 @@ function! wildsearch#getcompletion#command#do(ctx) abort
 
     " skip to white space
     while a:ctx.pos < len(a:ctx.cmdline)
-      if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
         break
       endif
 
@@ -33,7 +33,7 @@ function! wildsearch#getcompletion#command#do(ctx) abort
       return
     endif
 
-    if !wildsearch#getcompletion#main#skip_whitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_whitespace(a:ctx)
       return
     endif
   endwhile
@@ -41,7 +41,7 @@ function! wildsearch#getcompletion#command#do(ctx) abort
   " command name
   " skip to white space
   while a:ctx.pos < len(a:ctx.cmdline)
-    if wildsearch#getcompletion#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+    if wildsearch#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
       break
     endif
 
@@ -56,5 +56,5 @@ function! wildsearch#getcompletion#command#do(ctx) abort
   " new command
   let a:ctx.cmd = ''
 
-  call wildsearch#getcompletion#main#do(a:ctx)
+  call wildsearch#cmdline#main#do(a:ctx)
 endfunction

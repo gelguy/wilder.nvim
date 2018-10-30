@@ -1,14 +1,14 @@
-function! wildsearch#getcompletion#skip_vimgrep#do(ctx) abort
+function! wildsearch#cmdline#skip_vimgrep#do(ctx) abort
   " isident
   if match(a:ctx.cmdline[a:ctx.pos], '\i')
-    if !wildsearch#getcompletion#main#skip_nonwhitespace(a:ctx)
+    if !wildsearch#cmdline#main#skip_nonwhitespace(a:ctx)
       return
     endif
   else
     let l:delimiter = a:ctx.cmdline[a:ctx.pos]
     let a:ctx.pos += 1
 
-    if !wildsearch#getcompletion#skip_regex#do(a:ctx, l:delimiter)
+    if !wildsearch#cmdline#skip_regex#do(a:ctx, l:delimiter)
       return
     endif
 
