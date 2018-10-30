@@ -98,3 +98,53 @@ function! wildsearch#getcompletion#pipeline(opts) abort
       \ {_, xs -> map(xs, {_, x -> {'result': x, 'replace': 'wildsearch#getcompletion#replace'}})},
       \ ]
 endfunction
+
+let s:substitute_commands = {
+      \ 'substitute': v:true,
+      \ 'smagic': v:true,
+      \ 'snomagic': v:true,
+      \ 'global': v:true,
+      \ 'vglobal': v:true,
+      \ '&': v:true,
+      \ }
+
+function! wildsearch#getcompletion#is_substitute_command(cmd)
+  return has_key(s:substitute_commands, a:cmd)
+endfunction
+
+function! wildsearch#getcompletion#substitute_pipeline(opts) abort
+  let l:Pipeline = get(a:opts, 'pipeline', [
+        \ wildsearch#python_substring(),
+        \ wildsearch#python_search(),
+        \ ])
+
+  if type(l:Pipeline) == v:t_func
+    let l:Pipeline = [l:Pipeline]
+  endif
+
+  return [
+      \ wildsearch#check({-> getcmdtype() ==# ':'}),
+      \ {_, x -> wildsearch#getcompletion#parse(x)},
+      \ wildsearch#check({_, res -> wildsearch#getcompletion#is_substitute_command(res.cmd)}),
+      \ {_, res -> wildsearch#getcompletion#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
+      \ wildsearch#check({_, x-> len(x) == 2}),
+      \ wildsearch#map(
+      \   [{_, xs -> xs[0]}],
+      \   [
+      \     {_, xs -> xs[1]},
+      \     wildsearch#branch(
+      \       [
+      \         wildsearch#check({_, x -> empty(x)}),
+      \         {-> []},
+      \       ],
+      \       l:Pipeline,
+      \     ),
+      \   ],
+      \ ),
+      \ {_, xs -> map(xs[1], {_, x -> {'result': x,
+      \    'draw': escape(x, '^$.*~[]\'),
+      \    'output': xs[0] . x,
+      \    'replace': 'wildsearch#getcompletion#replace'
+      \ }})},
+      \ ]
+endfunction

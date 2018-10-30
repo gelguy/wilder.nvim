@@ -142,3 +142,9 @@ function! wildsearch#getcompletion_pipeline(...) abort
 
   return wildsearch#getcompletion#pipeline(l:opts)
 endfunction
+
+function! wildsearch#substitute_pipeline(...) abort
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  return wildsearch#getcompletion#substitute_pipeline(l:opts)
+endfunction
