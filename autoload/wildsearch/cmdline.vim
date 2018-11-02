@@ -68,33 +68,23 @@ func wildsearch#cmdline#replace(ctx, cmdline, x) abort
   return l:result.cmdline[: l:result.pos - 1] . a:x
 endfunction
 
-let s:transform = {
-      \ 'substitute': v:true,
-      \ 'smagic': v:true,
-      \ 'snomagic': v:true,
-      \ 'global': v:true,
-      \ 'vglobal': v:true,
-      \ '&': v:true,
-      \ }
-
 function! wildsearch#cmdline#pipeline(opts) abort
-  let l:Transform = get(a:opts, 'transform', s:transform)
-
-  if type(l:Transform) == v:t_dict
-    let l:dict = l:Transform
-    let l:Transform = {_, res -> get(l:dict, res.cmd, res)}
-  endif
-
   return [
       \ wildsearch#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wildsearch#cmdline#parse(x)},
-      \ l:Transform,
-      \ {_, res -> wildsearch#cmdline#is_user_command(res.cmd) ?
-      \   wildsearch#cmdline#get_user_completion(res.cmdline) :
-      \   wildsearch#cmdline#has_file_args(res.cmd) ?
-      \   map(getcompletion(res.cmdline, 'cmdline'), {_, x -> escape(x, ' ')}) :
-      \   getcompletion(res.cmdline, 'cmdline')
-      \ },
+      \ wildsearch#branch(
+      \   [
+      \     wildsearch#check({_, res -> wildsearch#cmdline#is_user_command(res.cmd)}),
+      \     {_, res -> wildsearch#cmdline#get_user_completion(res.cmdline)},
+      \   ],
+      \   [
+      \     wildsearch#check({_, res -> wildsearch#cmdline#has_file_args(res.cmd)}),
+      \     {_, res -> map(getcompletion(res.cmdline, 'cmdline'), {_, x -> escape(x, ' ')})},
+      \   ],
+      \   [
+      \     {_, res -> getcompletion(res.cmdline, 'cmdline')},
+      \   ],
+      \ ),
       \ {_, xs -> map(xs, {_, x -> {'result': x, 'replace': 'wildsearch#cmdline#replace'}})},
       \ ]
 endfunction
@@ -113,30 +103,24 @@ function! wildsearch#cmdline#is_substitute_command(cmd)
 endfunction
 
 function! wildsearch#cmdline#substitute_pipeline(opts) abort
-  let l:Pipeline = get(a:opts, 'pipeline', [
+  let l:pipeline = get(a:opts, 'pipeline', [
         \ wildsearch#python_substring(),
         \ wildsearch#python_search(),
         \ ])
-
-  if type(l:Pipeline) == v:t_func
-    let l:Pipeline = [l:Pipeline]
-  endif
-
-  let l:Pipeline = [{_, xs -> xs[1]}] + l:Pipeline
 
   return [
       \ wildsearch#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wildsearch#cmdline#parse(x)},
       \ wildsearch#check({_, res -> wildsearch#cmdline#is_substitute_command(res.cmd)}),
       \ {_, res -> wildsearch#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
-      \ wildsearch#check({_, x-> len(x) == 2}),
+      \ wildsearch#check({_, x -> len(x) == 2}),
       \ wildsearch#map(
-      \   [{_, xs -> xs[0]}],
-      \   l:Pipeline,
+      \   [{_, vs -> vs[0]}],
+      \   [{_, vs -> vs[1]}] + l:pipeline,
       \ ),
-      \ {_, xs -> map(xs[1], {_, x -> {'result': x,
+      \ {_, vs -> map(vs[1], {_, x -> {'result': x,
       \    'draw': escape(x, '^$.*~[]\'),
-      \    'output': xs[0] . x,
+      \    'output': vs[0] . x,
       \    'replace': 'wildsearch#cmdline#replace'
       \ }})},
       \ ]

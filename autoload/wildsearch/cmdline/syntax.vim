@@ -16,7 +16,6 @@ function! wildsearch#cmdline#syntax#do(ctx) abort
   endif
 
   let l:subcommand = a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]
-  echom l:subcommand . '1'
 
   " invalid match
   if l:subcommand !=# 'case' &&
