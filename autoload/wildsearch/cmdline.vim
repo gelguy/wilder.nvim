@@ -104,24 +104,26 @@ endfunction
 
 function! wildsearch#cmdline#substitute_pipeline(opts) abort
   let l:pipeline = get(a:opts, 'pipeline', [
-        \ wildsearch#python_substring(),
-        \ wildsearch#python_search(),
+        \ wildsearch#vim_substring(),
+        \ wildsearch#vim_search(),
         \ ])
+
+  let l:hide = get(a:opts, 'hide', 1)
 
   return [
       \ wildsearch#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wildsearch#cmdline#parse(x)},
       \ wildsearch#check({_, res -> wildsearch#cmdline#is_substitute_command(res.cmd)}),
       \ {_, res -> wildsearch#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
-      \ wildsearch#check({_, x -> len(x) == 2}),
+      \ {_, res -> len(res) == 2 ? res : (l:hide ? v:true : v:false)},
       \ wildsearch#map(
       \   [{_, vs -> vs[0]}],
       \   [{_, vs -> vs[1]}] + l:pipeline,
       \ ),
       \ {_, vs -> map(vs[1], {_, x -> {'result': x,
-      \    'draw': escape(x, '^$.*~[]\'),
-      \    'output': vs[0] . x,
-      \    'replace': 'wildsearch#cmdline#replace'
+      \   'draw': escape(x, '^$.*~[]\'),
+      \   'output': vs[0] . x,
+      \   'replace': 'wildsearch#cmdline#replace'
       \ }})},
       \ ]
 endfunction
