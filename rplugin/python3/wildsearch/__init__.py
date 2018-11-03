@@ -18,7 +18,7 @@ class Wildsearch(object):
         self.executor = None
 
     def do(self, ctx, x, command='do'):
-        self.nvim.call('wildsearch#pipeline#' + command, ctx, x)
+        self.nvim.call('wild#pipeline#' + command, ctx, x)
 
     def echo(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
@@ -53,7 +53,7 @@ class Wildsearch(object):
             else:
                 self.nvim.async_call(self.do, ctx, res)
 
-    @neovim.function('_wildsearch_init', sync=True, allow_nested=True)
+    @neovim.function('_wild_init', sync=True, allow_nested=True)
     def init(self, args):
         if self.has_init:
             return
@@ -66,7 +66,7 @@ class Wildsearch(object):
         t = threading.Thread(target=self.consumer, daemon=True)
         t.start()
 
-    @neovim.function('_wildsearch_python_sleep', sync=False)
+    @neovim.function('_wild_python_sleep', sync=False)
     def sleep(self, args):
         self.run_in_background(self.sleep_handler, args)
 
@@ -74,7 +74,7 @@ class Wildsearch(object):
         time.sleep(t)
         self.queue.put((ctx, x,))
 
-    @neovim.function('_wildsearch_python_search', sync=False, allow_nested=True)
+    @neovim.function('_wild_python_search', sync=False, allow_nested=True)
     def search(self, args):
         if args[2] == "":
             self.do(args[1], [])
@@ -129,7 +129,7 @@ class Wildsearch(object):
             with self.lock:
                 self.events.remove(event)
 
-    @neovim.function('_wildsearch_python_uniq', sync=False)
+    @neovim.function('_wild_python_uniq', sync=False)
     def uniq(self, args):
         ctx = args[0]
         items = args[1]
@@ -142,7 +142,7 @@ class Wildsearch(object):
         except Exception as e:
             self.queue.put((ctx, str(e), 'do_error',))
 
-    @neovim.function('_wildsearch_python_sort', sync=False, allow_nested=True)
+    @neovim.function('_wild_python_sort', sync=False, allow_nested=True)
     def sort(self, args):
         ctx = args[0]
         items = args[1]
