@@ -14,6 +14,18 @@ function! wild#check(...) abort
   return wild#pipeline#component#check#make(a:000)
 endfunction
 
+function! wild#result(...) abort
+  if a:0 == 0
+    return wild#pipeline#component#result#make()
+  else
+    return wild#pipeline#component#result#make(a:1)
+  endif
+endfunction
+
+function! wild#result_escape(chars) abort
+  return wild#result({_, x -> {'output': escape(x, '^$.*~[]/\')}})
+endfunction
+
 function! wild#vim_substring() abort
   return {_, x -> x . '\k*'}
 endfunction
@@ -68,6 +80,49 @@ function! wild#history(...) abort
   endif
 endfunction
 
+function! wild#search_pipeline(...)
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  let l:result = [
+        \ wild#check({_, x -> !empty(x)}),
+        \ wild#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
+        \ ]
+
+  let l:result += get(l:opts, 'pipeline', [
+        \ wild#vim_substring(),
+        \ wild#vim_search(),
+        \ wild#result_escape('^$,*~[]/\'),
+        \ ])
+
+  return l:result
+endfunction
+
+function! wild#vim_search_pipeline()
+  return wild#search_pipeline()
+endfunction
+
+function! wild#python_search_pipeline()
+  return wild#search_pipeline({
+        \ 'pipeline': [
+        \   wild#python_substring(),
+        \   wild#python_search(),
+        \   wild#result_escape('^$,*~[]/\'),
+        \ ],
+        \ })
+endfunction
+
+function! wild#cmdline_pipeline(...) abort
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  return wild#cmdline#pipeline(l:opts)
+endfunction
+
+function! wild#substitute_pipeline(...) abort
+  let l:opts = a:0 > 0 ? a:1 : {}
+
+  return wild#cmdline#substitute_pipeline(l:opts)
+endfunction
+
 function! wild#index(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
   return wild#render#component#index#make(l:args)
@@ -111,49 +166,4 @@ endfunction
 function! wild#condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
   return wild#render#component#condition#make(a:predicate, a:if_true, l:if_false)
-endfunction
-
-function! wild#search_pipeline(...)
-  let l:opts = a:0 > 0 ? a:1 : {}
-
-  let l:result = [
-        \ wild#check({_, x -> !empty(x)}),
-        \ wild#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
-        \ ]
-
-  let l:result += get(l:opts, 'pipeline', [
-        \ wild#vim_substring(),
-        \ wild#vim_search(),
-        \ ])
-
-  let l:result += [
-        \ {_, xs -> map(copy(xs), {i, x -> {'result': x, 'draw': escape(x, '^$.*~[]\')}})},
-        \ ]
-
-  return l:result
-endfunction
-
-function! wild#vim_search_pipeline()
-  return wild#search_pipeline()
-endfunction
-
-function! wild#python_search_pipeline()
-  return wild#search_pipeline({
-        \ 'pipeline': [
-        \   wild#python_substring(),
-        \   wild#python_search(),
-        \ ],
-        \ })
-endfunction
-
-function! wild#cmdline_pipeline(...) abort
-  let l:opts = a:0 > 0 ? a:1 : {}
-
-  return wild#cmdline#pipeline(l:opts)
-endfunction
-
-function! wild#substitute_pipeline(...) abort
-  let l:opts = a:0 > 0 ? a:1 : {}
-
-  return wild#cmdline#substitute_pipeline(l:opts)
 endfunction

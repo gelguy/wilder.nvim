@@ -415,7 +415,7 @@ function! s:draw(...) abort
   endif
 
   let l:xs = l:has_error ? [] :
-        \ map(copy(s:candidates), {_, x -> type(x) is v:t_dict ? get(x, 'draw', x.result) : x})
+        \ map(copy(s:candidates), {_, x -> type(x) is v:t_dict ? get(x, 'draw', x['result']) : x})
 
   let l:left_components = wild#render#get_components('left')
   let l:right_components = wild#render#get_components('right')
@@ -516,7 +516,7 @@ function! wild#main#step(num_steps) abort
     if s:selected >= 0
       let l:candidate = s:candidates[s:selected]
       let l:output = type(l:candidate) is v:t_dict ?
-            \ get(l:candidate, 'output', l:candidate.result) :
+            \ get(l:candidate, 'output', l:candidate['result']) :
             \ l:candidate
 
       let l:Replace = type(l:candidate) is v:t_dict ?

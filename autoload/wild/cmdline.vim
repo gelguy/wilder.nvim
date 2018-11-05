@@ -65,6 +65,12 @@ func wild#cmdline#replace(ctx, cmdline, x) abort
     return l:result.cmdline[: l:result.pos - 1] . a:x
   endif
 
+  if wild#cmdline#is_substitute_command(l:result.cmd)
+    let l:delimiter = l:result.cmdline[l:result.pos]
+
+    return l:result.cmdline[: l:result.pos - 1] . l:delimiter . a:x
+  endif
+
   return l:result.cmdline[: l:result.pos - 1] . a:x
 endfunction
 
@@ -85,7 +91,7 @@ function! wild#cmdline#pipeline(opts) abort
       \     {_, res -> getcompletion(res.cmdline, 'cmdline')},
       \   ],
       \ ),
-      \ {_, xs -> map(xs, {_, x -> {'result': x, 'replace': 'wild#cmdline#replace'}})},
+      \ wild#result({-> {'replace': 'wild#cmdline#replace'}}),
       \ ]
 endfunction
 
@@ -106,6 +112,7 @@ function! wild#cmdline#substitute_pipeline(opts) abort
   let l:pipeline = get(a:opts, 'pipeline', [
         \ wild#vim_substring(),
         \ wild#vim_search(),
+        \ wild#result_escape('^$,*~[]/\'),
         \ ])
 
   let l:hide = get(a:opts, 'hide', 1)
@@ -115,15 +122,8 @@ function! wild#cmdline#substitute_pipeline(opts) abort
       \ {_, x -> wild#cmdline#parse(x)},
       \ wild#check({_, res -> wild#cmdline#is_substitute_command(res.cmd)}),
       \ {_, res -> wild#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
-      \ {_, res -> len(res) == 2 ? res : (l:hide ? v:true : v:false)},
-      \ wild#map(
-      \   [{_, vs -> vs[0]}],
-      \   [{_, vs -> vs[1]}] + l:pipeline,
-      \ ),
-      \ {_, vs -> map(vs[1], {_, x -> {'result': x,
-      \   'draw': escape(x, '^$.*~[]\'),
-      \   'output': vs[0] . x,
-      \   'replace': 'wild#cmdline#replace'
-      \ }})},
+      \ {_, res -> len(res) == 2 ? res[1] : (l:hide ? v:true : v:false)},
+      \ ] + l:pipeline + [
+      \ wild#result({-> {'replace': 'wild#cmdline#replace'}}),
       \ ]
 endfunction
