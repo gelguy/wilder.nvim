@@ -493,7 +493,7 @@ function! wild#render#get_colors_nvim(group) abort
   endtry
 endfunction
 
-function! wild#render#get_colors_vim(group) abort abort
+function! wild#render#get_colors_vim(group) abort
   try
     redir => l:highlight
     silent execute 'silent highlight ' . a:group

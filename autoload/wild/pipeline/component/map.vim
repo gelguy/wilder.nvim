@@ -11,7 +11,7 @@ function! wild#pipeline#component#map#make(args) abort
   return {ctx, x -> s:start(l:args, ctx, x)}
 endfunction
 
-function! s:start(args, ctx, x)
+function! s:start(args, ctx, x) abort
   if !a:args.initialised
       let a:args.fs_list = map(copy(a:args.fs_list), {_, fs -> wild#pipeline#register_funcs(copy(fs))})
 

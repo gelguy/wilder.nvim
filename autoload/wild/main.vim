@@ -563,7 +563,7 @@ function! wild#main#step(num_steps) abort
   return "\<Insert>\<Insert>"
 endfunction
 
-function! s:feedkeys_cmdline(cmdline)
+function! s:feedkeys_cmdline(cmdline) abort
   let l:chars = split(a:cmdline, '\zs')
 
   let l:keys = "\<C-U>"
@@ -580,11 +580,11 @@ function! s:feedkeys_cmdline(cmdline)
   call feedkeys(l:keys, 'n')
 endfunction
 
-function! s:replace_all(ctx, cmdline, x)
+function! s:replace_all(ctx, cmdline, x) abort
   return a:x
 endfunction
 
-function! wild#main#can_accept_completion()
+function! wild#main#can_accept_completion() abort
   return wild#main#in_context() &&
         \ exists('s:selected') && s:selected >= 0
 endfunction
@@ -599,7 +599,7 @@ function! wild#main#accept_completion() abort
   return "\<Insert>\<Insert>"
 endfunction
 
-function! wild#main#can_reject_completion()
+function! wild#main#can_reject_completion() abort
   return wild#main#in_context() && exists('s:menus')
 endfunction
 
@@ -639,13 +639,13 @@ function! wild#main#restore_statusline() abort
   redrawstatus
 endfunction
 
-function! wild#main#enable()
+function! wild#main#enable() abort
   let s:enabled = 1
 
   return ''
 endfunction
 
-function! wild#main#disable()
+function! wild#main#disable() abort
   let s:enabled = 0
 
   call wild#main#stop()
@@ -653,7 +653,7 @@ function! wild#main#disable()
   return ''
 endfunction
 
-function! wild#main#toggle()
+function! wild#main#toggle() abort
   if s:enabled
     return wild#main#disable()
   endif

@@ -80,7 +80,7 @@ function! wild#history(...) abort
   endif
 endfunction
 
-function! wild#search_pipeline(...)
+function! wild#search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
   let l:result = [
@@ -97,11 +97,11 @@ function! wild#search_pipeline(...)
   return l:result
 endfunction
 
-function! wild#vim_search_pipeline()
+function! wild#vim_search_pipeline() abort
   return wild#search_pipeline()
 endfunction
 
-function! wild#python_search_pipeline()
+function! wild#python_search_pipeline() abort
   return wild#search_pipeline({
         \ 'pipeline': [
         \   wild#python_substring(),

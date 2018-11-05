@@ -1,4 +1,4 @@
-func wild#cmdline#skip_plus_command#do(ctx)
+function! wild#cmdline#skip_plus_command#do(ctx) abort
   let a:ctx.pos += 1
 
   while a:ctx.pos < len(a:ctx.cmdline)

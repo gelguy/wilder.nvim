@@ -1,4 +1,4 @@
-func wild#cmdline#parse(cmdline) abort
+function! wild#cmdline#parse(cmdline) abort
   if exists('s:cache_cmdline') && a:cmdline ==# s:cache_cmdline
     return s:cache
   else
@@ -12,15 +12,15 @@ func wild#cmdline#parse(cmdline) abort
   return copy(l:ctx)
 endfunc
 
-function! wild#cmdline#has_file_args(cmd)
+function! wild#cmdline#has_file_args(cmd) abort
   return wild#cmdline#main#has_file_args(a:cmd)
 endfunction
 
-function! wild#cmdline#is_user_command(cmd)
+function! wild#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-function! wild#cmdline#get_user_completion(cmdline)
+function! wild#cmdline#get_user_completion(cmdline) abort
   let l:ctx = wild#cmdline#parse(a:cmdline)
 
   let l:user_commands = nvim_get_commands({})
@@ -54,7 +54,7 @@ function! wild#cmdline#get_user_completion(cmdline)
   return l:Completion_func(l:ctx.cmdline[l:ctx.pos :], l:ctx.cmdline, l:ctx.pos + 1)
 endfunction
 
-func wild#cmdline#replace(ctx, cmdline, x) abort
+function! wild#cmdline#replace(ctx, cmdline, x) abort
   let l:result = wild#cmdline#parse(a:cmdline)
 
   if l:result.pos == 0
@@ -104,7 +104,7 @@ let s:substitute_commands = {
       \ '&': v:true,
       \ }
 
-function! wild#cmdline#is_substitute_command(cmd)
+function! wild#cmdline#is_substitute_command(cmd) abort
   return has_key(s:substitute_commands, a:cmd)
 endfunction
 

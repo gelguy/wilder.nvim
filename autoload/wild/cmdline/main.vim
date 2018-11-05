@@ -115,7 +115,7 @@ function! wild#cmdline#main#do(ctx) abort
     " 2 or 3-letter substitute command, takes no arguments
     if a:ctx.cmdline[l:cmd_start] ==# 's' &&
           \ stridx('cgriI', a:ctx.cmdline[l:cmd_start + 1]) != -1
-      let a:ctx.cmd = 'substitute'
+      let a:ctx.cmd = 's'
     endif
 
     let a:ctx.pos = len(a:ctx.cmdline)
@@ -489,7 +489,7 @@ function! wild#cmdline#main#has_file_args(cmd) abort
   return and(l:flags, s:XFILE)
 endfunction
 
-func wild#cmdline#main#is_whitespace(char)
+function! wild#cmdline#main#is_whitespace(char) abort
   let l:nr = char2nr(a:char)
   return a:char ==# ' ' || l:nr >= 9 && l:nr <= 13
 endfunc
@@ -526,7 +526,7 @@ function! wild#cmdline#main#skip_nonwhitespace(ctx) abort
   return 1
 endfunction
 
-func s:or(...) abort
+function! s:or(...) abort
   let l:result = 0
 
   for l:arg in a:000
