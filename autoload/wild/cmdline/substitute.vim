@@ -11,10 +11,17 @@ function! wild#cmdline#substitute#parse(ctx) abort
 
   let l:cmd_start = a:ctx.pos
 
-  let l:result = []
-
   let l:delimiter = a:ctx.cmdline[a:ctx.pos]
-  let l:result += [l:delimiter]
+
+  " delimiter cannot be alphanumeric, '\' or '|', see E146
+  if l:delimiter >=# 'a' && l:delimiter <=# 'z' ||
+        \ l:delimiter >=# 'A' && l:delimiter <=# 'Z' ||
+        \ l:delimiter >=# '0' && l:delimiter <=# '9' ||
+        \ l:delimiter ==# '\' || l:delimiter ==# '|'
+    return []
+  endif
+
+  let l:result = [l:delimiter]
 
   let a:ctx.pos += 1
   let l:arg_start = a:ctx.pos

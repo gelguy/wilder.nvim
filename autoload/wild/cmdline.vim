@@ -122,6 +122,7 @@ function! wild#cmdline#substitute_pipeline(opts) abort
       \ {_, x -> wild#cmdline#parse(x)},
       \ wild#check({_, res -> wild#cmdline#is_substitute_command(res.cmd)}),
       \ {_, res -> wild#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
+      \ wild#check({_, res -> len(res) > 0}),
       \ {_, res -> len(res) == 2 ? res[1] : (l:hide ? v:true : v:false)},
       \ ] + l:pipeline + [
       \ wild#result({-> {'replace': 'wild#cmdline#replace'}}),
