@@ -3,24 +3,22 @@ scriptencoding utf-8
 let s:hl_map = {}
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
-let s:opts = {
-      \ 'hl': 'StatusLine',
-      \ 'selected_hl': 'WildMenu',
-      \ 'error_hl': 'StatusLine',
-      \ 'separator': ' ',
-      \ 'ellipsis': '...',
-      \ }
+let s:opts = wilder#options#get()
 
-function! wilder#render#set_option(key, value) abort
-  let s:opts[a:key] = a:value
-endfunction
+function! wilder#render#get_components(...) abort
+  if !has_key(s:opts, 'render_components')
+    let s:opts.render_components = {
+          \ 'left': [wilder#previous_arrow()],
+          \ 'right': [wilder#next_arrow()]
+          \ }
+  endif
 
-function! wilder#render#set_options(opts) abort
-  let s:opts = extend(s:opts, a:opts)
-endfunction
+  if a:0 == 0
+    return get(s:opts.render_components, 'left', []) +
+          \ get(s:opts.render_components, 'right', [])
+  endif
 
-function! wilder#render#get_option(key) abort
-  return s:opts[a:key]
+  return get(s:opts.render_components, a:1, [])
 endfunction
 
 function! wilder#render#components_len(components, ctx, xs) abort
@@ -347,23 +345,6 @@ function! wilder#render#components_draw(components, ctx, xs) abort
   return l:res
 endfunction
 
-function! wilder#render#set_components(args) abort
-  let s:left = get(a:args, 'left', [])
-  let s:right = get(a:args, 'right', [])
-endfunction
-
-function! wilder#render#get_components(...) abort
-  if !exists('s:left') && !exists('s:right')
-    call wilder#render#set_components(wilder#render#default())
-  endif
-
-  if a:0 == 0
-    return s:left + s:right
-  endif
-
-  return a:1 ==# 'left' ? s:left : s:right
-endfunction
-
 function! wilder#render#make_hl(name, args) abort
   let l:type = type(a:args)
   if l:type == v:t_list
@@ -538,13 +519,6 @@ function! s:get_hl_attrs(attrs, key, hl) abort
   let a:attrs.standout = match(a:hl, a:key . '=\S*standout\S*') >= 0
   let a:attrs.underline = match(a:hl, a:key . '=\S*underline\S*') >= 0
   let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
-endfunction
-
-function! wilder#render#default() abort
-  return {
-        \ 'left': [wilder#previous_arrow()],
-        \ 'right': [wilder#next_arrow()],
-        \ }
 endfunction
 
 function! s:to_printable(x) abort

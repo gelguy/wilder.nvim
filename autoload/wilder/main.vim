@@ -15,34 +15,7 @@ let s:candidates = []
 let s:selected = -1
 let s:page = [-1, -1]
 
-let s:opts = {
-      \ 'modes': ['/', '?'],
-      \ 'interval': 100,
-      \ 'use_cmdlinechanged': 0,
-      \ 'hooks': {
-      \    'pre': 'wilder#main#save_statusline',
-      \    'post': 'wilder#main#restore_statusline',
-      \  },
-      \ 'num_workers': 2,
-      \ 'pipeline': [
-      \     has('nvim') ? wilder#branch(
-      \       wilder#cmdline_pipeline(),
-      \       wilder#python_search_pipeline(),
-      \     ) : wilder#vim_search_pipeline(),
-      \   ],
-      \ }
-
-function! wilder#main#set_option(key, value) abort
-  let s:opts[a:key] = a:value
-endfunction
-
-function! wilder#main#set_options(opts) abort
-  let s:opts = extend(s:opts, a:opts)
-endfunction
-
-function! wilder#main#get_option(key) abort
-  return s:opts[a:key]
-endfunction
+let s:opts = wilder#options#get()
 
 function! wilder#main#in_mode() abort
   return index(s:opts.modes, getcmdtype()) >= 0
@@ -295,6 +268,19 @@ function! s:do(check) abort
         \ }
 
     let s:run_id += 1
+
+    if !has_key(s:opts, 'pipeline')
+      if has('nvim')
+        let s:opts.pipeline = [
+              \ wilder#branch(
+              \   wilder#cmdline_pipeline(),
+              \   wilder#python_search_pipeline(),
+              \ ),
+              \ ]
+      else
+        let s:opts.pipeline = wilder#vim_search_pipeline()
+      endif
+    endif
 
     call wilder#pipeline#run(
           \ s:opts.pipeline,

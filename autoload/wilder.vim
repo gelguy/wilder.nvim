@@ -1,3 +1,11 @@
+function! wilder#set_option(x, ...) abort
+  if len(a:000) == 0
+    call wilder#options#set(a:x)
+  else
+    call wilder#options#set(a:x, a:1)
+  endif
+endfunction
+
 function! wilder#_sleep(t) abort
   return {-> {ctx, x -> timer_start(a:t * 1000, {-> wilder#pipeline#on_finish(ctx, x)})}}
 endfunction
@@ -166,4 +174,8 @@ endfunction
 function! wilder#condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
   return wilder#render#component#condition#make(a:predicate, a:if_true, l:if_false)
+endfunction
+
+function! wilder#make_hl(name, args) abort
+  return wilder#render#make_hl(a:name, a:args)
 endfunction
