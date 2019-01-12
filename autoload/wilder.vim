@@ -1,5 +1,5 @@
 function! wilder#_sleep(t) abort
-  return {-> {ctx, x -> _wilder_python_sleep(a:t, ctx, x)}}
+  return {-> {ctx, x -> timer_start(a:t * 1000, {-> wilder#pipeline#on_finish(ctx, x)})}}
 endfunction
 
 function! wilder#branch(...) abort
@@ -64,6 +64,10 @@ endfunction
 
 function! wilder#python_sort() abort
   return wilder#pipeline#component#python_sort#make()
+endfunction
+
+function! wilder#_python_sleep(t) abort
+  return {-> {ctx, x -> _wilder_python_sleep(a:t, ctx, x)}}
 endfunction
 
 function! wilder#history(...) abort
