@@ -1,13 +1,9 @@
 function! wilder#_sleep(t) abort
-  return {ctx, x -> wilder#pipeline#null(_wild_python_sleep(a:t, ctx, x))}
+  return {-> {ctx, x -> _wilder_python_sleep(a:t, ctx, x)}}
 endfunction
 
 function! wilder#branch(...) abort
   return wilder#pipeline#component#branch#make(a:000)
-endfunction
-
-function! wilder#map(...) abort
-  return wilder#pipeline#component#map#make(a:000)
 endfunction
 
 function! wilder#check(...) abort

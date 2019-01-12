@@ -78,6 +78,7 @@ function! wilder#cmdline#pipeline(opts) abort
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wilder#cmdline#parse(x)},
+      \ {_, res -> wilder#cmdline#is_substitute_command(res.cmd) ? v:true : res},
       \ wilder#branch(
       \   [
       \     wilder#check({_, res -> wilder#cmdline#is_user_command(res.cmd)}),
@@ -119,6 +120,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
 
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
+      \ wilder#check({-> &inccommand !=# 'split'}),
       \ {_, x -> wilder#cmdline#parse(x)},
       \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
       \ {_, res -> wilder#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},

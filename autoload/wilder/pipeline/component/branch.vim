@@ -3,70 +3,48 @@ function! wilder#pipeline#component#branch#make(args) abort
     return {_, x -> v:false}
   endif
 
-  let l:args = {
-        \ 'fs_list': a:args,
-        \ 'initialised': 0,
-        \ }
-
-  return {ctx, x -> s:branch_start(l:args, ctx, x)}
+  return {-> {ctx, x -> s:start(a:args, ctx, x)}}
 endfunction
 
-function! s:branch_start(args, ctx, x) abort
-  if !a:args.initialised
-      let a:args.fs_list = map(copy(a:args.fs_list), {_, fs -> wilder#pipeline#register_funcs(copy(fs))})
-
-      let a:args.initialised = 1
-  endif
-
+function! s:start(pipelines, ctx, x) abort
   let l:state = {
         \ 'index': 0,
-        \ 'fs_list': a:args.fs_list,
+        \ 'pipelines': a:pipelines,
         \ 'original_ctx': a:ctx,
         \ 'original_x': a:x,
         \ }
 
-  let l:state.on_error = wilder#pipeline#register_func({ctx, x -> s:branch_error(l:state, ctx, x)})
-  let l:state.on_finish = wilder#pipeline#register_func({ctx, x -> s:branch_finish(l:state, ctx, x)})
-
-  let l:ctx = copy(a:ctx)
-  let l:ctx.fs = l:state.fs_list[0]
-  let l:ctx.on_error = l:state.on_error
-  let l:ctx.on_finish = l:state.on_finish
-
-  call wilder#pipeline#do(l:ctx, a:x)
-  return v:null
+  call wilder#pipeline#run(
+        \ l:state.pipelines[0],
+        \ {ctx, x -> s:on_finish(l:state, ctx, x)},
+        \ {ctx, x -> wilder#pipeline#on_error(ctx, x)},
+        \ copy(a:ctx),
+        \ copy(a:x),
+        \ )
 endfunction
 
-function! s:branch_error(state, ctx, x) abort
-  call wilder#pipeline#unregister_func(a:state.on_error)
-  call wilder#pipeline#unregister_func(a:state.on_finish)
-
-  call wilder#pipeline#do_error(a:state.original_ctx, a:x)
-endfunction
-
-function! s:branch_finish(state, ctx, x) abort
+function! s:on_finish(state, ctx, x) abort
   if a:x isnot v:false
-    call wilder#pipeline#unregister_func(a:state.on_error)
-    call wilder#pipeline#unregister_func(a:state.on_finish)
+    if has_key(a:state.original_ctx, 'handler_id')
+      let a:ctx['handler_id'] = a:state.original_ctx.handler_id
+    endif
 
-    call wilder#pipeline#do(a:state.original_ctx, a:x)
+    call wilder#pipeline#on_finish(a:ctx, a:x)
     return
   endif
 
   let a:state.index += 1
 
-  if a:state.index >= len(a:state.fs_list)
-    call wilder#pipeline#unregister_func(a:state.on_error)
-    call wilder#pipeline#unregister_func(a:state.on_finish)
-
-    call wilder#pipeline#do(a:state.original_ctx, v:false)
+  if a:state.index >= len(a:state.pipelines)
+    call wilder#pipeline#on_finish(a:ctx, v:false)
     return
   endif
 
-  let l:ctx = copy(a:state.original_ctx)
-  let l:ctx.fs = a:state.fs_list[a:state.index]
-  let l:ctx.on_error = a:state.on_error
-  let l:ctx.on_finish = a:state.on_finish
-
-  call wilder#pipeline#do(l:ctx, a:state.original_x)
+  call wilder#pipeline#run(
+        \ a:state.pipelines[a:state.index],
+        \ {ctx, x -> s:on_finish(a:state, ctx, x)},
+        \ {ctx, x -> wilder#pipeline#on_error(ctx, x)},
+        \ copy(a:state.original_ctx),
+        \ copy(a:state.original_x),
+        \ )
 endfunction

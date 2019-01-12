@@ -17,7 +17,7 @@ class Wilder(object):
         self.lock = threading.Lock()
         self.executor = None
 
-    def do(self, ctx, x, command='do'):
+    def handle(self, ctx, x, command='on_finish'):
         self.nvim.call('wilder#pipeline#' + command, ctx, x)
 
     def echo(self, x):
@@ -49,9 +49,9 @@ class Wilder(object):
 
             if len(args) > 2:
                 command = args[2]
-                self.nvim.async_call(self.do, ctx, res, command=command)
+                self.nvim.async_call(self.handle, ctx, res, command=command)
             else:
-                self.nvim.async_call(self.do, ctx, res)
+                self.nvim.async_call(self.handle, ctx, res)
 
     @neovim.function('_wilder_init', sync=True, allow_nested=True)
     def init(self, args):
@@ -77,7 +77,7 @@ class Wilder(object):
     @neovim.function('_wilder_python_search', sync=False, allow_nested=True)
     def search(self, args):
         if args[2] == "":
-            self.do(args[1], [])
+            self.handle(args[1], [])
             return
 
         line_num = self.nvim.current.window.cursor[0] - 1
@@ -124,7 +124,7 @@ class Wilder(object):
                             return
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, str(e), 'do_error',))
+            self.queue.put((ctx, str(e), 'on_error',))
         finally:
             with self.lock:
                 self.events.remove(event)
@@ -140,7 +140,7 @@ class Wilder(object):
             res = [x for x in items if not (x in seen or seen.add(x))]
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, str(e), 'do_error',))
+            self.queue.put((ctx, str(e), 'on_error',))
 
     @neovim.function('_wilder_python_sort', sync=False, allow_nested=True)
     def sort(self, args):
@@ -152,4 +152,4 @@ class Wilder(object):
 
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, str(e), 'do_error',))
+            self.queue.put((ctx, str(e), 'on_error',))

@@ -24,6 +24,12 @@ let s:opts = {
       \    'post': 'wilder#main#restore_statusline',
       \  },
       \ 'num_workers': 2,
+      \ 'pipeline': [
+      \     has('nvim') ? wilder#branch(
+      \       wilder#cmdline_pipeline(),
+      \       wilder#python_search_pipeline(),
+      \     ) : wilder#vim_search_pipeline(),
+      \   ],
       \ }
 
 function! wilder#main#set_option(key, value) abort
@@ -285,14 +291,18 @@ function! s:do(check) abort
 
     let l:ctx = {
         \ 'input': l:input,
-        \ 'on_finish': 'wilder#main#on_finish',
-        \ 'on_error': 'wilder#main#on_error',
         \ 'run_id': s:run_id,
         \ }
 
     let s:run_id += 1
 
-    call wilder#pipeline#start(l:ctx, l:input)
+    call wilder#pipeline#run(
+          \ s:opts.pipeline,
+          \ function('wilder#main#on_finish'),
+          \ function('wilder#main#on_error'),
+          \ l:ctx,
+          \ l:input,
+          \ )
   endif
 
   let s:force = 0
