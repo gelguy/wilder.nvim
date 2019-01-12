@@ -23,7 +23,9 @@ function! wilder#render#component#spinner#make(args) abort
   let l:res = {
         \ 'stl': {ctx, x -> s:spinner(l:state, ctx, x)},
         \ 'len': {ctx, x -> strdisplaywidth(s:get_char(l:state, ctx, x))},
-        \ 'redraw': {ctx, x -> !ctx.done},
+        \ 'redraw': {ctx, x -> !ctx.done &&
+        \    (l:interval <= 0 || reltimefloat(reltime(l:state.last_new_state_time)) > l:interval)
+        \  },
         \ }
 
   if has_key(a:args, 'hl')
