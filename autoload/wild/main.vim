@@ -65,32 +65,27 @@ function! wild#main#disable_cmdline_enter() abort
 endfunction
 
 function! wild#main#start_auto() abort
-  if !wild#main#in_mode() || !s:enabled
-    return
-  endif
-
-  let s:auto = 1
-
-  call s:start(1)
+  " use timer_start so statusline does not flicker
+  " when using mappings which performs a command
+  call timer_start(0, {-> s:start_auto()})
 
   return "\<Insert>\<Insert>"
 endfunction
 
 function! wild#main#start_from_normal_mode() abort
-  if !s:enabled
-    return ''
-  endif
-
-  let s:auto = 1
-
-  " skip check since it is still normal mode
-  call s:start(0)
+  call timer_start(0, {-> s:start_auto()})
 
   return ''
 endfunction
 
-function! s:start(check) abort
-  if a:check && !wild#main#in_mode()
+function! s:start_auto() abort
+  let s:auto = 1
+
+  call s:start()
+endfunction
+
+function! s:start() abort
+  if !wild#main#in_mode() || !s:enabled
     call wild#main#stop()
     return
   endif
@@ -460,7 +455,7 @@ function! wild#main#step(num_steps) abort
   endif
 
   if !s:active
-    call s:start(1)
+    call s:start()
     return "\<Insert>\<Insert>"
   endif
 
