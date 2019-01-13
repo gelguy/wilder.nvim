@@ -54,8 +54,8 @@ function! wilder#cmdline#get_user_completion(cmdline) abort
   return l:Completion_func(l:ctx.cmdline[l:ctx.pos :], l:ctx.cmdline, l:ctx.pos + 1)
 endfunction
 
-function! wilder#cmdline#replace(ctx, cmdline, x) abort
-  let l:result = wilder#cmdline#parse(a:cmdline)
+function! wilder#cmdline#replace(ctx, x) abort
+  let l:result = wilder#cmdline#parse(a:ctx.cmdline)
 
   if l:result.pos == 0
     return a:x
@@ -92,7 +92,7 @@ function! wilder#cmdline#pipeline(opts) abort
       \     {_, res -> getcompletion(res.cmdline, 'cmdline')},
       \   ],
       \ ),
-      \ wilder#result({-> {'replace': 'wilder#cmdline#replace'}}),
+      \ wilder#result({'replace': 'wilder#cmdline#replace'}),
       \ ]
 endfunction
 
@@ -127,6 +127,6 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
       \ wilder#check({_, res -> len(res) > 0}),
       \ {_, res -> len(res) == 2 ? res[1] : (l:hide ? v:true : v:false)},
       \ ] + l:pipeline + [
-      \ wilder#result({-> {'replace': 'wilder#cmdline#replace'}}),
+      \ wilder#result({'replace': 'wilder#cmdline#replace'}),
       \ ]
 endfunction

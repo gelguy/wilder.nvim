@@ -11,7 +11,7 @@ let s:draw_done = 0
 let s:force = 0
 let s:auto_select = -1
 
-let s:candidates = []
+let s:result = {'x': []}
 let s:selected = -1
 let s:page = [-1, -1]
 
@@ -143,7 +143,7 @@ function! wilder#main#stop() abort
 
   let s:active = 0
   let s:auto = 0
-  let s:candidates = []
+  let s:result = {'x': []}
   let s:selected = -1
   let s:page = [-1, -1]
 
@@ -302,8 +302,11 @@ function! s:do(check) abort
     let l:ctx.error = s:error
   endif
 
-  if !s:draw_done && (l:is_new_input ||
-        \ wilder#render#components_need_redraw(wilder#render#get_components(), l:ctx, s:candidates))
+  if !s:draw_done && (l:is_new_input || wilder#render#components_need_redraw(
+        \   wilder#render#get_components(),
+        \   l:ctx,
+        \   get(s:result, 'x', []),
+        \ ))
     call s:draw()
   endif
 
@@ -321,7 +324,8 @@ function! wilder#main#on_finish(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:candidates = (a:x is v:false || a:x is v:true) ? [] : a:x
+  let s:result = (a:x is v:false || a:x is v:true) ? {} :
+        \ type(a:x) is v:t_dict ? a:x : {'x': a:x}
   let s:selected = -1
   let s:page = [-1, -1]
   " keep previous completion
@@ -369,7 +373,7 @@ function! wilder#main#on_error(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:candidates = []
+  let s:result = {'x': []}
   let s:selected = -1
   " keep previous completion
 
@@ -405,8 +409,13 @@ function! s:draw(...) abort
     let l:ctx.error = s:error
   endif
 
-  let l:xs = l:has_error ? [] :
-        \ map(copy(s:candidates), {_, x -> type(x) is v:t_dict ? get(x, 'draw', x['result']) : x})
+  if l:has_error
+    let l:xs = []
+  elseif has_key(s:result, 'draw')
+    let l:xs = map(copy(get(s:result, 'x', [])), {_, x -> s:result.draw(l:ctx, x)})
+  else
+    let l:xs = get(s:result, 'x', [])
+  endif
 
   let l:left_components = wilder#render#get_components('left')
   let l:right_components = wilder#render#get_components('right')
@@ -468,7 +477,7 @@ function! wilder#main#step(num_steps) abort
     let s:menus = []
   endif
 
-  let l:len = len(s:candidates)
+  let l:len = len(get(s:result, 'x', []))
   if a:num_steps == 0
     " pass
   elseif l:len == 0
@@ -505,14 +514,14 @@ function! wilder#main#step(num_steps) abort
 
   if s:selected >= -1
     if s:selected >= 0
-      let l:candidate = s:candidates[s:selected]
-      let l:output = type(l:candidate) is v:t_dict ?
-            \ get(l:candidate, 'output', l:candidate['result']) :
+      let l:candidate = get(s:result, 'x', [])[s:selected]
+
+      let l:output = has_key(s:result, 'output') ?
+            \ s:result.output({}, l:candidate) :
             \ l:candidate
 
-      let l:Replace = type(l:candidate) is v:t_dict ?
-            \ get(l:candidate, 'replace', 'all') :
-            \ 'all'
+      let l:Replace = get(s:result, 'replace', 'all')
+
       if l:Replace ==# 'all'
         let l:Replace = function('s:replace_all')
       elseif type(l:Replace) ==# v:t_string
@@ -522,11 +531,11 @@ function! wilder#main#step(num_steps) abort
       let l:cmdpos = s:replaced_cmdpos
       if l:cmdpos <= 1
         let l:cmdline = s:replaced_cmdline
-        let l:new_cmdline = l:output
       else
         let l:cmdline = s:replaced_cmdline[: l:cmdpos - 2]
-        let l:new_cmdline = l:Replace({}, l:cmdline, l:output)
       endif
+
+      let l:new_cmdline = l:Replace({'cmdline': l:cmdline}, l:output)
 
       if exists('s:menus') &&
             \ (empty(s:menus) || s:menus[0] !=# l:cmdline)
@@ -571,7 +580,7 @@ function! s:feedkeys_cmdline(cmdline) abort
   call feedkeys(l:keys, 'n')
 endfunction
 
-function! s:replace_all(ctx, cmdline, x) abort
+function! s:replace_all(ctx, x) abort
   return a:x
 endfunction
 

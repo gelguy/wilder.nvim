@@ -30,7 +30,9 @@ function! wilder#result(...) abort
 endfunction
 
 function! wilder#result_escape(chars) abort
-  return wilder#result({_, x -> {'output': escape(x, '^$.*~[]/\')}})
+  return wilder#result({
+        \'output': {ctx, x, prev -> escape(prev(ctx, x), a:chars)},
+        \ })
 endfunction
 
 function! wilder#vim_substring() abort
