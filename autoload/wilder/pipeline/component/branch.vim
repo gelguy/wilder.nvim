@@ -17,7 +17,7 @@ function! s:start(pipelines, ctx, x) abort
   call wilder#pipeline#run(
         \ l:state.pipelines[0],
         \ {ctx, x -> s:on_finish(l:state, ctx, x)},
-        \ {ctx, x -> wilder#pipeline#on_error(ctx, x)},
+        \ {ctx, x -> s:on_error(l:state, ctx, x)},
         \ copy(a:ctx),
         \ copy(a:x),
         \ )
@@ -25,9 +25,7 @@ endfunction
 
 function! s:on_finish(state, ctx, x) abort
   if a:x isnot v:false
-    if has_key(a:state.original_ctx, 'handler_id')
-      let a:ctx['handler_id'] = a:state.original_ctx.handler_id
-    endif
+    let a:ctx.handler_id = a:state.original_ctx.handler_id
 
     call wilder#pipeline#on_finish(a:ctx, a:x)
     return
@@ -43,8 +41,14 @@ function! s:on_finish(state, ctx, x) abort
   call wilder#pipeline#run(
         \ a:state.pipelines[a:state.index],
         \ {ctx, x -> s:on_finish(a:state, ctx, x)},
-        \ {ctx, x -> wilder#pipeline#on_error(ctx, x)},
+        \ {ctx, x -> s:on_error(a:state, ctx, x)},
         \ copy(a:state.original_ctx),
         \ copy(a:state.original_x),
         \ )
+endfunction
+
+function! s:on_error(state, ctx, x) abort
+  let a:ctx.handler_id = a:state.original_ctx.handler_id
+
+  call wilder#pipeline#on_error(a:ctx, a:x)
 endfunction

@@ -13,7 +13,11 @@ function! s:handle(ctx, x, key) abort
   let l:handler_id = get(a:ctx, 'handler_id', 0)
 
   if !has_key(s:handler_registry, l:handler_id)
-    echoerr 'wilder: handler id not found: ' . l:handler_id
+    " avoid echoerr since this in a try-catch block
+    " see try-echoerr
+    echohl ErrorMsg
+    echomsg 'wilder: ' . a:key . ' handler not found - id: ' . l:handler_id
+    echohl Normal
     return
   endif
 
@@ -21,10 +25,10 @@ function! s:handle(ctx, x, key) abort
 
   unlet s:handler_registry[l:handler_id]
 
-  call l:handler[a:key](a:ctx, a:x)
+  call s:call(l:handler[a:key], a:ctx, a:x)
 endfunction
 
-function! wilder#pipeline#run(pipeline, on_finish, on_error, ctx, x)
+function! wilder#pipeline#run(pipeline, on_finish, on_error, ctx, x) abort
   return s:run(a:pipeline, a:on_finish, a:on_error, a:ctx, a:x, 0)
 endfunction
 
@@ -36,7 +40,7 @@ function! s:call(f, ctx, x) abort
   endtry
 endfunction
 
-function! s:run(pipeline, on_finish, on_error, ctx, x, i)
+function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
   let l:x = a:x
   let l:i = a:i
 
@@ -58,13 +62,12 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i)
     if type(l:Result) is v:t_func
       let l:handler = {
             \ 'on_finish': {ctx, x -> s:run(a:pipeline, a:on_finish, a:on_error, ctx, x, i+1)},
-            \ 'on_error': {ctx, err -> a:on_error(ctx, err)},
+            \ 'on_error': {ctx, x -> a:on_error(ctx, x)},
             \ }
 
       let s:id_index += 1
       let s:handler_registry[s:id_index] = l:handler
-
-      let a:ctx['handler_id'] = s:id_index
+      let a:ctx.handler_id = s:id_index
 
       call timer_start(0, {-> s:call(l:Result, a:ctx, l:x)})
       return

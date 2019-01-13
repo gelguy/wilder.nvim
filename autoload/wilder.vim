@@ -7,6 +7,9 @@ function! wilder#set_option(x, ...) abort
 endfunction
 
 function! wilder#_sleep(t) abort
+  " lambda functions do not have func-abort
+  " so it is possible for timer_start to throw an error
+  " followed by on_finish being called
   return {-> {ctx, x -> timer_start(a:t * 1000, {-> wilder#pipeline#on_finish(ctx, x)})}}
 endfunction
 
