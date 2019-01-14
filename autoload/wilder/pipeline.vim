@@ -25,22 +25,54 @@ function! s:handle(ctx, x, key) abort
 
   unlet s:handler_registry[l:handler_id]
 
-  call s:call(l:handler[a:key], a:ctx, a:x)
+  if a:key ==# 'on_error'
+    call l:handler.on_error(a:ctx, a:x)
+    return
+  endif
+
+  try
+    call l:handler[a:key](a:ctx, a:x)
+  catch
+    call l:handler.on_error(a:ctx, v:exception)
+  endtry
 endfunction
 
 function! wilder#pipeline#run(pipeline, on_finish, on_error, ctx, x) abort
   return s:run(a:pipeline, a:on_finish, a:on_error, a:ctx, a:x, 0)
 endfunction
 
-function! s:call(f, ctx, x) abort
+function! s:call(f, ctx) abort
   try
-    call a:f(a:ctx, a:x)
+    call a:f()
   catch
     call wilder#pipeline#on_error(a:ctx, v:exception)
   endtry
 endfunction
 
+function! s:prepare_call(f, pipeline, on_finish, on_error, ctx, i)
+  let l:handler = {
+        \ 'on_finish': {ctx, x -> s:run(a:pipeline, a:on_finish, a:on_error, ctx, x, a:i)},
+        \ 'on_error': {ctx, x -> a:on_error(ctx, x)},
+        \ }
+
+  let s:id_index += 1
+  let s:handler_registry[s:id_index] = l:handler
+  let a:ctx.handler_id = s:id_index
+
+  call timer_start(0, {-> s:call(a:f, a:ctx)})
+endfunction
+
 function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
+  if a:x is v:false || a:x is v:true
+    call a:on_finish(a:ctx, a:x)
+    return
+  endif
+
+  if type(a:x) is v:t_func
+    call s:prepare_call(a:x, a:pipeline, a:on_finish, a:on_error, a:ctx, a:i)
+    return
+  endif
+
   let l:x = a:x
   let l:i = a:i
 
@@ -60,16 +92,7 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
     endif
 
     if type(l:Result) is v:t_func
-      let l:handler = {
-            \ 'on_finish': {ctx, x -> s:run(a:pipeline, a:on_finish, a:on_error, ctx, x, i+1)},
-            \ 'on_error': {ctx, x -> a:on_error(ctx, x)},
-            \ }
-
-      let s:id_index += 1
-      let s:handler_registry[s:id_index] = l:handler
-      let a:ctx.handler_id = s:id_index
-
-      call timer_start(0, {-> s:call(l:Result, a:ctx, l:x)})
+      call s:prepare_call(l:Result, a:pipeline, a:on_finish, a:on_error, a:ctx, l:i+1)
       return
     endif
 

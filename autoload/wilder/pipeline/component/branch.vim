@@ -3,7 +3,7 @@ function! wilder#pipeline#component#branch#make(args) abort
     return {_, x -> v:false}
   endif
 
-  return {-> {ctx, x -> s:start(a:args, ctx, x)}}
+  return {ctx, x -> {-> s:start(a:args, ctx, x)}}
 endfunction
 
 function! s:start(pipelines, ctx, x) abort
@@ -34,6 +34,8 @@ function! s:on_finish(state, ctx, x) abort
   let a:state.index += 1
 
   if a:state.index >= len(a:state.pipelines)
+    let a:ctx.handler_id = a:state.original_ctx.handler_id
+
     call wilder#pipeline#on_finish(a:ctx, v:false)
     return
   endif
