@@ -1,3 +1,43 @@
+function! wilder#in_context()
+  return wilder#main#in_context()
+endfunction
+
+function! wilder#enable_cmdline_enter()
+  return wilder#main#enable_cmdline_enter()
+endfunction
+
+function! wilder#next()
+  return wilder#main#next()
+endfunction
+
+function! wilder#previous()
+  return wilder#main#previous()
+endfunction
+
+function! wilder#can_reject_completion()
+  return wilder#main#can_reject_completion()
+endfunction
+
+function! wilder#reject_completion()
+  return wilder#main#reject_completion()
+endfunction
+
+function! wilder#can_accept_completion()
+  return wilder#main#can_accept_completion()
+endfunction
+
+function! wilder#accept_completion()
+  return wilder#main#accept_completion()
+endfunction
+
+function! wilder#start_from_normal_mode()
+  return wilder#main#start_from_normal_mode()
+endfunction
+
+function! wilder#toggle()
+  return wilder#main#toggle()
+endfunction
+
 function! wilder#set_option(x, ...) abort
   if len(a:000) == 0
     call wilder#options#set(a:x)
