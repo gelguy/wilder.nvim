@@ -24,12 +24,7 @@ class Wilder(object):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
 
     def run_in_background(self, fn, args):
-        self.executor.submit(
-            functools.partial(
-                fn,
-                *args,
-            )
-        )
+        self.executor.submit(functools.partial( fn, *args, ))
 
     def consumer(self):
         while True:
