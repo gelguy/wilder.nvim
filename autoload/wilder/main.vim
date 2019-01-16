@@ -2,7 +2,6 @@ scriptencoding utf-8
 
 let s:enabled = 1
 let s:init = 0
-let s:auto = 0
 let s:active = 0
 let s:hidden = 0
 let s:run_id = 0
@@ -17,7 +16,7 @@ let s:completion_stack = []
 let s:opts = wilder#options#get()
 
 function! wilder#main#in_mode() abort
-  return index(s:opts.modes, getcmdtype()) >= 0
+  return mode(1) ==# 'c' && index(s:opts.modes, getcmdtype()) >= 0
 endfunction
 
 function! wilder#main#in_context() abort
@@ -28,7 +27,7 @@ function! wilder#main#enable_cmdline_enter() abort
   if !exists('#WildsearchCmdlineEnter')
     augroup WildsearchCmdlineEnter
       autocmd!
-      autocmd CmdlineEnter * call wilder#main#start_auto()
+      autocmd CmdlineEnter * call wilder#main#start()
     augroup END
   endif
 endfunction
@@ -42,24 +41,18 @@ function! wilder#main#disable_cmdline_enter() abort
   endif
 endfunction
 
-function! wilder#main#start_auto() abort
+function! wilder#main#start() abort
   " use timer_start so statusline does not flicker
   " when using mappings which performs a command
-  call timer_start(0, {-> s:start_auto()})
+  call timer_start(0, {-> s:start()})
 
   return "\<Insert>\<Insert>"
 endfunction
 
 function! wilder#main#start_from_normal_mode() abort
-  call timer_start(0, {-> s:start_auto()})
+  call timer_start(0, {-> s:start()})
 
   return ''
-endfunction
-
-function! s:start_auto() abort
-  let s:auto = 1
-
-  call s:start()
 endfunction
 
 function! s:start() abort
@@ -86,7 +79,7 @@ function! s:start() abort
             \ {_ -> s:do(1)}, {'repeat': -1})
   endif
 
-  if s:auto && !exists('#WildsearchCmdlineLeave')
+  if !exists('#WildsearchCmdlineLeave')
     augroup WildsearchCmdlineLeave
       autocmd!
       autocmd CmdlineLeave * call wilder#main#stop()
@@ -140,7 +133,6 @@ function! wilder#main#stop() abort
   endif
 
   let s:active = 0
-  let s:auto = 0
   let s:result = {'x': []}
   let s:selected = -1
   let s:page = [-1, -1]
@@ -208,11 +200,6 @@ function! s:do(check) abort
   let l:has_completion = exists('s:completion') && l:input ==# s:completion
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
-
-  if !s:auto && !l:is_new_input && !l:has_completion && l:input_changed
-    call wilder#main#stop()
-    return
-  endif
 
   if !l:has_completion
     if exists('s:completion')
