@@ -31,9 +31,22 @@ function! wilder#cmdline#get_user_completion(cmdline) abort
 
   let l:user_command = l:user_commands[l:ctx.cmd]
 
-  if has_key(l:user_command, 'complete') &&
+  if has_key(l:user_command, 'complete_arg') && l:user_command.complete_arg isnot v:null
+    let l:Completion_func = function(l:user_command.complete_arg)
+
+    " pos + 1 for the command prompt
+    let l:result = l:Completion_func(l:ctx.cmdline[l:ctx.pos :], l:ctx.cmdline, l:ctx.pos + 1)
+
+    if get(l:user_command, 'complete', '') ==# 'custom'
+      let l:result = split(l:result, '\n')
+    endif
+
+    return l:result
+  endif
+
+  if has_key(l:user_command, 'complete') && l:user_command.complete isnot v:null &&
         \ l:user_command.complete !=# 'custom' && l:user_command.complete !=# 'customlist'
-    let l:completions = cmdline(l:ctx.cmdline[l:ctx.pos :], l:user_command.complete)
+    let l:completions = getcompletion(l:ctx.cmdline[l:ctx.pos :], l:user_command.complete, 1)
 
     if l:user_command.complete ==# 'file' ||
           \ l:user_command.complete ==# 'file_in_path' ||
@@ -44,14 +57,7 @@ function! wilder#cmdline#get_user_completion(cmdline) abort
     return l:completions
   endif
 
-  if !has_key(l:user_command, 'complete_arg') || l:user_command.complete_arg is v:null
-    return v:false
-  endif
-
-  let l:Completion_func = function(l:user_command.complete_arg)
-
-  " pos + 1 for the command prompt
-  return l:Completion_func(l:ctx.cmdline[l:ctx.pos :], l:ctx.cmdline, l:ctx.pos + 1)
+  return v:false
 endfunction
 
 function! wilder#cmdline#replace(ctx, x) abort
