@@ -162,14 +162,6 @@ function! wilder#main#stop() abort
     unlet s:replaced_cmdline
   endif
 
-  if exists('s:replaced_cmdpos')
-    unlet s:replaced_cmdpos
-  endif
-
-  if exists('s:previous_menu')
-    unlet s:previous_menu
-  endif
-
   if !s:hidden
     call s:post_hook()
   endif
@@ -230,25 +222,23 @@ function! s:do(check) abort
     if exists('s:replaced_cmdline')
       unlet s:replaced_cmdline
     endif
+  endif
 
-    if exists('s:replaced_cmdpos')
-      unlet s:replaced_cmdpos
-    endif
-
+  if !exists('s:previous_cmdline') || l:input_changed
     let s:previous_cmdline = l:input
   endif
 
   let s:draw_done = 0
 
   if !l:has_completion && (l:input_changed || l:is_new_input)
-    call s:run_pipeline(l:input, 0)
+    call s:run_pipeline(l:input)
   endif
 
   let s:force = 0
 
   let l:ctx = {
         \ 'selected': s:selected,
-        \ 'done': s:run_id - 1 == s:result_run_id,
+        \ 'done': s:run_id == s:result_run_id,
         \ }
 
   if exists('s:error')
@@ -264,17 +254,17 @@ function! s:do(check) abort
   endif
 endfunction
 
-function! s:run_pipeline(input, auto_select) abort
+function! s:run_pipeline(input, ...) abort
+  let s:run_id += 1
+
   let l:ctx = {
         \ 'input': a:input,
         \ 'run_id': s:run_id,
         \ }
 
-  if a:auto_select
-    let l:ctx.auto_select = 1
+  if a:0 > 0
+    call extend(l:ctx, a:1)
   endif
-
-  let s:run_id += 1
 
   if !has_key(s:opts, 'pipeline')
     if has('nvim')
@@ -303,7 +293,7 @@ function! wilder#main#on_finish(ctx, x) abort
     return
   endif
 
-  if a:ctx.run_id < s:result_run_id
+  if a:ctx.run_id != s:run_id
     return
   endif
 
@@ -335,7 +325,7 @@ function! wilder#main#on_finish(ctx, x) abort
     call s:pre_hook()
   endif
 
-  if get(a:ctx, 'auto_select', 0)
+  if len(s:completion_stack) > 0 && get(a:ctx, 'auto_select', 0)
     if exists('s:previous_cmdline')
       unlet s:previous_cmdline
     endif
@@ -352,7 +342,7 @@ function! wilder#main#on_error(ctx, x) abort
     return
   endif
 
-  if a:ctx.run_id < s:result_run_id
+  if a:ctx.run_id != s:run_id
     return
   endif
 
@@ -385,7 +375,7 @@ function! s:draw(...) abort
 
   let l:ctx = {
         \ 'selected': s:selected,
-        \ 'done': s:run_id - 1 == s:result_run_id,
+        \ 'done': s:run_id == s:result_run_id,
         \ }
 
   let l:has_error = exists('s:error')
@@ -454,12 +444,11 @@ function! wilder#main#step(num_steps) abort
   endif
 
   if !exists('s:replaced_cmdline')
-    let s:replaced_cmdline = getcmdline()
-    let s:replaced_cmdpos = getcmdpos()
+    let s:replaced_cmdline = s:getcmdline()
   endif
 
   if empty(s:completion_stack)
-    let s:completion_stack = [s:getcmdline(s:replaced_cmdline, s:replaced_cmdpos)]
+    let s:completion_stack = [s:replaced_cmdline]
   endif
 
   let l:previous_selected = s:selected
@@ -513,21 +502,19 @@ function! wilder#main#step(num_steps) abort
         let l:Replace = function(l:Replace)
       endif
 
-      let l:cmdline = s:getcmdline(s:replaced_cmdline, s:replaced_cmdpos)
-      let l:new_cmdline = l:Replace({'cmdline': l:cmdline}, l:output)
+      let l:new_cmdline = l:Replace({'cmdline': s:replaced_cmdline}, l:output)
     else
-      let l:new_cmdline = s:getcmdline(s:replaced_cmdline, s:replaced_cmdpos)
+      let l:new_cmdline = s:replaced_cmdline
     endif
 
     if l:previous_selected >= 0
       let s:completion_stack = s:completion_stack[1:]
     endif
 
+    let s:completion = l:new_cmdline
     let s:completion_stack = [l:new_cmdline] + s:completion_stack
 
     call s:feedkeys_cmdline(l:new_cmdline)
-
-    let s:completion = l:new_cmdline
   else
     if exists('s:completion')
       unlet s:completion
@@ -597,13 +584,12 @@ function! wilder#main#accept_completion() abort
       unlet s:replaced_cmdline
     endif
 
-    if exists('s:replaced_cmdpos')
-      unlet s:replaced_cmdpos
-    endif
-
     let s:previous_cmdline = l:cmdline
+    let s:result = {'x': []}
+    let s:selected = -1
+    let s:page = [-1, -1]
 
-    call s:run_pipeline(l:cmdline, 1)
+    call s:run_pipeline(l:cmdline, {'auto_select': 1})
   endif
 
   return "\<Insert>\<Insert>"
@@ -640,14 +626,13 @@ function! wilder#main#reject_completion() abort
       unlet s:replaced_cmdline
     endif
 
-    if exists('s:replaced_cmdpos')
-      unlet s:replaced_cmdpos
-    endif
-
     let s:previous_cmdline = l:cmdline
+    let s:result = {'x': []}
+    let s:selected = -1
+    let s:page = [-1, -1]
 
     call s:feedkeys_cmdline(l:cmdline)
-    call s:run_pipeline(l:cmdline, 0)
+    call s:run_pipeline(l:cmdline)
   endif
 
   return "\<Insert>\<Insert>"
