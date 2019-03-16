@@ -182,15 +182,7 @@ function! wilder#index(...) abort
 endfunction
 
 function! wilder#string(str, ...) abort
-  let l:res = {
-        \ 'stl': a:str,
-        \ }
-
-  if a:0 > 0
-    let l:res.hl = a:1
-  endif
-
-  return l:res
+  return {'value': a:str, 'hl': get(a:000, 0, '')}
 endfunction
 
 function! wilder#previous_arrow(...) abort

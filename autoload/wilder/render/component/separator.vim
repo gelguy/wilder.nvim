@@ -11,9 +11,9 @@ function! wilder#render#component#separator#make(str, fg, bg, ...) abort
   let l:name = 'WildsearchSeparator_' . l:key
 
   return {
-        \ 'stl': a:str,
-        \ 'hl': l:name,
+        \ 'value': a:str,
         \ 'pre_hook': {ctx -> s:hl(l:name, a:fg, a:bg)},
+        \ 'hl': l:name,
         \ }
 endfunction
 

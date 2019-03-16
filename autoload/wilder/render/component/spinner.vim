@@ -20,19 +20,14 @@ function! wilder#render#component#spinner#make(args) abort
         \ 'last_new_state_time': reltime(),
         \ }
 
-  let l:res = {
-        \ 'stl': {ctx, x -> s:spinner(l:state, ctx, x)},
+  return {
+        \ 'value': {ctx, x -> s:spinner(l:state, ctx, x)},
         \ 'len': {ctx, x -> strdisplaywidth(s:get_char(l:state, ctx, x))},
         \ 'redraw': {ctx, x -> !ctx.done &&
         \    (l:interval <= 0 || reltimefloat(reltime(l:state.last_new_state_time)) > l:interval)
         \  },
+        \ 'hl': get(a:args, 'hl', ''),
         \ }
-
-  if has_key(a:args, 'hl')
-    let l:res.hl = a:args.hl
-  endif
-
-  return l:res
 endfunction
 
 function! s:get_char(state, ctx, xs) abort

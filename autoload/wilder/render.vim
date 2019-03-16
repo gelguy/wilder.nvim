@@ -21,29 +21,50 @@ function! wilder#render#get_components(...) abort
   return get(s:opts.render_components, a:1, [])
 endfunction
 
+function! s:component_len(Component, ctx, xs) abort
+  if type(a:Component) is v:t_string
+    return strdisplaywidth(s:to_printable(a:Component))
+  endif
+
+  if type(a:Component) is v:t_dict
+    if has_key(a:Component, 'len')
+      if type(a:Component.len) is v:t_func
+        return a:Component.len(a:ctx, a:xs)
+      else
+        return a:Component.len
+      endif
+    endif
+
+    if type(a:Component.value) is v:t_func
+      let l:Value = a:Component.value(a:ctx, a:xs)
+    else
+      let l:Value = a:Component.value
+    endif
+
+    return s:component_len(l:Value, a:ctx, a:xs)
+  endif
+
+  if type(a:Component) is v:t_func
+    let l:Value = a:Component(a:ctx, a:xs)
+
+    return s:component_len(l:Value, a:ctx, a:xs)
+  endif
+
+  " v:t_list
+  let l:len = 0
+
+  for l:Elem in a:Component
+    let l:len += s:component_len(l:Elem, a:ctx, a:xs)
+  endfor
+
+  return l:len
+endfunction
+
 function! wilder#render#components_len(components, ctx, xs) abort
   let l:len = 0
 
   for l:Component in a:components
-    if type(l:Component) == v:t_func
-      let l:len += strdisplaywidth(l:Component(a:ctx, a:xs))
-    elseif type(l:Component) == v:t_string
-      let l:len += strdisplaywidth(l:Component)
-    elseif has_key(l:Component, 'len')
-      if type(l:Component.len) == v:t_func
-        let l:len += l:Component.len(a:ctx, a:xs)
-      else
-        let l:len += l:Component.len
-      endif
-    else
-      if type(l:Component.stl) == v:t_func
-        let l:res = l:Component.stl(a:ctx, a:xs)
-      else
-        let l:res = l:Component.stl
-      endif
-
-      let l:len += strdisplaywidth(l:res)
-    endif
+    let l:len += s:component_len(l:Component, a:ctx, a:xs)
   endfor
 
   return l:len
@@ -319,27 +340,48 @@ function! s:draw_error(ctx, error) abort
   return l:res . repeat(' ', l:space - strdisplaywidth(g:_wild_error))
 endfunction
 
+function! s:component_draw(Component, ctx, xs) abort
+  if type(a:Component) is v:t_string
+    return s:to_printable(a:Component)
+  endif
+
+  if type(a:Component) is v:t_dict
+    let l:res = ''
+
+    if has_key(a:Component, 'hl') && !empty(a:Component.hl)
+      let l:res .= '%#' . a:Component.hl . '#'
+    endif
+
+    if type(a:Component.value) is v:t_func
+      let l:Value = a:Component.value(a:ctx, a:xs)
+    else
+      let l:Value = a:Component.value
+    endif
+
+    return l:res . s:component_draw(l:Value, a:ctx, a:xs)
+  endif
+
+  if type(a:Component) is v:t_func
+    let l:Value = a:Component(a:ctx, a:xs)
+
+    return s:component_draw(l:Value, a:ctx, a:xs)
+  endif
+
+  " v:t_list
+  let l:res = ''
+
+  for l:Elem in a:Component
+    let l:res .= s:component_draw(l:Elem, a:ctx, a:xs)
+  endfor
+
+  return l:res
+endfunction
+
 function! wilder#render#components_draw(components, ctx, xs) abort
   let l:res = ''
 
   for l:Component in a:components
-    if type(l:Component) == v:t_func
-      let l:res .= l:Component(a:ctx, a:xs)
-      continue
-    elseif type(l:Component) == v:t_string
-      let l:res .= l:Component
-      continue
-    endif
-
-    if has_key(l:Component, 'hl')
-      let l:res .= '%#' . l:Component.hl . '#'
-    endif
-
-    if type(l:Component.stl) == v:t_func
-      let l:res .= l:Component.stl(a:ctx, a:xs)
-    else
-      let l:res .= l:Component.stl
-    endif
+    let l:res .= s:component_draw(l:Component, a:ctx, a:xs)
   endfor
 
   return l:res
