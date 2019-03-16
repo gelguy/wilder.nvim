@@ -8,29 +8,31 @@ function! wilder#render#component#condition#make(predicate, if_true, if_false) a
 
   return {
         \ 'value': {ctx, x -> s:value(l:state, ctx, x)},
-        \ 'len': {ctx, x -> s:len(l:state, ctx, x)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  call wilder#render#components_pre_hook(a:state.if_true + a:state.if_false, a:ctx)
+  for l:Component in a:state.if_true + a:state.if_false
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
+      call l:Component.pre_hook(a:ctx)
+    endif
+  endfor
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  call wilder#render#components_post_hook(a:state.if_true + a:state.if_false, a:ctx)
+  for l:Component in a:state.if_true + a:state.if_false
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
+      call l:Component.post_hook(a:ctx)
+    endif
+  endfor
 endfunction
 
-function! s:len(state, ctx, xs) abort
-  " choose branch here
+function! s:value(state, ctx, xs) abort
   let a:state.chosen = a:state.predicate(a:ctx, a:xs) ?
         \ a:state.if_true :
         \ a:state.if_false
 
-  return wilder#render#components_len(a:state.chosen, a:ctx, a:xs)
-endfunction
-
-function! s:value(state, ctx, xs) abort
-  return wilder#render#components_draw(a:state.chosen, a:ctx, a:xs)
+  return a:state.chosen
 endfunction

@@ -7,6 +7,7 @@ let s:hidden = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
+let s:draw_timer = -1
 
 let s:result = {'x': []}
 let s:selected = -1
@@ -24,8 +25,8 @@ function! wilder#main#in_context() abort
 endfunction
 
 function! wilder#main#enable_cmdline_enter() abort
-  if !exists('#WildsearchCmdlineEnter')
-    augroup WildsearchCmdlineEnter
+  if !exists('#WilderCmdlineEnter')
+    augroup WilderCmdlineEnter
       autocmd!
       autocmd CmdlineEnter * call wilder#main#start()
     augroup END
@@ -33,11 +34,11 @@ function! wilder#main#enable_cmdline_enter() abort
 endfunction
 
 function! wilder#main#disable_cmdline_enter() abort
-  if exists('#WildsearchCmdlineEnter')
-    augroup WildsearchCmdlineEnter
+  if exists('#WilderCmdlineEnter')
+    augroup WilderCmdlineEnter
       autocmd!
     augroup END
-    augroup! WildsearchCmdlineEnter
+    augroup! WilderCmdlineEnter
   endif
 endfunction
 
@@ -67,8 +68,8 @@ function! s:start() abort
   endif
 
   if s:opts.use_cmdlinechanged
-    if !exists('#WildsearchCmdlineChanged')
-      augroup WildsearchCmdlineChanged
+    if !exists('#WilderCmdlineChanged')
+      augroup WilderCmdlineChanged
         autocmd!
         " directly calling s:do makes getcmdline return an empty string
         autocmd CmdlineChanged * call timer_start(0, {_ -> s:do(1)})
@@ -79,15 +80,15 @@ function! s:start() abort
             \ {_ -> s:do(1)}, {'repeat': -1})
   endif
 
-  if !exists('#WildsearchCmdlineLeave')
-    augroup WildsearchCmdlineLeave
+  if !exists('#WilderCmdlineLeave')
+    augroup WilderCmdlineLeave
       autocmd!
       autocmd CmdlineLeave * call wilder#main#stop()
     augroup END
   endif
 
-  if !exists('#WildsearchVimResized')
-    augroup WildsearchVimResized
+  if !exists('#WilderVimResized')
+    augroup WilderVimResized
       autocmd!
         autocmd VimResized * call timer_start(0, {_ -> s:draw_resized()})
     augroup END
@@ -106,11 +107,11 @@ function! wilder#main#stop() abort
     return
   endif
 
-  if exists('#WildsearchCmdlineChanged')
-    augroup WildsearchCmdlineChanged
+  if exists('#WilderCmdlineChanged')
+    augroup WilderCmdlineChanged
       autocmd!
     augroup END
-    augroup! WildsearchCmdlineChanged
+    augroup! WilderCmdlineChanged
   endif
 
   if exists('s:timer')
@@ -118,18 +119,18 @@ function! wilder#main#stop() abort
     unlet s:timer
   endif
 
-  if exists('#WildsearchCmdlineLeave')
-    augroup WildsearchCmdlineLeave
+  if exists('#WilderCmdlineLeave')
+    augroup WilderCmdlineLeave
       autocmd!
     augroup END
-    augroup! WildsearchCmdlineLeave
+    augroup! WilderCmdlineLeave
   endif
 
-  if exists('#WildsearchVimResized')
-    augroup WildsearchVimResized
+  if exists('#WilderVimResized')
+    augroup WilderVimResized
       autocmd!
     augroup END
-    augroup! WildsearchVimResized
+    augroup! WilderVimResized
   endif
 
   let s:active = 0
@@ -353,53 +354,58 @@ function! s:draw(...) abort
     return
   endif
 
-  let l:direction = a:0 >= 1 ? a:1 : 0
-  let l:has_resized = a:0 >= 2 ? a:2 : 0
+  try
+      let l:direction = a:0 >= 1 ? a:1 : 0
+      let l:has_resized = a:0 >= 2 ? a:2 : 0
 
-  let l:ctx = {
-        \ 'selected': s:selected,
-        \ 'done': s:run_id == s:result_run_id,
-        \ }
+      let l:ctx = {
+            \ 'selected': s:selected,
+            \ 'done': s:run_id == s:result_run_id,
+            \ }
 
-  let l:has_error = exists('s:error')
+      let l:has_error = exists('s:error')
 
-  if l:has_error
-    let l:ctx.error = s:error
-  endif
+      if l:has_error
+        let l:ctx.error = s:error
+      endif
 
-  if l:has_error
-    let l:xs = []
-  elseif has_key(s:result, 'draw')
-    let l:xs = map(copy(get(s:result, 'x', [])), {_, x -> s:result.draw(l:ctx, x)})
-  else
-    let l:xs = get(s:result, 'x', [])
-  endif
+      if l:has_error
+        let l:xs = []
+      elseif has_key(s:result, 'draw')
+        let l:xs = map(copy(get(s:result, 'x', [])), {_, x -> s:result.draw(l:ctx, x)})
+      else
+        let l:xs = get(s:result, 'x', [])
+      endif
 
-  let l:left_components = wilder#render#get_components('left')
-  let l:right_components = wilder#render#get_components('right')
+      let l:left_components = wilder#render#get_components('left')
+      let l:right_components = wilder#render#get_components('right')
 
-  let l:space_used = wilder#render#components_len(
-        \ l:left_components + l:right_components,
-        \ l:ctx, l:xs)
-  let l:ctx.space = winwidth(0) - l:space_used
+      let l:space_used = wilder#render#components_len(
+            \ l:left_components + l:right_components,
+            \ l:ctx, l:xs)
 
-  let s:page = wilder#render#make_page(l:ctx, l:xs, s:page, l:direction, l:has_resized)
-  let l:ctx.page = s:page
+      if s:opts.renderer ==# 'float'
+        let l:ctx.space = &columns - l:space_used
+      else
+        let l:ctx.space = winwidth(0) - l:space_used
+      endif
 
-  if l:has_error
-    let l:statusline = wilder#render#draw_error(
-          \ l:left_components, l:right_components,
-          \ l:ctx, s:error)
-  else
-    let l:statusline = wilder#render#draw(
-          \ l:left_components, l:right_components,
-          \ l:ctx, l:xs)
-  endif
+      let s:page = wilder#render#make_page(l:ctx, l:xs, s:page, l:direction, l:has_resized)
+      let l:ctx.page = s:page
 
-  call setwinvar(0, '&statusline', l:statusline)
-  redrawstatus
+      call timer_stop(s:draw_timer)
 
-  let s:draw_done = 1
+      " need timer to avoid E523
+      let s:draw_timer = timer_start(0, {-> wilder#render#draw(
+            \ l:left_components, l:right_components,
+            \ l:ctx, l:xs)})
+  catch
+    echohl ErrorMsg
+    echomsg 'wilder: ' . v:exception
+    echohl Normal
+  finally
+    let s:draw_done = 1
+  endtry
 endfunction
 
 function! wilder#main#next() abort
@@ -621,17 +627,24 @@ function! wilder#main#reject_completion() abort
   return "\<Insert>\<Insert>"
 endfunction
 
-function! wilder#main#save_statusline() abort
-  let s:old_laststatus = &laststatus
-  let &laststatus = 2
+function! wilder#main#pre_hook() abort
+  if s:opts.renderer !=# 'float'
+    let s:old_laststatus = &laststatus
+    let &laststatus = 2
 
-  let s:old_statusline = &statusline
+    let s:old_statusline = &statusline
+  endif
 endfunction
 
-function! wilder#main#restore_statusline() abort
-  let &laststatus = s:old_laststatus
-  let &statusline = s:old_statusline
-  redrawstatus
+function! wilder#main#post_hook() abort
+  if s:opts.renderer ==# 'float'
+    call wilder#render#float#close()
+  else
+    let &laststatus = s:old_laststatus
+    let &statusline = s:old_statusline
+
+    redrawstatus
+  endif
 endfunction
 
 function! wilder#main#enable() abort

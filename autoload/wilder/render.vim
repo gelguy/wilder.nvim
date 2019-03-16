@@ -5,6 +5,32 @@ let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans('
 
 let s:opts = wilder#options#get()
 
+function! wilder#render#draw(left, right, ctx, xs) abort
+  try
+    let l:chunks = []
+    let l:chunks += s:draw_components(a:left, s:opts.hl, a:ctx, a:xs)
+
+    if has_key(a:ctx, 'error')
+      let l:chunks += s:draw_error(a:ctx, a:ctx.error)
+    else
+      let l:chunks += s:draw_xs(a:ctx, a:xs)
+    endif
+
+    let l:chunks += s:draw_components(a:right, s:opts.hl, a:ctx, a:xs)
+    let l:chunks = s:normalise(s:opts.hl, l:chunks)
+
+    if s:opts.renderer ==# 'float'
+      call wilder#render#float#draw(l:chunks)
+    else
+      call wilder#render#statusline#draw(l:chunks)
+    endif
+  catch
+    echohl ErrorMsg
+    echomsg 'wilder: ' . v:exception
+    echohl Normal
+  endtry
+endfunction
+
 function! wilder#render#get_components(...) abort
   if !has_key(s:opts, 'render_components')
     let s:opts.render_components = {
@@ -23,7 +49,7 @@ endfunction
 
 function! s:component_len(Component, ctx, xs) abort
   if type(a:Component) is v:t_string
-    return strdisplaywidth(s:to_printable(a:Component))
+    return strdisplaywidth(wilder#render#to_printable(a:Component))
   endif
 
   if type(a:Component) is v:t_dict
@@ -119,8 +145,8 @@ function! wilder#render#make_page(ctx, xs, page, direction, has_resized) abort
       let l:space = a:ctx.space
       let l:separator = s:opts.separator
 
-      let l:rendered_xs = map(copy(a:xs[a:page[0] : l:selected]), {_, x -> s:to_printable(x)})
-      let l:separator = s:to_printable(s:opts.separator)
+      let l:rendered_xs = map(copy(a:xs[a:page[0] : l:selected]), {_, x -> wilder#render#to_printable(x)})
+      let l:separator = wilder#render#to_printable(s:opts.separator)
 
       let l:width = strdisplaywidth(join(l:rendered_xs, l:separator))
 
@@ -154,16 +180,16 @@ function! s:make_page_from_start(ctx, xs, start) abort
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:to_printable(a:xs[l:start]))
+  let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:start]))
   let l:space = l:space - l:width
-  let l:separator_width = strdisplaywidth(s:to_printable(l:separator))
+  let l:separator_width = strdisplaywidth(wilder#render#to_printable(l:separator))
 
   while 1
     if l:end + 1 >= len(a:xs)
       break
     endif
 
-    let l:width = strdisplaywidth(s:to_printable(a:xs[l:end + 1]))
+    let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:end + 1]))
 
     if l:width + l:separator_width > l:space
       break
@@ -178,12 +204,12 @@ endfunction
 
 function! s:make_page_from_end(ctx, xs, end) abort
   let l:space = a:ctx.space
-  let l:separator = s:to_printable(s:opts.separator)
+  let l:separator = wilder#render#to_printable(s:opts.separator)
 
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:to_printable(a:xs[l:start]))
+  let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:start]))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(l:separator)
 
@@ -192,7 +218,7 @@ function! s:make_page_from_end(ctx, xs, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:to_printable(a:xs[l:start - 1]))
+    let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:start - 1]))
 
     if l:width + l:separator_width > l:space
       break
@@ -210,7 +236,7 @@ function! s:make_page_from_end(ctx, xs, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:to_printable(a:xs[l:end + 1]))
+    let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:end + 1]))
 
     if l:width + l:separator_width > l:space
       break
@@ -223,35 +249,44 @@ function! s:make_page_from_end(ctx, xs, end) abort
   return [l:start, l:end]
 endfunction
 
-function! wilder#render#draw(left, right, ctx, xs) abort
-  let l:res = ''
+function! s:normalise(hl, chunks) abort
+  if empty(a:chunks)
+    return []
+  endif
 
-  let l:res .= wilder#render#components_draw(a:left, a:ctx, a:xs)
-  let l:res .= s:draw_xs(a:ctx, a:xs)
-  let l:res .= wilder#render#components_draw(a:right, a:ctx, a:xs)
+  let l:res = []
 
-  return l:res
-endfunction
+  let l:text = ''
+  let l:hl = a:hl
 
-function! wilder#render#draw_error(left, right, ctx, error) abort
-  let l:res = ''
+  for l:chunk in a:chunks
+    let l:chunk_hl = get(l:chunk, 1, a:hl)
 
-  let l:res .= wilder#render#components_draw(a:left, a:ctx, [])
-  let l:res .= s:draw_error(a:ctx, a:error)
-  let l:res .= wilder#render#components_draw(a:right, a:ctx, [])
+    if l:chunk_hl ==# l:hl
+      let l:text .= l:chunk[0]
+    else
+      if !empty(l:text)
+        let l:res += [[l:text, l:hl]]
+      endif
+
+      let l:text = l:chunk[0]
+      let l:hl = l:chunk_hl
+    endif
+  endfor
+
+  let l:res += [[l:text, l:hl]]
 
   return l:res
 endfunction
 
 function! s:draw_xs(ctx, xs) abort
-  let s:cmdline = getcmdline()
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = s:to_printable(s:opts.separator)
+  let l:separator = wilder#render#to_printable(s:opts.separator)
 
   if l:page == [-1, -1]
-    return '%#' . s:opts.hl . '#' . repeat(' ', l:space)
+    return [[repeat(' ', l:space), s:opts.hl]]
   endif
 
   let l:start = l:page[0]
@@ -259,85 +294,93 @@ function! s:draw_xs(ctx, xs) abort
 
   " only 1 x, possible that it exceeds l:space
   if l:start == l:end
-    let l:x = s:to_printable(a:xs[l:start])
+    let l:x = wilder#render#to_printable(a:xs[l:start])
 
     if len(l:x) > l:space
-      let l:ellipsis = s:to_printable(s:opts.ellipsis)
+      let l:ellipsis = wilder#render#to_printable(s:opts.ellipsis)
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      let l:x = s:truncate(l:space_minus_ellipsis, l:x)
+      let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
 
       let g:_wild_xs = [l:x . l:ellipsis]
 
       if l:start == l:selected
-        let l:res = '%#' . s:opts.selected_hl . '#'
+        let l:hl = s:opts.selected_hl
       else
-        let l:res = '%#' . s:opts.hl . '#'
+        let l:hl = s:opts.hl
       endif
 
-      let l:res .= '%{g:_wild_xs[0]}'
-
-      return l:res . '%#' . s:opts.hl . '#'
+      return [[l:x . l:ellipsis, l:hl]]
     endif
   endif
 
-  let g:_wild_xs = map(copy(a:xs[l:start : l:end]), {_, x -> s:to_printable(x)})
-
   let l:current = l:start
-  let l:res = '%#' . s:opts.hl . '#'
+  let l:res = []
   let l:len = 0
 
   while l:current <= l:end
     if l:current != l:start
-      let l:res .= l:separator
+      let l:res += [[l:separator]]
       let l:len += strdisplaywidth(l:separator)
     endif
 
     if l:current == l:selected
-      let l:res .= '%#' . s:opts.selected_hl .
-            \ '#%{g:_wild_xs[' . string(l:current-l:start) . ']}' .
-            \ '%#' . s:opts.hl . '#'
+      let l:res += [[wilder#render#to_printable(a:xs[l:current]), s:opts.selected_hl]]
     else
-      let l:res .= '%{g:_wild_xs[' . string(l:current-l:start) . ']}'
+      let l:res += [[wilder#render#to_printable(a:xs[l:current])]]
     endif
 
-    let l:len += strdisplaywidth(g:_wild_xs[l:current-l:start])
+    let l:len += strdisplaywidth(a:xs[l:current])
     let l:current += 1
   endwhile
 
-  return l:res . repeat(' ', l:space - l:len)
+  let l:res += [[repeat(' ', l:space - l:len)]]
+  return l:res
 endfunction
 
 function! s:draw_error(ctx, error) abort
   let l:space = a:ctx.space
-  let l:error = s:to_printable(a:error)
+  let l:error = wilder#render#to_printable(a:error)
 
   if strdisplaywidth(l:error) > a:ctx.space
-    let l:ellipsis = s:to_printable(s:opts.ellipsis)
+    let l:ellipsis = wilder#render#to_printable(s:opts.ellipsis)
     let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-    let l:error = s:truncate(l:space_minus_ellipsis, l:error)
+    let l:error = wilder#render#truncate(l:space_minus_ellipsis, l:error)
 
-    let g:_wild_error = l:error . l:ellipsis
-  else
-    let g:_wild_error = l:error
+    let l:error = l:error . l:ellipsis
   endif
 
-  let l:res = '%#' . s:opts.error_hl . '#%{g:_wild_error}%#' . s:opts.hl . '#'
-
-  return l:res . repeat(' ', l:space - strdisplaywidth(g:_wild_error))
+  return [[l:error, s:opts.error_hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
-function! s:component_draw(Component, ctx, xs) abort
+function! s:draw_components(components, hl, ctx, xs) abort
+  let l:hl = a:hl
+  let l:res = []
+
+  for l:Component in a:components
+    let l:r = s:draw_component(l:Component, l:hl, a:ctx, a:xs)
+
+    if !empty(l:r)
+      let l:hl = l:r[-1][1]
+    endif
+
+    let l:res += l:r
+  endfor
+
+  return l:res
+endfunction
+
+function! s:draw_component(Component, hl, ctx, xs) abort
   if type(a:Component) is v:t_string
-    return s:to_printable(a:Component)
+    return [[wilder#render#to_printable(a:Component), a:hl]]
   endif
 
   if type(a:Component) is v:t_dict
-    let l:res = ''
-
     if has_key(a:Component, 'hl') && !empty(a:Component.hl)
-      let l:res .= '%#' . a:Component.hl . '#'
+      let l:hl = a:Component.hl
+    else
+      let l:hl = a:hl
     endif
 
     if type(a:Component.value) is v:t_func
@@ -346,30 +389,27 @@ function! s:component_draw(Component, ctx, xs) abort
       let l:Value = a:Component.value
     endif
 
-    return l:res . s:component_draw(l:Value, a:ctx, a:xs)
+    return s:draw_component(l:Value, l:hl, a:ctx, a:xs)
   endif
 
   if type(a:Component) is v:t_func
     let l:Value = a:Component(a:ctx, a:xs)
 
-    return s:component_draw(l:Value, a:ctx, a:xs)
+    return s:draw_component(l:Value, a:hl, a:ctx, a:xs)
   endif
 
   " v:t_list
-  let l:res = ''
+  let l:res = []
+  let l:hl = a:hl
 
   for l:Elem in a:Component
-    let l:res .= s:component_draw(l:Elem, a:ctx, a:xs)
-  endfor
+    let l:r = s:draw_component(l:Elem, l:hl, a:ctx, a:xs)
 
-  return l:res
-endfunction
+    if !empty(l:r)
+      let l:hl = l:r[-1][1]
+    endif
 
-function! wilder#render#components_draw(components, ctx, xs) abort
-  let l:res = ''
-
-  for l:Component in a:components
-    let l:res .= s:component_draw(l:Component, a:ctx, a:xs)
+    let l:res += l:r
   endfor
 
   return l:res
@@ -551,7 +591,7 @@ function! s:get_hl_attrs(attrs, key, hl) abort
   let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
 endfunction
 
-function! s:to_printable(x) abort
+function! wilder#render#to_printable(x) abort
   if !s:has_strtrans_issue
     " check if first character is a combining character
     if strdisplaywidth(' ' . a:x) == strdisplaywidth(a:x)
@@ -603,7 +643,7 @@ function! s:to_printable(x) abort
   return l:res
 endfunction
 
-function! s:truncate(len, str) abort
+function! wilder#render#truncate(len, str) abort
   " assumes to_printable has been called on str
   let l:chars = split(a:str, '\zs')
   let l:width = strdisplaywidth(a:str)

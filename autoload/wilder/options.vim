@@ -5,9 +5,10 @@ call extend(s:opts, {
       \ 'modes': ['/', '?'],
       \ 'interval': 100,
       \ 'use_cmdlinechanged': 0,
+      \ 'renderer': 'statusline',
       \ 'hooks': {
-      \    'pre': 'wilder#main#save_statusline',
-      \    'post': 'wilder#main#restore_statusline',
+      \    'pre': 'wilder#main#pre_hook',
+      \    'post': 'wilder#main#post_hook',
       \  },
       \ 'num_workers': 2,
       \ })
