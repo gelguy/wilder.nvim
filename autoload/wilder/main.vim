@@ -219,26 +219,13 @@ function! s:do(check) abort
 
   if !l:has_completion && (l:input_changed || l:is_new_input)
     call s:run_pipeline(l:input)
+
+    if !s:draw_done
+      call s:draw()
+    endif
   endif
 
   let s:force = 0
-
-  let l:ctx = {
-        \ 'selected': s:selected,
-        \ 'done': s:run_id == s:result_run_id,
-        \ }
-
-  if exists('s:error')
-    let l:ctx.error = s:error
-  endif
-
-  if !s:draw_done && (l:is_new_input || wilder#render#components_need_redraw(
-        \   wilder#render#get_components(),
-        \   l:ctx,
-        \   get(s:result, 'x', []),
-        \ ))
-    call s:draw()
-  endif
 endfunction
 
 function! s:run_pipeline(input, ...) abort
@@ -342,6 +329,15 @@ function! wilder#main#on_error(ctx, x) abort
   let s:error = a:x
 
   call s:draw()
+endfunction
+
+function! wilder#main#draw() abort
+  if !s:active || !s:enabled
+    return 0
+  endif
+
+  call s:draw()
+  return 1
 endfunction
 
 function! s:draw_resized() abort

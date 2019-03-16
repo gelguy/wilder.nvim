@@ -5,8 +5,8 @@ function! wilder#render#component#spinner#make(args) abort
   endif
 
   let l:done = get(a:args, 'done', ' ')
-  let l:delay = get(a:args, 'delay', 0) / 1000.0
-  let l:interval = get(a:args, 'interval', 0) / 1000.0
+  let l:delay = get(a:args, 'delay', 0)
+  let l:interval = get(a:args, 'interval', 0)
 
   let l:state = {
         \ 'frames': l:frames,
@@ -14,58 +14,72 @@ function! wilder#render#component#spinner#make(args) abort
         \ 'delay': l:delay,
         \ 'interval': l:interval,
         \ 'index': 0,
-        \ 'current_char': l:done,
         \ 'was_done': 1,
+        \ 'timer': 0,
         \ 'start_time': reltime(),
-        \ 'last_new_state_time': reltime(),
         \ }
 
   return {
         \ 'value': {ctx, x -> s:spinner(l:state, ctx, x)},
         \ 'len': {ctx, x -> strdisplaywidth(s:get_char(l:state, ctx, x))},
-        \ 'redraw': {ctx, x -> !ctx.done &&
-        \    (l:interval <= 0 || reltimefloat(reltime(l:state.last_new_state_time)) > l:interval)
-        \  },
         \ 'hl': get(a:args, 'hl', ''),
         \ }
 endfunction
 
+" set current_char in here so it is consistent with the actual rendered
+" char. Due to reltime(), the char might be changed since len is called
+" earlier
 function! s:get_char(state, ctx, xs) abort
   if a:ctx.done
     let a:state.was_done = 1
-    let a:state.current_char = a:state.done
+    let a:state.index = -1
     return a:state.done
   endif
 
-  if a:state.was_done == 1
+  if a:state.was_done
     let a:state.was_done = 0
-    let a:state.index = -1
+    let a:state.index = len(a:state.frames) - 1
 
     if a:state.delay > 0
       let a:state.start_time = reltime()
     endif
   endif
 
-  if a:state.delay > 0 && reltimefloat(reltime(a:state.start_time)) < a:state.delay
-    let a:state.current_char = a:state.done
+  let l:elapsed = reltimefloat(reltime(a:state.start_time)) * 1000
+
+  if a:state.delay > 0 && l:elapsed < a:state.delay
+    let a:state.index = -1
     return a:state.done
   endif
 
-  if a:state.interval <= 0 || reltimefloat(reltime(a:state.last_new_state_time)) > a:state.interval
-    " set current_char in here so it is consistent with the actual rendered
-    " char. Due to reltime(), the char might be changed since len is called
-    " earlier
-    let a:state.index = (a:state.index + 1) % len(a:state.frames)
-    let a:state.current_char = a:state.frames[a:state.index]
-
-    if a:state.interval > 0
-      let a:state.last_new_state_time = reltime()
-    endif
+  if a:state.interval > 0
+    let l:elapsed_minus_delay = l:elapsed - a:state.delay
+    let a:state.index = l:elapsed_minus_delay / a:state.interval
+  else
+    let a:state.index += 1
   endif
 
+  let a:state.index = float2nr(fmod(a:state.index, len(a:state.frames)))
   return a:state.frames[a:state.index]
 endfunction
 
 function! s:spinner(state, ctx, xs) abort
-  return a:state.current_char
+  if a:state.timer
+    call timer_stop(a:state.timer)
+  endif
+
+  if !a:ctx.done
+    let l:elapsed = reltimefloat(reltime(a:state.start_time)) * 1000
+
+    if l:elapsed < a:state.delay
+      let l:wait_time = a:state.delay - l:elapsed + 1
+    else
+      let l:elapsed_minus_delay = l:elapsed - a:state.delay
+      let l:wait_time = a:state.interval - fmod(l:elapsed_minus_delay, a:state.interval) + 1
+    endif
+
+    let a:state.timer = timer_start(float2nr(l:wait_time), {-> wilder#main#draw()})
+  endif
+
+  return a:state.index == -1 ? a:state.done : a:state.frames[a:state.index]
 endfunction

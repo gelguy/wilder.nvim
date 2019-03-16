@@ -223,18 +223,6 @@ function! s:make_page_from_end(ctx, xs, end) abort
   return [l:start, l:end]
 endfunction
 
-function! wilder#render#components_need_redraw(components, ctx, x) abort
-  for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'redraw')
-      if l:Component.redraw(a:ctx, a:x)
-        return 1
-      endif
-    endif
-  endfor
-
-  return 0
-endfunction
-
 function! wilder#render#draw(left, right, ctx, xs) abort
   let l:res = ''
 

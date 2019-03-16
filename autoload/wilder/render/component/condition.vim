@@ -9,7 +9,6 @@ function! wilder#render#component#condition#make(predicate, if_true, if_false) a
   return {
         \ 'value': {ctx, x -> s:value(l:state, ctx, x)},
         \ 'len': {ctx, x -> s:len(l:state, ctx, x)},
-        \ 'redraw': {ctx, x -> s:redraw(l:state, ctx, x)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
@@ -21,10 +20,6 @@ endfunction
 
 function! s:post_hook(state, ctx) abort
   call wilder#render#components_post_hook(a:state.if_true + a:state.if_false, a:ctx)
-endfunction
-
-function! s:redraw(state, ctx, x) abort
-  return wilder#render#components_need_redraw(a:state.if_true + a:state.if_false, a:ctx, a:x)
 endfunction
 
 function! s:len(state, ctx, xs) abort
