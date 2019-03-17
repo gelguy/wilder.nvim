@@ -12,7 +12,7 @@ function! s:search(opts, ctx, x) abort
   try
     silent exe 'keeppatterns ' . l:current_line . ',$s/' . a:x . '/\=s:add(submatch(0), l:candidates, l:candidates_set, l:max_candidates)/gne'
     silent exe 'keeppatterns 1,' . l:current_line . 's/' . a:x . '/\=s:add(submatch(0), l:candidates, l:candidates_set, l:max_candidates)/gne'
-  catch /^Wildsearch: Max candidates reached/
+  catch /^wilder: Max candidates reached/
     return l:candidates
   finally
     call setpos('.', l:cursor_pos)
@@ -35,5 +35,5 @@ function! s:add(match, candidates, candidates_set, max_candidates) abort
 endfunction
 
 function! s:throw() abort
-  throw 'Wildsearch: Max candidates reached'
+  throw 'wilder: Max candidates reached'
 endfunction
