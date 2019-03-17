@@ -216,3 +216,13 @@ endfunction
 function! wilder#make_hl(name, args) abort
   return wilder#render#make_hl(a:name, a:args)
 endfunction
+
+function! wilder#statusline_renderer(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wilder#render#statusline#renderer(l:args)
+endfunction
+
+function! wilder#float_renderer(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wilder#render#float#renderer(l:args)
+endfunction

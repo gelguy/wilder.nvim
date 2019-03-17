@@ -3,48 +3,14 @@ scriptencoding utf-8
 let s:hl_map = {}
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
-let s:opts = wilder#options#get()
+function! wilder#render#components_len(components, ctx, xs) abort
+  let l:len = 0
 
-function! wilder#render#draw(left, right, ctx, xs) abort
-  try
-    let l:chunks = []
-    let l:chunks += s:draw_components(a:left, s:opts.hl, a:ctx, a:xs)
+  for l:Component in a:components
+    let l:len += s:component_len(l:Component, a:ctx, a:xs)
+  endfor
 
-    if has_key(a:ctx, 'error')
-      let l:chunks += s:draw_error(a:ctx, a:ctx.error)
-    else
-      let l:chunks += s:draw_xs(a:ctx, a:xs)
-    endif
-
-    let l:chunks += s:draw_components(a:right, s:opts.hl, a:ctx, a:xs)
-    let l:chunks = s:normalise(s:opts.hl, l:chunks)
-
-    if s:opts.renderer ==# 'float'
-      call wilder#render#float#draw(l:chunks)
-    else
-      call wilder#render#statusline#draw(l:chunks)
-    endif
-  catch
-    echohl ErrorMsg
-    echomsg 'wilder: ' . v:exception
-    echohl Normal
-  endtry
-endfunction
-
-function! wilder#render#get_components(...) abort
-  if !has_key(s:opts, 'render_components')
-    let s:opts.render_components = {
-          \ 'left': [wilder#previous_arrow()],
-          \ 'right': [wilder#next_arrow()]
-          \ }
-  endif
-
-  if a:0 == 0
-    return get(s:opts.render_components, 'left', []) +
-          \ get(s:opts.render_components, 'right', [])
-  endif
-
-  return get(s:opts.render_components, a:1, [])
+  return l:len
 endfunction
 
 function! s:component_len(Component, ctx, xs) abort
@@ -86,87 +52,40 @@ function! s:component_len(Component, ctx, xs) abort
   return l:len
 endfunction
 
-function! wilder#render#components_len(components, ctx, xs) abort
-  let l:len = 0
-
-  for l:Component in a:components
-    let l:len += s:component_len(l:Component, a:ctx, a:xs)
-  endfor
-
-  return l:len
-endfunction
-
-function! wilder#render#init() abort
-  " create highlight before and after components since there might be
-  " components which depend on existing highlights
-  for l:key in keys(s:hl_map)
-    exe s:hl_map[l:key]
-  endfor
-
-  call wilder#render#components_pre_hook(wilder#render#get_components(), {})
-
-  for l:key in keys(s:hl_map)
-    exe s:hl_map[l:key]
-  endfor
-endfunction
-
-function! wilder#render#finish() abort
-  call wilder#render#components_post_hook(wilder#render#get_components(), {})
-endfunction
-
-function! wilder#render#components_pre_hook(components, ctx) abort
-  for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
-      call l:Component.pre_hook(a:ctx)
-    endif
-  endfor
-endfunction
-
-function! wilder#render#components_post_hook(components, ctx) abort
-  for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
-      call l:Component.post_hook(a:ctx)
-    endif
-  endfor
-endfunction
-
-function! wilder#render#make_page(ctx, xs, page, direction, has_resized) abort
+function! wilder#render#make_page(ctx, xs) abort
   if empty(a:xs)
     return [-1, -1]
   endif
 
+  let l:page = a:ctx.page
   let l:selected = a:ctx.selected
 
   " if selected is within old page
-  if a:page != [-1, -1] && l:selected != -1 && l:selected >= a:page[0] && l:selected <= a:page[1]
+  if l:page != [-1, -1] && l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
     " check if page_start to selected still fits within space
-    if a:has_resized
+    if a:ctx.resized
       let l:selected = a:ctx.selected
-      let l:space = a:ctx.space
-      let l:separator = s:opts.separator
 
-      let l:rendered_xs = map(copy(a:xs[a:page[0] : l:selected]), {_, x -> wilder#render#to_printable(x)})
-      let l:separator = wilder#render#to_printable(s:opts.separator)
+      let l:rendered_xs = map(copy(a:xs[l:page[0] : l:selected]), {_, x -> wilder#render#to_printable(x)})
+      let l:width = strdisplaywidth(join(l:rendered_xs, a:ctx.separator))
 
-      let l:width = strdisplaywidth(join(l:rendered_xs, l:separator))
-
-      if l:width <= l:space
-        return s:make_page_from_start(a:ctx, a:xs, a:page[0])
+      if l:width <= a:ctx.space
+        return s:make_page_from_start(a:ctx, a:xs, l:page[0])
       endif
 
       " else make new page
     else
-      return a:page
+      return l:page
     endif
   endif
 
   let l:selected = l:selected == -1 ? 0 : l:selected
 
-  if a:page == [-1, -1]
+  if l:page == [-1, -1]
     return s:make_page_from_start(a:ctx, a:xs, l:selected)
   endif
 
-  if a:direction < 0
+  if a:ctx.direction < 0
     return s:make_page_from_end(a:ctx, a:xs, l:selected)
   endif
 
@@ -175,14 +94,12 @@ endfunction
 
 function! s:make_page_from_start(ctx, xs, start) abort
   let l:space = a:ctx.space
-  let l:separator = s:opts.separator
-
   let l:start = a:start
   let l:end = l:start
 
   let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:start]))
   let l:space = l:space - l:width
-  let l:separator_width = strdisplaywidth(wilder#render#to_printable(l:separator))
+  let l:separator_width = strdisplaywidth(wilder#render#to_printable(a:ctx.separator))
 
   while 1
     if l:end + 1 >= len(a:xs)
@@ -204,14 +121,12 @@ endfunction
 
 function! s:make_page_from_end(ctx, xs, end) abort
   let l:space = a:ctx.space
-  let l:separator = wilder#render#to_printable(s:opts.separator)
-
   let l:end = a:end
   let l:start = l:end
 
   let l:width = strdisplaywidth(wilder#render#to_printable(a:xs[l:start]))
   let l:space = l:space - l:width
-  let l:separator_width = strdisplaywidth(l:separator)
+  let l:separator_width = strdisplaywidth(a:ctx.separator)
 
   while 1
     if l:start - 1 < 0
@@ -228,7 +143,7 @@ function! s:make_page_from_end(ctx, xs, end) abort
     let l:start -= 1
   endwhile
 
-  " moving from page [5,10] ends in [0,4]
+  " moving left from page [5,10] ends in [0,4]
   " but there might be leftover space, so we increase l:end to fill up the
   " space e.g. to [0,6]
   while 1
@@ -247,6 +162,36 @@ function! s:make_page_from_end(ctx, xs, end) abort
   endwhile
 
   return [l:start, l:end]
+endfunction
+
+function! wilder#render#components_pre_hook(components, ctx) abort
+  for l:Component in a:components
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
+      call l:Component.pre_hook(a:ctx)
+    endif
+  endfor
+endfunction
+
+function! wilder#render#components_post_hook(components, ctx) abort
+  for l:Component in a:components
+    if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
+      call l:Component.post_hook(a:ctx)
+    endif
+  endfor
+endfunction
+
+function! wilder#render#chunks(left, right, ctx, xs) abort
+  let l:chunks = []
+  let l:chunks += s:draw_components(a:left, a:ctx.hl, a:ctx, a:xs)
+
+  if has_key(a:ctx, 'error')
+    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx.error)
+  else
+    let l:chunks += s:draw_xs(a:ctx, a:xs)
+  endif
+
+  let l:chunks += s:draw_components(a:right, a:ctx.hl, a:ctx, a:xs)
+  return s:normalise(a:ctx.hl, l:chunks)
 endfunction
 
 function! s:normalise(hl, chunks) abort
@@ -283,10 +228,10 @@ function! s:draw_xs(ctx, xs) abort
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = wilder#render#to_printable(s:opts.separator)
+  let l:separator = wilder#render#to_printable(a:ctx.separator)
 
   if l:page == [-1, -1]
-    return [[repeat(' ', l:space), s:opts.hl]]
+    return [[repeat(' ', l:space), a:ctx.hl]]
   endif
 
   let l:start = l:page[0]
@@ -297,7 +242,7 @@ function! s:draw_xs(ctx, xs) abort
     let l:x = wilder#render#to_printable(a:xs[l:start])
 
     if len(l:x) > l:space
-      let l:ellipsis = wilder#render#to_printable(s:opts.ellipsis)
+      let l:ellipsis = wilder#render#to_printable(a:ctx.ellipsis)
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
       let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
@@ -305,9 +250,9 @@ function! s:draw_xs(ctx, xs) abort
       let g:_wild_xs = [l:x . l:ellipsis]
 
       if l:start == l:selected
-        let l:hl = s:opts.selected_hl
+        let l:hl = a:ctx.selected_hl
       else
-        let l:hl = s:opts.hl
+        let l:hl = a:ctx.hl
       endif
 
       return [[l:x . l:ellipsis, l:hl]]
@@ -325,7 +270,7 @@ function! s:draw_xs(ctx, xs) abort
     endif
 
     if l:current == l:selected
-      let l:res += [[wilder#render#to_printable(a:xs[l:current]), s:opts.selected_hl]]
+      let l:res += [[wilder#render#to_printable(a:xs[l:current]), a:ctx.selected_hl]]
     else
       let l:res += [[wilder#render#to_printable(a:xs[l:current])]]
     endif
@@ -338,12 +283,12 @@ function! s:draw_xs(ctx, xs) abort
   return l:res
 endfunction
 
-function! s:draw_error(ctx, error) abort
+function! s:draw_error(hl, ctx, error) abort
   let l:space = a:ctx.space
   let l:error = wilder#render#to_printable(a:error)
 
   if strdisplaywidth(l:error) > a:ctx.space
-    let l:ellipsis = wilder#render#to_printable(s:opts.ellipsis)
+    let l:ellipsis = wilder#render#to_printable(a:ctx.ellipsis)
     let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
     let l:error = wilder#render#truncate(l:space_minus_ellipsis, l:error)
@@ -351,7 +296,7 @@ function! s:draw_error(ctx, error) abort
     let l:error = l:error . l:ellipsis
   endif
 
-  return [[l:error, s:opts.error_hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
+  return [[l:error, a:hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
 function! s:draw_components(components, hl, ctx, xs) abort
@@ -413,6 +358,12 @@ function! s:draw_component(Component, hl, ctx, xs) abort
   endfor
 
   return l:res
+endfunction
+
+function! wilder#render#init_hl() abort
+  for l:key in keys(s:hl_map)
+    exe s:hl_map[l:key]
+  endfor
 endfunction
 
 function! wilder#render#make_hl(name, args) abort

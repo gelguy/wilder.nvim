@@ -11,7 +11,7 @@ let s:draw_timer = -1
 
 let s:result = {'x': []}
 let s:selected = -1
-let s:page = [-1, -1]
+let s:clear_selection = 1
 let s:completion_stack = []
 
 let s:opts = wilder#options#get()
@@ -97,6 +97,10 @@ function! s:start() abort
   let s:active = 1
   let s:hidden = 0
 
+  if !has_key(s:opts, 'renderer')
+    let s:opts.renderer = wilder#statusline_renderer()
+  endif
+
   call s:pre_hook()
 
   call s:do(0)
@@ -136,7 +140,7 @@ function! wilder#main#stop() abort
   let s:active = 0
   let s:result = {'x': []}
   let s:selected = -1
-  let s:page = [-1, -1]
+  let s:clear_selection = 0
   let s:completion_stack = []
 
   if exists('s:previous_cmdline')
@@ -163,26 +167,28 @@ function! wilder#main#stop() abort
 endfunction
 
 function! s:pre_hook() abort
-  if has_key(s:opts, 'hooks') && has_key(s:opts.hooks, 'pre')
-    if type(s:opts.hooks.pre) is v:t_func
-      call s:opts.hooks.pre()
-    else
-      call function(s:opts.hooks.pre)()
-    endif
+  call wilder#render#init_hl()
+
+  if has_key(s:opts.renderer, 'pre_hook')
+    call s:opts.renderer.pre_hook({})
   endif
 
-  call wilder#render#init()
+  if has_key(s:opts, 'pre_hook')
+    call s:opts.pre_hook({})
+  endif
+
+  " create highlight before and after components since there might be
+  " components which depend on existing highlights
+  call wilder#render#init_hl()
 endfunction
 
 function! s:post_hook() abort
-  call wilder#render#finish()
+  if has_key(s:opts.renderer, 'post_hook')
+    call s:opts.renderer.post_hook({})
+  endif
 
-  if has_key(s:opts, 'hooks') && has_key(s:opts.hooks, 'post')
-    if type(s:opts.hooks.post) is v:t_func
-      call s:opts.hooks.post()
-    else
-      call function(s:opts.hooks.post)()
-    endif
+  if has_key(s:opts, 'post_hook')
+    call s:opts.post_hook({})
   endif
 endfunction
 
@@ -277,7 +283,7 @@ function! wilder#main#on_finish(ctx, x) abort
   let s:result = (a:x is v:false || a:x is v:true) ? {} :
         \ type(a:x) is v:t_dict ? a:x : {'x': a:x}
   let s:selected = -1
-  let s:page = [-1, -1]
+  let s:clear_selection = 1
   " keep previous completion
 
   if exists('s:error')
@@ -355,13 +361,17 @@ function! s:draw(...) abort
   endif
 
   try
-      let l:direction = a:0 >= 1 ? a:1 : 0
-      let l:has_resized = a:0 >= 2 ? a:2 : 0
+      let l:direction = a:0 >= 1 ? a:1 >= 0 : 0
+      let l:resized = a:0 >= 2 ? a:2 : 0
 
       let l:ctx = {
+            \ 'clear_previous': get(s:, 'clear_selection', 0),
             \ 'selected': s:selected,
+            \ 'resized': l:resized,
+            \ 'direction': l:direction,
             \ 'done': s:run_id == s:result_run_id,
             \ }
+      let s:clear_selection = 0
 
       let l:has_error = exists('s:error')
 
@@ -377,34 +387,26 @@ function! s:draw(...) abort
         let l:xs = get(s:result, 'x', [])
       endif
 
-      let l:left_components = wilder#render#get_components('left')
-      let l:right_components = wilder#render#get_components('right')
-
-      let l:space_used = wilder#render#components_len(
-            \ l:left_components + l:right_components,
-            \ l:ctx, l:xs)
-
-      if s:opts.renderer ==# 'float'
-        let l:ctx.space = &columns - l:space_used
-      else
-        let l:ctx.space = winwidth(0) - l:space_used
-      endif
-
-      let s:page = wilder#render#make_page(l:ctx, l:xs, s:page, l:direction, l:has_resized)
-      let l:ctx.page = s:page
-
       call timer_stop(s:draw_timer)
 
       " need timer to avoid E523
-      let s:draw_timer = timer_start(0, {-> wilder#render#draw(
-            \ l:left_components, l:right_components,
-            \ l:ctx, l:xs)})
+      let s:draw_timer = timer_start(0, {-> s:renderer_draw(l:ctx, l:xs)})
   catch
     echohl ErrorMsg
     echomsg 'wilder: ' . v:exception
     echohl Normal
   finally
     let s:draw_done = 1
+  endtry
+endfunction
+
+function! s:renderer_draw(ctx, xs) abort
+  try
+    call s:opts.renderer.draw(a:ctx, a:xs)
+  catch
+    echohl ErrorMsg
+    echomsg 'wilder: ' . string(v:exception)
+    echohl Normal
   endtry
 endfunction
 
@@ -576,7 +578,7 @@ function! wilder#main#accept_completion() abort
     let s:previous_cmdline = l:cmdline
     let s:result = {'x': []}
     let s:selected = -1
-    let s:page = [-1, -1]
+    let s:clear_selection = 1
 
     call s:run_pipeline(l:cmdline, {'auto_select': 1})
   endif
@@ -618,33 +620,13 @@ function! wilder#main#reject_completion() abort
     let s:previous_cmdline = l:cmdline
     let s:result = {'x': []}
     let s:selected = -1
-    let s:page = [-1, -1]
+    let s:clear_selection = 1
 
     call s:feedkeys_cmdline(l:cmdline)
     call s:run_pipeline(l:cmdline)
   endif
 
   return "\<Insert>\<Insert>"
-endfunction
-
-function! wilder#main#pre_hook() abort
-  if s:opts.renderer !=# 'float'
-    let s:old_laststatus = &laststatus
-    let &laststatus = 2
-
-    let s:old_statusline = &statusline
-  endif
-endfunction
-
-function! wilder#main#post_hook() abort
-  if s:opts.renderer ==# 'float'
-    call wilder#render#float#close()
-  else
-    let &laststatus = s:old_laststatus
-    let &statusline = s:old_statusline
-
-    redrawstatus
-  endif
 endfunction
 
 function! wilder#main#enable() abort

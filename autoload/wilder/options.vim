@@ -4,22 +4,8 @@ let s:opts = {}
 call extend(s:opts, {
       \ 'modes': ['/', '?'],
       \ 'interval': 100,
-      \ 'use_cmdlinechanged': 0,
-      \ 'renderer': 'statusline',
-      \ 'hooks': {
-      \    'pre': 'wilder#main#pre_hook',
-      \    'post': 'wilder#main#post_hook',
-      \  },
+      \ 'use_cmdlinechanged': exists('##CmdlineChanged'),
       \ 'num_workers': 2,
-      \ })
-
-" render options
-call extend(s:opts, {
-      \ 'hl': 'StatusLine',
-      \ 'selected_hl': 'WildMenu',
-      \ 'error_hl': 'StatusLine',
-      \ 'separator': ' ',
-      \ 'ellipsis': '...',
       \ })
 
 function! wilder#options#get() abort
