@@ -5,10 +5,10 @@ function! wilder#render#component#separator#make(str, fg, bg, ...) abort
     let l:key = s:index
     let s:index += 1
   else
-    let l:key = a:0
+    let l:key = a:1
   endif
 
-  let l:name = 'WildsearchSeparator_' . l:key
+  let l:name = 'WilderSeparator_' . l:key
 
   return {
         \ 'value': a:str,
