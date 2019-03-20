@@ -45,7 +45,7 @@ function! s:draw(state, ctx, xs) abort
   let a:ctx.selected_hl = a:state.selected_hl
   let a:ctx.error_hl = a:state.error_hl
 
-  let l:chunks = wilder#render#chunks(a:state.left, a:state.right, a:ctx, a:xs)
+  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 
   call s:draw_chunks(l:chunks)
 endfunction

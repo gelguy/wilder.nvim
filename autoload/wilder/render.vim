@@ -180,7 +180,7 @@ function! wilder#render#components_post_hook(components, ctx) abort
   endfor
 endfunction
 
-function! wilder#render#chunks(left, right, ctx, xs) abort
+function! wilder#render#make_hl_chunks(left, right, ctx, xs) abort
   let l:chunks = []
   let l:chunks += s:draw_components(a:left, a:ctx.hl, a:ctx, a:xs)
 

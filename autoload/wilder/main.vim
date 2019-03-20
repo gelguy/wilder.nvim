@@ -7,7 +7,6 @@ let s:hidden = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
-let s:draw_timer = -1
 
 let s:result = {'x': []}
 let s:selected = -1
@@ -387,26 +386,13 @@ function! s:draw(...) abort
         let l:xs = get(s:result, 'x', [])
       endif
 
-      call timer_stop(s:draw_timer)
-
-      " need timer to avoid E523
-      let s:draw_timer = timer_start(0, {-> s:renderer_draw(l:ctx, l:xs)})
-  catch
+      call s:opts.renderer.draw(l:ctx, l:xs)
+  catch /sdfasdf/
     echohl ErrorMsg
     echomsg 'wilder: ' . v:exception
     echohl Normal
   finally
     let s:draw_done = 1
-  endtry
-endfunction
-
-function! s:renderer_draw(ctx, xs) abort
-  try
-    call s:opts.renderer.draw(a:ctx, a:xs)
-  catch
-    echohl ErrorMsg
-    echomsg 'wilder: ' . string(v:exception)
-    echohl Normal
   endtry
 endfunction
 

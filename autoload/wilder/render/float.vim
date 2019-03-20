@@ -1,10 +1,3 @@
-let s:ns_id = nvim_create_namespace('')
-
-let s:buf = -1
-let s:win = -1
-let s:columns = -1
-let s:cmdheight = -1
-
 function! wilder#render#float#renderer(args) abort
   let l:state = {
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
@@ -13,6 +6,11 @@ function! wilder#render#float#renderer(args) abort
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', ' ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
+        \ 'buf': -1,
+        \ 'win': -1,
+        \ 'ns_id': nvim_create_namespace(''),
+        \ 'columns': -1,
+        \ 'cmdheight': -1,
         \ }
 
   if !has_key(a:args, 'left') && !has_key(a:args, 'right')
@@ -53,40 +51,53 @@ function! s:draw(state, ctx, xs) abort
   let a:ctx.selected_hl = a:state.selected_hl
   let a:ctx.error_hl = a:state.error_hl
 
-  let l:chunks = wilder#render#chunks(a:state.left, a:state.right, a:ctx, a:xs)
+  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 
-  call s:draw_chunks(a:state.hl, l:chunks)
+  if a:state.buf == -1
+    let a:state.buf = nvim_create_buf(v:false, v:true)
+  endif
+
+  let l:in_sandbox = 0
+  try
+    call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [''])
+  catch /E523/
+    " might be in sandbox due to expr mapping
+    let l:in_sandbox = 1
+  endtry
+
+  if l:in_sandbox
+    call timer_start(0, {-> s:draw_chunks(a:state, l:chunks)})
+  else
+    call s:draw_chunks(a:state, l:chunks)
+  endif
 endfunction
 
-function! s:draw_chunks(hl, chunks) abort
-  if s:buf == -1
-    let s:buf = nvim_create_buf(v:false, v:true)
-  endif
-
-  if s:win == -1
-    let s:win = s:new_win()
-  elseif s:columns != &columns || s:cmdheight != &cmdheight
+function! s:draw_chunks(state, chunks) abort
+  if a:state.win == -1
+    let a:state.win = s:new_win(a:state.buf)
+  elseif a:state.columns != &columns || a:state.cmdheight != &cmdheight
     let l:win = s:new_win()
-    call nvim_win_close(s:win, 1)
-    let s:win = l:win
+    call nvim_win_close(a:state.win, 1)
+    let a:state.win = l:win
   endif
 
-  let s:columns = &columns
-  let s:cmdheight = &cmdheight
+  let a:state.columns = &columns
+  let a:state.cmdheight = &cmdheight
 
   let l:text = ''
   for l:elem in a:chunks
     let l:text .= l:elem[0]
   endfor
 
-  call nvim_buf_set_lines(s:buf, 0, -1, v:true, [l:text])
+  call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [l:text])
+  call nvim_buf_clear_namespace(a:state.buf, a:state.ns_id, 0, -1)
 
   let l:start = 0
   for l:elem in a:chunks
     let l:end = l:start + len(l:elem[0])
 
-    let l:hl = get(l:elem, 1, a:hl)
-    call nvim_buf_add_highlight(s:buf, s:ns_id, l:hl, 0, l:start, l:end)
+    let l:hl = get(l:elem, 1, a:state.hl)
+    call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, 0, l:start, l:end)
 
     let l:start = l:end
   endfor
@@ -94,8 +105,8 @@ function! s:draw_chunks(hl, chunks) abort
   redraw
 endfunction
 
-function! s:new_win() abort
-  let l:win = nvim_open_win(s:buf, 0, &columns, 1, {
+function! s:new_win(buf) abort
+  let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
         \ 'relative': 'editor',
         \ 'row': &lines - &cmdheight - 1,
         \ 'col': 0,
@@ -113,13 +124,13 @@ function! s:pre_hook(state, ctx) abort
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  if s:buf != -1
-    call nvim_buf_clear_namespace(s:buf, s:ns_id, 0, -1)
+  if a:state.buf != -1
+    call nvim_buf_clear_namespace(a:state.buf, a:state.ns_id, 0, -1)
   endif
 
-  if s:win != -1
-    call nvim_win_close(s:win, 1)
-    let s:win = -1
+  if a:state.win != -1
+    call nvim_win_close(a:state.win, 1)
+    let a:state.win = -1
   endif
 
   call wilder#render#components_post_hook(a:state.left + a:state.right, a:ctx)
