@@ -1,3 +1,11 @@
+let s:open_win_num_args = 3
+try
+  let l:win = nvim_open_win(0, 0, {})
+catch 'Not enough arguments'
+  let s:open_win_num_args = 5
+catch
+endtry
+
 function! wilder#render#float#renderer(args) abort
   let l:state = {
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
@@ -106,12 +114,23 @@ function! s:draw_chunks(state, chunks) abort
 endfunction
 
 function! s:new_win(buf) abort
-  let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
-        \ 'relative': 'editor',
-        \ 'row': &lines - &cmdheight - 1,
-        \ 'col': 0,
-        \ 'focusable': 0,
-        \ })
+  if s:open_win_num_args == 5
+    let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
+          \ 'relative': 'editor',
+          \ 'row': &lines - &cmdheight - 1,
+          \ 'col': 0,
+          \ 'focusable': 0,
+          \ })
+  else
+    let l:win = nvim_open_win(a:buf, 0, {
+          \ 'relative': 'editor',
+          \ 'height': 1,
+          \ 'width': &columns,
+          \ 'row': &lines - &cmdheight - 1,
+          \ 'col': 0,
+          \ 'focusable': 0,
+          \ })
+  endif
 
   call nvim_win_set_option(l:win, 'winhl', 'Normal:Normal,Search:None,IncSearch:None')
   call nvim_win_set_option(l:win, 'listchars', '')
