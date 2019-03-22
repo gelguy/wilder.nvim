@@ -41,6 +41,10 @@ function! s:draw(state, ctx, xs) abort
     let a:state.page = [-1, -1]
   endif
 
+  if a:state.win == -1
+    return
+  endif
+
   let l:space_used = wilder#render#components_len(
         \ a:state.left + a:state.right,
         \ a:ctx,
@@ -61,13 +65,9 @@ function! s:draw(state, ctx, xs) abort
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 
-  if a:state.buf == -1
-    let a:state.buf = nvim_create_buf(v:false, v:true)
-  endif
-
   let l:in_sandbox = 0
   try
-    call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [''])
+    call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [])
   catch /E523/
     " might be in sandbox due to expr mapping
     let l:in_sandbox = 1
@@ -82,11 +82,7 @@ endfunction
 
 function! s:draw_chunks(state, chunks) abort
   if a:state.win == -1
-    let a:state.win = s:new_win(a:state.buf)
-  elseif a:state.columns != &columns || a:state.cmdheight != &cmdheight
-    let l:win = s:new_win()
-    call nvim_win_close(a:state.win, 1)
-    let a:state.win = l:win
+    return
   endif
 
   let a:state.columns = &columns
@@ -139,6 +135,18 @@ function! s:new_win(buf) abort
 endfunction
 
 function! s:pre_hook(state, ctx) abort
+  if a:state.buf == -1
+    let a:state.buf = nvim_create_buf(v:false, v:true)
+  endif
+
+  if a:state.win == -1
+    let a:state.win = s:new_win(a:state.buf)
+  elseif a:state.columns != &columns || a:state.cmdheight != &cmdheight
+    let l:win = s:new_win(a:state.buf)
+    call nvim_win_close(a:state.win, 1)
+    let a:state.win = l:win
+  endif
+
   call wilder#render#components_pre_hook(a:state.left + a:state.right, a:ctx)
 endfunction
 
