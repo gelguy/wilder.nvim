@@ -33,7 +33,7 @@ function! s:handle(ctx, x, key) abort
   try
     call l:handler[a:key](a:ctx, a:x)
   catch
-    call l:handler.on_error(a:ctx, v:exception)
+    call l:handler.on_error(a:ctx, 'pipeline: ' . v:exception)
   endtry
 endfunction
 
@@ -45,7 +45,7 @@ function! s:call(f, ctx) abort
   try
     call a:f()
   catch
-    call wilder#pipeline#on_error(a:ctx, v:exception)
+    call wilder#pipeline#on_error(a:ctx, 'pipeline :' . v:exception)
   endtry
 endfunction
 
@@ -79,10 +79,15 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
   while l:i < len(a:pipeline)
     let l:F = a:pipeline[l:i]
 
+    if type(l:F) isnot v:t_func
+      call a:on_error(a:ctx, 'pipeline: expected function but got: ' . string(l:F))
+      return
+    endif
+
     try
       let l:Result = l:F(a:ctx, l:x)
     catch
-      call a:on_error(a:ctx, v:exception)
+      call a:on_error(a:ctx, 'pipeline: ' . v:exception)
       return
     endtry
 

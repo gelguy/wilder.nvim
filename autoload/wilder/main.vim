@@ -389,7 +389,7 @@ function! s:draw(...) abort
       call s:opts.renderer.draw(l:ctx, l:xs)
   catch
     echohl ErrorMsg
-    echomsg 'wilder: ' . v:exception
+    echomsg 'wilder: draw: ' . v:exception
     echohl Normal
   finally
     let s:draw_done = 1
