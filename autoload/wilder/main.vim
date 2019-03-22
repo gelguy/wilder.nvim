@@ -387,7 +387,7 @@ function! s:draw(...) abort
       endif
 
       call s:opts.renderer.draw(l:ctx, l:xs)
-  catch /sdfasdf/
+  catch
     echohl ErrorMsg
     echomsg 'wilder: ' . v:exception
     echohl Normal
