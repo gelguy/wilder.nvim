@@ -1,11 +1,17 @@
-import time
-import multiprocessing
+import asyncio
+import concurrent.futures
 import functools
 import importlib
-import concurrent.futures
+import multiprocessing
 import threading
-import asyncio
-import neovim
+import time
+
+from importlib.util import find_spec
+
+if find_spec('pynvim'):
+    import pynvim as neovim
+else:
+    import neovim
 
 @neovim.plugin
 class Wilder(object):
