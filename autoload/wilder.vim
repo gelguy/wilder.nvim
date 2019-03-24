@@ -75,6 +75,12 @@ function! wilder#result_output_escape(chars) abort
         \ })
 endfunction
 
+function! wilder#result_map_x(f) abort
+  return wilder#result({
+        \ 'x': {ctx, xs -> map(xs, {_, x -> a:f(ctx, x)})},
+        \ })
+endfunction
+
 function! wilder#vim_substring() abort
   return {_, x -> x . '\k*'}
 endfunction
