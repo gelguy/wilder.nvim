@@ -1,29 +1,24 @@
 function! wilder#pipeline#component#result#make(...) abort
   let l:args = a:0 ? a:1 : {}
-  return {ctx, x -> s:result(l:args, ctx, x)}
+  return {ctx, r -> s:result(l:args, ctx, r)}
 endfunction
 
-function! s:result(args, ctx, x) abort
-  let l:result = type(a:x) is v:t_dict ? copy(a:x) : {'x': a:x}
+function! s:result(args, ctx, r) abort
+  let l:result = type(a:r) is v:t_dict ? copy(a:r) : {'x': a:r}
 
   for l:key in keys(a:args)
-    if type(a:args[l:key]) is v:t_string
-      let l:F = function(a:args[l:key])
-    else
-      let l:F = a:args[l:key]
-    endif
+    let l:F = a:args[l:key]
 
     if l:key ==# 'replace'
-      let l:result[l:key] = l:F
+      let l:result.replace = l:F
+      continue
+    elseif l:key ==# 'x'
+      let l:result.x = l:F(a:ctx, a:r.x)
       continue
     endif
 
     if has_key(l:result, l:key)
       let l:Prev = l:result[l:key]
-
-      if type(l:Prev) is v:t_string
-        let l:Prev = function(l:Prev)
-      endif
     else
       let l:Prev = {ctx, x -> x}
     endif
