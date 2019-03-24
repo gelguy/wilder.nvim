@@ -69,7 +69,7 @@ function! wilder#result(...) abort
   endif
 endfunction
 
-function! wilder#result_escape(chars) abort
+function! wilder#result_output_escape(chars) abort
   return wilder#result({
         \'output': {ctx, x, prev -> escape(prev(ctx, x), a:chars)},
         \ })
@@ -144,7 +144,7 @@ function! wilder#search_pipeline(...) abort
   let l:result += get(l:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
-        \ wilder#result_escape('^$,*~[]/\'),
+        \ wilder#result_output_escape('^$,*~[]/\'),
         \ ])
 
   return l:result
@@ -159,7 +159,7 @@ function! wilder#python_search_pipeline() abort
         \ 'pipeline': [
         \   wilder#python_substring(),
         \   wilder#python_search(),
-        \   wilder#result_escape('^$,*~[]/\'),
+        \   wilder#result_output_escape('^$,*~[]/\'),
         \ ],
         \ })
 endfunction

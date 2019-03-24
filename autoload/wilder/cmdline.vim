@@ -122,7 +122,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
   let l:pipeline = get(a:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
-        \ wilder#result_escape('^$,*~[]/\'),
+        \ wilder#result_output_escape('^$,*~[]/\'),
         \ ])
 
   let l:hide = get(a:opts, 'hide', 1)
