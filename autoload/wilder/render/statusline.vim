@@ -36,6 +36,7 @@ function! s:draw(state, ctx, xs) abort
   let a:ctx.space = winwidth(0) - l:space_used
   let a:ctx.page = a:state.page
   let a:ctx.separator = a:state.separator
+  let a:ctx.ellipsis = a:state.ellipsis
 
   let l:page = wilder#render#make_page(a:ctx, a:xs)
   let a:ctx.page = l:page
