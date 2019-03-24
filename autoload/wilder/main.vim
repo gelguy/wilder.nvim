@@ -474,9 +474,7 @@ function! wilder#main#step(num_steps) abort
       let l:Replace = get(s:result, 'replace', 'all')
 
       if l:Replace ==# 'all'
-        let l:Replace = function('s:replace_all')
-      elseif type(l:Replace) ==# v:t_string
-        let l:Replace = function(l:Replace)
+        let l:Replace = funcref('s:replace_all')
       endif
 
       let l:new_cmdline = l:Replace({'cmdline': s:replaced_cmdline}, l:output)

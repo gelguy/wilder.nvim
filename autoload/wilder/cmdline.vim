@@ -101,7 +101,7 @@ function! wilder#cmdline#pipeline(opts) abort
       \     {_, res -> getcompletion(res.cmdline, 'cmdline')},
       \   ],
       \ ),
-      \ wilder#result({'replace': 'wilder#cmdline#replace'}),
+      \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
       \ ]
 endfunction
 
@@ -135,6 +135,6 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
       \ wilder#check({_, res -> len(res) > 0}),
       \ {_, res -> len(res) == 2 ? res[1] : (l:hide ? v:true : v:false)},
       \ ] + l:pipeline + [
-      \ wilder#result({'replace': 'wilder#cmdline#replace'}),
+      \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
       \ ]
 endfunction
