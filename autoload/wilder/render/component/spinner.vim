@@ -6,7 +6,7 @@ function! wilder#render#component#spinner#make(args) abort
 
   let l:done = get(a:args, 'done', ' ')
   let l:delay = get(a:args, 'delay', 0)
-  let l:interval = get(a:args, 'interval', 0)
+  let l:interval = get(a:args, 'interval', 100)
 
   let l:state = {
         \ 'frames': l:frames,
@@ -52,12 +52,8 @@ function! s:get_char(state, ctx, xs) abort
     return a:state.done
   endif
 
-  if a:state.interval > 0
-    let l:elapsed_minus_delay = l:elapsed - a:state.delay
-    let a:state.index = l:elapsed_minus_delay / a:state.interval
-  else
-    let a:state.index += 1
-  endif
+  let l:elapsed_minus_delay = l:elapsed - a:state.delay
+  let a:state.index = l:elapsed_minus_delay / a:state.interval
 
   let a:state.index = float2nr(fmod(a:state.index, len(a:state.frames)))
   return a:state.frames[a:state.index]
