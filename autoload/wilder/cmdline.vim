@@ -81,13 +81,15 @@ function! wilder#cmdline#replace(ctx, x, prev) abort
 endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
+  let l:hide = get(a:opts, 'hide', 1)
+
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wilder#cmdline#parse(x)},
       \ wilder#branch(
       \   [
       \     wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-      \     {-> v:true},
+      \     {-> l:hide ? v:true : v:false},
       \   ],
       \   [
       \     wilder#check({_, res -> wilder#cmdline#is_user_command(res.cmd)}),
