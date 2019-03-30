@@ -506,6 +506,10 @@ function! wilder#main#step(num_steps) abort
 endfunction
 
 function! s:getcmdline(...) abort
+  if s:opts.use_cmdlinechanged || !s:opts.before_cursor
+    return getcmdline()
+  endif
+
   if a:0
     let l:cmdline = a:1
     let l:cmdpos = a:2
@@ -524,7 +528,11 @@ endfunction
 function! s:feedkeys_cmdline(cmdline) abort
   let l:chars = split(a:cmdline, '\zs')
 
-  let l:keys = "\<C-U>"
+  if s:opts.use_cmdlinechanged || !s:opts.before_cursor
+    let l:keys = "\<C-E>\<C-U>"
+  else
+    let l:keys = "\<C-U>"
+  endif
 
   for l:char in l:chars
     " control characters
