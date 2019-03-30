@@ -351,7 +351,7 @@ function! s:draw_resized() abort
     return
   endif
 
-  call s:draw(0, 1)
+  call s:draw(0)
 endfunction
 
 function! s:draw(...) abort
@@ -360,13 +360,11 @@ function! s:draw(...) abort
   endif
 
   try
-      let l:direction = a:0 >= 1 ? a:1 >= 0 : 0
-      let l:resized = a:0 >= 2 ? a:2 : 0
+      let l:direction = a:0 >= 1 ? a:1 : 0
 
       let l:ctx = {
             \ 'clear_previous': get(s:, 'clear_selection', 0),
             \ 'selected': s:selected,
-            \ 'resized': l:resized,
             \ 'direction': l:direction,
             \ 'done': s:run_id == s:result_run_id,
             \ }

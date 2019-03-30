@@ -63,19 +63,14 @@ function! wilder#render#make_page(ctx, xs) abort
   " if selected is within old page
   if l:page != [-1, -1] && l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
     " check if page_start to selected still fits within space
-    if a:ctx.resized
-      let l:selected = a:ctx.selected
+    " space might have changed due to resizing or due to custom draw functions
+    let l:selected = a:ctx.selected
 
-      let l:rendered_xs = map(copy(a:xs[l:page[0] : l:selected]), {_, x -> wilder#render#to_printable(x)})
-      let l:width = strdisplaywidth(join(l:rendered_xs, a:ctx.separator))
+    let l:rendered_xs = map(copy(a:xs[l:page[0] : l:selected]), {_, x -> wilder#render#to_printable(x)})
+    let l:width = strdisplaywidth(join(l:rendered_xs, a:ctx.separator))
 
-      if l:width <= a:ctx.space
-        return s:make_page_from_start(a:ctx, a:xs, l:page[0])
-      endif
-
-      " else make new page
-    else
-      return l:page
+    if l:width <= a:ctx.space
+      return s:make_page_from_start(a:ctx, a:xs, l:page[0])
     endif
   endif
 
