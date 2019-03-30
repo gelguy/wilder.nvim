@@ -60,8 +60,8 @@ function! wilder#cmdline#get_user_completion(cmdline) abort
   return v:false
 endfunction
 
-function! wilder#cmdline#replace(ctx, x) abort
-  let l:result = wilder#cmdline#parse(a:ctx.cmdline)
+function! wilder#cmdline#replace(ctx, x, prev) abort
+  let l:result = wilder#cmdline#parse(getcmdline())
 
   if l:result.pos == 0
     return a:x

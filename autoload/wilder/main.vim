@@ -8,7 +8,7 @@ let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
 
-let s:result = {'x': []}
+let s:result = []
 let s:selected = -1
 let s:clear_selection = 1
 let s:completion_stack = []
@@ -137,7 +137,7 @@ function! wilder#main#stop() abort
   endif
 
   let s:active = 0
-  let s:result = {'x': []}
+  let s:result = []
   let s:selected = -1
   let s:clear_selection = 0
   let s:completion_stack = []
@@ -246,19 +246,6 @@ function! s:run_pipeline(input, ...) abort
     call extend(l:ctx, a:1)
   endif
 
-  if !has_key(s:opts, 'pipeline')
-    if has('nvim')
-      let s:opts.pipeline = [
-            \ wilder#branch(
-            \   wilder#cmdline_pipeline(),
-            \   wilder#python_search_pipeline(),
-            \ ),
-            \ ]
-    else
-      let s:opts.pipeline = wilder#vim_search_pipeline()
-    endif
-  endif
-
   call wilder#pipeline#run(
         \ s:opts.pipeline,
         \ function('wilder#main#on_finish'),
@@ -279,8 +266,7 @@ function! wilder#main#on_finish(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:result = (a:x is v:false || a:x is v:true) ? {} :
-        \ type(a:x) is v:t_dict ? a:x : {'x': a:x}
+  let s:result = (a:x is v:false || a:x is v:true) ? [] : a:x
   let s:selected = -1
   let s:clear_selection = 1
   " keep previous completion
@@ -328,7 +314,7 @@ function! wilder#main#on_error(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:result = {'x': []}
+  let s:result = []
   let s:selected = -1
   " keep previous completion
 
@@ -378,10 +364,8 @@ function! s:draw(...) abort
 
       if l:has_error
         let l:xs = []
-      elseif has_key(s:result, 'draw')
-        let l:xs = map(copy(get(s:result, 'x', [])), {_, x -> s:result.draw(l:ctx, x)})
       else
-        let l:xs = get(s:result, 'x', [])
+        let l:xs = s:result
       endif
 
       call s:opts.renderer.render(l:ctx, l:xs)
@@ -428,7 +412,7 @@ function! wilder#main#step(num_steps) abort
 
   let l:previous_selected = s:selected
 
-  let l:len = len(get(s:result, 'x', []))
+  let l:len = len(s:result)
   if a:num_steps == 0
     " pass
   elseif l:len == 0
@@ -463,19 +447,18 @@ function! wilder#main#step(num_steps) abort
 
   if s:selected >= -1
     if s:selected >= 0
-      let l:candidate = get(s:result, 'x', [])[s:selected]
+      let l:candidate = s:result[s:selected]
 
-      let l:output = has_key(s:result, 'output') ?
-            \ s:result.output({}, l:candidate) :
-            \ l:candidate
+      if type(l:candidate) is v:t_dict
+        let l:output = has_key(l:candidate, 'output')
+              \ ? l:candidate.output({}, l:candidate.value)
+              \ : l:candidate.value
 
-      let l:Replace = get(s:result, 'replace', 'all')
-
-      if l:Replace ==# 'all'
-        let l:Replace = funcref('s:replace_all')
+        let l:Replace = get(l:candidate, 'replace', {_, x -> x})
+        let l:new_cmdline = l:Replace({}, l:output)
+      else
+        let l:new_cmdline = l:candidate
       endif
-
-      let l:new_cmdline = l:Replace({'cmdline': s:replaced_cmdline}, l:output)
     else
       let l:new_cmdline = s:replaced_cmdline
     endif
@@ -544,10 +527,6 @@ function! s:feedkeys_cmdline(cmdline) abort
   call feedkeys(l:keys, 'n')
 endfunction
 
-function! s:replace_all(ctx, x) abort
-  return a:x
-endfunction
-
 function! wilder#main#can_accept_completion() abort
   return wilder#main#in_context() &&
         \ exists('s:selected') && s:selected >= 0
@@ -566,7 +545,7 @@ function! wilder#main#accept_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
-    let s:result = {'x': []}
+    let s:result = []
     let s:selected = -1
     let s:clear_selection = 1
 
@@ -608,7 +587,7 @@ function! wilder#main#reject_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
-    let s:result = {'x': []}
+    let s:result = []
     let s:selected = -1
     let s:clear_selection = 1
 
