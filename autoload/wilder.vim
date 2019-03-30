@@ -6,12 +6,40 @@ function! wilder#enable_cmdline_enter()
   return wilder#main#enable_cmdline_enter()
 endfunction
 
+function! wilder#enable()
+  return wilder#main#enable()
+endfunction
+
+function! wilder#disable()
+  return wilder#main#disable()
+endfunction
+
+function! wilder#toggle()
+  return wilder#main#toggle()
+endfunction
+
+function! wilder#set_option(x, ...) abort
+  if len(a:000) == 0
+    call wilder#options#set(a:x)
+  else
+    call wilder#options#set(a:x, a:1)
+  endif
+endfunction
+
 function! wilder#next()
   return wilder#main#next()
 endfunction
 
 function! wilder#previous()
   return wilder#main#previous()
+endfunction
+
+function! wilder#on_finish()
+  return wilder#pipeline#on_finish()
+endfunction
+
+function! wilder#on_error()
+  return wilder#pipeline#on_error()
 endfunction
 
 function! wilder#can_reject_completion()
@@ -34,17 +62,11 @@ function! wilder#start_from_normal_mode()
   return wilder#main#start_from_normal_mode()
 endfunction
 
-function! wilder#toggle()
-  return wilder#main#toggle()
+function! wilder#make_hl(name, args) abort
+  return wilder#render#make_hl(a:name, a:args)
 endfunction
 
-function! wilder#set_option(x, ...) abort
-  if len(a:000) == 0
-    call wilder#options#set(a:x)
-  else
-    call wilder#options#set(a:x, a:1)
-  endif
-endfunction
+" pipeline components
 
 function! wilder#_sleep(t) abort
   " lambda functions do not have func-abort
@@ -133,6 +155,8 @@ function! wilder#history(...) abort
   endif
 endfunction
 
+" pipelines
+
 function! wilder#search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
@@ -176,6 +200,8 @@ function! wilder#substitute_pipeline(...) abort
   return wilder#cmdline#substitute_pipeline(l:opts)
 endfunction
 
+" render components
+
 function! wilder#index(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
   return wilder#render#component#index#make(l:args)
@@ -213,9 +239,7 @@ function! wilder#condition(predicate, if_true, ...) abort
   return wilder#render#component#condition#make(a:predicate, a:if_true, l:if_false)
 endfunction
 
-function! wilder#make_hl(name, args) abort
-  return wilder#render#make_hl(a:name, a:args)
-endfunction
+" renderers
 
 function! wilder#statusline_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
