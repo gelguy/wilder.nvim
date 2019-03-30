@@ -30,13 +30,13 @@ function! wilder#render#float#renderer(args) abort
   endif
 
   return {
-        \ 'draw': {ctx, xs -> s:draw(l:state, ctx, xs)},
+        \ 'render': {ctx, xs -> s:render(l:state, ctx, xs)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
-function! s:draw(state, ctx, xs) abort
+function! s:render(state, ctx, xs) abort
   if a:ctx.clear_previous
     let a:state.page = [-1, -1]
   endif
@@ -74,13 +74,13 @@ function! s:draw(state, ctx, xs) abort
   endtry
 
   if l:in_sandbox
-    call timer_start(0, {-> s:draw_chunks(a:state, l:chunks)})
+    call timer_start(0, {-> s:render_chunks(a:state, l:chunks)})
   else
-    call s:draw_chunks(a:state, l:chunks)
+    call s:render_chunks(a:state, l:chunks)
   endif
 endfunction
 
-function! s:draw_chunks(state, chunks) abort
+function! s:render_chunks(state, chunks) abort
   if a:state.win == -1
     return
   endif

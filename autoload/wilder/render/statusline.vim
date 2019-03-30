@@ -17,13 +17,13 @@ function! wilder#render#statusline#renderer(args) abort
   endif
 
   return {
-        \ 'draw': {ctx, xs -> s:draw(l:state, ctx, xs)},
+        \ 'render': {ctx, xs -> s:render(l:state, ctx, xs)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
-function! s:draw(state, ctx, xs) abort
+function! s:render(state, ctx, xs) abort
   if a:ctx.clear_previous
     let a:state.page = [-1, -1]
   endif
@@ -48,10 +48,10 @@ function! s:draw(state, ctx, xs) abort
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 
-  call s:draw_chunks(l:chunks)
+  call s:render_chunks(l:chunks)
 endfunction
 
-function! s:draw_chunks(chunks) abort
+function! s:render_chunks(chunks) abort
   let l:statusline = ''
   let g:_wilder_xs = map(copy(a:chunks), {_, x -> x[0]})
 

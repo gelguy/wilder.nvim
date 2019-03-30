@@ -384,7 +384,7 @@ function! s:draw(...) abort
         let l:xs = get(s:result, 'x', [])
       endif
 
-      call s:opts.renderer.draw(l:ctx, l:xs)
+      call s:opts.renderer.render(l:ctx, l:xs)
   catch
     echohl ErrorMsg
     echomsg 'wilder: draw: ' . v:exception
