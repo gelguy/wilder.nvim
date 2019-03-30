@@ -45,7 +45,7 @@ function! s:call(f, ctx) abort
   try
     call a:f()
   catch
-    call wilder#pipeline#on_error(a:ctx, 'pipeline :' . v:exception)
+    call wilder#pipeline#on_error(a:ctx, 'pipeline: ' . v:exception)
   endtry
 endfunction
 

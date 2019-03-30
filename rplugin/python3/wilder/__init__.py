@@ -2,11 +2,11 @@ import asyncio
 import concurrent.futures
 import functools
 import importlib
+from importlib.util import find_spec
 import multiprocessing
 import threading
 import time
 
-from importlib.util import find_spec
 
 if find_spec('pynvim'):
     import pynvim as neovim
@@ -125,7 +125,7 @@ class Wilder(object):
                             return
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, str(e), 'on_error',))
+            self.queue.put((ctx, 'python_search: ' + str(e), 'on_error',))
         finally:
             with self.lock:
                 self.events.remove(event)
@@ -141,7 +141,7 @@ class Wilder(object):
             res = [x for x in items if not (x in seen or seen.add(x))]
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, str(e), 'on_error',))
+            self.queue.put((ctx, 'python_uniq: ' + str(e), 'on_error',))
 
     @neovim.function('_wilder_python_sort', sync=False, allow_nested=True)
     def sort(self, args):
@@ -153,4 +153,4 @@ class Wilder(object):
 
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, str(e), 'on_error',))
+            self.queue.put((ctx, 'python_sort: ' + str(e), 'on_error',))
