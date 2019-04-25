@@ -48,16 +48,16 @@ function! s:render(state, ctx, xs) abort
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 
-  call s:render_chunks(l:chunks)
+  call s:render_chunks(l:chunks, a:state.hl)
 endfunction
 
-function! s:render_chunks(chunks) abort
+function! s:render_chunks(chunks, hl) abort
   let l:statusline = ''
   let g:_wilder_xs = map(copy(a:chunks), {_, x -> x[0]})
 
   let l:i = 0
   while l:i < len(a:chunks)
-    let l:statusline .= '%#' . a:chunks[l:i][1] . '#'
+    let l:statusline .= '%#' . get(a:chunks[l:i], 1, a:hl) . '#'
 
     " prevent leading space from being truncated
     if g:_wilder_xs[l:i][0] ==# ' '

@@ -70,13 +70,14 @@ function! s:start() abort
     if !exists('#WilderCmdlineChanged')
       augroup WilderCmdlineChanged
         autocmd!
-        " directly calling s:do makes getcmdline return an empty string
+        " call from a timer so statusline does not change during mappings
         autocmd CmdlineChanged * call timer_start(0, {_ -> s:do(1)})
       augroup END
     endif
   elseif !exists('s:timer')
       let s:timer = timer_start(s:opts.interval,
-            \ {_ -> s:do(1)}, {'repeat': -1})
+            \ {_ -> s:do(1)},
+            \ {'repeat': -1})
   endif
 
   if !exists('#WilderCmdlineLeave')
@@ -468,7 +469,12 @@ function! wilder#main#step(num_steps) abort
               \ : l:candidate.value
 
         let l:Replace = get(l:candidate, 'replace', {_, x -> x})
-        let l:new_cmdline = l:Replace({}, l:output)
+
+        if type(l:Replace) is v:t_func
+          let l:new_cmdline = l:Replace({'cmdline': s:replaced_cmdline}, l:output)
+        else
+          let l:new_cmdline = l:Replace
+        endif
       else
         let l:new_cmdline = l:candidate
       endif

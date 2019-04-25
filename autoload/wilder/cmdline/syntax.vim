@@ -12,6 +12,7 @@ function! wilder#cmdline#syntax#do(ctx) abort
   endwhile
 
   if l:in_subcommand
+    let a:ctx.pos = l:arg_start
     return
   endif
 

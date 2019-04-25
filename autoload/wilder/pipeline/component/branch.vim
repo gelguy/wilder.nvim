@@ -3,7 +3,7 @@ function! wilder#pipeline#component#branch#make(args) abort
     return {_, x -> v:false}
   endif
 
-  return {ctx, x -> {-> s:start(a:args, ctx, x)}}
+  return {_, x -> {ctx -> s:start(a:args, ctx, x)}}
 endfunction
 
 function! s:start(pipelines, ctx, x) abort

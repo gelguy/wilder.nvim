@@ -72,7 +72,7 @@ function! wilder#_sleep(t) abort
   " lambda functions do not have func-abort
   " so it is possible for timer_start to throw an error
   " followed by on_finish being called
-  return {ctx, x -> {-> timer_start(a:t, {-> wilder#pipeline#on_finish(ctx, x)})}}
+  return {_, x -> {ctx -> timer_start(a:t, {-> wilder#pipeline#on_finish(ctx, x)})}}
 endfunction
 
 function! wilder#branch(...) abort
@@ -129,20 +129,20 @@ function! wilder#python_fuzzy_delimiter(...) abort
 endfunction
 
 function! wilder#python_search(...) abort
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipeline#component#python_search#make(l:args)
+  let l:opts = a:0 > 0 ? a:1 : {}
+  return {_, x -> {ctx -> _wilder_python_search(l:opts, ctx, x)}}
 endfunction
 
 function! wilder#python_uniq() abort
-  return {ctx, x -> wilder#pipeline#null(_wild_python_uniq(ctx, x))}
+  return {_, x -> {ctx -> _wilder_python_uniq(a:opts, ctx, x)}}
 endfunction
 
 function! wilder#python_sort() abort
-  return wilder#pipeline#component#python_sort#make()
+  return {_, x -> {ctx -> _wilder_python_sort(ctx, x)}}
 endfunction
 
 function! wilder#_python_sleep(t) abort
-  return {ctx, x -> {-> _wilder_python_sleep(a:t, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_sleep(a:t, ctx, x)}}
 endfunction
 
 function! wilder#history(...) abort

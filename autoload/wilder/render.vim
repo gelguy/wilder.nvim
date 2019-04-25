@@ -13,31 +13,31 @@ function! wilder#render#components_len(components, ctx, xs) abort
   return l:len
 endfunction
 
-function! s:component_len(Component, ctx, xs) abort
-  if type(a:Component) is v:t_string
-    return strdisplaywidth(wilder#render#to_printable(a:Component))
+function! s:component_len(component, ctx, xs) abort
+  if type(a:component) is v:t_string
+    return strdisplaywidth(wilder#render#to_printable(a:component))
   endif
 
-  if type(a:Component) is v:t_dict
-    if has_key(a:Component, 'len')
-      if type(a:Component.len) is v:t_func
-        return a:Component.len(a:ctx, a:xs)
+  if type(a:component) is v:t_dict
+    if has_key(a:component, 'len')
+      if type(a:component.len) is v:t_func
+        return a:component.len(a:ctx, a:xs)
       else
-        return a:Component.len
+        return a:component.len
       endif
     endif
 
-    if type(a:Component.value) is v:t_func
-      let l:Value = a:Component.value(a:ctx, a:xs)
+    if type(a:component.value) is v:t_func
+      let l:Value = a:component.value(a:ctx, a:xs)
     else
-      let l:Value = a:Component.value
+      let l:Value = a:component.value
     endif
 
     return s:component_len(l:Value, a:ctx, a:xs)
   endif
 
-  if type(a:Component) is v:t_func
-    let l:Value = a:Component(a:ctx, a:xs)
+  if type(a:component) is v:t_func
+    let l:Value = a:component(a:ctx, a:xs)
 
     return s:component_len(l:Value, a:ctx, a:xs)
   endif
@@ -45,11 +45,35 @@ function! s:component_len(Component, ctx, xs) abort
   " v:t_list
   let l:len = 0
 
-  for l:Elem in a:Component
+  for l:Elem in a:component
     let l:len += s:component_len(l:Elem, a:ctx, a:xs)
   endfor
 
   return l:len
+endfunction
+
+function! wilder#render#components_pre_hook(components, ctx) abort
+  call s:component_hook(a:components, a:ctx, 'pre')
+endfunction
+
+function! wilder#render#components_post_hook(components, ctx) abort
+  call s:component_hook(a:components, a:ctx, 'post')
+endfunction
+
+function! s:component_hook(component, ctx, key) abort
+  if type(a:component) is v:t_dict
+    if has_key(a:component, a:key . '_hook')
+      call a:component[a:key . '_hook'](a:ctx)
+    endif
+
+    call s:component_hook(a:component.value, a:ctx, a:key)
+
+    return
+  elseif type(a:component) is v:t_list
+    for l:elem in a:component
+      call s:component_hook(l:elem, a:ctx)
+    endfor
+  endif
 endfunction
 
 function! wilder#render#make_page(ctx, xs) abort
@@ -68,12 +92,12 @@ function! wilder#render#make_page(ctx, xs) abort
 
     let l:i = 0
     let l:separator_width = strdisplaywidth(a:ctx.separator)
-    let l:width = strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:i))
+    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:i))
     let l:i = l:page[0] + 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
-      let l:width += strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:i))
+      let l:width += strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:i))
 
       " cannot fit in current page
       if l:width > a:ctx.space
@@ -108,7 +132,7 @@ function! s:make_page_from_start(ctx, xs, start) abort
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:start))
+  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -117,7 +141,7 @@ function! s:make_page_from_start(ctx, xs, start) abort
       break
     endif
 
-    let l:width = strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:end + 1))
+    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -135,7 +159,7 @@ function! s:make_page_from_end(ctx, xs, end) abort
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:start))
+  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -144,7 +168,7 @@ function! s:make_page_from_end(ctx, xs, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:start - 1))
+    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:start - 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -162,7 +186,7 @@ function! s:make_page_from_end(ctx, xs, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(wilder#render#to_printable_cached(a:ctx, a:xs, l:end + 1))
+    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -191,6 +215,24 @@ function! wilder#render#components_post_hook(components, ctx) abort
   endfor
 endfunction
 
+function! wilder#render#draw_x(ctx, xs, i)
+  let l:x = a:xs[a:i]
+
+  if type(l:x) is v:t_dict
+    if has_key(l:x, 'draw')
+      let l:ctx = {
+            \ 'i': a:i,
+            \ 'selected': a:ctx.selected == a:i,
+            \ }
+      let l:x = l:x.draw(l:ctx, l:x.value)
+    else
+      let l:x = l:x.value
+    endif
+  endif
+
+  return wilder#render#to_printable(l:x)
+endfunction
+
 function! wilder#render#make_hl_chunks(left, right, ctx, xs) abort
   let l:chunks = []
   let l:chunks += s:draw_components(a:left, a:ctx.hl, a:ctx, a:xs)
@@ -202,10 +244,11 @@ function! wilder#render#make_hl_chunks(left, right, ctx, xs) abort
   endif
 
   let l:chunks += s:draw_components(a:right, a:ctx.hl, a:ctx, a:xs)
-  return s:normalise(a:ctx.hl, l:chunks)
+
+  return wilder#render#normalise(a:ctx.hl, l:chunks)
 endfunction
 
-function! s:normalise(hl, chunks) abort
+function! wilder#render#normalise(hl, chunks) abort
   if empty(a:chunks)
     return []
   endif
@@ -222,7 +265,7 @@ function! s:normalise(hl, chunks) abort
       let l:text .= l:chunk[0]
     else
       if !empty(l:text)
-        let l:res += [[l:text, l:hl]]
+        call add(l:res, [l:text, l:hl])
       endif
 
       let l:text = l:chunk[0]
@@ -230,7 +273,7 @@ function! s:normalise(hl, chunks) abort
     endif
   endfor
 
-  let l:res += [[l:text, l:hl]]
+  call add(l:res, [l:text, l:hl])
 
   return l:res
 endfunction
@@ -250,15 +293,13 @@ function! s:draw_xs(ctx, xs) abort
 
   " only 1 x, possible that it exceeds l:space
   if l:start == l:end
-    let l:x = wilder#render#to_printable_cached(a:ctx, a:xs, l:start)
+    let l:x = s:draw_x_cached(a:ctx, a:xs, l:start)
 
     if len(l:x) > l:space
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
       let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
-
-      let g:_wild_xs = [l:x . l:ellipsis]
 
       if l:start == l:selected
         let l:hl = a:ctx.selected_hl
@@ -271,27 +312,34 @@ function! s:draw_xs(ctx, xs) abort
   endif
 
   let l:current = l:start
-  let l:res = []
+  let l:previous_selected = 0
+  let l:res = [['']]
   let l:len = 0
 
   while l:current <= l:end
     if l:current != l:start
-      let l:res += [[l:separator]]
+      if l:previous_selected
+        call add(l:res, [l:separator])
+      else
+        let l:res[-1][0] .= l:separator
+      endif
       let l:len += strdisplaywidth(l:separator)
     endif
 
-    let l:x = wilder#render#to_printable_cached(a:ctx, a:xs, l:current)
+    let l:x = s:draw_x_cached(a:ctx, a:xs, l:current)
     if l:current == l:selected
-      let l:res += [[l:x, a:ctx.selected_hl]]
+      call add(l:res, [l:x, a:ctx.selected_hl])
+      let l:previous_selected = 1
     else
-      let l:res += [[l:x]]
+      let l:res[-1][0] .= l:x
+      let l:previous_selected = 0
     endif
 
     let l:len += strdisplaywidth(l:x)
     let l:current += 1
   endwhile
 
-  let l:res += [[repeat(' ', l:space - l:len)]]
+  call add(l:res, [repeat(' ', l:space - l:len)])
   return l:res
 endfunction
 
@@ -554,7 +602,7 @@ function! s:get_hl_attrs(attrs, key, hl) abort
   let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
 endfunction
 
-function! wilder#render#to_printable_cached(ctx, xs, i)
+function! s:draw_x_cached(ctx, xs, i)
   if !has_key(a:ctx, 'draw_cache')
     let a:ctx.draw_cache = repeat([v:null], len(a:xs))
   endif
@@ -563,21 +611,7 @@ function! wilder#render#to_printable_cached(ctx, xs, i)
     return a:ctx.draw_cache[a:i]
   endif
 
-  let l:x = a:xs[a:i]
-
-  if type(l:x) is v:t_dict
-    if has_key(l:x, 'draw')
-      let l:ctx = {
-            \ 'i': a:i,
-            \ 'selected': a:ctx.selected == a:i,
-            \ }
-      let l:x = l:x.draw(l:ctx, l:x.value)
-    else
-      let l:x = l:x.value
-    endif
-  endif
-
-  let l:x = wilder#render#to_printable(l:x)
+  let l:x = wilder#render#draw_x(a:ctx, a:xs, a:i)
 
   let a:ctx.draw_cache[a:i] = l:x
 

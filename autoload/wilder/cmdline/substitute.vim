@@ -28,17 +28,17 @@ function! wilder#cmdline#substitute#parse(ctx) abort
 
   " delimiter not reached
   if !wilder#cmdline#skip_regex#do(a:ctx, l:delimiter)
-    let l:result += [a:ctx.cmdline[l:arg_start :]]
+    call add(l:result, a:ctx.cmdline[l:arg_start :])
     let a:ctx.pos = l:cmd_start
     return l:result
   endif
 
-  let l:result += [a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]]
+  call add(l:result, a:ctx.cmdline[l:arg_start : a:ctx.pos - 1])
 
   " skip delimiter
   let a:ctx.pos += 1
   let l:arg_start = a:ctx.pos
-  let l:result += [l:delimiter]
+  call add(l:result, l:delimiter)
 
   let l:delimiter_reached = 0
 
@@ -56,17 +56,17 @@ function! wilder#cmdline#substitute#parse(ctx) abort
   endwhile
 
   if !l:delimiter_reached
-    let l:result += [a:ctx.cmdline[l:arg_start :]]
+    call add(l:result, a:ctx.cmdline[l:arg_start :])
     let a:ctx.pos = l:cmd_start
     return l:result
   endif
 
-  let l:result += [a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]]
+  call add(l:result, a:ctx.cmdline[l:arg_start : a:ctx.pos - 1])
 
   " skip delimiter
   let a:ctx.pos += 1
   let l:arg_start = a:ctx.pos
-  let l:result += [l:delimiter]
+  call add(l:result, l:delimiter)
 
   " consume until | or " is reached
   while a:ctx.pos < len(a:ctx.cmdline)
@@ -86,7 +86,7 @@ function! wilder#cmdline#substitute#parse(ctx) abort
   endwhile
 
   if a:ctx.pos != l:arg_start
-    let l:result += [a:ctx.cmdline[l:arg_start :]]
+    call add(l:result, a:ctx.cmdline[l:arg_start :])
   endif
 
   let a:ctx.pos = l:cmd_start

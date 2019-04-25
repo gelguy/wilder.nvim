@@ -43,7 +43,7 @@ endfunction
 
 function! s:call(f, ctx) abort
   try
-    call a:f()
+    call a:f(a:ctx)
   catch
     call wilder#pipeline#on_error(a:ctx, 'pipeline: ' . v:exception)
   endtry
@@ -59,7 +59,7 @@ function! s:prepare_call(f, pipeline, on_finish, on_error, ctx, i)
   let s:handler_registry[s:id_index] = l:handler
   let a:ctx.handler_id = s:id_index
 
-  call timer_start(0, {-> s:call(a:f, a:ctx)})
+  call s:call(a:f, a:ctx)
 endfunction
 
 function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
@@ -69,7 +69,8 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
   endif
 
   if type(a:x) is v:t_func
-    call s:prepare_call(a:x, a:pipeline, a:on_finish, a:on_error, a:ctx, a:i)
+    let l:ctx = copy(a:ctx)
+    call s:prepare_call(a:x, a:pipeline, a:on_finish, a:on_error, l:ctx, a:i)
     return
   endif
 
@@ -97,7 +98,8 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
     endif
 
     if type(l:Result) is v:t_func
-      call s:prepare_call(l:Result, a:pipeline, a:on_finish, a:on_error, a:ctx, l:i+1)
+    let l:ctx = copy(a:ctx)
+      call s:prepare_call(l:Result, a:pipeline, a:on_finish, a:on_error, l:ctx, l:i+1)
       return
     endif
 

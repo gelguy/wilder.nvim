@@ -15,13 +15,27 @@ function! s:result(args, ctx, x) abort
     endif
 
     if has_key(l:x, l:key)
-      let l:Prev = l:x[l:key]
+      if type(l:x[l:key]) is v:t_func
+        let l:Prev = l:x[l:key]
+      else
+        let l:Prev = {ctx, x, def -> l:x[l:key]}
+      endif
     else
-      let l:Prev = {ctx, x -> x}
+      let l:Prev = {ctx, x, def -> def}
     endif
+
+    let l:Prev = function('s:wrap_prev', [l:Prev])
 
     let l:x[l:key] = {ctx, x -> l:F(ctx, x, l:Prev)}
   endfor
 
   return l:x
+endfunction
+
+function! s:wrap_prev(f, ctx, x, ...) abort
+  if a:0
+    return a:f(a:ctx, a:x, a:1)
+  else
+    return a:f(a:ctx, a:x, a:x)
+  endif
 endfunction

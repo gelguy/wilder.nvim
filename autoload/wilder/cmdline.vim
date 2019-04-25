@@ -61,7 +61,7 @@ function! wilder#cmdline#get_user_completion(cmdline) abort
 endfunction
 
 function! wilder#cmdline#replace(ctx, x, prev) abort
-  let l:result = wilder#cmdline#parse(getcmdline())
+  let l:result = wilder#cmdline#parse(a:ctx.cmdline)
 
   if l:result.pos == 0
     return a:x
@@ -121,10 +121,16 @@ function! wilder#cmdline#is_substitute_command(cmd) abort
 endfunction
 
 function! wilder#cmdline#substitute_pipeline(opts) abort
-  let l:pipeline = get(a:opts, 'pipeline', [
-        \ wilder#vim_substring(),
-        \ wilder#vim_search(),
-        \ wilder#result_output_escape('^$,*~[]/\'),
+  let l:pipeline = get(a:opts, 'pipeline', has('nvim') ?
+        \ [
+        \   wilder#python_substring(),
+        \   wilder#python_search(),
+        \   wilder#result_output_escape('^$,*~[]/\'),
+        \ ] :
+        \ [
+        \   wilder#vim_substring(),
+        \   wilder#vim_search(),
+        \   wilder#result_output_escape('^$,*~[]/\'),
         \ ])
 
   let l:hide = get(a:opts, 'hide', 1)

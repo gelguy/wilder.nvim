@@ -1,0 +1,1124 @@
+*wilder.txt*                              wilder documentation
+
+        A More Adventurous Wildmenu~
+
+wilder                                *wilder*
+
+1. Introduction                     |wilder-introduction|
+2. Install                          |wilder-install|
+3. Options                          |wilder-options|
+4. Pipeline                         |wilder-pipeline|
+5. Renderer                         |wilder-renderer|
+6. API                              |wilder-api|
+7. Configurations                   |wilder-configurations|
+
+==============================================================================
+1. Introduction                     *wilder-introduction*
+
+wilder.nvim adds new features to 'wildmenu'.
+Features include
+
+1. Automatically provides completions as you type
+2. |/| search support: get completions as you type your search query
+3. Customisable pipeline: e.g. choose between substring matching and fuzzy
+   matching
+4. Async query support: use |python3| for faster and non-blocking queries
+5. Customisable skins and themes
+
+==============================================================================
+2. Install                          *wilder-install*
+
+Requirements:
+
+- Vim 8.1+ or Neovim 0.3+
+- Certain features (e.g. async, cmdline completion) are only enabled in Neovim
+- Default async search needs Python 3 enabled
+
+==============================================================================
+3. Options                          *wilder-options*
+
+Options can be set using the |wilder#set_option| function.
+
+                                    *wilder#set_option()*
+wilder#set_option({name}, {value})
+            Sets the option {name} to the given {value}.
+            E.g.
+>
+            call wilder#set_option('foo', 'bar')
+<
+
+wilder#set_option({dict})
+            For each {key}-{value} pair of the |Dictionary|, sets the option
+            {key} to the given {value}.
+>
+            call wilder#set_option({'foo': 'bar'})
+<
+
+
+modes                               *wilder-option-modes*
+            List of modes which wilder will be active in.
+            Possible elements: '/', '?' and ':'
+
+            Default: ['/', '?']
+
+use_cmdlinechanged                  *wilder-option-use_cmdlinechanged*
+            If true, wilder will refresh queries when the |CmdlineChanged|
+            autocommand is triggered.
+            Otherwise it will use a |timer| to check whether the cmdline has
+            changed.
+            Using a timer will be more resource intensive.
+
+            Default: exists('##CmdlineChanged')
+
+interval                            *wilder-option-interval*
+            Interval of the |timer| used to check whether the cmdline has
+            changed, in milliseconds.
+            Only applicable if the {use_cmdlinechanged} option is false.
+
+            Default: 100
+
+before_cursor                       *wilder-option-before_cursor*
+            If true, wilder will look only at the part of the cmdline before
+            the cursor, and when selecting a completion, the entire cmdline
+            will be replaced.
+            Only applicable if the {use_cmdlinechanged} option is false.
+
+            Default: 0
+
+num_workers                         *wilder-option-num_workers*
+            Number of workers for the Python 3 |remote-plugin| when using
+            |wilder-pipeline-python_search|.
+            Has to be set at startup, before wilder is first run. Setting the
+            option after the first run has no effect.
+
+            Default: 2
+
+pipeline                            *wilder-option-pipeline*
+            Sets the pipeline to use to get completions.
+            See |wilder-pipeline|.
+
+            Default: |wilder#search_pipeline()| for Vim
+                     |wilder#cmdline_pipeline()| and
+                     |wilder#python_search_pipeline()| for Neovim
+
+renderer                            *wilder-option-renderer*
+            Sets the renderer to used to display the completions.
+            See |wilder-renderer|.
+
+            Default: |wilder#statusline_renderer()| with
+                     |wilder#previous_arrow()| and |wilder#next_arrow()|
+
+pre_hook                            *wilder-option-pre_hook*
+            A function which takes a {ctx}. This function is called when
+            wilder starts, or when wilder becomes unhidden. See
+            |wilder-hidden|.
+
+            {ctx} contains no keys.
+
+            Default: None
+
+post_hook                           *wilder-option-post_hook*
+            A function which takes a {ctx}. This function is called when
+            wilder stops, or when wilder becomes hidden. See
+            |wilder-hidden|.
+
+            {ctx} contains no keys.
+
+            Default: None
+
+==============================================================================
+4. Pipeline                         *wilder-pipeline*
+
+The pipeline is used to get completions from a given query. Use
+|wilder-option-pipeline| to set the pipeline.
+
+A pipeline is a list of functions. Each function is takes a {ctx} context
+object and a {x} value and returns a new {x} value. The resulting {x} is then
+passed to the next function in the list. The first element is passed the
+current cmdline. The result of the last element will be the completions for
+that query. See |wilder-pipeline-context| for what {ctx} contains.
+
+A contrived example:
+>
+    wilder#set_option('pipeline', [
+      \   {ctx, x -> [x, 'foo', 'bar']},
+      \   ])
+<
+This will return the 3 completions, the current cmdline and the strings 'foo'
+and 'bar'.
+
+The result of the pipeline should be a list. The elements of the list can
+either be a string or a |Dictionary| with a certain set of keys. See
+|wilder-pipeline-result| for more details on what the dictionary should
+contain.
+
+There are 3 special types of values, which when returned in the middle of the
+pipeline, will cause the pipeline to stop. These are `v:false` `v:true` and
+functions. See |wilder-pipeline-v:false|, |wilder-pipeline-v:true| and
+|wilder-pipeline-return-function| for more details on what these special
+values mean, and how theye are handled.
+
+A component can throw an exception which will also cause the pipeline to stop.
+
+wilder provides some built-in pipeline functions, known as pipeline
+components. Combine these components with your own functions to create a
+custom pipeline. In particular, use |wilder#branch| to add control flow to
+your pipeline. See |wilder-pipeline-components| for the list of components.
+
+wilder also provides built-in pipelines. These pipelines can be combined with
+|wilder#branch|. See |wilder-pipelines| for the list of pipelines.
+
+                                    *wilder-pipeline-context*
+The first argument to a pipeline component is a {ctx} context object. The
+context is a |Dictionary| containing the following keys:
+
+                `input`
+                The input to the first element of the pipeline.
+
+                `run_id`
+                A number to indicate the current pipeline running.
+
+Although it is not recommended, components can use the {ctx} to pass
+information to subsequent components.
+
+                                    *wilder-pipeline-v:false*
+Returning the |v:false| in a pipeline component will cause the pipeline to
+stop and return |v:false|. |v:false| indicates to wilder to not continue on
+with the pipeline, and treat it as though there are no completions. use this
+to return early from a pipeline based on certain conditions.
+
+Example:
+>
+    wilder#set_option('pipeline', [
+      \   {ctx, x -> empty(x) ? v:false : x},
+      \   {ctx, x -> MyCompletionFunction(x)},
+      \   ]
+<
+This pipeline will terminate early if the cmdline is empty.
+Since this is a common pattern, it is provided as the |wilder#check()|
+component.
+
+                                    *wilder-pipeline-v:true*
+                                    *wilder-hidden*
+Returning the |v:true| in a pipeline component is the same as returning
+|v:true|, except that it has the added behaviour of causing wilder to be
+hidden. When wilder is hidden, |wilder#in_context()| will return false, and
+wilder will not be rendered. Note that wilder is still enabled, and will still
+be handle completions and be shown again when the next pipeline returns a
+non-|v:true| value.
+
+                                    *wilder-pipeline-return-function*
+Returning a function {f} in a pipeline component will cause the pipeline to be
+suspended. The returned function will then be called with a new {ctx}.
+|wilder#on_finish()| should be called, with {ctx}, and the result {x} as
+arguments. The original {ctx} from the parent function can be ignored.
+The pipeline will then be resumed, and the {x} value will be passed on to the
+next component. If there is an error, |wilder#on_error()| should be called
+instead, with {ctx} and {error} as arguments.
+Note exactly one of |wilder#on_finish()| or |wilder#on_error()| has to be
+called. Not calling either will result in a memory leak, and calling more than
+one will result in an error.
+
+Example:
+>
+    wilder#set_option('pipeline', [
+      \   {_, x -> {ctx -> timer_start(100, {-> wilder#on_finish(ctx, x)})}},
+      \   {ctx, x -> MyCompletionFunction(x)},
+      \   ]
+<
+This will call `MyCompletionFunction` after a 100 millisecond delay.
+
+Use this behaviour to create async pipeline components.
+
+                                    *wilder-pipeline-result*
+The result of the pipeline should be a list. The elements of the list can
+either be a string or a Result |Dictionary| containing a specific set of keys.
+
+The Result dictionary allows you to change how the candidate is handled. For
+example, you may wish to escape certain characters when drawing the candidate
+or only change certain parts of the cmdline when the candidate is selected.
+
+A Result dictionary has the following keys:
+
+            `value`
+            Mandatory~
+            The completion candidate.
+
+            `draw`
+            Optional~
+            A function which takes a {ctx} and {x} and returns a string
+            representing how {x} will be drawn by the renderer.
+
+            The keys of {ctx} are:
+                `selected`
+                The index of the selected candidate. -1 indicates no selection.
+
+                `i`
+                The index of the {x} in the list of candidates.
+
+            Default: None
+
+            `output`
+            Optional~
+            A function which takes a {ctx} and {x} and returns a string
+            representing how {x} will be output when selected as a completion
+            candidate.
+
+            {ctx} contains no keys.
+
+            Default: None
+
+            `replace`
+            Optional~
+            A function which takes a {ctx} and {x} and returns the cmdline to
+            replace the current one. The cmdline is only replaced up to
+            where the cursor is.
+
+            {ctx} contains no keys.
+
+            Default: {_, x -> x}
+
+The flow of the pipeline goes like this:
+1. The pipeline starts with the current cmdline as the input
+2. The pipeline finishes with a list, containing strings and/or Results.
+3. For each completion candidate {x}, it is drawn by the renderer.
+   If {x} is a string, it is passed directly to the renderer.
+   If {x} is a dictionary, and has no `draw` key, its `value` entry is passed
+   to the renderer.
+   If {x} is a dictionary and has a `draw` entry, `draw` is called, with the
+   {x} argument being the `value` entry of the dictonary. The result of `draw`
+   is then passed to the renderer.
+4. When a candidate {x} is selected, its value can be modified before
+   inserting it to the cmdline.
+   If {x} is a string, it is unchanged.
+   If {x} is a dictionary, and has no `output` key, its `value` entry will be
+   used.
+   If {x} is a dictionary and has a `output` entry, `output` is called, with
+   the {x} argument being the `value` entry of the dictonary. The result of
+   `output` will be used.
+5. Finally, the string or output from above will be inserted to the cmdline.
+   See |wilder-option-before_cursor| on which part of the cmdline will be
+   replaced.
+   If {x} is a dictionary and has a `replace` entry, `replace` is called, with
+   the {x} argument being the result from the step 4. The result of the
+   `replace` function will be inserted.
+   Otherwise, the result from step 4 will be inserted.
+
+The |wilder#result()| pipeline component is a helper component which allows
+easy modification of the result list.
+
+COMPONENTS                          *wilder-pipeline-components*
+
+wilder#check({f}, |...|)            *wilder#check()*
+            Takes a variadic list of functions. The functions should take
+            {ctx} and {x} as arguments and return true or false.
+            If any of the functions return false, this component will return
+            |v:false|.
+            Returns {x} otherwise.
+
+wilder#branch({list_of_pipelines})  *wilder#branch()*
+            Takes a list of pipelines. The pipelines should be a list of
+            components.
+            Sequentially runs each of the pipelines, using the {ctx} and {x}
+            passed to the branch component.
+            {ctx} is copied, and will not be shared between the pipelines.
+            If the result of a pipeline is |v:false|, the next pipeline will
+            be run.
+            If the result of a pipeline is a non-|v:false| value {x}, this
+            component will return {x}.
+            If the result of all  the pipelines are |v:false|, this component
+            will return |v:false|.
+            Use this to add control flow to pipelines.
+
+            Example:
+>
+                wilder#set_option('pipeline', [
+                  \   wilder#branch(
+                  \     [
+                  \       wilder#check({ctx, x -> empty(x)}),
+                  \       wilder#history(),
+                  \     ],
+                  \     wilder#search_pipeline(),
+                  \   ),
+                  \   ]
+<
+            This pipeline will return completions from the history is {x} is
+            empty.
+
+                                    *wilder#history()*
+wilder#history([{max_num}, [{cmdtype}]])
+            A component which returns up to {max_num} values from the
+            |history| of {cmdtype}.
+            By default, {max_num} is treated as 50.
+            Passing zero or a negative value of {max_num} will result in no
+            limit.
+            By default, {cmdtype} is the value of |getcmdtype()|.
+            See |hist-names| for the possible values of {cmdtype}
+
+wilder#vim_substring()              *wilder#vim_substring()*
+            Takes a string and appends it with a substring regex.
+
+wilder#vim_search([{options}])      *wilder#vim_search()*
+            Takes a regex and searches the current buffer for completions
+            matching the regex. Returns a list of unique strings.
+
+            Options:
+            `max_candidates`
+            Maximum number of candidates to return.
+            0 or less sets no limit.
+
+            Default: 300
+
+wilder#vim_sort()                   *wilder#vim_sort()*
+            Takes a list and returns a sorted copy of the list.
+
+wilder#vim_uniq()                   *wilder#vim_uniq()*
+            Takes a list and returns a uniq-ed copy of the list.
+
+wilder#python_substring()           *wilder#python_substring()*
+            Takes a string and appends it with a Python substring regex.
+
+                                    *wilder#python_fuzzy_match()*
+wilder#python_fuzzy_match([{options}])
+            Takes a string and converts it into a Python fuzzy regex.
+            The string is split into characters and the fuzzy regex for `word`
+            is added in between each character.
+
+            Options:
+            `word`
+            Word character for the Python regex.
+
+            Default: '\w'
+
+                                    *wilder#python_fuzzy_delimiter()*
+wilder#python_fuzzy_delimiter([{options}])
+            Takes a string and converts it to a Python regex by splitting the
+            string into characters. Each character either follows directly
+            from the previous one, or is the start of a delimited region.
+            The start of a delimited region is either
+            1. a `delimiter` character followed by a character
+            2. An uppercase character
+
+            e.g.
+            `fb` matches `FooBar`, `foo_bar`, `fooBar`
+                 but not `foobar` since `bar` is not delimited
+
+            Options:
+            `word`
+            Python regex for word characters
+
+            Default: '\w'
+
+            `delimiter`
+            Python regex for delimiter characters
+
+            Default: '[_-]'
+
+wilder#python_search([{options}])   *wilder#python_search()*
+                                    Neovim only~
+                                    Async~
+            Takes a regex and searches the current buffer for completions
+            matching the regex using Python 3.
+            Returns a list of unique strings.
+
+            Options:
+            `max_candidates`
+            Maximum number of candidates to return.
+            0 or less sets no limit.
+
+            Default: 300
+
+            `engine`
+            Regex engine to use. Has to be compatible with Python 3's `re`
+            module.
+            For faster completions, `re2` is recommended, but needs to be
+            installed.
+
+            Default: 're'
+
+wilder#python_sort()                *wilder#python_sort()*
+                                    Neovim only~
+                                    Async~
+            Takes a list and returns a sorted copy of the list.
+
+wilder#python_uniq()                *wilder#python_uniq()*
+                                    Neovim only~
+                                    Async~
+            Takes a list and returns a uniq-ed copy of the list.
+
+wilder#result([{dictionary}])       *wilder#result()*
+            Takes a dictionary and returns a component which will transform a
+            list into a list of Result dictonaries. See |wilder-pipeline-result|
+            for more information on how the Result dictionary is used.
+
+            For each element in the input to the component, if the element is
+            a string, it is converted into a dictionary with `value` entry as
+            the string.
+
+            For the `value` {key} of the dictionary, the {value} should be a
+            function which takes a {ctx} and the current value of the Result
+            {x} and returns the new `value` for the Result.
+
+            For each other {key}-{value} pair of the dictionary, {value}
+            should be a function which takes a {ctx}, {x} and {prev} and
+            returns the the new entry for {key} in the Result.
+
+            {ctx} contains the following keys if the {key} is `draw`:
+                `i`
+                The position of {x} in the list of candidates.
+
+                `selected`
+                True if {x} currently is selected.
+
+            Otherwise, the {ctx} contains no keys.
+
+            {prev} is a function which takes a {ctx}, {x} and {default} and
+            returns the new {value}. Passing the current {ctx} and {x} value
+            will return the result of evaluating the previous Result's {value}
+            with the same {key}. If the previous Result does not have an entry
+            for {key}, {default} is used.
+
+            {default} can be omitted as a shorthand for prev(ctx, x, x).
+
+            For example:
+>
+            [
+            \ {ctx, x -> MyCompletionFunction(x)},
+            \ wilder#result({'draw': {ctx, x -> (ctx['i'] + 1) . '. ' . x}}),
+            \ wilder#result({'draw': {ctx, x, prev -> ctx['selected'] ?
+            \                         '[' . prev(ctx, x) . ']' :
+            \                         prev(ctx, x)}}),
+            \ ]
+<
+            This pipeline will first prepend the index of the candidate and
+            then surround it with square brackets if it is currently selected.
+
+
+                                    *wilder#result_output_escape()*
+wilder#result_output_escape({chars})
+            Helper function which returns a |wilder#result()| which escapes
+            {chars} in the Result output.
+
+PIPELINES                           *wilder-pipelines*
+
+wilder#vim_search_pipeline()        *wilder#vim_search_pipeline()*
+            Returns a pipeline which does Vim substring search.
+
+wilder#python_search_pipeline()     *wilder#python_search_pipeline()*
+                                    Neovim only~
+                                    Async~
+            Returns a pipeline which does Python substring search.
+
+wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
+                                    Neovim only~
+            Returns a pipeline which returns cmdline completions.
+
+            Options:
+            `hide`
+            When true, hides wilder when inccommand is active.
+            See |wilder-hidden|.
+            See https://github.com/neovim/neovim/issues/9777.
+
+            Default: 1
+
+                                    *wilder#substitute_pipeline()*
+wilder#substitute_pipeline([{opts}])
+            Returns a pipeline which runs the given pipeline when in a
+            |:substitute| command.
+            Uses the {search} section of the command as the argument.
+
+            Options:
+            `hide`
+            When true, hides wilder when inccommand is active and not in the
+            {pattern} section of the |:substitute| command.
+            See |wilder-hidden|.
+            See https://github.com/neovim/neovim/issues/9777.
+
+            Default: 1
+
+            `pipeline`
+            The pipeline to pass the {search} section to.
+
+            Default: For vim: [
+                     \ wilder#vim_substring(),
+                     \ wilder#vim_search(),
+                     \ wilder#result_output_escape('^$,*~[]/\'),
+                     \ ])
+                     For nvim: [
+                     \ wilder#python_substring(),
+                     \ wilder#python_search(),
+                     \ wilder#result_output_escape('^$,*~[]/\'),
+                     ]
+
+==============================================================================
+5. Renderer                         *wilder-renderer*
+
+The renderer is used to draw wilder and the completion candidates on the
+screen. Use |wilder-option-renderer| to set the renderer.
+
+A renderer is a dictionary containing the following keys:
+
+            `render`
+            Mandatory~
+            A function which takes a {ctx} and the pipeline result {xs} and
+            does the necessary actions to draw the results on the screen.
+
+            The keys of {ctx} are:
+                `selected`
+                The index of the selected candidate. -1 indicates no selection.
+
+                `direction`
+                A number to indicate the whether the previous candidate or the
+                next candidate was selected. 1 indicates the next candidate,
+                -1 indicates the previous candidate, 0 indicates that there
+                was no change.
+
+                `done`
+                A boolean to indicate whether the current pipeline has finished.
+
+                `has_error`
+                True if the pipeline resulted in an error.
+
+                `clear_previous`
+                A boolean to indicate whether the previous state should be
+                cleared.
+
+            `pre_hook`
+            Optional~
+            A function which takes a {ctx}. This function is called when
+            wilder starts, or when wilder becomes unhidden. See
+            |wilder-hidden|.
+
+            {ctx} contains no keys.
+
+            `post_hook`
+            Optional~
+            A function which takes a {ctx}. This function is called when
+            wilder stops, or when wilder becomes hidden. See
+            |wilder-hidden|.
+
+            {ctx} contains no keys.
+
+There are two in-built renderers, one using the statusline and one using a
+floating window.
+
+                                    *wilder#statusline_renderer()*
+wilder#statusline_renderer([{opts}])
+            Returns a renderer which draws the results on the statusline of
+            the current window.
+
+            Options:
+            `hl`
+            Optional~
+            The default highlight group.
+
+            Default: 'StatusLine'
+
+            `selected_hl`
+            Optional~
+            The highlight group for the selected candidate.
+
+            Default: 'WildMenu'
+
+            `error_hl`
+            Optional~
+            The highlight group of error messages.
+
+            Default: 'StatusLine'
+
+            `separator`
+            Optional~
+            The separator between candidates.
+
+            Default: '  '
+
+            `ellipsis`
+            Optional~
+            The string to appended to a candidate if it is too long. The
+            candidate is first truncated.
+
+            Default: '...'
+
+            `left`
+            Optional~
+            The components rendered on the left of the candidates.
+            See |wilder-renderer-components|.
+
+            Default: [wilder#previous_arrow()]
+
+            `right`
+            Optional~
+            The components rendered on the right of the candidates.
+            See |wilder-renderer-components|.
+
+            Default: [wilder#next_arrow()]
+
+wilder#float_renderer([{opts}])     *wilder#float_renderer()*
+                                    Experimental~
+            Requires Neovim 0.4+ with floating window API. Returns a renderer
+            which draws the results on a floating window just above the
+            cmdline.
+            Uses the same options as |wilder#statusline_renderer|.
+
+COMPONENTS                          *wilder-renderer-components*
+                                    *wilder-renderer-component*
+
+Both |wilder#statusline_renderer()| and |wilder#float_renderer()| use the same
+components.
+
+Components can be of the following types:
+
+            String:
+            The value of the string will be drawn. To change its highlight
+            group, see the entry for Dictionary.
+
+            List:
+            A list of |wilder-renderer-components|. Any component can be in
+            the list, even other nested lists.
+            Components of the list are drawn in sequence.
+
+            Dictionary:
+            A dictionary with the following keys:
+                `value`
+                Mandatory~
+                A |wilder-renderer-component|. Can be nested.
+
+                `len`
+                Optional~
+                Used to determine the display width taken up by the component.
+                Can be of the following types:
+
+                    Number:
+                    The value of the number is used.
+
+                    Function:
+                    A function which takes a {ctx} and the list of Results
+                    {xs} and returns the display width taken up by the
+                    component.
+                    The keys of {ctx} are the same as the ones in the `render`
+                    key of |wilder-renderer|.
+
+                Default: None
+
+                `hl`
+                Optional~
+                The highlight group to use when drawing this component.
+
+                Default: The `hl` option for the renderer.
+
+                `pre_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder starts, or when wilder becomes unhidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `post_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder stops, or when wilder becomes hidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+            Function:
+            A function which takes a {ctx} and the list of Results {xs} and
+            returns a component.
+
+Before drawing the results, the amount of space available needs to be
+calculated. This is done by calculating the total space taken by the
+components, and then subtracting that from the total space available.
+
+For String components, it is the |strdisplaywidth()| of the string.
+For List components, it is the sum of the space used by the nested components.
+For Dictionary components, if it has no `len` entry, the space taken by the
+`value` entry is calculated. Otherwise, the `len` entry is used if it is a
+Number, or the result of calling the `len` entry is used.
+For Function components, the function is called, and the space used of the
+result is calculated.
+
+This means that when using Dictionary components, the `len` entry has to be
+consistent with the `value` entry, otherwise the rendering will not be
+correct.
+
+When drawing the results, the components are evaluated.
+
+For String components, the string itself is used.
+For List components, each element is evaluated and then drawn in sequence.
+For Dictionary components, the `value` entry is evaluated.
+For Function components, the function is called, and its result evaluated.
+If any of these result in another |wilder-renderer-component|, it is evaluated
+again.
+
+The default highlight group used for the result is the `hl` option passed to
+the renderer. To change the highlight group, use a Dictionary component
+together with |wilder#make_hl()|.
+
+Here is the list of in-built components:
+
+wilder#previous_arrow([{opts}])     *wilder#previous_arrow()*
+            Returns a component which shows a previous arrow when there are
+            previous candidates which do not fit in the current view.
+            Note Has to be used with |wilder#next_arrow()|, otherwise the
+            `len` entry will not be evaluated correctly.
+
+            Options:
+            `previous`
+            Optional~
+            The arrow to be drawn.
+
+            Default: '< '
+
+            `hl`
+            Optional~
+            The highlight group to use.
+
+            Default: None
+
+wilder#next_arrow([{opts}])         *wilder#next_arrow()*
+            Returns a component which shows a next arrow when there are
+            additional candidates which do not fit in the current view.
+            Note Has to be used with |wilder#previous_arrow()|, otherwise the
+            `len` entry will not be evaluated correctly.
+
+            Options:
+            `next`
+            Optional~
+            The arrow to be drawn.
+
+            Default: ' >'
+
+            `previous`
+            Optional~
+            The arrow to be drawn used by |wilder#previous_arrow()|.
+
+            Default: '< '
+
+            `hl`
+            Optional~
+            The highlight group to use.
+
+            Default: None
+
+wilder#index([{opts}])              *wilder#index()*
+            Returns a component which shows the index of the currently
+            selected candidate and the total number of candidates.
+            For example, if there are 10 candidates and the 5th one is
+            selected, it will draw ' 5/10'.
+
+            Options:
+            `hl`
+            Optional~
+            The highlight group to use.
+
+            Default: None
+
+wilder#spinner([{opts}])            *wilder#spinner()*
+            Returns a component which indicates whether the current pipeline
+            is still running.
+
+            Options:
+            `frames`
+            Optional~
+            The frames to use for the spinner. If it is a string, the string
+            is split into characters and each character is a frame. Otherwise,
+            it should be a list of strings.
+
+            Default: ['-', '\', '|', '/'']
+
+            `done`
+            Optional~
+            The string to display when the pipeline is done, or when there is
+            no pipeline running, or when the `delay` timeout has not been
+            reached.
+
+            Default: ' '
+
+            `delay`
+            Optional~
+            The time in milliseconds before the spinner should show.
+
+            Default: 50
+
+            `interval`
+            Optional~
+            The time in milliseconds for each frame.
+
+            Default: 100
+
+                                    *wilder#separator()*
+wilder#separator({str}, {fg}, {bg}, [{key}])
+            Helper function to draw an airline-like separator.
+            {str} should be the separator character
+            {fg} is the highlight group from which the |highlight-ctermfg| and
+            |highlight-guifg| should be from.
+            {bg} is the highlight group from which the |highlight-ctermbg| and
+            |highlight-guibg| should be from.
+            {key} is an optional argument which will be used to name the new
+            highlight group. Otherwise, a new name will be generated.
+
+                                    *wilder#predicate()*
+wilder#condition({predicate}, {if_true}, [{if_false}])
+            Returns a component which renders the given components based on
+            the {predicate}.
+            {predicate} is a function which takes a {ctx} and the list of
+            Results {xs} and returns true or false.
+            The keys of {ctx} are the same as the ones in the `render` key of
+            |wilder-renderer|.
+            If the result is true, {if_true} is used the component. Otherwise
+            {if_false} is used. If {if_false} is not given, no component is
+            drawn.
+
+==============================================================================
+6. API                              *wilder-API*
+
+wilder#in_context()                 *wilder#in_context()*
+            Returns true if wilder is enabled, is in one of the modes set in
+            the |wilder-option-modes| and is not hidden (see |wilder-hidden|).
+
+            Example usage:
+>
+            cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
+            cmap <expr> <S-Tab> wilder#in_context() ?
+                \ wilder#previous() :
+                \ "\<S-Tab>"
+<
+
+wilder#enable_cmdline_enter()       *wilder#enable_cmdline_enter()*
+            Creates a new |CmdlineEnter| autocmd to which will start wilder
+            when the cmdline is entered.
+
+wilder#enable()                     *wilder#enable()*
+            Enables wilder.
+
+wilder#disable()                    *wilder#disable()*
+            Disables wilder.
+
+wilder#toggle()                     *wilder#toggle()*
+            Enables wilder if it is disabled. Disables it otherwise.
+
+wilder#next()                       *wilder#next()*
+            Select the next completion candidate.
+
+wilder#previous()                   *wilder#previous()*
+            Select the previous completion candidate.
+
+wilder#can_accept_completion()      *wilder#can_accept_completion()*
+            Returns true if |wilder#in_context()| is true, and there is a
+            completion which can be accepted.
+
+wilder#can_reject_completion()      *wilder#can_reject_completion()*
+            Returns true if |wilder#in_context()| is true, and there is a
+            completion which can be rejected.
+
+wilder#accept_completion()          *wilder#accept_completion()*
+            Accepts the current completion. Mainly used when in |menus| in
+            cmdline mode.
+
+            Example:
+>
+            cmap <expr> <Down> wilder#can_accept_completion() ?
+                \ wilder#accept_completion() :
+                \ "\<Down>"
+<
+
+wilder#reject_completion()          *wilder#reject_completion()*
+            Rejects the current completion. Mainly used when in |menus| in
+            cmdline mode.
+
+            Example:
+>
+            cmap <expr> <Up> wilder#can_reject_completion() ?
+                \ wilder#reject_completion() :
+                \ "\<Up>"
+<
+
+wilder#on_finish({ctx}, {x})        *wilder#on_finish()*
+            Called to continue from an async component in the
+            |wilder-pipeline|.
+            See |wilder-pipeline-return-function|.
+
+wilder#on_error({ctx}, {err})       *wilder#on_error()*
+            Called to throw an error from an async component in the
+            |wilder-pipeline|.
+            See |wilder-pipeline-return-function|.
+
+wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
+            Used to start wilder from normal mode. To be used when the current
+            Vim or Neovim version does not support the |CmdlineEnter| autocmd.
+
+            Example:
+>
+            nnoremap <expr> / wilder#start_from_normal_mode() . '/'
+            nnoremap <expr> : wilder#start_from_normal_mode() . ':'
+<
+
+wilder#make_hl({name}, {args})      *wilder#make_hl()*
+            Helper function to create a highlight group.
+            Creates a highlight group with the given {name} based on {args}.
+            These highlight groups will be recreated each time wilder is
+            started, or is unhidden (see |wilder-hidden|).
+            Returns {name}.
+
+            Args can be of the types:
+
+            String:
+            A |:hi-link| is made to the given highlight group.
+
+            List:
+            The list should be of the form:
+            [{term_hl}, {cterm_hl}, {guiterm_hl}]
+
+            Each entry can be of the types:
+                List:
+                [{fg}, {bg}] or [{fg}, {bg}, {attr-list}]
+                where {fg} and {bg} are numbers or strings, and {attr-list} is
+                a list of strings.
+                For {term_hl}, the first 2 elements are ignored.
+
+                Example:
+>
+                call wilder#make_hl('MyHighlight', [
+                    \ [0, 0, 'bold'],
+                    \ [1, 2],
+                    \ ['#000', '#fff', 'bold'],
+                    \ ])
+<
+
+                Dictionary:
+                The dictionary is similar to the one returned from
+                |nvim_get_hl_by_name|.
+                The dictionary has the following keys:
+
+                `foreground`
+                Optional~
+                The foreground highlight.
+
+                Default: 'NONE'
+
+                `background`
+                Optional~
+                The background highlight.
+
+                Default: 'NONE'
+
+                `bold`
+                Optional~
+                Whether the highlight group has the bold attribute.
+
+                Default: v:false
+
+                `italic`
+                Optional~
+                Whether the highlight group has the italic attribute.
+
+                Default: v:false
+
+                `reverse`
+                Optional~
+                Whether the highlight group has the reverse attribute.
+
+                Default: v:false
+
+                `standout`
+                Optional~
+                Whether the highlight group has the standout attribute.
+
+                Default: v:false
+
+                `underline`
+                Optional~
+                Whether the highlight group has the underline attribute.
+
+                Default: v:false
+
+                `undercurl`
+                Optional~
+                Whether the highlight group has the undercurl attribute.
+
+                Default: v:false
+
+                Example:
+>
+                call wilder#make_hl('MyHighlight', [
+                    \ {},
+                    \ {'foreground': 1, 'background': 2},
+                    \ {'foreground': '#000', 'background': '#fff',
+                    \   'bold': v:true},
+                    \ ])
+<
+
+==============================================================================
+7. Configurations                   *wilder-configurations*
+
+Here are some example configurations:
+
+Minimal Configuration~
+>
+    set wildcharm=<Tab>
+
+    call wilder#enable_cmdline_enter()
+
+    cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
+    cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+
+    " enable cmdline completion (for Neovim only)
+    call wilder#set_option('modes', ['/', '?', ':'])
+<
+
+More Pipelines~
+>
+    " add minimal configuration
+
+    call wilder#set_option('pipeline', [
+          \   wilder#branch(
+          \     [
+          \       wilder#check({_, x -> empty(x)}),
+          \       wilder#history(100),
+          \     ],
+          \     wilder#cmdline_pipeline(),
+          \     [
+          \       wilder#python_fuzzy_delimiter(),
+          \       wilder#python_search({'engine': 're2'}),
+          \       wilder#result_output_escape('^$,*~[]/\'),
+          \     ],
+          \   ),
+          \ ])
+<
+
+Airline/Lightline Theme Renderer~
+>
+    " add minimal configuration
+    " add pipeline configuration
+
+    " for vim-airline
+    let s:status_hl = wilder#make_hl('WilderStatus', 'airline_c')
+    let s:mode_hl = wilder#make_hl('WilderMode', 'airline_a')
+    let s:index_hl = wilder#make_hl('WilderIndex', 'airline_z')
+
+    " for lightline.vim
+    let s:status_hl = wilder#make_hl('WilderStatus', 'LightlineMiddle_active')
+    let s:mode_hl = wilder#make_hl('WilderMode', 'LightlineLeft_active_0')
+    let s:index_hl = wilder#make_hl('WilderIndex', 'LightlineRight_active_0')
+
+    call wilder#set_option('renderer', wilder#statusline_renderer({
+          \ 'hl': s:status_hl,
+          \ 'left': [
+          \    {'value': [' WILDER ', wilder#spinner()], 'hl': s:mode_hl},
+          \    wilder#separator('', s:mode_hl, s:status_hl, 'left'), ' ',
+          \ ],
+          \ 'right': [
+          \    ' ', wilder#separator('', s:index_hl, s:status_hl, 'right'),
+          \    wilder#index({'hl': s:index_hl}),
+          \ ],
+          \ }))
+<
+
+
+==============================================================================
+ vim:tw=78:ts=4:ft=help:norl:expandtab:

@@ -5,7 +5,7 @@ function! wilder#render#component#spinner#make(args) abort
   endif
 
   let l:done = get(a:args, 'done', ' ')
-  let l:delay = get(a:args, 'delay', 0)
+  let l:delay = get(a:args, 'delay', 50)
   let l:interval = get(a:args, 'interval', 100)
 
   let l:state = {
@@ -20,8 +20,8 @@ function! wilder#render#component#spinner#make(args) abort
         \ }
 
   return {
-        \ 'value': {ctx, x -> s:spinner(l:state, ctx, x)},
-        \ 'len': {ctx, x -> strdisplaywidth(s:get_char(l:state, ctx, x))},
+        \ 'value': {ctx, xs -> s:spinner(l:state, ctx, xs)},
+        \ 'len': {ctx, xs -> strdisplaywidth(s:get_char(l:state, ctx, xs))},
         \ 'hl': get(a:args, 'hl', ''),
         \ }
 endfunction

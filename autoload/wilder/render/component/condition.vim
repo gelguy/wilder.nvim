@@ -7,26 +7,18 @@ function! wilder#render#component#condition#make(predicate, if_true, if_false) a
         \ }
 
   return {
-        \ 'value': {ctx, x -> s:value(l:state, ctx, x)},
+        \ 'value': {ctx, xs -> s:value(l:state, ctx, xs)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  for l:Component in a:state.if_true + a:state.if_false
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
-      call l:Component.pre_hook(a:ctx)
-    endif
-  endfor
+  call wilder#render#components_pre_hook(a:state.if_true + a:state.if_false, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  for l:Component in a:state.if_true + a:state.if_false
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
-      call l:Component.post_hook(a:ctx)
-    endif
-  endfor
+  call wilder#render#components_post_hook(a:state.if_true + a:state.if_false, a:ctx)
 endfunction
 
 function! s:value(state, ctx, xs) abort
