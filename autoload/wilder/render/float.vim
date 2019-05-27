@@ -11,7 +11,6 @@ function! wilder#render#float#renderer(args) abort
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
         \ 'error_hl': get(a:args, 'error_hl', 'StatusLine'),
-        \ 'separator_hl': get(a:args, 'separator_hl', 'StatusLine'),
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
@@ -28,6 +27,12 @@ function! wilder#render#float#renderer(args) abort
   else
     let l:state.left = get(a:args, 'left', [])
     let l:state.right = get(a:args, 'right', [])
+  endif
+
+  if has_key(a:args, 'separator_hl')
+    let l:state.separator_hl = get(a:args, 'separator_hl')
+  else
+    let l:state.separator_hl = l:state.hl
   endif
 
   return {
