@@ -1,39 +1,45 @@
 function! wilder#cmdline#let#do(ctx)
-  if a:ctx.cmd ==# 'let' &&
-        \ match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]') == -1
-    " let var1 var2 ...
-    let l:arg_start = a:ctx.pos
+  if a:ctx.cmd ==# 'let'
+    let a:ctx.expand = 'user_vars'
+    if match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]') == -1
+      " let var1 var2 ...
+      let l:arg_start = a:ctx.pos
 
-    while a:ctx.pos < len(a:ctx.cmdline)
-      if wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-        let l:arg_start = a:ctx.pos + 1
-      endif
+      while a:ctx.pos < len(a:ctx.cmdline)
+        if wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+          let l:arg_start = a:ctx.pos + 1
+        endif
 
-      let a:ctx.pos += 1
-    endwhile
+        let a:ctx.pos += 1
+      endwhile
 
-    let a:ctx.pos = l:arg_start
+      let a:ctx.pos = l:arg_start
 
-    return
+      return
+    endif
+  else
+    let a:ctx.expand = a:ctx.cmd ==# 'call' ? 'functions' : 'expression'
   endif
 
-  let l:expand_type = a:ctx.cmd ==# 'call' ? 'func' : 'expr'
   let l:got_eq = 0
 
   let l:arg_start = a:ctx.pos
 
   while a:ctx.pos < len(a:ctx.cmdline)
-    let l:char = a:ctx.cmdline[a:ctx.pos]
+    let l:match = match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]')
 
-    if match(l:char, '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]') != -1
+    if l:match != -1
+      let a:ctx.pos += l:match
+      let l:char = a:ctx.cmdline[a:ctx.pos]
+
       if l:char ==# '&' && a:ctx.pos < len(a:ctx.cmdline)
         if a:ctx.cmdline[a:ctx.pos + 1] ==# '&'
           let a:ctx.pos += 1
-          let l:expand_type = a:ctx.cmd ==# 'let' || l:got_eq ?
-                \ 'expr' :
+          let a:ctx.expand = (a:ctx.cmd ==# 'let' || l:got_eq) ?
+                \ 'expression' :
                 \ 'nothing'
         elseif l:char !=# ' '
-          let l:expand_type = 'settings'
+          let a:ctx.expand = 'settings'
           if a:ctx.pos + 2 < len(a:ctx.cmdline) &&
                 \ (a:ctx.cmdline[a:ctx.pos + 1] ==# 'l' ||
                 \ a:ctx.cmdline[a:ctx.pos + 2] ==# 'g') &&
@@ -42,16 +48,16 @@ function! wilder#cmdline#let#do(ctx)
           endif
         endif
       elseif l:char ==# '$'
-        let l:expand_type = 'env_var'
+        let a:ctx.expand = 'env_vars'
       elseif l:char ==# '='
         let l:got_eq = 1
-        let l:expand_type = 'expr'
-      elseif l:char ==# '#' && l:expand_type ==# 'expr'
+        let a:ctx.expand = 'expression'
+      elseif l:char ==# '#' && a:ctx.expand ==# 'expression'
         " this doesn't look correct
         " but we follow the wildmenu implementation
         break
       elseif (l:char ==# '<' || l:char ==# '#') &&
-            \ l:expand_type ==# 'func' &&
+            \ a:ctx.expand ==# 'functions' &&
             \ stridx(a:ctx.cmdline[a:ctx.pos + 1 :], '(') == -1
         " this doesn't look correct either
         break
@@ -70,7 +76,7 @@ function! wilder#cmdline#let#do(ctx)
             let a:ctx.pos += 1
           endwhile
 
-          let l:expand_type = 'nothing'
+          let a:ctx.expand = 'nothing'
         elseif l:char ==# "'"
           while a:ctx.pos < len(a:ctx.cmdline)
             if a:ctx.cmdline[a:ctx.pos] ==# "'" &&
@@ -84,34 +90,31 @@ function! wilder#cmdline#let#do(ctx)
             let a:ctx.pos += 1
           endwhile
 
-          let l:expand_type = 'nothing'
+          let a:ctx.expand = 'nothing'
         elseif l:char ==# '|'
           if a:ctx.pos + 1 < len(a:ctx.cmdline) &&
                 \ a:ctx.cmdline[a:ctx.pos + 1] ==# '|'
             let a:ctx.pos += 1
-            let l:expand_type = 'expr'
+            let a:ctx.expand = 'expression'
           else
-            let l:expand_type = 'command'
+            let a:ctx.expand = 'commands'
           endif
         else
-          let l:expand_type = 'expr'
+          let a:ctx.expand = 'expression'
         endif
       else
-        let l:expand_type = 'expr'
+        let a:ctx.expand = 'expression'
       endif
 
-      let l:arg_start = a:ctx.pos + 1
-    endif
+      let a:ctx.pos += 1
 
-    let a:ctx.pos += 1
-
-    if wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-      if !wilder#cmdline#main#skip_whitespace(a:ctx)
-        let l:arg_start = a:ctx.pos
-        break
+      if wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+        call wilder#cmdline#main#skip_whitespace(a:ctx)
       endif
 
       let l:arg_start = a:ctx.pos
+    else
+      break
     endif
   endwhile
 

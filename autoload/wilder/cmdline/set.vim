@@ -1,4 +1,5 @@
 function! wilder#cmdline#set#do(ctx) abort
+  let a:ctx.expand = 'settings'
   let l:arg_start = a:ctx.pos
   let l:in_option_arg = 0
 

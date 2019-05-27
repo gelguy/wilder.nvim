@@ -1,4 +1,10 @@
-function! wilder#cmdline#map#do(ctx) abort
+function! wilder#cmdline#map#do(ctx, force) abort
+  if a:force && a:ctx.cmd !=# 'map' && a:ctx.cmd !=# 'unmap'
+    let a:ctx.expand = 'nothing'
+    return
+  endif
+
+  let a:ctx.expand = 'mapping'
   let l:arg_start = a:ctx.pos
 
   while a:ctx.pos < len(a:ctx.cmdline)

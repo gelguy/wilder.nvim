@@ -6,6 +6,7 @@ function! wilder#cmdline#filter#do(ctx) abort
   endif
 
   if !wilder#cmdline#main#skip_whitespace(a:ctx)
+    let a:ctx.expand = 'nothing'
     return
   endif
 

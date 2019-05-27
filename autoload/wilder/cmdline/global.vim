@@ -32,6 +32,7 @@ function! wilder#cmdline#global#do(ctx) abort
 
   " new command
   let a:ctx.cmd = ''
+  let a:ctx.expand = ''
 
   call wilder#cmdline#main#do(a:ctx)
 endfunction

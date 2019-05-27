@@ -1,4 +1,5 @@
 function! wilder#cmdline#menu#do(ctx) abort
+  let a:ctx.expand = 'menus'
   let l:arg_start = a:ctx.pos
 
   while a:ctx.pos < len(a:ctx.cmdline)

@@ -1,8 +1,8 @@
 function! wilder#pipeline#component#vim_uniq#make() abort
-  return {ctx, x -> s:uniq(ctx, x)}
+  return funcref('wilder#pipeline#component#vim_uniq#do')
 endfunction
 
-function! s:uniq(ctx, x) abort
+function! wilder#pipeline#component#vim_uniq#do(ctx, x) abort
   let l:seen = {}
   let l:res = []
 

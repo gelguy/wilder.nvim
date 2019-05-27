@@ -102,16 +102,12 @@ function! s:start() abort
   endif
 
   if !has_key(s:opts, 'pipeline')
-    if has('nvim')
-      let s:opts.pipeline = [
-            \ wilder#branch(
-            \   wilder#cmdline_pipeline(),
-            \   has('python3') ? wilder#python_search_pipeline() : wilder#vim_search_pipeline(),
-            \ ),
-            \ ]
-    else
-      let s:opts.pipeline = wilder#vim_search_pipeline()
-    endif
+    let s:opts.pipeline = [
+          \ wilder#branch(
+          \   wilder#cmdline_pipeline(),
+          \   has('nvim') && has('python3') ? wilder#python_search_pipeline() : wilder#vim_search_pipeline(),
+          \ ),
+          \ ]
   endif
 
   call s:pre_hook()

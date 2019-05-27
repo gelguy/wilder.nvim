@@ -33,7 +33,7 @@ function! s:handle(ctx, x, key) abort
   try
     call l:handler[a:key](a:ctx, a:x)
   catch
-    call l:handler.on_error(a:ctx, 'pipeline: ' . v:exception)
+    call l:handler.on_error(a:ctx, 'pipeline: ' . v: . v:exception)
   endtry
 endfunction
 
