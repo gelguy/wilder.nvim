@@ -11,6 +11,7 @@ function! wilder#render#float#renderer(args) abort
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
         \ 'error_hl': get(a:args, 'error_hl', 'StatusLine'),
+        \ 'separator_hl': get(a:args, 'separator_hl', 'StatusLine'),
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
@@ -62,6 +63,7 @@ function! s:render(state, ctx, xs) abort
   let a:ctx.hl = a:state.hl
   let a:ctx.selected_hl = a:state.selected_hl
   let a:ctx.error_hl = a:state.error_hl
+  let a:ctx.separator_hl = a:state.separator_hl
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 
