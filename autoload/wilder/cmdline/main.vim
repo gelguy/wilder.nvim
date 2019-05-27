@@ -276,11 +276,15 @@ function! wilder#cmdline#main#do(ctx) abort
     let a:ctx.pos += 1
   endwhile
 
+  let a:ctx.pos = l:first_arg_start
+
   if and(l:flags, s:XFILE)
     let l:in_quote = 0
     let l:beginning_of_word = -1
 
     call wilder#cmdline#main#skip_whitespace(a:ctx)
+
+    let l:arg_start = a:ctx.pos
 
     while a:ctx.pos < len(a:ctx.cmdline)
       let l:char = a:ctx.cmdline[a:ctx.pos]
@@ -320,6 +324,8 @@ function! wilder#cmdline#main#do(ctx) abort
 
     if l:beginning_of_word != -1 && l:in_quote
       let a:ctx.pos = l:beginning_of_word
+    else
+      let a:ctx.pos = l:arg_start
     endif
     let a:ctx.expand = 'files'
 
@@ -331,10 +337,14 @@ function! wilder#cmdline#main#do(ctx) abort
 
       if l:cmd_start == a:ctx.pos
         let a:ctx.expand = 'shellcmd'
+        return
       endif
     endif
 
     if a:ctx.cmdline[a:ctx.pos] ==# '$'
+      let l:arg_start = a:ctx.pos
+      let a:ctx.pos += 1
+
       while a:ctx.pos < len(a:ctx.cmdline)
         let l:char = a:ctx.cmdline[a:ctx.pos]
         if !s:is_idc(l:char)
@@ -347,6 +357,7 @@ function! wilder#cmdline#main#do(ctx) abort
       if a:ctx.pos == len(a:ctx.cmdline)
         let a:ctx.expand = 'env_vars'
         let a:ctx.pos = l:arg_start + 1
+        return
       endif
     elseif a:ctx.cmdline[a:ctx.pos] ==# '~'
       while a:ctx.pos < len(a:ctx.cmdline)
@@ -362,11 +373,10 @@ function! wilder#cmdline#main#do(ctx) abort
             \ a:ctx.pos > l:arg_start + 1
         let a:ctx.expand = 'user'
         let a:ctx.pos = l:arg_start + 1
+        return
       endif
     endif
   endif
-
-  let a:ctx.pos = l:first_arg_start
 
   if a:ctx.cmd ==# 'find' ||
         \ a:ctx.cmd ==# 'sfind' ||
@@ -597,36 +607,6 @@ function! wilder#cmdline#main#do(ctx) abort
     let a:ctx.expand = 'arglist'
     return
   endif
-
-  " handle rest of commands including user-defined commands
-  " assume arguments are split by whitespace
-  " for commands which don't have arguments or have invalid arguments
-  " this is ok, since wilder#cmdline() will return no results
-  let l:arg_start = a:ctx.pos
-
-  while a:ctx.pos < len(a:ctx.cmdline)
-    let l:char = a:ctx.cmdline[a:ctx.pos]
-
-    if l:char ==# '\'
-      if a:ctx.pos + 1 < len(a:ctx.cmdline)
-        let a:ctx.pos += 1
-      endif
-    elseif wilder#cmdline#main#is_whitespace(l:char)
-      let l:arg_start = a:ctx.pos + 1
-
-    " special case for files
-    " / will be treated as start of new arg
-    " $ is not included in the arg if found at the start of arg
-    " handle case where there is no whitespace between command and argument
-    elseif and(l:flags, s:XFILE)
-      if l:char ==# '$' &&
-          \ (l:arg_start == a:ctx.pos - 1 || l:arg_start == a:ctx.pos)
-        let l:arg_start = a:ctx.pos + 1
-      endif
-    endif
-
-    let a:ctx.pos += 1
-  endwhile
 
   let a:ctx.pos = l:arg_start
 endfunc
