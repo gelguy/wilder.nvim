@@ -127,7 +127,7 @@ function! s:getcompletion(res) abort
   elseif a:res.expand ==# 'cscope'
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
   elseif a:res.expand ==# 'directories'
-    return getcompletion(l:arg, 'directories')
+    return getcompletion(l:arg, 'dir')
   elseif a:res.expand ==# 'events'
     return getcompletion(l:arg, 'event')
   elseif a:res.expand ==# 'expression'
