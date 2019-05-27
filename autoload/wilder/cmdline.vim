@@ -1,11 +1,11 @@
 function! wilder#cmdline#parse(cmdline) abort
   if exists('s:cache_cmdline') && a:cmdline ==# s:cache_cmdline
-    return s:cache
+    return s:cache_cmdline_results
   else
     let l:ctx = {'cmdline': a:cmdline, 'pos': 0, 'cmd': '', 'expand': ''}
     call wilder#cmdline#main#do(l:ctx)
 
-    let s:cache = l:ctx
+    let s:cache_cmdline_results = l:ctx
     let s:cache_cmdline = a:cmdline
   endif
 
@@ -32,65 +32,97 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
   elseif a:res.expand ==# 'directories' ||
         \ a:res.expand ==# 'files' ||
         \ a:res.expand ==# 'files_in_path'
-    let l:path = simplify(expand(a:res.cmdline[a:res.pos :]))
-    let a:res.cmdline = a:res.cmdline[: a:res.pos - 1] . l:path
-    let l:tail = fnamemodify(l:path, ':t')
+    let l:expand = expand(a:res.cmdline[a:res.pos :], 0, 1)
 
-    if l:tail ==# '.'
-      let a:ctx.arg = ''
+    if len(l:expand) > 1
+      let a:ctx.arg = '*'
+      return l:expand
     else
-      let a:ctx.arg = l:tail
-      let l:offset = len(l:path) - len(l:tail)
+      let l:path = simplify(l:expand[0])
+      let a:res.cmdline = a:res.cmdline[: a:res.pos - 1] . l:path
+      let l:tail = fnamemodify(l:path, ':t')
+
+      if l:tail ==# '.'
+        let a:ctx.arg = ''
+      else
+        let a:ctx.arg = l:tail
+        let l:offset = len(l:path) - len(l:tail)
+      endif
     endif
   endif
 
   let l:char = a:res.cmdline[a:res.pos + l:offset]
-  let a:res.cmdline = a:res.cmdline[: a:res.pos + l:offset]
 
-  let l:xs = s:getcompletion(a:res)
+  let l:xs = []
 
   if l:char !=# toupper(l:char)
     let a:res.cmdline = a:res.cmdline[: a:res.pos + l:offset - 1] . toupper(l:char)
     let l:xs += s:getcompletion(a:res)
   endif
 
+  let a:res.cmdline = l:cmdline[: a:res.pos + l:offset]
+  let l:xs += s:getcompletion(a:res)
+
   let a:res.cmdline = l:cmdline
 
   return wilder#pipeline#component#vim_uniq#do({}, l:xs)
 endfunc
 
-function! wilder#cmdline#fuzzy_match(ctx, xs)
+function! wilder#cmdline#make_filter(f)
+  return {ctx, xs -> s:filter(ctx, xs, a:f)}
+endfunction
+
+function! s:filter(ctx, xs, matcher)
   let l:arg = a:ctx.arg
-
-  " make fuzzy regex
-  let l:split_arg = split(l:arg, '\zs')
-  let l:i = 0
-  let l:regex = '\V'
-  while l:i < len(l:split_arg)
-    if l:i > 0
-      let l:regex .= '\.\{-}'
-    endif
-
-    let l:c = l:split_arg[l:i]
-
-    if l:c ==# '\'
-      let l:regex .= '\\'
-    elseif l:c ==# toupper(l:c)
-      let l:regex .= l:c
-    else
-      let l:regex .= '\%(' . l:c . '\|' . toupper(l:c) . '\)'
-    endif
-
-    let l:i += 1
-  endwhile
 
   if a:ctx.expand ==# 'directories' ||
         \ a:ctx.expand ==# 'files' ||
         \ a:ctx.expand ==# 'files_in_path'
-    return filter(a:xs, {_, x -> match(s:get_path_tail(x), l:regex) != -1})
+    if l:arg ==# '*'
+      return a:xs
+    endif
+
+    return filter(a:xs, {_, x -> a:matcher(a:ctx, s:get_path_tail(x), l:arg)})
   endif
 
-  return filter(a:xs, {_, x -> match(x, l:regex) != -1})
+  return filter(a:xs, {_, x -> a:matcher(a:ctx, x, l:arg)})
+endfunction
+
+function! wilder#cmdline#fuzzy_matcher(ctx, x, arg)
+  if empty(a:arg)
+    return 1
+  endif
+
+  if exists('s:cache_arg') && a:arg ==# s:cache_arg
+    let l:regex = s:cache_regex
+  else
+    " make fuzzy regex
+    let l:split_arg = split(a:arg, '\zs')
+    let l:i = 0
+    let l:regex = '\V'
+    while l:i < len(l:split_arg)
+      if l:i > 0
+        let l:regex .= '\.\{-}'
+      endif
+
+      let l:c = l:split_arg[l:i]
+
+      if l:c ==# '\'
+        let l:regex .= '\\'
+      elseif l:c ==# toupper(l:c)
+        let l:regex .= l:c
+      else
+        let l:regex .= '\%(' . l:c . '\|' . toupper(l:c) . '\)'
+      endif
+
+      let l:i += 1
+    endwhile
+
+    let s:cache_arg = a:arg
+    let s:cache_regex = l:regex
+  endif
+
+  return match(a:x, l:regex) != -1
 endfunction
 
 function! s:get_path_tail(path) abort
@@ -196,7 +228,7 @@ function! s:getcompletion(res) abort
       return ['*', '+', '0', '1', '?']
     endif
 
-    if l:arg ==# '*' || l:arg ==# '+' || l:arg == '0' ||
+    if l:arg ==# '*' || l:arg ==# '+' || l:arg ==# '0' ||
           \ l:arg ==# '1' || l:arg ==# '?'
       return [l:arg]
     endif
@@ -289,13 +321,13 @@ endfunction
 function! wilder#cmdline#pipeline(opts) abort
   let l:hide = get(a:opts, 'hide', 1)
   let l:max_candidates = get(a:opts, 'max_candidates', 300)
-  let l:fuzzy_pipeline = get(a:opts, 'fuzzy_pipeline', [])
+  let l:fuzzy = get(a:opts, 'fuzzy', 0)
 
-  if l:fuzzy_pipeline is# 'default'
-    let l:fuzzy_pipeline = [funcref('wilder#cmdline#fuzzy_match')]
+  if !has_key(a:opts, 'pipeline')
+    let l:pipeline = l:fuzzy ? [wilder#cmdline_filter(wilder#fuzzy_matcher())] : []
+  else
+    let l:pipeline = a:opts.pipeline
   endif
-
-  let l:fuzzy = !empty(l:fuzzy_pipeline)
 
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
@@ -312,10 +344,10 @@ function! wilder#cmdline#pipeline(opts) abort
       \   [
       \     wilder#check({_, res -> wilder#cmdline#has_file_args(res.cmd)}),
       \     {ctx, res -> map(wilder#cmdline#getcompletion(ctx, res, l:fuzzy), {_, x -> escape(x, ' ')})},
-      \   ] + l:fuzzy_pipeline,
+      \   ] + l:pipeline,
       \   [
       \     {ctx, res -> wilder#cmdline#getcompletion(ctx, res, l:fuzzy)},
-      \   ] + l:fuzzy_pipeline,
+      \   ] + l:pipeline,
       \ ),
       \ {_, xs -> l:max_candidates > 0 ? xs[: l:max_candidates - 1] : xs},
       \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),

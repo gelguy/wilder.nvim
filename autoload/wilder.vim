@@ -194,6 +194,14 @@ function! wilder#cmdline_pipeline(...) abort
   return wilder#cmdline#pipeline(l:opts)
 endfunction
 
+function! wilder#cmdline_filter(f) abort
+  return wilder#cmdline#make_filter(a:f)
+endfunction
+
+function! wilder#fuzzy_matcher() abort
+  return {ctx, x, arg -> wilder#cmdline#fuzzy_matcher(ctx, x, arg)}
+endfunction
+
 function! wilder#substitute_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 

@@ -333,7 +333,7 @@ function! wilder#cmdline#main#do(ctx) abort
       " should set xp_shell, but looks like not needed
       let l:cmd_start = a:ctx.pos
 
-      call wilder#cmdline#skip_whitespace(a:ctx)
+      call wilder#cmdline#main#skip_whitespace(a:ctx)
 
       if l:cmd_start == a:ctx.pos
         let a:ctx.expand = 'shellcmd'
