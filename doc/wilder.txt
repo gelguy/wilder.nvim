@@ -636,7 +636,7 @@ wilder#statusline_renderer([{opts}])
             Optional~
             The highlight group of the separator between candidates.
 
-            Default: same as the `hl` option
+            Default: same value as the `hl` option
 
             `ellipsis`
             Optional~
