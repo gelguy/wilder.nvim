@@ -632,6 +632,12 @@ wilder#statusline_renderer([{opts}])
 
             Default: '  '
 
+            `separator_hl`
+            Optional~
+            The highlight group of the separator between candidates.
+
+            Default: same as the `hl` option
+
             `ellipsis`
             Optional~
             The string to appended to a candidate if it is too long. The
