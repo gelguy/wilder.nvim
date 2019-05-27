@@ -29,6 +29,12 @@ function! wilder#render#float#renderer(args) abort
     let l:state.right = get(a:args, 'right', [])
   endif
 
+  if has_key(a:args, 'separator_hl')
+    let l:state.separator_hl = get(a:args, 'separator_hl')
+  else
+    let l:state.separator_hl = l:state.hl
+  endif
+
   return {
         \ 'render': {ctx, xs -> s:render(l:state, ctx, xs)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
@@ -62,6 +68,7 @@ function! s:render(state, ctx, xs) abort
   let a:ctx.hl = a:state.hl
   let a:ctx.selected_hl = a:state.selected_hl
   let a:ctx.error_hl = a:state.error_hl
+  let a:ctx.separator_hl = a:state.separator_hl
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
 

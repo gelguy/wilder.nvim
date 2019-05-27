@@ -316,10 +316,12 @@ function! s:draw_xs(ctx, xs) abort
   let l:res = [['']]
   let l:len = 0
 
+  let l:separator_same_hl = a:ctx.separator_hl ==# a:ctx.hl
+
   while l:current <= l:end
     if l:current != l:start
-      if l:previous_selected
-        call add(l:res, [l:separator])
+      if l:previous_selected || !l:separator_same_hl
+        call add(l:res, [l:separator, a:ctx.separator_hl])
       else
         let l:res[-1][0] .= l:separator
       endif
@@ -329,11 +331,12 @@ function! s:draw_xs(ctx, xs) abort
     let l:x = s:draw_x_cached(a:ctx, a:xs, l:current)
     if l:current == l:selected
       call add(l:res, [l:x, a:ctx.selected_hl])
-      let l:previous_selected = 1
-    else
+    elseif l:separator_same_hl
       let l:res[-1][0] .= l:x
-      let l:previous_selected = 0
+    else
+      call add(l:res, [l:x, a:ctx.hl])
     endif
+    let l:previous_selected = l:current == l:selected
 
     let l:len += strdisplaywidth(l:x)
     let l:current += 1
