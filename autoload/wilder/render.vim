@@ -90,10 +90,10 @@ function! wilder#render#make_page(ctx, xs) abort
     " space might have changed due to resizing or due to custom draw functions
     let l:selected = a:ctx.selected
 
-    let l:i = 0
+    let l:i = l:page[0]
     let l:separator_width = strdisplaywidth(a:ctx.separator)
     let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:xs, l:i))
-    let l:i = l:page[0] + 1
+    let l:i += 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
@@ -295,7 +295,7 @@ function! s:draw_xs(ctx, xs) abort
   if l:start == l:end
     let l:x = s:draw_x_cached(a:ctx, a:xs, l:start)
 
-    if len(l:x) > l:space
+    if strdisplaywidth(l:x) > l:space
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
@@ -307,7 +307,9 @@ function! s:draw_xs(ctx, xs) abort
         let l:hl = a:ctx.hl
       endif
 
-      return [[l:x . l:ellipsis, l:hl]]
+      let l:result = l:x . l:ellipsis
+      let l:padding = repeat(' ', l:space - strdisplaywidth(l:result))
+      return [[l:result . l:padding, l:hl]]
     endif
   endif
 
