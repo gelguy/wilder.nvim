@@ -38,16 +38,21 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
       let a:ctx.arg = '*'
       return l:expand
     else
+      let l:tail = fnamemodify(l:expand[0], ':t')
       let l:path = simplify(l:expand[0])
-      let a:res.cmdline = a:res.cmdline[: a:res.pos - 1] . l:path
-      let l:tail = fnamemodify(l:path, ':t')
 
       if l:tail ==# '.'
+        " append /. since simplify removes . from the path
+        let l:path .= '/.'
         let a:ctx.arg = ''
+        let l:offset = 2
       else
+        let l:tail = fnamemodify(l:path, ':t')
         let a:ctx.arg = l:tail
         let l:offset = len(l:path) - len(l:tail)
       endif
+
+      let a:res.cmdline = a:res.cmdline[: a:res.pos - 1] . l:path
     endif
   endif
 
