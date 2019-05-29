@@ -97,10 +97,10 @@ function! wilder#cmdline#pipeline(opts) abort
       \   ],
       \   [
       \     wilder#check({_, res -> wilder#cmdline#has_file_args(res.cmd)}),
-      \     {_, res -> map(getcompletion(res.cmdline, 'cmdline'), {_, x -> escape(x, ' ')})},
+      \     {_, res -> map(getcompletion(res.cmdline, 'cmdline', 1), {_, x -> escape(x, ' ')})},
       \   ],
       \   [
-      \     {_, res -> getcompletion(res.cmdline, 'cmdline')},
+      \     {_, res -> getcompletion(res.cmdline, 'cmdline', 1)},
       \   ],
       \ ),
       \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
