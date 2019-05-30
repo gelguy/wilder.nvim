@@ -18,11 +18,15 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
 
   " if argument is empty, use normal completions
   " up to 300 help tags returned, so fuzzy matching does not work
-  if !a:fuzzy || a:res.pos == len(a:res.cmdline) || a:res.expand ==# 'help'
+  if (!a:fuzzy || a:res.pos == len(a:res.cmdline) || a:res.expand ==# 'help') &&
+        \ a:res.expand !=# 'directories' &&
+        \ a:res.expand !=# 'files' &&
+        \ a:res.expand !=# 'files_in_path'
     return s:getcompletion(a:res)
   endif
 
   let l:cmdline = a:res.cmdline
+  let l:meta = {}
 
   if (a:res.expand ==# 'expression' || a:res.expand ==# 'user_vars') &&
         \ a:ctx.arg[1] ==# ':' &&
@@ -49,6 +53,7 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
     " check for wildcards
     let l:expand = expand(a:res.cmdline[a:res.pos : ], 0, 1)
     if len(l:expand) > 1
+      " TODO: handle prefix correctly
       let a:ctx.arg = ''
       return l:expand
     endif
@@ -109,6 +114,7 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
 
     let l:head = fnamemodify(l:path . 'a', ':h')
     let l:tail = fnamemodify(l:path . 'a', ':t')
+
     if l:head ==# '.'
       let l:arg_without_char = ''
     elseif l:head ==# '/'
@@ -118,13 +124,18 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
     endif
 
     if l:head ==# '/'
-      let a:ctx.path_prefix = ''
+      let l:meta.path_prefix = ''
     else
-      let a:ctx.path_prefix = l:arg_without_char
+      let l:meta.path_prefix = l:arg_without_char
     endif
 
-    let a:ctx.arg = l:tail[: -2]
-    let l:char = len(l:tail) == 1 ? '' : l:tail[0]
+    if a:fuzzy
+      let a:ctx.arg = l:tail[: -2]
+      let l:char = len(l:tail) == 1 ? '' : l:tail[0]
+    else
+      let l:arg_without_char = l:path
+      let l:char = ''
+    endif
   elseif a:res.expand ==# 'mapping'
     " we want < to match special characters such as <Space>
     " a shortcut is to return everything and let the fuzzy matcher
@@ -150,7 +161,13 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
 
   let a:res.cmdline = l:cmdline
 
-  return wilder#pipeline#component#vim_uniq#do({}, l:xs)
+  let l:xs = wilder#pipeline#component#vim_uniq#do({}, l:xs)
+
+  if len(l:meta)
+    return map(l:xs, {_, x -> {'value': x, 'meta': l:meta}})
+  endif
+
+  return l:xs
 endfunc
 
 function! wilder#cmdline#make_filter(f)
@@ -167,10 +184,18 @@ function! s:filter(ctx, xs, matcher)
       return a:xs
     endif
 
-    return filter(a:xs, {_, x -> a:matcher(a:ctx, s:get_path_tail(x), l:arg)})
+    return filter(a:xs, {_, x -> a:matcher(a:ctx, s:get_path_tail(s:get_value(x)), l:arg)})
   endif
 
-  return filter(a:xs, {_, x -> a:matcher(a:ctx, x, l:arg)})
+  return filter(a:xs, {_, x -> a:matcher(a:ctx, s:get_value(x), l:arg)})
+endfunction
+
+function! s:get_value(x)
+  if type(a:x) is v:t_dict
+    return a:x.value
+  endif
+
+  return a:x
 endfunction
 
 function! wilder#cmdline#fuzzy_matcher(ctx, x, arg)
@@ -462,6 +487,23 @@ function! wilder#cmdline#replace(ctx, x, prev) abort
   return l:result.cmdline[: l:result.pos - 1] . a:x
 endfunction
 
+function! wilder#cmdline#draw_path(ctx, x, prev) abort
+  if has_key(a:ctx, 'meta') &&
+        \ type(a:ctx.meta) is v:t_dict &&
+        \ has_key(a:ctx.meta, 'path_prefix')
+    let l:path_prefix = a:ctx.meta.path_prefix
+    let l:i = 0
+    while l:i < len(l:path_prefix) &&
+          \ l:path_prefix[l:i] ==# a:x[l:i]
+      let l:i += 1
+    endwhile
+
+    return a:x[l:i :]
+  endif
+
+  return a:prev(a:ctx, a:x, a:x)
+endfunction
+
 function! wilder#cmdline#pipeline(opts) abort
   let l:hide = get(a:opts, 'hide', 1)
   let l:max_candidates = get(a:opts, 'max_candidates', 300)
@@ -487,7 +529,11 @@ function! wilder#cmdline#pipeline(opts) abort
       \   ],
       \   [
       \     wilder#check({_, res -> wilder#cmdline#has_file_args(res.cmd)}),
-      \     {ctx, res -> map(wilder#cmdline#getcompletion(ctx, res, l:fuzzy), {_, x -> escape(x, ' ')})},
+      \     {ctx, res -> wilder#cmdline#getcompletion(ctx, res, l:fuzzy)},
+      \     wilder#result({
+      \       'output': {_, x -> escape(x, ' ')},
+      \       'draw': funcref('wilder#cmdline#draw_path'),
+      \     }),
       \   ] + l:pipeline,
       \   [
       \     {ctx, res -> wilder#cmdline#getcompletion(ctx, res, l:fuzzy)},

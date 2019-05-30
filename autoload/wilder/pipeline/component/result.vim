@@ -12,6 +12,9 @@ function! s:result(args, ctx, x) abort
     if l:key ==# 'value'
       let l:x.value = l:F(a:ctx, l:x.value)
       continue
+    elseif l:key ==# 'meta'
+      let l:x.meta = extend(l:x, a:args.meta)
+      continue
     endif
 
     if has_key(l:x, l:key)
@@ -24,12 +27,14 @@ function! s:result(args, ctx, x) abort
       let l:Prev = {ctx, x, def -> def}
     endif
 
-    let l:Prev = function('s:wrap_prev', [l:Prev])
-
-    let l:x[l:key] = {ctx, x -> l:F(ctx, x, l:Prev)}
+    let l:x[l:key] = s:make_func(l:F, l:Prev)
   endfor
 
   return l:x
+endfunction
+
+function! s:make_func(f, prev) abort
+  return {ctx, x -> a:f(ctx, x, function('s:wrap_prev', [a:prev]))}
 endfunction
 
 function! s:wrap_prev(f, ctx, x, ...) abort
