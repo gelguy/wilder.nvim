@@ -1,6 +1,7 @@
 function! wilder#cmdline#main#do(ctx) abort
   " default
   let a:ctx.expand = 'commands'
+  let a:ctx.force = 0
 
   if empty(a:ctx.cmdline[a:ctx.pos :])
     return
@@ -135,12 +136,11 @@ function! wilder#cmdline#main#do(ctx) abort
   endif
 
   let a:ctx.expand = 'nothing'
-  let l:force = 0
 
   " handle !
   if a:ctx.cmdline[a:ctx.pos] ==# '!'
     let a:ctx.pos += 1
-    let l:force = 1
+    let a:ctx.force = 1
   endif
 
   call wilder#cmdline#main#skip_whitespace(a:ctx)
@@ -175,7 +175,7 @@ function! wilder#cmdline#main#do(ctx) abort
       let a:ctx.pos += 1
       let l:use_fitler = 1
     else
-      let l:use_filter = l:force
+      let l:use_filter = a:ctx.force
     endif
   elseif a:ctx.cmd ==# '<' || a:ctx.cmd ==# '>'
     while a:ctx.cmdline[a:ctx.pos] ==# a:ctx.cmd
@@ -544,17 +544,22 @@ function! wilder#cmdline#main#do(ctx) abort
     call wilder#cmdline#main#find_last_whitespace(a:ctx)
 
     let a:ctx.expand = 'buffers'
+    return
   elseif a:ctx.cmd ==# 'buffer' ||
         \ a:ctx.cmd ==# 'sbuffer' ||
         \ a:ctx.cmd ==# 'checktime'
     let a:ctx.expand = 'buffers'
+    return
   elseif a:ctx.cmd ==# 'abbreviate' ||
         \ a:ctx.cmd ==# 'unabbreviate' ||
-        \ match(a:ctx.cmd, 'map$') != -1 ||
-        \ match(a:ctx.cmd, 'abbrev$') != -1
-    call wilder#cmdline#map#do(a:ctx, l:force)
+        \ a:ctx.cmd[-3 :] ==# 'map' ||
+        \ a:ctx.cmd[-6 :] ==# 'abbrev'
+    call wilder#cmdline#map#do(a:ctx)
     return
-  elseif match(a:ctx.cmd, 'menu$') != -1
+  elseif a:ctx.cmd[-8 :] ==# 'mapclear'
+    let a:ctx.expand = 'mapclear'
+    return
+  elseif a:ctx.cmd[-4 :] ==# 'menu'
     call wilder#cmdline#menu#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'colorscheme'

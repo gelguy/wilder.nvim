@@ -24,48 +24,128 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
 
   let l:cmdline = a:res.cmdline
 
-  let l:offset = 0
   if (a:res.expand ==# 'expression' || a:res.expand ==# 'user_vars') &&
         \ a:ctx.arg[1] ==# ':' &&
         \ (a:ctx.arg[0] ==# 'g' || a:ctx.arg[0] ==# 's')
-    let l:offset = 2
+    let l:arg_without_char = a:ctx.arg[0 : 1]
+    let l:char = a:ctx.arg[2]
   elseif a:res.expand ==# 'directories' ||
         \ a:res.expand ==# 'files' ||
         \ a:res.expand ==# 'files_in_path'
-    let l:expand = expand(a:res.cmdline[a:res.pos :], 0, 1)
+    let l:slash = has('win32') || has('win64') ?
+          \ (&shellslash ? '/' : '\') :
+          \ '/'
 
+    if a:ctx.arg ==# '~'
+      let a:ctx.arg = ''
+      let a:res.cmdline .= l:slash
+
+      let l:xs = s:getcompletion(a:res)
+      let a:ctx.cmdline = l:cmdline
+
+      return l:xs
+    endif
+
+    " check for wildcards
+    let l:expand = expand(a:res.cmdline[a:res.pos : ], 0, 1)
     if len(l:expand) > 1
-      let a:ctx.arg = '*'
+      let a:ctx.arg = ''
       return l:expand
-    else
-      let l:tail = fnamemodify(l:expand[0], ':t')
-      let l:path = simplify(l:expand[0])
+    endif
 
-      if l:tail ==# '.'
-        " append /. since simplify removes . from the path
-        let l:path .= '/.'
-        let a:ctx.arg = ''
-        let l:offset = 2
-      else
-        let l:tail = fnamemodify(l:path, ':t')
-        let a:ctx.arg = l:tail
-        let l:offset = len(l:path) - len(l:tail)
+    let l:check_wildcard = 0
+    if a:res.cmdline[a:res.pos] ==# '%' ||
+          \ a:res.cmdline[a:res.pos] ==# '#'
+      let l:arg_end = a:res.pos
+      let l:i = a:res.pos + 1
+      let l:last_char = ''
+
+      while l:i < len(a:res.cmdline)
+        let l:chars = a:res.cmdline[l:i : l:i + 1]
+
+        if l:chars ==# ':p' ||
+              \ l:chars ==# ':h' ||
+              \ l:chars ==# ':t' ||
+              \ l:chars ==# ':r' ||
+              \ l:chars ==# ':e'
+          let l:last_char = l:chars[1]
+          let l:arg_end = l:i + 1
+          let l:i += 2
+        else
+          break
+        endif
+      endwhile
+
+      let l:expand = expand(a:res.cmdline[a:res.pos : l:arg_end])
+      if empty(l:expand)
+        " E500
+        return []
       endif
 
-      let a:res.cmdline = a:res.cmdline[: a:res.pos - 1] . l:path
-    endif
-  endif
+      let a:res.cmdline = l:cmdline[: a:res.pos - 1] . l:expand
 
-  let l:char = a:res.cmdline[a:res.pos + l:offset]
+      " append slash if needed
+      if l:last_char ==# 'h' &&
+            \ l:cmdline[l:arg_end + 1] !=# l:slash &&
+            \ l:expand !=# l:slash
+        let a:res.cmdline .= l:slash
+      endif
+
+      let a:res.cmdline .= l:cmdline[l:arg_end + 1 :]
+
+      let l:check_wildcard = 1
+    endif
+
+    " check for wildcards again after substitution
+    if l:check_wildcard
+      let l:expand = expand(a:res.cmdline[a:res.pos :], 0, 1)
+      if len(l:expand) > 1
+        let a:ctx.arg = ''
+        return l:expand
+      endif
+    endif
+
+    let l:path = a:res.cmdline[a:res.pos :]
+
+    let l:head = fnamemodify(l:path . 'a', ':h')
+    let l:tail = fnamemodify(l:path . 'a', ':t')
+    if l:head ==# '.'
+      let l:arg_without_char = ''
+    elseif l:head ==# '/'
+      let l:arg_without_char = '/'
+    else
+      let l:arg_without_char = l:head . l:slash
+    endif
+
+    if l:head ==# '/'
+      let a:ctx.path_prefix = ''
+    else
+      let a:ctx.path_prefix = l:arg_without_char
+    endif
+
+    let a:ctx.arg = l:tail[: -2]
+    let l:char = len(l:tail) == 1 ? '' : l:tail[0]
+  elseif a:res.expand ==# 'mapping'
+    " we want < to match special characters such as <Space>
+    " a shortcut is to return everything and let the fuzzy matcher
+    " handle the matching
+    let l:arg_without_char = ''
+    let l:char = ''
+  else
+    let l:arg_without_char = ''
+    let l:char = a:ctx.arg[0]
+  endif
 
   let l:xs = []
 
+  let l:cmdline_before_arg = a:res.pos > 0 ? a:res.cmdline[: a:res.pos - 1] : ''
+
   if l:char !=# toupper(l:char)
-    let a:res.cmdline = a:res.cmdline[: a:res.pos + l:offset - 1] . toupper(l:char)
+    let a:res.cmdline = l:cmdline_before_arg . l:arg_without_char . toupper(l:char)
     let l:xs += s:getcompletion(a:res)
   endif
 
-  let a:res.cmdline = l:cmdline[: a:res.pos + l:offset]
+  let a:res.cmdline = l:cmdline_before_arg . l:arg_without_char . l:char
   let l:xs += s:getcompletion(a:res)
 
   let a:res.cmdline = l:cmdline
@@ -164,7 +244,7 @@ function! s:getcompletion(res) abort
   elseif a:res.expand ==# 'cscope'
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
   elseif a:res.expand ==# 'directories'
-    return getcompletion(l:arg, 'dir')
+    return getcompletion(l:arg, 'dir', 1)
   elseif a:res.expand ==# 'events'
     return getcompletion(l:arg, 'event')
   elseif a:res.expand ==# 'expression'
@@ -172,9 +252,9 @@ function! s:getcompletion(res) abort
   elseif a:res.expand ==# 'env_vars'
     return getcompletion(l:arg, 'environment')
   elseif a:res.expand ==# 'files'
-    return getcompletion(l:arg, 'file')
+    return getcompletion(l:arg, 'file', 1)
   elseif a:res.expand ==# 'files_in_path'
-    return getcompletion(l:arg, 'files_in_path')
+    return getcompletion(l:arg, 'files_in_path', 1)
   elseif a:res.expand ==# 'functions'
     return getcompletion(l:arg, 'function')
   elseif a:res.expand ==# 'help'
@@ -189,7 +269,64 @@ function! s:getcompletion(res) abort
   elseif a:res.expand ==# 'locales'
     return getcompletion(l:arg, 'locale')
   elseif a:res.expand ==# 'mapping'
-    " TODO: handle mapping
+    let l:map_args = get(a:res, 'map_args', {})
+
+    let l:result = []
+
+    if l:arg ==# '' || l:arg[0] ==# '<'
+      for l:map_arg in ['<buffer>', '<unique>', '<nowait>', '<silent>',
+            \ '<special>', '<script>', '<expr>']
+        if !has_key(l:map_args, l:map_arg)
+          call add(l:result, l:map_arg)
+        endif
+      endfor
+
+      if l:arg[0] ==# '<'
+        return filter(l:result, {_, x -> match(x, l:arg) == 0})
+      endif
+    endif
+
+    if a:res.cmd[-5 :] ==# 'unmap'
+      let l:mode = a:res.cmd ==# 'unmap' ? '' : a:res.cmd[0]
+      let l:cmd = 'map'
+    elseif a:res.cmd[-3 :] ==# 'map'
+      let l:mode = a:res.cmd ==# 'map' || a:res.cmd ==# 'noremap' ? '' : a:res.cmd[0]
+      let l:cmd = 'map'
+    elseif a:res.cmd[-12 :] ==# 'unabbreviate'
+      let l:mode = a:res.cmd ==# 'unabbreviate' ? '' : a:res.cmd[0]
+      let l:cmd = 'abbrev'
+    elseif a:res.cmd ==# 'abbreviate'
+      let l:mode = ''
+      let l:cmd = 'abbrev'
+    elseif a:res.cmd[-6 :] ==# 'abbrev'
+      let l:mode = a:res.cmd ==# 'noreabbrev' ? '' : a:res.cmd[0]
+      let l:cmd = 'abbrev'
+    else
+      let l:mode = ''
+      let l:cmd = 'map'
+    endif
+
+    let l:lines = split(execute(l:mode . l:cmd . ' ' . join(keys(l:map_args), ' ') .
+          \ ' ' . l:arg), "\n")
+
+    if len(l:lines) != 1 ||
+          \ (l:lines[0] !=# 'No mapping found' &&
+          \ l:lines[0] !=# 'No abbreviation found')
+      for l:line in l:lines
+        let l:words = split(l:line,'\s\+')
+        if l:line[0] ==# ' '
+          let l:map_lhs = l:words[0]
+        else
+          let l:map_lhs = l:words[1]
+        endif
+
+        call add(l:result, l:map_lhs)
+      endfor
+    endif
+
+    return l:result
+  elseif a:res.expand ==# 'mapclear'
+    return match('<buffer>', l:arg) == 0 ? ['<buffer>'] : []
   elseif a:res.expand ==# 'messages'
     return getcompletion(l:arg, 'messages')
   elseif a:res.expand ==# 'packadd'
@@ -209,6 +346,8 @@ function! s:getcompletion(res) abort
     return getcompletion(l:arg, 'syntime')
   elseif a:res.expand ==# 'syntime'
     return getcompletion(l:arg, 'syntime')
+  elseif a:res.expand ==# 'user'
+    return getcompletion(l:arg, 'user')
   elseif a:res.expand ==# 'user_func'
     let l:functions = getcompletion(l:arg, 'function')
     let l:functions = filter(l:functions, {_, x -> !(x[0] >= 'a' && x[0] <= 'z')})
@@ -310,7 +449,7 @@ function! wilder#cmdline#replace(ctx, x, prev) abort
     return a:x
   endif
 
-  if match(l:result.cmd, 'menu$') != -1
+  if l:result.cmd[-4 :] ==# 'menu'
     return l:result.cmdline[: l:result.pos - 1] . a:x
   endif
 
