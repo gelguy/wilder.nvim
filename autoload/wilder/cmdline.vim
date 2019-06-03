@@ -151,13 +151,13 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
 
   let l:cmdline_before_arg = a:res.pos > 0 ? a:res.cmdline[: a:res.pos - 1] : ''
 
+  let a:res.cmdline = l:cmdline_before_arg . l:arg_without_char . l:char
+  let l:xs += s:getcompletion(a:res)
+
   if l:char !=# toupper(l:char)
     let a:res.cmdline = l:cmdline_before_arg . l:arg_without_char . toupper(l:char)
     let l:xs += s:getcompletion(a:res)
   endif
-
-  let a:res.cmdline = l:cmdline_before_arg . l:arg_without_char . l:char
-  let l:xs += s:getcompletion(a:res)
 
   let a:res.cmdline = l:cmdline
 
@@ -508,12 +508,7 @@ function! wilder#cmdline#pipeline(opts) abort
   let l:hide = get(a:opts, 'hide', 1)
   let l:max_candidates = get(a:opts, 'max_candidates', 300)
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
-
-  if !has_key(a:opts, 'pipeline')
-    let l:pipeline = l:fuzzy ? [wilder#cmdline_filter(wilder#fuzzy_matcher())] : []
-  else
-    let l:pipeline = a:opts.pipeline
-  endif
+  let l:pipeline = get(a:opts, 'pipeline', [])
 
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
@@ -542,6 +537,16 @@ function! wilder#cmdline#pipeline(opts) abort
       \ {_, xs -> l:max_candidates > 0 ? xs[: l:max_candidates - 1] : xs},
       \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
       \ ]
+endfunction
+
+function! wilder#cmdline#fuzzy_pipeline(opts) abort
+  let l:pipeline = [wilder#cmdline_filter(wilder#fuzzy_matcher())] +
+        \ get(a:opts, 'pipeline', [])
+  let l:opts = extend({
+        \ 'fuzzy': 1,
+        \ 'pipeline': l:pipeline,
+        \ }, a:opts)
+  return wilder#cmdline#pipeline(l:opts)
 endfunction
 
 let s:substitute_commands = {
