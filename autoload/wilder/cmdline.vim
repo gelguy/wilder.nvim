@@ -99,6 +99,10 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
       let a:res.cmdline .= l:cmdline[l:arg_end + 1 :]
 
       let l:check_wildcard = 1
+    elseif a:res.cmdline[a:res.pos] ==# '~'
+      let l:expand = expand(a:res.cmdline[a:res.pos :])
+      let a:res.cmdline = l:cmdline[: a:res.pos - 1] . l:expand
+      let l:check_wildcard = 1
     endif
 
     " check for wildcards again after substitution
