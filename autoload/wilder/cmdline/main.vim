@@ -392,7 +392,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'tcd' ||
         \ a:ctx.cmd ==# 'tchdir'
     if a:ctx.expand ==# 'files'
-      let a:ctx.expand = 'directories'
+      let a:ctx.expand = 'dir'
     endif
     return
   elseif a:ctx.cmd ==# 'help'
@@ -543,12 +543,12 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'bunload'
     call wilder#cmdline#main#find_last_whitespace(a:ctx)
 
-    let a:ctx.expand = 'buffers'
+    let a:ctx.expand = 'buffer'
     return
   elseif a:ctx.cmd ==# 'buffer' ||
         \ a:ctx.cmd ==# 'sbuffer' ||
         \ a:ctx.cmd ==# 'checktime'
-    let a:ctx.expand = 'buffers'
+    let a:ctx.expand = 'buffer'
     return
   elseif a:ctx.cmd ==# 'abbreviate' ||
         \ a:ctx.cmd ==# 'unabbreviate' ||
@@ -563,7 +563,7 @@ function! wilder#cmdline#main#do(ctx) abort
     call wilder#cmdline#menu#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'colorscheme'
-    let a:ctx.expand = 'colors'
+    let a:ctx.expand = 'color'
     return
   elseif a:ctx.cmd ==# 'compiler'
     let a:ctx.expand = 'compiler'

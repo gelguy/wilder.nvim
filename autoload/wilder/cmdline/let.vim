@@ -1,6 +1,6 @@
 function! wilder#cmdline#let#do(ctx)
   if a:ctx.cmd ==# 'let'
-    let a:ctx.expand = 'user_vars'
+    let a:ctx.expand = 'var'
     if match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]') == -1
       " let var1 var2 ...
       let l:arg_start = a:ctx.pos
@@ -18,7 +18,7 @@ function! wilder#cmdline#let#do(ctx)
       return
     endif
   else
-    let a:ctx.expand = a:ctx.cmd ==# 'call' ? 'functions' : 'expression'
+    let a:ctx.expand = a:ctx.cmd ==# 'call' ? 'function' : 'expression'
   endif
 
   let l:got_eq = 0
@@ -48,7 +48,7 @@ function! wilder#cmdline#let#do(ctx)
           endif
         endif
       elseif l:char ==# '$'
-        let a:ctx.expand = 'env_vars'
+        let a:ctx.expand = 'environment'
       elseif l:char ==# '='
         let l:got_eq = 1
         let a:ctx.expand = 'expression'
@@ -57,7 +57,7 @@ function! wilder#cmdline#let#do(ctx)
         " but we follow the wildmenu implementation
         break
       elseif (l:char ==# '<' || l:char ==# '#') &&
-            \ a:ctx.expand ==# 'functions' &&
+            \ a:ctx.expand ==# 'function' &&
             \ stridx(a:ctx.cmdline[a:ctx.pos + 1 :], '(') == -1
         " this doesn't look correct either
         break
@@ -97,7 +97,7 @@ function! wilder#cmdline#let#do(ctx)
             let a:ctx.pos += 1
             let a:ctx.expand = 'expression'
           else
-            let a:ctx.expand = 'commands'
+            let a:ctx.expand = 'command'
           endif
         else
           let a:ctx.expand = 'expression'

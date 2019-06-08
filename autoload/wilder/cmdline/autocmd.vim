@@ -38,7 +38,7 @@ function! wilder#cmdline#autocmd#do(ctx, doautocmd) abort
 
   " complete event/group name
   if a:ctx.pos == len(a:ctx.cmdline)
-    let a:ctx.expand = 'events'
+    let a:ctx.expand = 'event'
     let a:ctx.pos = l:arg_start
     return
   endif
@@ -67,7 +67,7 @@ function! wilder#cmdline#autocmd#do(ctx, doautocmd) abort
   endif
 
   if a:doautocmd
-    let a:ctx.expand = 'files'
+    let a:ctx.expand = 'file'
     let a:ctx.pos =  l:arg_start
   endif
 endfunction

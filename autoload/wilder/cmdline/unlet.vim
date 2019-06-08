@@ -7,5 +7,5 @@ function! wilder#cmdline#unlet#do(ctx) abort
     return
   endif
 
-  let a:ctx.expand = 'user_vars'
+  let a:ctx.expand = 'var'
 endfunction

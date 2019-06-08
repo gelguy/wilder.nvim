@@ -19,8 +19,8 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
   " if argument is empty, use normal completions
   " up to 300 help tags returned, so fuzzy matching does not work
   if (!a:fuzzy || a:res.pos == len(a:res.cmdline) || a:res.expand ==# 'help') &&
-        \ a:res.expand !=# 'directories' &&
-        \ a:res.expand !=# 'files' &&
+        \ a:res.expand !=# 'dir' &&
+        \ a:res.expand !=# 'file' &&
         \ a:res.expand !=# 'files_in_path'
     return s:getcompletion(a:res)
   endif
@@ -28,13 +28,13 @@ function! wilder#cmdline#getcompletion(ctx, res, fuzzy) abort
   let l:cmdline = a:res.cmdline
   let l:meta = {}
 
-  if (a:res.expand ==# 'expression' || a:res.expand ==# 'user_vars') &&
+  if (a:res.expand ==# 'expression' || a:res.expand ==# 'var') &&
         \ a:ctx.arg[1] ==# ':' &&
         \ (a:ctx.arg[0] ==# 'g' || a:ctx.arg[0] ==# 's')
     let l:arg_without_char = a:ctx.arg[0 : 1]
     let l:char = a:ctx.arg[2]
-  elseif a:res.expand ==# 'directories' ||
-        \ a:res.expand ==# 'files' ||
+  elseif a:res.expand ==# 'dir' ||
+        \ a:res.expand ==# 'file' ||
         \ a:res.expand ==# 'files_in_path'
     let l:slash = has('win32') || has('win64') ?
           \ (&shellslash ? '/' : '\') :
@@ -181,8 +181,8 @@ endfunction
 function! s:filter(ctx, xs, matcher)
   let l:arg = a:ctx.arg
 
-  if a:ctx.expand ==# 'directories' ||
-        \ a:ctx.expand ==# 'files' ||
+  if a:ctx.expand ==# 'dir' ||
+        \ a:ctx.expand ==# 'file' ||
         \ a:ctx.expand ==# 'files_in_path'
     if l:arg ==# '*'
       return a:xs
@@ -272,7 +272,7 @@ function! s:getcompletion(res) abort
     return getcompletion(l:arg, 'compiler')
   elseif a:res.expand ==# 'cscope'
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
-  elseif a:res.expand ==# 'directories'
+  elseif a:res.expand ==# 'dir'
     return getcompletion(l:arg, 'dir', 1)
   elseif a:res.expand ==# 'events'
     return getcompletion(l:arg, 'event')
@@ -280,11 +280,11 @@ function! s:getcompletion(res) abort
     return getcompletion(l:arg, 'expression')
   elseif a:res.expand ==# 'env_vars'
     return getcompletion(l:arg, 'environment')
-  elseif a:res.expand ==# 'files'
+  elseif a:res.expand ==# 'file'
     return getcompletion(l:arg, 'file', 1)
   elseif a:res.expand ==# 'files_in_path'
     return getcompletion(l:arg, 'files_in_path', 1)
-  elseif a:res.expand ==# 'functions'
+  elseif a:res.expand ==# 'function'
     return getcompletion(l:arg, 'function')
   elseif a:res.expand ==# 'help'
     return getcompletion(l:arg, 'help')
@@ -295,7 +295,7 @@ function! s:getcompletion(res) abort
   elseif a:res.expand ==# 'language'
     return getcompletion(l:arg, 'locale') +
           \ filter(['ctype', 'messages', 'time'], {_, x -> match(x, l:arg) == 0})
-  elseif a:res.expand ==# 'locales'
+  elseif a:res.expand ==# 'locale'
     return getcompletion(l:arg, 'locale')
   elseif a:res.expand ==# 'mapping'
     let l:map_args = get(a:res, 'map_args', {})
@@ -411,7 +411,7 @@ function! s:getcompletion(res) abort
     return filter(getcompletion(l:arg, 'command'), {_, x -> !(x[0] >= 'a' && x[0] <= 'z')})
   elseif a:res.expand ==# 'tags_listfiles'
     return getcompletion(l:arg, 'tag_listfiles')
-  elseif a:res.expand ==# 'user_vars'
+  elseif a:res.expand ==# 'var'
     return getcompletion(l:arg, 'var')
   endif
 
