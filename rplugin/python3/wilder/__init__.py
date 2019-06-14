@@ -27,7 +27,7 @@ class Wilder(object):
         self.nvim.call('wilder#pipeline#' + command, ctx, x)
 
     def echo(self, x):
-        self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
+        self.nvim.session.threadsafe_call(lambda: self.nvim.command('echomsg "' + x + '"'))
 
     def run_in_background(self, fn, args):
         self.executor.submit(functools.partial( fn, *args, ))

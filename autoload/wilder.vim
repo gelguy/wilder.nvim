@@ -19,7 +19,7 @@ function! wilder#toggle()
 endfunction
 
 function! wilder#set_option(x, ...) abort
-  if len(a:000) == 0
+  if !a:0
     call wilder#options#set(a:x)
   else
     call wilder#options#set(a:x, a:1)
@@ -34,12 +34,20 @@ function! wilder#previous()
   return wilder#main#previous()
 endfunction
 
-function! wilder#on_finish()
-  return wilder#pipeline#on_finish()
+function! wilder#on_finish(ctx, x)
+  return wilder#pipeline#on_finish(a:ctx, a:x)
 endfunction
 
-function! wilder#on_error()
-  return wilder#pipeline#on_error()
+function! wilder#on_error(ctx, x)
+  return wilder#pipeline#on_error(a:ctx, a:x)
+endfunction
+
+function! wilder#wait(f, on_finish, ...)
+  if !a:0
+    return wilder#pipeline#wait(a:f, a:on_finish)
+  else
+    return wilder#pipeline#wait(a:f, a:on_finish, a:1)
+  endif
 endfunction
 
 function! wilder#can_reject_completion()
@@ -66,13 +74,43 @@ function! wilder#make_hl(name, args) abort
   return wilder#render#make_hl(a:name, a:args)
 endfunction
 
+function! wilder#flatten(xss) abort
+  if empty(a:xss)
+    return []
+  endif
+
+  let l:result = a:xss[0]
+
+  for l:xs in a:xss[1 :]
+    let l:result += l:xs
+  endfor
+
+  return l:result
+endfunction
+
+function! wilder#uniq(xs, ...) abort
+  let l:seen = {}
+  let l:res = []
+
+  for l:element in a:xs
+    let l:key = a:0 ? a:1(l:element) : l:element
+
+    if !has_key(l:seen, l:key)
+      let l:seen[l:key] = 1
+      call add(l:res, l:key)
+    endif
+  endfor
+
+  return l:res
+endfunction
+
 " pipeline components
 
 function! wilder#_sleep(t) abort
   " lambda functions do not have func-abort
   " so it is possible for timer_start to throw an error
   " followed by on_finish being called
-  return {_, x -> {ctx -> timer_start(a:t, {-> wilder#pipeline#on_finish(ctx, x)})}}
+  return {_, x -> {ctx -> timer_start(a:t, {-> wilder#on_finish(ctx, x)})}}
 endfunction
 
 function! wilder#branch(...) abort
@@ -84,7 +122,7 @@ function! wilder#check(...) abort
 endfunction
 
 function! wilder#result(...) abort
-  if a:0 == 0
+  if !a:0
     return wilder#pipeline#component#result#make()
   else
     return wilder#pipeline#component#result#make(a:1)
@@ -95,6 +133,10 @@ function! wilder#result_output_escape(chars) abort
   return wilder#result({
         \'output': {ctx, x, prev -> escape(prev(ctx, x), a:chars)},
         \ })
+endfunction
+
+function! wilder#sequence(...) abort
+  return wilder#pipeline#component#sequence#make(a:000)
 endfunction
 
 function! wilder#vim_substring() abort
@@ -108,10 +150,6 @@ endfunction
 
 function! wilder#vim_sort() abort
   return {_, x -> sort(copy(x))}
-endfunction
-
-function! wilder#vim_uniq() abort
-  return wilder#pipeline#component#vim_uniq#make()
 endfunction
 
 function! wilder#python_substring() abort
@@ -146,7 +184,7 @@ function! wilder#_python_sleep(t) abort
 endfunction
 
 function! wilder#history(...) abort
-  if a:0 == 0
+  if !a:0
     return wilder#pipeline#component#history#make()
   elseif a:0 == 1
     return wilder#pipeline#component#history#make(a:1)
@@ -236,7 +274,7 @@ function! wilder#next_arrow(...) abort
 endfunction
 
 function! wilder#separator(str, from, to, ...) abort
-  if a:0 > 0
+  if a:0
     return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
   else
     return wilder#render#component#separator#make(a:str, a:from, a:to)

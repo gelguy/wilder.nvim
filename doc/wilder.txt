@@ -515,11 +515,11 @@ wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
 
             Options:
             `hide`
-            When true, hides wilder when inccommand is active.
+            When true, hides wilder when in a |:substitute| command.
             See |wilder-hidden|.
             See https://github.com/neovim/neovim/issues/9777.
 
-            Default: 1
+            Default: !has('nvim-0.4')
 
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{opts}])
@@ -529,12 +529,34 @@ wilder#substitute_pipeline([{opts}])
 
             Options:
             `hide`
-            When true, hides wilder when inccommand is active and not in the
-            {pattern} section of the |:substitute| command.
+            When true, hides wilder when in the {pattern} section of the
+            |:substitute| command.
             See |wilder-hidden|.
             See https://github.com/neovim/neovim/issues/9777.
 
-            Default: 1
+            Default: !has('nvim-0.4')
+
+            Note For Neovim 0.3, you can set the `hide` option above to `1` add
+            this snippet to your vimrc to disable inccommand while in the
+            {search} section.
+>
+        function! s:save_inccommand(...)
+          let s:saved_inccommand = &inccommand
+          let &inccommand = ''
+        endfunction
+
+        function! s:restore_inccommand(...)
+          let &inccommand = s:saved_inccommand
+        endfunction
+
+        call wilder#set_option('pre_hook', funcref('s:save_inccommand'))
+        call wilder#set_option('post_hook', funcref('s:restore_inccommand'))
+<
+
+            Note For Neovim 0.4+, the statusline does not redraw correctly
+            when using 'inccommand'.
+            See https://github.com/neovim/neovim/issues/9783.
+
 
             `pipeline`
             The pipeline to pass the {search} section to.

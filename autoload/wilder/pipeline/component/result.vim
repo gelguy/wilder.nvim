@@ -10,10 +10,18 @@ function! s:result(args, ctx, x) abort
     let l:F = a:args[l:key]
 
     if l:key ==# 'value'
-      let l:x.value = l:F(a:ctx, l:x.value)
+      if type(l:F) is v:t_func
+        let l:x.value = l:F(a:ctx, l:x.value)
+      else
+        let l:x.value = l:F
+      endif
       continue
     elseif l:key ==# 'meta'
-      let l:x.meta = extend(l:x, a:args.meta)
+      if type(l:F) is v:t_func
+        let l:x.meta = l:F(a:ctx, get(l:x, 'meta', {}))
+      else
+        let l:x.meta = extend(get(l:x, 'meta', {}), a:args.meta)
+      endif
       continue
     endif
 

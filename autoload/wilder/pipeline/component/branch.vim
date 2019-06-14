@@ -27,7 +27,7 @@ function! s:on_finish(state, ctx, x) abort
   if a:x isnot v:false
     let a:ctx.handler_id = a:state.original_ctx.handler_id
 
-    call wilder#pipeline#on_finish(a:ctx, a:x)
+    call wilder#on_finish(a:ctx, a:x)
     return
   endif
 
@@ -36,7 +36,7 @@ function! s:on_finish(state, ctx, x) abort
   if a:state.index >= len(a:state.pipelines)
     let a:ctx.handler_id = a:state.original_ctx.handler_id
 
-    call wilder#pipeline#on_finish(a:ctx, v:false)
+    call wilder#on_finish(a:ctx, v:false)
     return
   endif
 
@@ -52,5 +52,5 @@ endfunction
 function! s:on_error(state, ctx, x) abort
   let a:ctx.handler_id = a:state.original_ctx.handler_id
 
-  call wilder#pipeline#on_error(a:ctx, a:x)
+  call wilder#on_error(a:ctx, a:x)
 endfunction

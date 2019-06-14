@@ -327,7 +327,7 @@ function! wilder#cmdline#main#do(ctx) abort
     else
       let a:ctx.pos = l:arg_start
     endif
-    let a:ctx.expand = 'files'
+    let a:ctx.expand = 'file'
 
     if l:use_filter || a:ctx.cmd ==# '!' || a:ctx.cmd ==# 'terminal'
       " should set xp_shell, but looks like not needed
@@ -381,7 +381,7 @@ function! wilder#cmdline#main#do(ctx) abort
   if a:ctx.cmd ==# 'find' ||
         \ a:ctx.cmd ==# 'sfind' ||
         \ a:ctx.cmd ==# 'tabfind'
-    if a:ctx.expand ==# 'files'
+    if a:ctx.expand ==# 'file'
       let a:ctx.expand = 'files_in_path'
     endif
     return
@@ -391,7 +391,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lchdir' ||
         \ a:ctx.cmd ==# 'tcd' ||
         \ a:ctx.cmd ==# 'tchdir'
-    if a:ctx.expand ==# 'files'
+    if a:ctx.expand ==# 'file'
       let a:ctx.expand = 'dir'
     endif
     return
