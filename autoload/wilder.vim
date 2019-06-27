@@ -232,18 +232,12 @@ function! wilder#cmdline_pipeline(...) abort
   return wilder#cmdline#pipeline(l:opts)
 endfunction
 
-function! wilder#cmdline_fuzzy_pipeline(...) abort
-  let l:opts = a:0 > 0 ? a:1 : {}
-
-  return wilder#cmdline#fuzzy_pipeline(l:opts)
-endfunction
-
 function! wilder#cmdline_filter(f) abort
   return wilder#cmdline#make_filter(a:f)
 endfunction
 
 function! wilder#fuzzy_matcher() abort
-  return {ctx, x, arg -> wilder#cmdline#fuzzy_matcher(ctx, x, arg)}
+  return {ctx, candidate, query -> wilder#cmdline#fuzzy_matcher(ctx, candidate, query)}
 endfunction
 
 function! wilder#substitute_pipeline(...) abort

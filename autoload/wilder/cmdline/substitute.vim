@@ -3,8 +3,19 @@ function! wilder#cmdline#substitute#do(ctx) abort
 endfunction
 
 function! wilder#cmdline#substitute#parse(ctx) abort
-  " returns [{delimiter}, {from}, {delimiter}, {to}, {delimiter}, {flags}]
+  let l:cmdline = a:ctx.cmdline[a:ctx.pos :]
 
+  if !exists('s:cache_cmdline') || l:cmdline !=# s:cache_cmdline
+    let l:res = s:parse(a:ctx)
+
+    let s:cache_cmdline = l:cmdline
+    let s:cache_parsed_cmdline = l:res
+  endif
+
+  return copy(s:cache_parsed_cmdline)
+endfunction
+
+function! s:parse(ctx) abort
   if a:ctx.pos >= len(a:ctx.cmdline)
     return []
   endif

@@ -382,7 +382,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'sfind' ||
         \ a:ctx.cmd ==# 'tabfind'
     if a:ctx.expand ==# 'file'
-      let a:ctx.expand = 'files_in_path'
+      let a:ctx.expand = 'file_in_path'
     endif
     return
   elseif a:ctx.cmd ==# 'cd' ||

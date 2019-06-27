@@ -511,34 +511,74 @@ wilder#python_search_pipeline()     *wilder#python_search_pipeline()*
 
 wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
                                     Neovim only~
-            Returns a pipeline which returns cmdline completions.
+            Returns a pipeline which returns completions in cmdline mode.
+            Handles user command completions, file completions and cmdline
+            completions.
+            For completions during |:substitute|, use
+            |wilder#substitute_pipeline()|.
 
             Options:
-            `hide`
+            `fuzzy`
+            When true, use fuzzy matching for the results.
+            Note: Fuzzy matching does not work in some cases, e.g. when
+            getting |help| completions.
+
+            Default: 0
+
+            `fuzzy_matcher`
+            The function to use when matching candidates in fuzzy completion.
+            Takes a {ctx}, {candidate} and {query} and returns true or false.
+
+            Default: wilder#fuzzy_matcher()
+
+            `use_python_for_file_completion`
+            Use async Python to get file or directory completions.
+
+            Default: 0
+
+            `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
             See |wilder-hidden|.
             See https://github.com/neovim/neovim/issues/9777.
 
-            Default: !has('nvim-0.4')
+            Default: has('nvim') && !has('nvim-0.3.7')
 
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{opts}])
             Returns a pipeline which runs the given pipeline when in a
             |:substitute| command.
-            Uses the {search} section of the command as the argument.
+            Uses the {pattern} section of the command as the argument.
+
+            Note |wilder#substitute_pipeline()| should be placed in front of
+            |wilder#cmdline_pipeline()| when using |wilder#branch()| if
+            `hide_in_substitute` is true.
 
             Options:
-            `hide`
-            When true, hides wilder when in the {pattern} section of the
+            `pipeline`
+            The pipeline to pass the {pattern} section to.
+
+            Default: For vim: [
+                     \ wilder#vim_substring(),
+                     \ wilder#vim_search(),
+                     \ wilder#result_output_escape('^$,*~[]/\'),
+                     \ ])
+                     For nvim: [
+                     \ wilder#python_substring(),
+                     \ wilder#python_search(),
+                     \ wilder#result_output_escape('^$,*~[]/\'),
+                     ]
+
+            `hide_in_replace`
+            When true, hides wilder when in the {string} section of the
             |:substitute| command.
             See |wilder-hidden|.
             See https://github.com/neovim/neovim/issues/9777.
 
-            Default: !has('nvim-0.4')
+            Default: has('nvim') && !has('nvim-0.3.7')
 
-            Note For Neovim 0.3, you can set the `hide` option above to `1` add
-            this snippet to your vimrc to disable inccommand while in the
-            {search} section.
+            Note For Neovim < 0.3.7, you can set the `hide_in_replace` option
+            above to `1` add this snippet to your vimrc to disable inccommand
+            while in the {pattern} section.
 >
         function! s:save_inccommand(...)
           let s:saved_inccommand = &inccommand
@@ -556,21 +596,6 @@ wilder#substitute_pipeline([{opts}])
             Note For Neovim 0.4+, the statusline does not redraw correctly
             when using 'inccommand'.
             See https://github.com/neovim/neovim/issues/9783.
-
-
-            `pipeline`
-            The pipeline to pass the {search} section to.
-
-            Default: For vim: [
-                     \ wilder#vim_substring(),
-                     \ wilder#vim_search(),
-                     \ wilder#result_output_escape('^$,*~[]/\'),
-                     \ ])
-                     For nvim: [
-                     \ wilder#python_substring(),
-                     \ wilder#python_search(),
-                     \ wilder#result_output_escape('^$,*~[]/\'),
-                     ]
 
 ==============================================================================
 5. Renderer                         *wilder-renderer*
@@ -1080,6 +1105,14 @@ wilder#make_hl({name}, {args})      *wilder#make_hl()*
                     \   'bold': v:true},
                     \ ])
 <
+
+wilder#fuzzy_matcher()             *wilder#fuzzy_matcher()*
+            Returns a fuzzy matcher to use for |wilder#cmdline_pipeline()|.
+            The matcher matches {candidate} if it contains all the characters
+            in {query} and in the same order.
+
+            e.g. `foobar` will match `fbr`
+                 `foobar` will not match `frb`
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*
