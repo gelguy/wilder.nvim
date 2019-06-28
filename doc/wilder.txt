@@ -532,9 +532,10 @@ wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
             Default: wilder#fuzzy_matcher()
 
             `use_python_for_file_completion`
+            Neovim only~
             Use async Python to get file or directory completions.
 
-            Default: 0
+            Default: has('nvim')
 
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
