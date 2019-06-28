@@ -677,11 +677,11 @@ endfunction
 
 function! wilder#cmdline#get_file_completion_pipeline(opts) abort
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
-  let l:use_python = get(a:opts, 'use_python', 0)
+  let l:use_python = get(a:opts, 'use_python', has('nvim'))
 
   let l:Completion_func = l:use_python ?
         \ funcref('wilder#cmdline#python_get_file_completion') :
-        \ funcref('wilder#cmdline#get_file_completion')
+        \ funcref('wilder#cmdline#getcompletion')
 
   if l:fuzzy
     let l:Matcher = get(a:opts, 'fuzzy_matcher', funcref('wilder#cmdline#fuzzy_matcher'))
