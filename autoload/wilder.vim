@@ -131,7 +131,7 @@ endfunction
 
 function! wilder#result_output_escape(chars) abort
   return wilder#result({
-        \'output': {ctx, x, prev -> escape(prev(ctx, x), a:chars)},
+        \'output': [{ctx, x -> escape(x, a:chars)}],
         \ })
 endfunction
 

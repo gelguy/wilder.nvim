@@ -8,7 +8,7 @@ let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
 
-let s:result = []
+let s:result = {'xs': []}
 let s:selected = -1
 let s:clear_selection = 1
 let s:completion_stack = []
@@ -147,7 +147,7 @@ function! wilder#main#stop() abort
   endif
 
   let s:active = 0
-  let s:result = []
+  let s:result = {'xs': []}
   let s:selected = -1
   let s:clear_selection = 0
   let s:completion_stack = []
@@ -276,7 +276,13 @@ function! wilder#main#on_finish(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:result = (a:x is v:false || a:x is v:true) ? [] : a:x
+  let l:result = (a:x is v:false || a:x is v:true) ? {'xs': []} : a:x
+  if type(l:result) is v:t_list
+    let s:result = {'xs': l:result}
+  else
+    let s:result = l:result
+  endif
+
   let s:selected = -1
   let s:clear_selection = 1
   " keep previous completion
@@ -324,7 +330,7 @@ function! wilder#main#on_error(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:result = []
+  let s:result = {'xs': []}
   let s:selected = -1
   " keep previous completion
 
@@ -373,7 +379,7 @@ function! s:draw(...) abort
       endif
 
       if l:has_error
-        let l:xs = []
+        let l:xs = {'xs': []}
       else
         let l:xs = s:result
       endif
@@ -422,7 +428,7 @@ function! wilder#main#step(num_steps) abort
 
   let l:previous_selected = s:selected
 
-  let l:len = len(s:result)
+  let l:len = len(s:result.xs)
   if a:num_steps == 0
     " pass
   elseif l:len == 0
@@ -457,22 +463,29 @@ function! wilder#main#step(num_steps) abort
 
   if s:selected >= -1
     if s:selected >= 0
-      let l:candidate = s:result[s:selected]
+      let l:candidate = s:result.xs[s:selected]
 
-      if type(l:candidate) is v:t_dict
-        let l:output = has_key(l:candidate, 'output')
-              \ ? l:candidate.output({}, l:candidate.value)
-              \ : l:candidate.value
+      let l:output = l:candidate
 
-        let l:Replace = get(l:candidate, 'replace', {_, x -> x})
+      if has_key(s:result, 'output')
+        for l:F in s:result.output
+          if type(l:F) isnot v:t_func
+            let l:F = function(l:F)
+          endif
 
-        if type(l:Replace) is v:t_func
-          let l:new_cmdline = l:Replace({'cmdline': s:replaced_cmdline}, l:output)
-        else
-          let l:new_cmdline = l:Replace
-        endif
-      else
-        let l:new_cmdline = l:candidate
+          let l:output = l:F({}, l:output)
+        endfor
+      endif
+
+      let l:new_cmdline = l:output
+      if has_key(s:result, 'replace')
+        for l:F in s:result.replace
+          if type(l:F) isnot v:t_func
+            let l:F = function(l:F)
+          endif
+
+          let l:new_cmdline = l:F({'cmdline': s:replaced_cmdline}, l:new_cmdline)
+        endfor
       endif
     else
       let l:new_cmdline = s:replaced_cmdline
@@ -560,7 +573,7 @@ function! wilder#main#accept_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
-    let s:result = []
+    let s:result = {'xs': []}
     let s:selected = -1
     let s:clear_selection = 1
 
@@ -602,7 +615,7 @@ function! wilder#main#reject_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
-    let s:result = []
+    let s:result = {'xs': []}
     let s:selected = -1
     let s:clear_selection = 1
 
