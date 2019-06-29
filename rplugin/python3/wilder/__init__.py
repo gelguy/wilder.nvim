@@ -258,7 +258,7 @@ class Wilder(object):
                             continue
                         name = str(entry) if has_wildcard else entry.name
                         if Path(name) == Path(path_prefix):
-                            res.append('./')
+                            res.append(os.path.join(path_prefix, './'))
                         elif entry.is_dir():
                             res.append((str(entry) if has_wildcard else entry.name) + os.sep)
                         else:
