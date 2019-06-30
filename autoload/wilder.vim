@@ -42,6 +42,16 @@ function! wilder#reject(ctx, x)
   return wilder#pipeline#reject(a:ctx, a:x)
 endfunction
 
+" DEPRECATED: use wilder#resolve()
+function! wilder#on_finish(ctx, x)
+  return wilder#pipeline#resolve(a:ctx, a:x)
+endfunction
+
+" DEPRECATED: use wilder#reject()
+function! wilder#on_error(ctx, x)
+  return wilder#pipeline#reject(a:ctx, a:x)
+endfunction
+
 function! wilder#wait(f, on_finish, ...)
   if !a:0
     return wilder#pipeline#wait(a:f, a:on_finish)
