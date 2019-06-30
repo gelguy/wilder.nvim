@@ -211,19 +211,19 @@ non-|v:true| value.
                                     *wilder-pipeline-return-function*
 Returning a function {f} in a pipeline component will cause the pipeline to be
 suspended. The returned function will then be called with a new {ctx}.
-|wilder#on_finish()| should be called, with {ctx}, and the result {x} as
-arguments. The original {ctx} from the parent function can be ignored.
-The pipeline will then be resumed, and the {x} value will be passed on to the
-next component. If there is an error, |wilder#on_error()| should be called
-instead, with {ctx} and {error} as arguments.
-Note exactly one of |wilder#on_finish()| or |wilder#on_error()| has to be
-called. Not calling either will result in a memory leak, and calling more than
-one will result in an error.
+|wilder#resolve()| should be called, with {ctx}, and the result {x} as
+arguments. The original {ctx} from the parent function can be ignored. The
+pipeline will then be resumed, and the {x} value will be passed on to the next
+component. If there is an error, |wilder#reject()| should be called instead,
+with {ctx} and {error} as arguments.
+Note exactly one of |wilder#resolve()| or |wilder#reject()| has to be called
+eventually. Not calling either will result in a memory leak, and calling more
+than one will result in an error.
 
 Example:
 >
     wilder#set_option('pipeline', [
-      \   {_, x -> {ctx -> timer_start(100, {-> wilder#on_finish(ctx, x)})}},
+      \   {_, x -> {ctx -> timer_start(100, {-> wilder#resolve(ctx, x)})}},
       \   {ctx, x -> MyCompletionFunction(x)},
       \   ]
 <
@@ -995,12 +995,12 @@ wilder#reject_completion()          *wilder#reject_completion()*
                 \ "\<Up>"
 <
 
-wilder#on_finish({ctx}, {x})        *wilder#on_finish()*
+wilder#resolve({ctx}, {x})          *wilder#resolve()*
             Called to continue from an async component in the
             |wilder-pipeline|.
             See |wilder-pipeline-return-function|.
 
-wilder#on_error({ctx}, {err})       *wilder#on_error()*
+wilder#reject({ctx}, {err})         *wilder#reject()*
             Called to throw an error from an async component in the
             |wilder-pipeline|.
             See |wilder-pipeline-return-function|.

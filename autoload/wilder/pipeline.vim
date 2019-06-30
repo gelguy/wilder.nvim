@@ -1,12 +1,12 @@
 let s:handler_registry = {}
 let s:id_index = 0
 
-function! wilder#pipeline#on_finish(ctx, x) abort
-  call s:handle(a:ctx, a:x, 'on_finish')
+function! wilder#pipeline#resolve(ctx, x) abort
+  call s:handle(a:ctx, a:x, 'resolve')
 endfunction
 
-function! wilder#pipeline#on_error(ctx, x) abort
-  call s:handle(a:ctx, a:x, 'on_error')
+function! wilder#pipeline#reject(ctx, x) abort
+  call s:handle(a:ctx, a:x, 'reject')
 endfunction
 
 function! s:handle(ctx, x, key) abort
@@ -29,13 +29,13 @@ function! s:handle(ctx, x, key) abort
 
   unlet s:handler_registry[l:handler_id]
 
-  if a:key ==# 'on_error'
+  if a:key ==# 'reject'
     call l:handler.on_error(a:ctx, a:x)
     return
   endif
 
   try
-    call l:handler[a:key](a:ctx, a:x)
+    call l:handler.on_finish(a:ctx, a:x)
   catch
     call l:handler.on_error(a:ctx, 'pipeline: ' . v:exception)
   endtry
@@ -51,7 +51,7 @@ function! s:call(f, ctx, handler_id) abort
   try
     call a:f(a:ctx)
   catch
-    call wilder#on_error(a:ctx, 'pipeline: ' . v:exception)
+    call wilder#reject(a:ctx, 'pipeline: ' . v:exception)
   endtry
 endfunction
 
@@ -169,6 +169,6 @@ function! s:wait_on_error(state, ctx, x)
   if has_key(a:state, 'on_error')
     call a:state.on_error(a:ctx, a:x)
   else
-    call wilder#on_error(a:ctx, a:x)
+    call wilder#reject(a:ctx, a:x)
   endif
 endfunction

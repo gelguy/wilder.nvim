@@ -338,8 +338,8 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion) abort
   let l:upper_res.expand_arg = a:res.expand_arg . toupper(l:fuzzy_char)
 
   return wilder#wait(a:getcompletion(a:ctx, l:upper_res),
-        \ {ctx, upper_xs -> wilder#on_finish(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
-        \ {ctx, lower_xs -> wilder#on_finish(ctx, wilder#uniq(lower_xs + upper_xs))}))})
+        \ {ctx, upper_xs -> wilder#resolve(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
+        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#uniq(lower_xs + upper_xs))}))})
 endfunction
 
 function! wilder#cmdline#python_get_file_completion(ctx, res) abort
