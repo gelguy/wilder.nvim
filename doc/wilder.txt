@@ -147,10 +147,11 @@ A contrived example:
 This will return the 3 completions, the current cmdline and the strings 'foo'
 and 'bar'.
 
-The result of the pipeline should be a list. The elements of the list can
-either be a string or a |Dictionary| with a certain set of keys. See
-|wilder-pipeline-result| for more details on what the dictionary should
-contain.
+The result of the pipeline should be a list of strings or a dictionary. For
+the dictionary, the 'xs' value should be a list of strings. See
+|wilder-pipeline-result| for more details on other keys the dictionary
+contain, and see |wilder-pipeline-flow| for more details on how the result
+will be used.
 
 There are 3 special types of values, which when returned in the middle of the
 pipeline, will cause the pipeline to stop. These are `v:false` `v:true` and
@@ -231,23 +232,33 @@ This will call `MyCompletionFunction` after a 100 millisecond delay.
 Use this behaviour to create async pipeline components.
 
                                     *wilder-pipeline-result*
-The result of the pipeline should be a list. The elements of the list can
-either be a string or a Result |Dictionary| containing a specific set of keys.
+The result of the pipeline should be a list of strings or a dictionary. For
+the dictionary, the 'xs' value should be a list of strings.
 
-The Result dictionary allows you to change how the candidate is handled. For
+When the result is a list, it is implicitly converted into a dictionary with
+the list of keys under the 'xs' key.
+
+The result dictionary allows you to change how the candidate is handled. For
 example, you may wish to escape certain characters when drawing the candidate
 or only change certain parts of the cmdline when the candidate is selected.
 
-A Result dictionary has the following keys:
+The Result dictionary has the following keys:
 
-            `value`
+            `xs`                    *wilder-pipeline-result-xs*
             Mandatory~
-            The completion candidate.
+            The list of candidates as strings
 
-            `draw`
+            `draw`                  *wilder-pipeline-result-draw*
             Optional~
-            A function which takes a {ctx} and {x} and returns a string
-            representing how {x} will be drawn by the renderer.
+            A list of strings or functions which takes a {ctx} and {x} and
+            returns a string representing how {x} will be drawn by the
+            renderer.
+            For each element in the list, if the element is a string, it is
+            converted to a function using |function()|.
+            {ctx} and {x} are passed to the function and the result is a the
+            new value of {x}. {ctx} and the new value of {x} is then passed to
+            the next element. If there are no more elements, the final {x}
+            will be used.
 
             The keys of {ctx} are:
                 `selected`
@@ -258,54 +269,54 @@ A Result dictionary has the following keys:
 
             Default: None
 
-            `output`
+            `output`                *wilder-pipeline-result-output*
             Optional~
-            A function which takes a {ctx} and {x} and returns a string
-            representing how {x} will be output when selected as a completion
-            candidate.
+            A list of strings or functions which takes a {ctx} and {x} and
+            returns a string representing how {x} will be output when selected
+            as a completion candidate.
+            See the |wilder-pipeline-result-draw| option for how iterating
+            through the list works.
 
             {ctx} contains no keys.
 
             Default: None
 
-            `replace`
+            `replace`               *wilder-pipeline-result-replace*
             Optional~
-            A function which takes a {ctx} and {x} and returns the cmdline to
-            replace the current one. The cmdline is only replaced up to
-            where the cursor is.
+            A list of strings or functions which takes a {ctx} and {x} and
+            returns the cmdline to replace the current one
+            See |wilder-option-before_cursor| on which part of the cmdline will be
+            replaced.
+            See the |wilder-pipeline-result-draw| option for how iterating
+            through the list works.
 
             {ctx} contains no keys.
 
             Default: {_, x -> x}
 
-The flow of the pipeline goes like this:
+                                    *wilder-pipeline-flow*
 1. The pipeline starts with the current cmdline as the input
-2. The pipeline finishes with a list, containing strings and/or Results.
-3. For each completion candidate {x}, it is drawn by the renderer.
-   If {x} is a string, it is passed directly to the renderer.
-   If {x} is a dictionary, and has no `draw` key, its `value` entry is passed
-   to the renderer.
-   If {x} is a dictionary and has a `draw` entry, `draw` is called, with the
-   {x} argument being the `value` entry of the dictonary. The result of `draw`
-   is then passed to the renderer.
-4. When a candidate {x} is selected, its value can be modified before
+2. The pipeline finishes with a list of strings or a dictionary {result}.
+3. The list of strings is implicitly converted into a result dictionary with
+   the list of strings under the `xs` key.
+4. Each element of the `xs` list {x} is drawn by the renderer:
+   If {result} does not contain the key `draw`, its {x} entry is used.
+   Otherwise, |wilder-pipeline-result-draw| is applied. The result is then
+   passed to the renderer.
+5. When a candidate {x} is selected, its value can be modified before
    inserting it to the cmdline.
-   If {x} is a string, it is unchanged.
-   If {x} is a dictionary, and has no `output` key, its `value` entry will be
-   used.
-   If {x} is a dictionary and has a `output` entry, `output` is called, with
-   the {x} argument being the `value` entry of the dictonary. The result of
-   `output` will be used.
-5. Finally, the string or output from above will be inserted to the cmdline.
+   If {result} does not contain the key `output`, its {x} entry is used.
+   Otherwise, |wilder-pipeline-result-output| is applied. The result is then
+   used for insertion to the cmdline.
+6. Finally, the output from above will be inserted to the cmdline.
    See |wilder-option-before_cursor| on which part of the cmdline will be
    replaced.
-   If {x} is a dictionary and has a `replace` entry, `replace` is called, with
-   the {x} argument being the result from the step 4. The result of the
-   `replace` function will be inserted.
-   Otherwise, the result from step 4 will be inserted.
+   If {result} does not contain the key `output`, its {x} entry is used.
+   Otherwise, |wilder-pipeline-result-output| is applied. The result is then
+   used to replace the cmdline.
 
 The |wilder#result()| pipeline component is a helper component which allows
-easy modification of the result list.
+easy modification of the result dictionary.
 
 COMPONENTS                          *wilder-pipeline-components*
 
@@ -447,47 +458,38 @@ wilder#python_uniq()                *wilder#python_uniq()*
             Takes a list and returns a uniq-ed copy of the list.
 
 wilder#result([{dictionary}])       *wilder#result()*
-            Takes a dictionary and returns a component which will transform a
-            list into a list of Result dictonaries. See |wilder-pipeline-result|
-            for more information on how the Result dictionary is used.
+            Takes an {input} dictionary and returns a component which will
+            transform the input into a result dictionary and modifies its
+            keys.
+            See |wilder-pipeline-result| for more information on how the
+            keys of the dictionary is used.
 
-            For each element in the input to the component, if the element is
-            a string, it is converted into a dictionary with `value` entry as
-            the string.
+            For each {key} and {value} pair in {dictionary}:
+            If {value} is a list, and {input} does not contain {key},
+            {input}'s {key} is set to the list. Otherwise, the list is
+            appended to the end of the list at {input}'s {key}.
 
-            For the `value` {key} of the dictionary, the {value} should be a
-            function which takes a {ctx} and the current value of the Result
-            {x} and returns the new `value` for the Result.
+            If {value} is a dictionary, and {input} does not contain {key},
+            {input}'s {key} is set to the dictionary. Otherwise, the
+            dictionary at {input}'s {key} is extended with the dictionary
+            using |extend()|.
 
-            For each other {key}-{value} pair of the dictionary, {value}
-            should be a function which takes a {ctx}, {x} and {prev} and
-            returns the the new entry for {key} in the Result.
+            If {value} is a function, it should be a function which takes a
+            {ctx} and {old_value} and returns the new value to be used. If
+            input does not contain {key}, {old_value} will be |v:null|.
 
-            {ctx} contains the following keys if the {key} is `draw`:
-                `i`
-                The position of {x} in the list of candidates.
-
-                `selected`
-                True if {x} currently is selected.
-
-            Otherwise, the {ctx} contains no keys.
-
-            {prev} is a function which takes a {ctx}, {x} and {default} and
-            returns the new {value}. Passing the current {ctx} and {x} value
-            will return the result of evaluating the previous Result's {value}
-            with the same {key}. If the previous Result does not have an entry
-            for {key}, {default} is used.
-
-            {default} can be omitted as a shorthand for prev(ctx, x, x).
+            Otherwise, it contains the current value at {input}'s {key}.
+            If {value} is none of the above, the value at {input}'s {key} will
+            be replaced with {value}.
 
             For example:
 >
             [
             \ {ctx, x -> MyCompletionFunction(x)},
-            \ wilder#result({'draw': {ctx, x -> (ctx['i'] + 1) . '. ' . x}}),
-            \ wilder#result({'draw': {ctx, x, prev -> ctx['selected'] ?
+            \ wilder#result({'draw': [{ctx, x -> (ctx['i'] + 1) . '. ' . x}]}),
+            \ wilder#result({'draw': [{ctx, x, prev -> ctx['selected'] ?
             \                         '[' . prev(ctx, x) . ']' :
-            \                         prev(ctx, x)}}),
+            \                         prev(ctx, x)}]}),
             \ ]
 <
             This pipeline will first prepend the index of the candidate and
@@ -497,7 +499,8 @@ wilder#result([{dictionary}])       *wilder#result()*
                                     *wilder#result_output_escape()*
 wilder#result_output_escape({chars})
             Helper function which returns a |wilder#result()| which escapes
-            {chars} in the Result output.
+            {chars} in the `output` when selecting a candidate. See
+            |wilder-pipeline-flow| on how `output` is used.
 
 PIPELINES                           *wilder-pipelines*
 
