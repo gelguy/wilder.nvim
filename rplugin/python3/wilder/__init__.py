@@ -29,7 +29,7 @@ class Wilder(object):
         self.lock = threading.Lock()
         self.executor = None
 
-    def handle(self, ctx, x, command='on_finish'):
+    def handle(self, ctx, x, command='resolve'):
         self.nvim.call('wilder#pipeline#' + command, ctx, x)
 
     def echo(self, x):
@@ -131,7 +131,7 @@ class Wilder(object):
                             return
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, 'python_search: ' + str(e), 'on_error',))
+            self.queue.put((ctx, 'python_search: ' + str(e), 'reject',))
         finally:
             with self.lock:
                 self.events.remove(event)
@@ -147,7 +147,7 @@ class Wilder(object):
             res = [x for x in items if not (x in seen or seen.add(x))]
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, 'python_uniq: ' + str(e), 'on_error',))
+            self.queue.put((ctx, 'python_uniq: ' + str(e), 'reject',))
 
     @neovim.function('_wilder_python_sort', sync=False, allow_nested=True)
     def sort(self, args):
@@ -159,7 +159,7 @@ class Wilder(object):
 
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, 'python_sort: ' + str(e), 'on_error',))
+            self.queue.put((ctx, 'python_sort: ' + str(e), 'reject',))
 
     @neovim.function('_wilder_python_get_file_completion', sync=False, allow_nested=True)
     def get_file_completion(self, args):
@@ -279,7 +279,7 @@ class Wilder(object):
 
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'on_error',))
+            self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'reject',))
 
     @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
     def get_users(self, args):
@@ -308,4 +308,4 @@ class Wilder(object):
             res = sorted(res)
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, 'python_get_users: ' + str(e), 'on_error',))
+            self.queue.put((ctx, 'python_get_users: ' + str(e), 'reject',))

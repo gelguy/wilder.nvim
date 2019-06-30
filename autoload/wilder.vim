@@ -34,12 +34,12 @@ function! wilder#previous()
   return wilder#main#previous()
 endfunction
 
-function! wilder#on_finish(ctx, x)
-  return wilder#pipeline#on_finish(a:ctx, a:x)
+function! wilder#resolve(ctx, x)
+  return wilder#pipeline#resolve(a:ctx, a:x)
 endfunction
 
-function! wilder#on_error(ctx, x)
-  return wilder#pipeline#on_error(a:ctx, a:x)
+function! wilder#reject(ctx, x)
+  return wilder#pipeline#reject(a:ctx, a:x)
 endfunction
 
 function! wilder#wait(f, on_finish, ...)
@@ -109,8 +109,8 @@ endfunction
 function! wilder#_sleep(t) abort
   " lambda functions do not have func-abort
   " so it is possible for timer_start to throw an error
-  " followed by on_finish being called
-  return {_, x -> {ctx -> timer_start(a:t, {-> wilder#on_finish(ctx, x)})}}
+  " followed by resolve being called
+  return {_, x -> {ctx -> timer_start(a:t, {-> wilder#resolve(ctx, x)})}}
 endfunction
 
 function! wilder#branch(...) abort
