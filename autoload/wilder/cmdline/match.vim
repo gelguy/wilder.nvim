@@ -7,7 +7,7 @@ function! wilder#cmdline#match#do(ctx) abort
     if wilder#cmdline#main#skip_nonwhitespace(a:ctx) &&
           \ wilder#cmdline#main#skip_whitespace(a:ctx)
       let l:delimiter = a:ctx.cmdline[a:ctx.pos]
-
+      let a:ctx.expand = 'nothing'
       let a:ctx.pos += 1
 
       call wilder#cmdline#skip_regex#do(a:ctx, l:delimiter)

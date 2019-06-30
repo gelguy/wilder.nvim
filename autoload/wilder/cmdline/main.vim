@@ -1,4 +1,8 @@
 function! wilder#cmdline#main#do(ctx) abort
+  " default
+  let a:ctx.expand = 'commands'
+  let a:ctx.force = 0
+
   if empty(a:ctx.cmdline[a:ctx.pos :])
     return
   endif
@@ -10,6 +14,7 @@ function! wilder#cmdline#main#do(ctx) abort
   " check if comment
   if a:ctx.cmdline[a:ctx.pos] ==# '"'
     let a:ctx.pos = len(a:ctx.cmdline)
+    let a:ctx.expand = 'nothing'
     return
   endif
 
@@ -22,6 +27,7 @@ function! wilder#cmdline#main#do(ctx) abort
 
   if a:ctx.cmdline[a:ctx.pos] ==# '"'
     let a:ctx.pos = len(a:ctx.cmdline)
+    let a:ctx.expand = 'nothing'
     return
   endif
 
@@ -81,6 +87,11 @@ function! wilder#cmdline#main#do(ctx) abort
         endwhile
       endif
 
+      if a:ctx.pos == l:cmd_start
+        let a:ctx.expand = 'unsuccessful'
+        return
+      endif
+
       " find the command
       if a:ctx.pos > l:cmd_start
         let l:cmd = a:ctx.cmdline[l:cmd_start : a:ctx.pos - 1]
@@ -106,6 +117,7 @@ function! wilder#cmdline#main#do(ctx) abort
           \ l:char >=# '0' && l:char <=# '9'
       let a:ctx.pos = l:cmd_start
       let a:ctx.cmd = ''
+      " expand commands
       return
     endif
   endif
@@ -119,20 +131,19 @@ function! wilder#cmdline#main#do(ctx) abort
     endif
 
     let a:ctx.pos = len(a:ctx.cmdline)
+    let a:ctx.expand = 'nothing'
     return
   endif
 
-  let l:force = 0
+  let a:ctx.expand = 'nothing'
 
   " handle !
   if a:ctx.cmdline[a:ctx.pos] ==# '!'
     let a:ctx.pos += 1
-    let l:force = 1
+    let a:ctx.force = 1
   endif
 
-  if !wilder#cmdline#main#skip_whitespace(a:ctx)
-    return
-  endif
+  call wilder#cmdline#main#skip_whitespace(a:ctx)
 
   if has_key(s:command_map, a:ctx.cmd)
     let l:flags = s:command_map[a:ctx.cmd].flags
@@ -164,26 +175,24 @@ function! wilder#cmdline#main#do(ctx) abort
       let a:ctx.pos += 1
       let l:use_fitler = 1
     else
-      let l:use_filter = l:force
+      let l:use_filter = a:ctx.force
     endif
   elseif a:ctx.cmd ==# '<' || a:ctx.cmd ==# '>'
     while a:ctx.cmdline[a:ctx.pos] ==# a:ctx.cmd
       let a:ctx.pos += 1
     endwhile
 
-    if !wilder#cmdline#main#skip_whitespace(a:ctx)
-      return
-    endif
+    call wilder#cmdline#main#skip_whitespace(a:ctx)
   endif
 
   " +command
   if and(l:flags, s:EDITCMD) &&
         \ !l:use_filter && a:ctx.cmdline[a:ctx.pos] ==# '+'
     call wilder#cmdline#skip_plus_command#do(a:ctx)
-  endif
 
-  if !wilder#cmdline#main#skip_whitespace(a:ctx)
-    return
+    if !wilder#cmdline#main#skip_whitespace(a:ctx)
+      return
+    endif
   endif
 
   " look for | for new command and " for comment
@@ -202,7 +211,7 @@ function! wilder#cmdline#main#do(ctx) abort
         if l:lookahead + 1 < len(a:ctx.cmdline)
           let l:lookahead += 1
         else
-          return
+          break
         endif
       endif
 
@@ -215,6 +224,7 @@ function! wilder#cmdline#main#do(ctx) abort
       elseif a:ctx.cmdline[l:lookahead] ==# '|'
         let a:ctx.pos = l:lookahead + 1
         let a:ctx.cmd = ''
+        let a:ctx.expand = ''
 
         call wilder#cmdline#main#do(a:ctx)
 
@@ -229,14 +239,13 @@ function! wilder#cmdline#main#do(ctx) abort
   " command does not take extra arguments
   if !and(l:flags, s:EXTRA) && !l:is_user_cmd
     " consume whitespace
-    if !wilder#cmdline#main#skip_whitespace(a:ctx)
-      return
-    endif
+    call wilder#cmdline#main#skip_whitespace(a:ctx)
 
     " and check for | or "
     if a:ctx.cmdline[a:ctx.pos] ==# '|'
       let a:ctx.pos += 1
       let a:ctx.cmd = ''
+      let a:ctx.expand = ''
 
       call wilder#cmdline#main#do(a:ctx)
       return
@@ -244,16 +253,153 @@ function! wilder#cmdline#main#do(ctx) abort
       " remaining part is either comment or invalid arguments
       " either way, treat as no arguments
       let a:ctx.pos = len(a:ctx.cmdline)
+      let a:ctx.expand = 'nothing'
       return
     endif
   endif
 
-  if !wilder#cmdline#main#skip_whitespace(a:ctx)
-    return
+  " find start of last argument
+  let l:first_arg_start = a:ctx.pos
+  let l:arg_start = a:ctx.pos
+  while a:ctx.pos < len(a:ctx.cmdline)
+    let l:char = a:ctx.cmdline[a:ctx.pos]
+
+    if l:char ==# ' ' || l:char ==# "\t"
+      let a:ctx.pos += 1
+      let l:arg_start = a:ctx.pos
+    else
+      if l:char ==# '\\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
+        let a:ctx.pos += 1
+      endif
+    endif
+
+    let a:ctx.pos += 1
+  endwhile
+
+  let a:ctx.pos = l:first_arg_start
+
+  if and(l:flags, s:XFILE)
+    let l:in_quote = 0
+    let l:beginning_of_word = -1
+
+    call wilder#cmdline#main#skip_whitespace(a:ctx)
+
+    let l:arg_start = a:ctx.pos
+
+    while a:ctx.pos < len(a:ctx.cmdline)
+      let l:char = a:ctx.cmdline[a:ctx.pos]
+      if l:char ==# '\\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
+        let a:ctx.pos += 1
+      elseif l:char ==# '`'
+        if !l:in_quote
+          let l:arg_start = a:ctx.pos
+          let l:beginning_of_word = a:ctx.pos + 1
+        endif
+
+        let l:in_quote = !l:in_quote
+      elseif l:char ==# '|' ||
+            \ l:char ==# "\n" ||
+            \ l:char ==# '"' ||
+            \ wilder#cmdline#main#is_whitespace(l:char)
+        let l:len = 0
+
+        while a:ctx.pos < len(a:ctx.cmdline)
+          if l:char ==# '`' || s:isfilec_or_wc(l:char)
+            break
+          endif
+
+          let l:len = len(l:char)
+          let a:ctx.pos += 1
+        endwhile
+
+        if l:in_quote
+          let l:beginning_of_word = a:ctx.pos
+        endif
+
+        let a:ctx.pos -= l:len
+      endif
+
+      let a:ctx.pos += 1
+    endwhile
+
+    if l:beginning_of_word != -1 && l:in_quote
+      let a:ctx.pos = l:beginning_of_word
+    else
+      let a:ctx.pos = l:arg_start
+    endif
+    let a:ctx.expand = 'file'
+
+    if l:use_filter || a:ctx.cmd ==# '!' || a:ctx.cmd ==# 'terminal'
+      " should set xp_shell, but looks like not needed
+      let l:cmd_start = a:ctx.pos
+
+      call wilder#cmdline#main#skip_whitespace(a:ctx)
+
+      if l:cmd_start == a:ctx.pos
+        let a:ctx.expand = 'shellcmd'
+        return
+      endif
+    endif
+
+    if a:ctx.cmdline[a:ctx.pos] ==# '$'
+      let l:arg_start = a:ctx.pos
+      let a:ctx.pos += 1
+
+      while a:ctx.pos < len(a:ctx.cmdline)
+        let l:char = a:ctx.cmdline[a:ctx.pos]
+        if !s:is_idc(l:char)
+          break
+        endif
+
+        let a:ctx.pos += 1
+      endwhile
+
+      if a:ctx.pos == len(a:ctx.cmdline)
+        let a:ctx.expand = 'env_vars'
+        let a:ctx.pos = l:arg_start + 1
+        return
+      endif
+    elseif a:ctx.cmdline[a:ctx.pos] ==# '~'
+      while a:ctx.pos < len(a:ctx.cmdline)
+        let l:char = a:ctx.cmdline[a:ctx.pos]
+        if l:char ==# '/'
+          break
+        endif
+
+        let a:ctx.pos += 1
+      endwhile
+
+      if a:ctx.pos == len(a:ctx.cmdline) &&
+            \ a:ctx.pos > l:arg_start + 1
+        let a:ctx.expand = 'user'
+        let a:ctx.pos = l:arg_start + 1
+        return
+      endif
+    endif
   endif
 
+  if a:ctx.cmd ==# 'find' ||
+        \ a:ctx.cmd ==# 'sfind' ||
+        \ a:ctx.cmd ==# 'tabfind'
+    if a:ctx.expand ==# 'file'
+      let a:ctx.expand = 'file_in_path'
+    endif
+    return
+  elseif a:ctx.cmd ==# 'cd' ||
+        \ a:ctx.cmd ==# 'chdir' ||
+        \ a:ctx.cmd ==# 'lcd' ||
+        \ a:ctx.cmd ==# 'lchdir' ||
+        \ a:ctx.cmd ==# 'tcd' ||
+        \ a:ctx.cmd ==# 'tchdir'
+    if a:ctx.expand ==# 'file'
+      let a:ctx.expand = 'dir'
+    endif
+    return
+  elseif a:ctx.cmd ==# 'help'
+    let a:ctx.expand = 'help'
+    return
   " command modifiers
-  if a:ctx.cmd ==# 'aboveleft' ||
+  elseif a:ctx.cmd ==# 'aboveleft' ||
         \ a:ctx.cmd ==# 'argdo' ||
         \ a:ctx.cmd ==# 'belowright' ||
         \ a:ctx.cmd ==# 'botright' ||
@@ -286,38 +432,30 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'vertical' ||
         \ a:ctx.cmd ==# 'windo'
     let a:ctx.cmd = ''
+    let a:ctx.expand = ''
 
     call wilder#cmdline#main#do(a:ctx)
 
     return
-  endif
-
-  if a:ctx.cmd ==# 'filter'
+  elseif a:ctx.cmd ==# 'filter'
     call wilder#cmdline#filter#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'match'
+  elseif a:ctx.cmd ==# 'match'
     call wilder#cmdline#match#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'command'
+  elseif a:ctx.cmd ==# 'command'
     call wilder#cmdline#command#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'global' || a:ctx.cmd ==# 'vglobal'
+  elseif a:ctx.cmd ==# 'delcommand'
+    let a:ctx.expand = 'user_commands'
+    return
+  elseif a:ctx.cmd ==# 'global' || a:ctx.cmd ==# 'vglobal'
     call wilder#cmdline#global#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# '&' || a:ctx.cmd ==# 'substitute'
+  elseif a:ctx.cmd ==# '&' || a:ctx.cmd ==# 'substitute'
     call wilder#cmdline#substitute#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'isearch' ||
+  elseif a:ctx.cmd ==# 'isearch' ||
         \ a:ctx.cmd ==# 'dsearch' ||
         \ a:ctx.cmd ==# 'ilist' ||
         \ a:ctx.cmd ==# 'dlist' ||
@@ -328,28 +466,38 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'dsplit'
     call wilder#cmdline#isearch#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'autocmd' ||
-        \ a:ctx.cmd ==# 'doautocmd' ||
-        \ a:ctx.cmd ==# 'doautoall'
-    call wilder#cmdline#autocmd#do(a:ctx)
+  elseif a:ctx.cmd ==# 'autocmd'
+    call wilder#cmdline#autocmd#do(a:ctx, 0)
     return
-  endif
-
-  if a:ctx.cmd ==# 'set' ||
+  elseif a:ctx.cmd ==# 'doautocmd' ||
+        \ a:ctx.cmd ==# 'doautoall'
+    call wilder#cmdline#autocmd#do(a:ctx, 1)
+  elseif a:ctx.cmd ==# 'set' ||
         \ a:ctx.cmd ==# 'setglobal' ||
         \ a:ctx.cmd ==# 'setlocal'
     call wilder#cmdline#set#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'syntax'
+  elseif a:ctx.cmd ==# 'tag' ||
+        \ a:ctx.cmd ==# 'stag' ||
+        \ a:ctx.cmd ==# 'ptag' ||
+        \ a:ctx.cmd ==# 'ltag' ||
+        \ a:ctx.cmd ==# 'tselect' ||
+        \ a:ctx.cmd ==# 'stelect' ||
+        \ a:ctx.cmd ==# 'tjump' ||
+        \ a:ctx.cmd ==# 'stjump' ||
+        \ a:ctx.cmd ==# 'ptjump'
+    if &wildoptions =~# 'tagfile'
+      let a:ctx.expand = 'tags_listfiles'
+    else
+      let a:ctx.expand = 'tags'
+    endif
+    return
+  elseif a:ctx.cmd ==# 'augroup'
+    let a:ctx.expand = 'augroup'
+  elseif a:ctx.cmd ==# 'syntax'
     call wilder#cmdline#syntax#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'let' ||
+  elseif a:ctx.cmd ==# 'let' ||
         \ a:ctx.cmd ==# 'if' ||
         \ a:ctx.cmd ==# 'elseif' ||
         \ a:ctx.cmd ==# 'while' ||
@@ -369,116 +517,101 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lgetexpr'
     call wilder#cmdline#let#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'highlight'
+  elseif a:ctx.cmd ==# 'unlet'
+    call wilder#cmdline#unlet#do(a:ctx)
+  elseif a:ctx.cmd ==# 'function' ||
+        \ a:ctx.cmd ==# 'delfunction'
+    let a:ctx.expand = 'user_func'
+    return
+  elseif a:ctx.cmd ==# 'echohl'
+    let a:ctx.expand = 'highlight'
+    " TODO: include None
+    return
+  elseif a:ctx.cmd ==# 'highlight'
     call wilder#cmdline#highlight#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'cscope' ||
+  elseif a:ctx.cmd ==# 'cscope' ||
         \ a:ctx.cmd ==# 'lcscope' ||
         \ a:ctx.cmd ==# 'scscope'
     call wilder#cmdline#cscope#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'sign'
+  elseif a:ctx.cmd ==# 'sign'
     call wilder#cmdline#sign#do(a:ctx)
     return
-  endif
+  elseif a:ctx.cmd ==# 'bdelete' ||
+        \ a:ctx.cmd ==# 'bwipeout' ||
+        \ a:ctx.cmd ==# 'bunload'
+    call wilder#cmdline#main#find_last_whitespace(a:ctx)
 
-  if a:ctx.cmd ==# 'abbreviate' ||
+    let a:ctx.expand = 'buffer'
+    return
+  elseif a:ctx.cmd ==# 'buffer' ||
+        \ a:ctx.cmd ==# 'sbuffer' ||
+        \ a:ctx.cmd ==# 'checktime'
+    let a:ctx.expand = 'buffer'
+    return
+  elseif a:ctx.cmd ==# 'abbreviate' ||
         \ a:ctx.cmd ==# 'unabbreviate' ||
-        \ match(a:ctx.cmd, 'map$') != -1 ||
-        \ match(a:ctx.cmd, 'abbrev$') != -1
+        \ a:ctx.cmd[-3 :] ==# 'map' ||
+        \ a:ctx.cmd[-6 :] ==# 'abbrev'
     call wilder#cmdline#map#do(a:ctx)
     return
-  endif
-
-  if match(a:ctx.cmd, 'menu$') != -1
+  elseif a:ctx.cmd[-8 :] ==# 'mapclear'
+    let a:ctx.expand = 'mapclear'
+    return
+  elseif a:ctx.cmd[-4 :] ==# 'menu'
     call wilder#cmdline#menu#do(a:ctx)
     return
-  endif
-
-  if a:ctx.cmd ==# 'profile'
-    call wilder#cmdline#profile#do(a:ctx)
+  elseif a:ctx.cmd ==# 'colorscheme'
+    let a:ctx.expand = 'color'
     return
-  endif
-
-  " commands which only have 1 argument
-  " take the whole cmdline excluding the command as the argument
-  if a:ctx.cmd ==# 'help' ||
-        \ a:ctx.cmd ==# 'delcommand' ||
-        \ a:ctx.cmd ==# 'tag' ||
-        \ a:ctx.cmd ==# 'stag' ||
-        \ a:ctx.cmd ==# 'ptag' ||
-        \ a:ctx.cmd ==# 'ltag' ||
-        \ a:ctx.cmd ==# 'tselect' ||
-        \ a:ctx.cmd ==# 'stselect' ||
-        \ a:ctx.cmd ==# 'ptselect' ||
-        \ a:ctx.cmd ==# 'tjump' ||
-        \ a:ctx.cmd ==# 'stjump' ||
-        \ a:ctx.cmd ==# 'ptjump' ||
-        \ a:ctx.cmd ==# 'augroup' ||
-        \ a:ctx.cmd ==# 'function' ||
-        \ a:ctx.cmd ==# 'delfunction' ||
-        \ a:ctx.cmd ==# 'buffer' ||
-        \ a:ctx.cmd ==# 'sbuffer' ||
-        \ a:ctx.cmd ==# 'checktime' ||
-        \ a:ctx.cmd ==# 'checktime' ||
-        \ a:ctx.cmd ==# 'mapclear' ||
-        \ a:ctx.cmd ==# 'nmapclear' ||
-        \ a:ctx.cmd ==# 'vmapclear' ||
-        \ a:ctx.cmd ==# 'omapclear' ||
-        \ a:ctx.cmd ==# 'imapclear' ||
-        \ a:ctx.cmd ==# 'cmapclear' ||
-        \ a:ctx.cmd ==# 'lmapclear' ||
-        \ a:ctx.cmd ==# 'smapclear' ||
-        \ a:ctx.cmd ==# 'xmapclear' ||
-        \ a:ctx.cmd ==# 'colorscheme' ||
-        \ a:ctx.cmd ==# 'compiler' ||
-        \ a:ctx.cmd ==# 'ownsyntax' ||
-        \ a:ctx.cmd ==# 'setfiletype' ||
-        \ a:ctx.cmd ==# 'packadd' ||
-        \ a:ctx.cmd ==# 'checkhealth' ||
-        \ a:ctx.cmd ==# 'behave' ||
-        \ a:ctx.cmd ==# 'messages' ||
-        \ a:ctx.cmd ==# 'history' ||
-        \ a:ctx.cmd ==# 'syntime' ||
-        \ a:ctx.cmd ==# ''
+  elseif a:ctx.cmd ==# 'compiler'
+    let a:ctx.expand = 'compiler'
     return
-  endif
+  elseif a:ctx.cmd ==# 'ownsyntax'
+    let a:ctx.expand = 'ownsyntax'
+    return
+  elseif a:ctx.cmd ==# 'packadd'
+    let a:ctx.expand = 'packadd'
+    return
+  elseif a:ctx.cmd ==# 'language'
+    call wilder#cmdline#main#skip_nonwhitespace(a:ctx)
 
-  " handle rest of commands including user-defined commands
-  " assume arguments are split by whitespace
-  " for commands which don't have arguments or have invalid arguments
-  " this is ok, since wilder#cmdline() will return no results
-  let l:arg_start = a:ctx.pos
-
-  while a:ctx.pos < len(a:ctx.cmdline)
-    let l:char = a:ctx.cmdline[a:ctx.pos]
-
-    if l:char ==# '\'
-      if a:ctx.pos + 1 < len(a:ctx.cmdline)
-        let a:ctx.pos += 1
-      endif
-    elseif wilder#cmdline#main#is_whitespace(l:char)
-      let l:arg_start = a:ctx.pos + 1
-
-    " special case for files
-    " / will be treated as start of new arg
-    " $ is not included in the arg if found at the start of arg
-    " handle case where there is no whitespace between command and argument
-    elseif and(l:flags, s:XFILE)
-      if l:char ==# '$' &&
-          \ (l:arg_start == a:ctx.pos - 1 || l:arg_start == a:ctx.pos)
-        let l:arg_start = a:ctx.pos + 1
+    if a:ctx.pos == len(a:ctx.cmdline)
+      let a:ctx.expand = 'language'
+      let a:ctx.pos = l:arg_start
+    else
+      let l:subcommand = a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]
+      if l:subcommand ==# 'messages' ||
+            \ l:subcommand ==# 'ctype' ||
+            \ l:subcommand ==# 'time'
+        let a:ctx.expand = 'locales'
+        call wilder#cmdline#skip_whitespace(a:ctx)
       endif
     endif
-
-    let a:ctx.pos += 1
-  endwhile
+  elseif a:ctx.cmd ==# 'profile'
+    call wilder#cmdline#profile#do(a:ctx)
+    return
+  elseif a:ctx.cmd ==# 'checkhealth'
+    let a:ctx.expand = 'checkhealth'
+    return
+  elseif a:ctx.cmd ==# 'behave'
+    let a:ctx.expand = 'behave'
+    return
+  elseif a:ctx.cmd ==# 'messages'
+    let a:ctx.expand = 'messages'
+    return
+  elseif a:ctx.cmd ==# 'history'
+    let a:ctx.expand = 'history'
+    return
+  elseif a:ctx.cmd ==# 'syntime'
+    let a:ctx.expand = 'syntime'
+    return
+  elseif a:ctx.cmd ==# 'argdelete'
+    call wilder#cmdline#main#find_last_whitespace(a:ctx)
+    let a:ctx.expand = 'arglist'
+    return
+  endif
 
   let a:ctx.pos = l:arg_start
 endfunc
@@ -524,6 +657,41 @@ function! wilder#cmdline#main#skip_nonwhitespace(ctx) abort
   endwhile
 
   return 1
+endfunction
+
+function! wilder#cmdline#main#find_last_whitespace(ctx) abort
+  let l:arg_start = a:ctx.pos
+  let a:ctx.pos = len(a:ctx.cmdline) - 1
+  while a:ctx.pos >= l:arg_start
+    if wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      let l:arg_start = a:ctx.pos + 1
+
+      break
+    endif
+    let a:ctx.pos -= 1
+  endwhile
+endfunction
+
+function! s:is_filec(c) abort
+  return match(a:c, '\f') != -1
+endfunction
+
+function! s:path_has_wildcard(c) abort
+  if has('win32') || has('win64')
+    let l:wildcards = '?*$[`'
+  else
+    let l:wildcards = "*?[{`'$"
+  endif
+
+  return stridx(l:wildcards, a:c) != -1
+endfunction
+
+function! s:isfilec_or_wc(c) abort
+  return s:is_filec(a:c) || a:c ==# ']' || s:path_has_wildcard(a:c)
+endfunction
+
+function! s:is_idc(c) abort
+  return match(a:c, '\i') != -1
 endfunction
 
 function! s:or(...) abort

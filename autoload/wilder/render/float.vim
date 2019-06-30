@@ -151,9 +151,12 @@ function! s:pre_hook(state, ctx) abort
   if a:state.win == -1
     let a:state.win = s:new_win(a:state.buf)
   elseif a:state.columns != &columns || a:state.cmdheight != &cmdheight
-    let l:win = s:new_win(a:state.buf)
-    call nvim_win_close(a:state.win, 1)
-    let a:state.win = l:win
+    let l:old_win = a:state.win
+
+    " set to -1 preemptively in case API calls fail
+    let a:state.win = -1
+    call nvim_win_close(l:old_win, 1)
+    let a:state.win = s:new_win(a:state.buf)
   endif
 
   call wilder#render#components_pre_hook(a:state.left + a:state.right, a:ctx)
@@ -165,8 +168,9 @@ function! s:post_hook(state, ctx) abort
   endif
 
   if a:state.win != -1
-    call nvim_win_close(a:state.win, 1)
+    let l:win = a:state.win
     let a:state.win = -1
+    call nvim_win_close(l:win, 1)
   endif
 
   call wilder#render#components_post_hook(a:state.left + a:state.right, a:ctx)

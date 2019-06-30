@@ -1,9 +1,15 @@
 import asyncio
 import concurrent.futures
+import fnmatch
 import functools
+import glob
 import importlib
 from importlib.util import find_spec
 import multiprocessing
+import os
+from pathlib import Path
+import pwd
+import shutil
 import threading
 import time
 
@@ -27,7 +33,7 @@ class Wilder(object):
         self.nvim.call('wilder#pipeline#' + command, ctx, x)
 
     def echo(self, x):
-        self.nvim.session.threadsafe_call(lambda: self.nvim.command('echom "' + x + '"'))
+        self.nvim.session.threadsafe_call(lambda: self.nvim.command('echomsg "' + x + '"'))
 
     def run_in_background(self, fn, args):
         self.executor.submit(functools.partial( fn, *args, ))
@@ -100,13 +106,13 @@ class Wilder(object):
         if event.is_set():
             return
 
-        module_name = opts['engine'] if 'engine' in opts else 're'
-        max_candidates = opts['max_candidates'] if 'max_candidates' in opts else 300
-
-        seen = set()
-        candidates = []
-
         try:
+            module_name = opts['engine'] if 'engine' in opts else 're'
+            max_candidates = opts['max_candidates'] if 'max_candidates' in opts else 300
+
+            seen = set()
+            candidates = []
+
             re = importlib.import_module(module_name)
             pattern = re.compile(x)
 
@@ -154,3 +160,152 @@ class Wilder(object):
             self.queue.put((ctx, res,))
         except Exception as e:
             self.queue.put((ctx, 'python_sort: ' + str(e), 'on_error',))
+
+    @neovim.function('_wilder_python_get_file_completion', sync=False, allow_nested=True)
+    def get_file_completion(self, args):
+        event = threading.Event()
+
+        wildignore = self.nvim.options.get('wildignore')
+
+        if args[3] == 'file_in_path':
+            path_opt = self.nvim.options.get('path') if args[3] == 'file_in_path' else ''
+            directories = path_opt.split(',')
+        elif args[3] == 'shellcmd':
+            path = os.environ['PATH']
+            directories = path.split(':')
+        else:
+            directories = [args[1]]
+
+        with self.lock:
+            while len(self.events) > 0:
+                e = self.events.pop(0)
+                e.set()
+
+            self.events.append(event)
+
+        self.run_in_background(self.get_file_completion_handler, [event] + args + [directories, wildignore])
+
+    def get_file_completion_handler(self,
+                                    event,
+                                    ctx,
+                                    working_directory,
+                                    expand_arg,
+                                    expand_type,
+                                    has_wildcard,
+                                    directories,
+                                    wildignore_opt):
+        if event.is_set():
+            return
+
+        try:
+            res = []
+            wildignore_list = wildignore_opt.split(',')
+
+            for directory in directories:
+                if event.is_set():
+                    return
+                if not directory:
+                    continue
+
+                if has_wildcard:
+                    tail = os.path.basename(expand_arg)
+                    show_hidden = tail.startswith('.')
+                    pattern = ''
+                    wildcard = os.path.join(directory, expand_arg)
+
+                    it = glob.iglob(wildcard, recursive=True)
+                else:
+                    path = os.path.join(directory, expand_arg)
+                    (head, tail) = os.path.split(path)
+                    show_hidden = tail.startswith('.')
+                    pattern = tail + '*'
+
+                    try:
+                        it = os.scandir(head)
+                    except FileNotFoundError:
+                        continue
+
+                if 'path_prefix' in ctx:
+                    path_prefix = ctx['path_prefix']
+                else:
+                    path_prefix = ''
+
+                for entry in it:
+                    if event.is_set():
+                        return
+                    try:
+                        if has_wildcard:
+                            entry = Path(entry)
+                            try:
+                                entry = entry.relative_to(directory)
+                            except ValueError:
+                                pass
+                        if entry.name.startswith('.') and not show_hidden:
+                            continue
+                        if expand_type == 'dir' and not entry.is_dir():
+                            continue
+                        ignore = False
+                        for wildignore in wildignore_list:
+                            if fnmatch.fnmatch(entry.name, wildignore):
+                                ignore = True
+                                break
+                        if ignore:
+                            continue
+                        if not has_wildcard and pattern and not fnmatch.fnmatch(entry.name, pattern):
+                            continue
+                        if expand_type == 'shellcmd' and (
+                                not entry.is_file() or not os.access(os.path.join(directory, entry.name), os.X_OK)):
+                            continue
+                        name = str(entry) if has_wildcard else entry.name
+                        if Path(name) == Path(path_prefix):
+                            res.append(os.path.join(path_prefix, './'))
+                        elif entry.is_dir():
+                            res.append((str(entry) if has_wildcard else entry.name) + os.sep)
+                        else:
+                            res.append(str(entry) if has_wildcard else entry.name)
+                    except OSError:
+                        pass
+            res = sorted(res)
+
+            head = os.path.dirname(expand_arg)
+            if not has_wildcard:
+                res = list(map(lambda f: os.path.join(head, f) if head else f, res))
+
+            if expand_arg == '.':
+                res.insert(0, '../')
+                res.insert(0, './')
+            elif expand_arg == '..':
+                res.insert(0, '../')
+
+            self.queue.put((ctx, res,))
+        except Exception as e:
+            self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'on_error',))
+
+    @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
+    def get_users(self, args):
+        event = threading.Event()
+
+        with self.lock:
+            while len(self.events) > 0:
+                e = self.events.pop(0)
+                e.set()
+
+            self.events.append(event)
+
+        self.run_in_background(self.get_users_handler, [event] + args)
+
+    def get_users_handler(self, event, ctx, expand_arg, expand_type):
+        if event.is_set():
+            return
+
+        try:
+            res = []
+
+            for user in pwd.getpwall():
+                if user.pw_name.startswith(expand_arg):
+                    res.append(user.pw_name)
+
+            res = sorted(res)
+            self.queue.put((ctx, res,))
+        except Exception as e:
+            self.queue.put((ctx, 'python_get_users: ' + str(e), 'on_error',))

@@ -42,6 +42,7 @@ function! wilder#cmdline#isearch#do(ctx) abort
     if a:ctx.cmdline[a:ctx.pos] ==# '|'
       let a:ctx.pos += 1
       let a:ctx.cmd = ''
+      let a:ctx.expand = ''
 
       call wilder#cmdline#main#do(a:ctx)
       return

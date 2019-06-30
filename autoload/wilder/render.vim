@@ -224,6 +224,10 @@ function! wilder#render#draw_x(ctx, xs, i)
             \ 'i': a:i,
             \ 'selected': a:ctx.selected == a:i,
             \ }
+      if type(l:x) is v:t_dict && has_key(l:x, 'meta')
+        let l:ctx.meta = l:x.meta
+      endif
+
       let l:x = l:x.draw(l:ctx, l:x.value)
     else
       let l:x = l:x.value

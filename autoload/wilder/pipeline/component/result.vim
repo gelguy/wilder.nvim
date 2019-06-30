@@ -10,7 +10,18 @@ function! s:result(args, ctx, x) abort
     let l:F = a:args[l:key]
 
     if l:key ==# 'value'
-      let l:x.value = l:F(a:ctx, l:x.value)
+      if type(l:F) is v:t_func
+        let l:x.value = l:F(a:ctx, l:x.value)
+      else
+        let l:x.value = l:F
+      endif
+      continue
+    elseif l:key ==# 'meta'
+      if type(l:F) is v:t_func
+        let l:x.meta = l:F(a:ctx, get(l:x, 'meta', {}))
+      else
+        let l:x.meta = extend(get(l:x, 'meta', {}), a:args.meta)
+      endif
       continue
     endif
 
@@ -24,12 +35,14 @@ function! s:result(args, ctx, x) abort
       let l:Prev = {ctx, x, def -> def}
     endif
 
-    let l:Prev = function('s:wrap_prev', [l:Prev])
-
-    let l:x[l:key] = {ctx, x -> l:F(ctx, x, l:Prev)}
+    let l:x[l:key] = s:make_func(l:F, l:Prev)
   endfor
 
   return l:x
+endfunction
+
+function! s:make_func(f, prev) abort
+  return {ctx, x -> a:f(ctx, x, function('s:wrap_prev', [a:prev]))}
 endfunction
 
 function! s:wrap_prev(f, ctx, x, ...) abort
