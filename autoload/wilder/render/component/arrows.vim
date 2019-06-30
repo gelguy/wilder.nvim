@@ -2,7 +2,7 @@ function! wilder#render#component#arrows#make_previous(args) abort
   let l:previous = get(a:args, 'previous', '< ')
 
   return {
-        \ 'value': {ctx, xs -> s:left(l:previous, ctx, xs)},
+        \ 'value': {ctx, result -> s:left(l:previous, ctx, result)},
         \ 'len': strdisplaywidth(l:previous),
         \ 'hl': get(a:args, 'hl', '')
         \ }
@@ -13,17 +13,17 @@ function! wilder#render#component#arrows#make_next(args) abort
   let l:next = get(a:args, 'next', ' >')
 
   return {
-        \ 'value': {ctx, xs -> s:right(l:previous, l:next, ctx, xs)},
+        \ 'value': {ctx, result -> s:right(l:previous, l:next, ctx, result)},
         \ 'len': strdisplaywidth(l:next),
         \ }
 endfunction
 
-function! s:left(previous, ctx, xs) abort
+function! s:left(previous, ctx, result) abort
   return a:ctx.page[0] > 0 ? a:previous : ''
 endfunction
 
-function! s:right(previous, next, ctx, xs) abort
-  let l:next_page_arrow = a:ctx.page[1] < len(a:xs) - 1 ?
+function! s:right(previous, next, ctx, result) abort
+  let l:next_page_arrow = a:ctx.page[1] < len(a:result.xs) - 1 ?
         \ a:next :
         \ repeat(' ', strdisplaywidth(a:next))
 

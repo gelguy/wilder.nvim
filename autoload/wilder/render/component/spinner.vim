@@ -20,8 +20,8 @@ function! wilder#render#component#spinner#make(args) abort
         \ }
 
   return {
-        \ 'value': {ctx, xs -> s:spinner(l:state, ctx, xs)},
-        \ 'len': {ctx, xs -> strdisplaywidth(s:get_char(l:state, ctx, xs))},
+        \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
+        \ 'len': {ctx, result -> strdisplaywidth(s:get_char(l:state, ctx, result))},
         \ 'hl': get(a:args, 'hl', ''),
         \ }
 endfunction
@@ -29,7 +29,7 @@ endfunction
 " set current_char in here so it is consistent with the actual rendered
 " char. Due to reltime(), the char might be changed since len is called
 " earlier
-function! s:get_char(state, ctx, xs) abort
+function! s:get_char(state, ctx, result) abort
   if a:ctx.done
     let a:state.was_done = 1
     let a:state.index = -1
@@ -59,7 +59,7 @@ function! s:get_char(state, ctx, xs) abort
   return a:state.frames[a:state.index]
 endfunction
 
-function! s:spinner(state, ctx, xs) abort
+function! s:spinner(state, ctx, result) abort
   if a:state.timer
     call timer_stop(a:state.timer)
   endif

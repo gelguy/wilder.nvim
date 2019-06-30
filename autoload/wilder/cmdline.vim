@@ -601,7 +601,7 @@ function! wilder#cmdline#get_user_completion(cmdline) abort
   return v:false
 endfunction
 
-function! wilder#cmdline#replace(ctx, x, prev) abort
+function! wilder#cmdline#replace(ctx, x) abort
   let l:result = wilder#cmdline#parse(a:ctx.cmdline)
 
   if l:result.pos == 0
@@ -621,7 +621,7 @@ function! wilder#cmdline#replace(ctx, x, prev) abort
   return l:result.cmdline[: l:result.pos - 1] . a:x
 endfunction
 
-function! wilder#cmdline#draw_path(ctx, x, prev) abort
+function! wilder#cmdline#draw_path(ctx, x) abort
   if has_key(a:ctx, 'meta') &&
         \ type(a:ctx.meta) is v:t_dict &&
         \ has_key(a:ctx.meta, 'path_prefix')
@@ -635,7 +635,7 @@ function! wilder#cmdline#draw_path(ctx, x, prev) abort
     return a:x[l:i :]
   endif
 
-  return a:prev(a:ctx, a:x, a:x)
+  return a:x
 endfunction
 
 function! wilder#cmdline#user_completion_pipeline() abort
@@ -644,7 +644,7 @@ function! wilder#cmdline#user_completion_pipeline() abort
       \ {_, x -> wilder#cmdline#parse(x)},
       \ wilder#check({_, res -> wilder#cmdline#is_user_command(res.cmd)}),
       \ {_, res -> wilder#cmdline#get_user_completion(res.cmdline)},
-      \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
+      \ wilder#result({'replace': ['wilder#cmdline#replace']}),
       \ ]
 endfunction
 
@@ -671,7 +671,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
       \ (l:fuzzy ? [wilder#cmdline#make_filter(l:Matcher)] : [])
       \ + [
       \ l:fuzzy ? wilder#cmdline#make_filter(l:Matcher) : {_, x -> x},
-      \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
+      \ wilder#result({'replace': ['wilder#cmdline#replace']}),
       \ ]
 endfunction
 
@@ -701,10 +701,10 @@ function! wilder#cmdline#get_file_completion_pipeline(opts) abort
       \ (l:fuzzy ? [wilder#cmdline#make_filter(l:Matcher)] : [])
       \ + [
       \ wilder#result({
-      \   'meta': {ctx, meta -> extend(meta, {'path_prefix': ctx.path_prefix})},
-      \   'output': {_, x -> escape(x, ' ')},
-      \   'draw': funcref('wilder#cmdline#draw_path'),
-      \   'replace': funcref('wilder#cmdline#replace'),
+      \   'meta': {ctx, meta -> extend(meta is v:null ? {} : meta, {'path_prefix': ctx.path_prefix})},
+      \   'output': [{_, x -> escape(x, ' ')}],
+      \   'draw': ['wilder#cmdline#draw_path'],
+      \   'replace': ['wilder#cmdline#replace'],
       \ }),
       \ ]
 endfunction
@@ -766,7 +766,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
       \ {_, res -> wilder#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
       \ {_, res -> len(res) == 2 ? res[1] : (l:hide_in_replace ? v:true : v:false)},
       \ ] + l:pipeline + [
-      \ wilder#result({'replace': funcref('wilder#cmdline#replace')}),
+      \ wilder#result({'replace': ['wilder#cmdline#replace']}),
       \ ]
 endfunction
 
