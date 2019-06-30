@@ -772,7 +772,6 @@ endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
-  let l:use_python_for_file_completion = get(a:opts, 'use_python_for_file_completion', 0)
 
   if has_key(a:opts, 'hide_in_substitute')
     let l:hide_in_substitute = a:opts.hide_in_substitute
@@ -785,7 +784,6 @@ function! wilder#cmdline#pipeline(opts) abort
 
   let l:get_file_completion_opts = {
         \ 'fuzzy': l:fuzzy,
-        \ 'use_python': l:use_python_for_file_completion,
         \ }
   let l:getcompletion_opts = {
         \ 'fuzzy': l:fuzzy,
@@ -794,6 +792,10 @@ function! wilder#cmdline#pipeline(opts) abort
   if has_key(a:opts, 'fuzzy_matcher')
     let l:get_file_completion_opts.fuzzy_matcher = a:opts.fuzzy_matcher
     let l:getcompletion_opts.fuzzy_matcher = a:opts.fuzzy_matcher
+  endif
+
+  if has_key(a:opts, 'use_python_for_file_completion')
+    let l:get_file_completion_opts.use_python_for_file_completion = a:opts.use_python_for_file_completion
   endif
 
   return [
