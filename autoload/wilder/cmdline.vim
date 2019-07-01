@@ -672,7 +672,6 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
       \ ] +
       \ (l:fuzzy ? [wilder#cmdline#make_filter(l:Matcher)] : [])
       \ + [
-      \ l:fuzzy ? wilder#cmdline#make_filter(l:Matcher) : {_, x -> x},
       \ wilder#result({'replace': ['wilder#cmdline#replace']}),
       \ ]
 endfunction
