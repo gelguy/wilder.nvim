@@ -244,7 +244,7 @@ function! wilder#render#make_hl_chunks(left, right, ctx, result) abort
   let l:chunks += s:draw_components(a:left, a:ctx.hl, a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
-    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx)
+    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx.error)
   else
     let l:chunks += s:draw_xs(a:ctx, a:result)
   endif
