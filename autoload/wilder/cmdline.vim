@@ -90,6 +90,8 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
       elseif l:char ==# '/'
         break
       endif
+
+      let l:expand_end += 1
     endwhile
   elseif a:res.expand_arg[0] ==# '%' ||
         \ a:res.expand_arg[0] ==# '#'
