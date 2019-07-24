@@ -473,7 +473,7 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:output = l:F({}, l:output)
+          let l:output = l:F({'meta': get(s:result, 'meta', {})}, l:output)
         endfor
       endif
 
@@ -484,7 +484,9 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:new_cmdline = l:F({'cmdline': s:replaced_cmdline}, l:new_cmdline)
+          let l:new_cmdline = l:F({
+                \ 'cmdline': s:replaced_cmdline,
+                \ 'meta': get(s:result, 'meta', {})}, l:new_cmdline)
         endfor
       endif
     else

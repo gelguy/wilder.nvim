@@ -223,9 +223,7 @@ function! wilder#render#draw_x(ctx, result, i)
           \ 'i': a:i,
           \ 'selected': a:ctx.selected == a:i,
           \ }
-    if has_key(a:result, 'meta')
-      let l:ctx.meta = a:result.meta
-    endif
+    let l:ctx.meta = get(a:result, 'meta', {})
 
     for l:F in a:result.draw
       if type(l:F) isnot v:t_func

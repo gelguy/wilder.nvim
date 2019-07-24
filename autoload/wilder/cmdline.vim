@@ -252,63 +252,75 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   return a:res
 endfunction
 
-function! wilder#cmdline#make_filter(f) abort
-  return {ctx, xs -> s:filter(ctx, xs, a:f)}
+function! wilder#cmdline#fuzzy_filter() abort
+  return {ctx, candidates, query -> s:fuzzy_filter(ctx, candidates, query)}
 endfunction
 
-function! s:filter(ctx, xs, matcher) abort
-  if a:ctx.expand ==# 'dir' ||
-        \ a:ctx.expand ==# 'file' ||
-        \ a:ctx.expand ==# 'file_in_path'
-    return filter(a:xs, {_, x -> a:matcher(a:ctx, s:get_path_tail(s:get_value(x)), a:ctx.match_arg)})
-  endif
-
-  return filter(a:xs, {_, x -> a:matcher(a:ctx, s:get_value(x), a:ctx.match_arg)})
-endfunction
-
-function! s:get_value(x) abort
-  if type(a:x) is v:t_dict
-    return a:x.value
-  endif
-
-  return a:x
-endfunction
-
-function! wilder#cmdline#fuzzy_matcher(ctx, candidate, query) abort
+function! s:fuzzy_filter(ctx, candidates, query) abort
   if empty(a:query)
-    return 1
+    return a:candidates
   endif
 
-  if exists('s:cache_query') && a:query ==# s:cache_query
-    let l:regex = s:cache_regex
-  else
-    " make fuzzy regex
-    let l:split_query = split(a:query, '\zs')
-    let l:i = 0
-    let l:regex = '\V'
-    while l:i < len(l:split_query)
-      if l:i > 0
-        let l:regex .= '\.\{-}'
-      endif
+  " make fuzzy regex
+  let l:split_query = split(a:query, '\zs')
+  let l:i = 0
+  let l:regex = '\V'
+  while l:i < len(l:split_query)
+    if l:i > 0
+      let l:regex .= '\.\{-}'
+    endif
 
-      let l:c = l:split_query[l:i]
+    let l:c = l:split_query[l:i]
 
-      if l:c ==# '\'
-        let l:regex .= '\\'
-      elseif l:c ==# toupper(l:c)
-        let l:regex .= l:c
-      else
-        let l:regex .= '\%(' . l:c . '\|' . toupper(l:c) . '\)'
-      endif
+    if l:c ==# '\'
+      let l:regex .= '\\'
+    elseif l:c ==# toupper(l:c)
+      let l:regex .= l:c
+    else
+      let l:regex .= '\%(' . l:c . '\|' . toupper(l:c) . '\)'
+    endif
 
-      let l:i += 1
-    endwhile
+    let l:i += 1
+  endwhile
 
-    let s:cache_query = a:query
-    let s:cache_regex = l:regex
+  return filter(a:candidates, {_, x -> match(x, l:regex) != -1})
+endfunction
+
+function! wilder#cmdline#python_fuzzy_filter(...) abort
+  let l:engine = get(a:, 1, 're')
+  return {ctx, candidates, query -> s:python_fuzzy_filter(ctx, engine, candidates, query)}
+endfunction
+
+function! s:python_fuzzy_filter(ctx, engine, candidates, query) abort
+  if empty(a:query)
+    return a:candidates
   endif
 
-  return match(a:candidate, l:regex) != -1
+  " make fuzzy regex
+  let l:split_query = split(a:query, '\zs')
+  let l:i = 0
+  let l:regex = ''
+  while l:i < len(l:split_query)
+    if l:i > 0
+      let l:regex .= '\w*?'
+    endif
+
+    let l:c = l:split_query[l:i]
+
+    if l:c ==# '\'
+      let l:regex .= '\\'
+    elseif l:c ==# '(' || l:c ==# ')'
+      let l:regex .= '\' . l:c
+    elseif l:c ==# toupper(l:c)
+      let l:regex .= l:c
+    else
+      let l:regex .= '(?:' . l:c . '|' . toupper(l:c) . ')'
+    endif
+
+    let l:i += 1
+  endwhile
+
+  return {ctx -> _wilder_python_filter(ctx, l:regex, a:candidates, a:engine)}
 endfunction
 
 function! s:get_path_tail(path) abort
@@ -652,11 +664,18 @@ endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
+  let l:use_python = get(a:opts, 'use_python', has('nvim'))
 
   let l:Completion_func = funcref('wilder#cmdline#getcompletion')
 
   if l:fuzzy
-    let l:Matcher = get(a:opts, 'fuzzy_matcher', funcref('wilder#cmdline#fuzzy_matcher'))
+    if has_key(a:opts, 'fuzzy_filter')
+      let l:Filter = a:opts.fuzzy_filter
+    else
+      let l:Filter = l:use_python
+            \ ? wilder#cmdline#python_fuzzy_filter()
+            \ : wilder#cmdline#fuzzy_filter()
+    endif
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
           \ ctx, x, l:Completion_func)}
   else
@@ -670,7 +689,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
       \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
       \ l:Getcompletion,
       \ ] +
-      \ (l:fuzzy ? [wilder#cmdline#make_filter(l:Matcher)] : [])
+      \ (l:fuzzy ? [{ctx, xs -> l:Filter(ctx, xs, ctx.match_arg)}] : [])
       \ + [
       \ wilder#result({'replace': ['wilder#cmdline#replace']}),
       \ ]
@@ -685,7 +704,13 @@ function! wilder#cmdline#get_file_completion_pipeline(opts) abort
         \ funcref('wilder#cmdline#getcompletion')
 
   if l:fuzzy
-    let l:Matcher = get(a:opts, 'fuzzy_matcher', funcref('wilder#cmdline#fuzzy_matcher'))
+    if has_key(a:opts, 'fuzzy_filter')
+      let l:Filter = a:opts.fuzzy_filter
+    else
+      let l:Filter = l:use_python
+            \ ? wilder#cmdline#python_fuzzy_filter()
+            \ : wilder#cmdline#fuzzy_filter()
+    endif
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
           \ ctx, x, l:Completion_func)}
   else
@@ -699,7 +724,7 @@ function! wilder#cmdline#get_file_completion_pipeline(opts) abort
       \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
       \ l:Getcompletion,
       \ ] +
-      \ (l:fuzzy ? [wilder#cmdline#make_filter(l:Matcher)] : [])
+      \ (l:fuzzy ? [{ctx, xs -> l:Filter(ctx, xs, ctx.match_arg)}] : [])
       \ + [
       \ wilder#result({
       \   'meta': {ctx, meta -> extend(meta is v:null ? {} : meta, {'path_prefix': ctx.path_prefix})},
@@ -790,9 +815,9 @@ function! wilder#cmdline#pipeline(opts) abort
         \ 'fuzzy': l:fuzzy,
         \ }
 
-  if has_key(a:opts, 'fuzzy_matcher')
-    let l:get_file_completion_opts.fuzzy_matcher = a:opts.fuzzy_matcher
-    let l:getcompletion_opts.fuzzy_matcher = a:opts.fuzzy_matcher
+  if has_key(a:opts, 'fuzzy_filter')
+    let l:get_file_completion_opts.fuzzy_filter = a:opts.fuzzy_filter
+    let l:getcompletion_opts.fuzzy_filter = a:opts.fuzzy_filter
   endif
 
   if has_key(a:opts, 'use_python_for_file_completion')

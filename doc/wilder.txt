@@ -86,8 +86,7 @@ before_cursor                       *wilder-option-before_cursor*
             Default: 0
 
 num_workers                         *wilder-option-num_workers*
-            Number of workers for the Python 3 |remote-plugin| when using
-            |wilder-pipeline-python_search|.
+            Number of workers for the Python 3 |remote-plugin|.
             Has to be set at startup, before wilder is first run. Setting the
             option after the first run has no effect.
 
@@ -97,9 +96,11 @@ pipeline                            *wilder-option-pipeline*
             Sets the pipeline to use to get completions.
             See |wilder-pipeline|.
 
-            Default: |wilder#search_pipeline()| for Vim
+            Default: |wilder#cmdline_pipeline()| and
+                     |wilder#search_pipeline()| for Vim
                      |wilder#cmdline_pipeline()| and
-                     |wilder#python_search_pipeline()| for Neovim
+                     |wilder#python_search_pipeline()| for Neovim with
+                                                       Python 3 support
 
 renderer                            *wilder-option-renderer*
             Sets the renderer to used to display the completions.
@@ -156,8 +157,8 @@ will be used.
 There are 3 special types of values, which when returned in the middle of the
 pipeline, will cause the pipeline to stop. These are `v:false` `v:true` and
 functions. See |wilder-pipeline-v:false|, |wilder-pipeline-v:true| and
-|wilder-pipeline-return-function| for more details on what these special
-values mean, and how theye are handled.
+|wilder-pipeline-thunk| for more details on what these special values mean,
+and how theye are handled.
 
 A component can throw an exception which will also cause the pipeline to stop.
 
@@ -208,14 +209,16 @@ wilder will not be rendered. Note that wilder is still enabled, and will still
 be handle completions and be shown again when the next pipeline returns a
 non-|v:true| value.
 
-                                    *wilder-pipeline-return-function*
+                                    *wilder-pipeline-thunk*
 Returning a function {f} in a pipeline component will cause the pipeline to be
-suspended. The returned function will then be called with a new {ctx}.
-|wilder#resolve()| should be called, with {ctx}, and the result {x} as
-arguments. The original {ctx} from the parent function can be ignored. The
-pipeline will then be resumed, and the {x} value will be passed on to the next
-component. If there is an error, |wilder#reject()| should be called instead,
-with {ctx} and {error} as arguments.
+suspended. The function is called a thunk. The thunk will then be called with
+a new {ctx}. Use the thunk to call async code.
+After the async code has finished running, |wilder#resolve()| should be caled
+with {ctx} and the result {x} as arguments. The original {ctx} from the parent
+function can be ignored. The pipeline will then be resumed, and the {x} value
+will be passed on to the next component.
+If there is an error, |wilder#reject()| should be called instead, with {ctx}
+and {error} as arguments.
 Note exactly one of |wilder#resolve()| or |wilder#reject()| has to be called
 eventually. Not calling either will result in a memory leak, and calling more
 than one will result in an error.
@@ -248,6 +251,11 @@ The Result dictionary has the following keys:
             Mandatory~
             The list of candidates as strings
 
+            `meta`                  *wilder-pipeline-result-meta*
+            Optional~
+            A dictionary containing arbitrary data. Will be passed to the
+            `draw`, `output` and `replace` functions when they are called.
+
             `draw`                  *wilder-pipeline-result-draw*
             Optional~
             A list of strings or functions which takes a {ctx} and {x} and
@@ -267,6 +275,10 @@ The Result dictionary has the following keys:
                 `i`
                 The index of the {x} in the list of candidates.
 
+                `meta`
+                See |wilder-pipeline-result-meta|. Defauts to an empty
+                dictionary if not set.
+
             Default: None
 
             `output`                *wilder-pipeline-result-output*
@@ -277,7 +289,10 @@ The Result dictionary has the following keys:
             See the |wilder-pipeline-result-draw| option for how iterating
             through the list works.
 
-            {ctx} contains no keys.
+            The keys of {ctx} are:
+                `meta`
+                See |wilder-pipeline-result-meta|. Defauts to an empty
+                dictionary if not set.
 
             Default: None
 
@@ -290,9 +305,17 @@ The Result dictionary has the following keys:
             See the |wilder-pipeline-result-draw| option for how iterating
             through the list works.
 
-            {ctx} contains no keys.
+            The keys of {ctx} are:
+                `cmdline`
+                The cmdline which was replaced. This value should be used
+                instead of |getcmdline()| as the current cmdline may have
+                changed.
 
-            Default: {_, x -> x}
+                `meta`
+                See |wilder-pipeline-result-meta|. Defauts to an empty
+                dictionary if not set.
+
+            Default: None
 
                                     *wilder-pipeline-flow*
 1. The pipeline starts with the current cmdline as the input
@@ -524,21 +547,27 @@ wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
             `fuzzy`
             When true, use fuzzy matching for the results.
             Note: Fuzzy matching does not work in some cases, e.g. when
-            getting |help| completions.
+            getting |help| completions, when completing filenames with
+            |wildcards| or user-defined command completions
+            |:command-completion|.
 
             Default: 0
 
-            `fuzzy_matcher`
-            The function to use when matching candidates in fuzzy completion.
-            Takes a {ctx}, {candidate} and {query} and returns true or false.
-
-            Default: wilder#fuzzy_matcher()
-
-            `use_python_for_file_completion`
+            `use_python`
             Neovim only~
-            Use async Python to get file or directory completions.
+            Use async Python to get file or directory completions and for
+            fuzzy fitering.
 
             Default: has('nvim')
+
+            `fuzzy_filter`
+            The function to use when matching candidates in fuzzy completion.
+            Takes a {ctx}, {candidates} and {query} and returns the list of
+            filtered candidates. Can return a |wilder-pipeline-thunk|.
+            Only used if `fuzzy` is true.
+
+            Default: |wilder#python_fuzzy_filter()| if `use_python` is true
+                     |wilder#fuzzy_filter()| otherwise
 
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
@@ -998,12 +1027,12 @@ wilder#reject_completion()          *wilder#reject_completion()*
 wilder#resolve({ctx}, {x})          *wilder#resolve()*
             Called to continue from an async component in the
             |wilder-pipeline|.
-            See |wilder-pipeline-return-function|.
+            See |wilder-pipeline-thunk|.
 
 wilder#reject({ctx}, {err})         *wilder#reject()*
             Called to throw an error from an async component in the
             |wilder-pipeline|.
-            See |wilder-pipeline-return-function|.
+            See |wilder-pipeline-thunk|.
 
 wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
             Used to start wilder from normal mode. To be used when the current
@@ -1110,10 +1139,27 @@ wilder#make_hl({name}, {args})      *wilder#make_hl()*
                     \ ])
 <
 
-wilder#fuzzy_matcher()             *wilder#fuzzy_matcher()*
-            Returns a fuzzy matcher to use for |wilder#cmdline_pipeline()|.
-            The matcher matches {candidate} if it contains all the characters
+wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
+            Returns a fuzzy filter to use for `fuzzy_filter` in
+            |wilder#cmdline_pipeline()|.
+            The filter matches a {candidate} if it contains all the characters
             in {query} and in the same order.
+
+            e.g. `foobar` will match `fbr`
+                 `foobar` will not match `frb`
+
+wilder#python_fuzzy_filter([{engine}])
+                                    *wilder#python_fuzzy_filter()*
+                                    Neovim only~
+                                    Async~
+            Returns a fuzzy filter to use for `fuzzy_filter` in
+            |wilder#cmdline_pipeline()|.
+            The filter matches a {candidate} if it contains all the characters
+            in {query} and in the same order.
+            The filter uses Python 3. {engine} is the regex engine to use. Has
+            to be compatible with Python 3's `re` module. Defaults to 're' if
+            not set.
+
 
             e.g. `foobar` will match `fbr`
                  `foobar` will not match `frb`

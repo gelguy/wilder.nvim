@@ -237,23 +237,25 @@ function! wilder#python_search_pipeline() abort
 endfunction
 
 function! wilder#cmdline_pipeline(...) abort
-  let l:opts = a:0 > 0 ? a:1 : {}
-
-  return wilder#cmdline#pipeline(l:opts)
-endfunction
-
-function! wilder#cmdline_filter(f) abort
-  return wilder#cmdline#make_filter(a:f)
-endfunction
-
-function! wilder#fuzzy_matcher() abort
-  return {ctx, candidate, query -> wilder#cmdline#fuzzy_matcher(ctx, candidate, query)}
+  return wilder#cmdline#pipeline(get(a:, 1, {}))
 endfunction
 
 function! wilder#substitute_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
   return wilder#cmdline#substitute_pipeline(l:opts)
+endfunction
+
+function! wilder#fuzzy_filter() abort
+  return wilder#cmdline#fuzzy_filter()
+endfunction
+
+function! wilder#python_fuzzy_filter(...) abort
+  if a:0
+    return wilder#cmdline#python_fuzzy_filter(a:1)
+  else
+    return wilder#cmdline#fuzzy_filter()
+  endif
 endfunction
 
 " render components

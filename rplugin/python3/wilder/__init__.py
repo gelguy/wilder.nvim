@@ -281,6 +281,21 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'reject',))
 
+    @neovim.function('_wilder_python_filter', sync=False, allow_nested=True)
+    def filter(self, args):
+        ctx = args[0]
+        pattern = args[1]
+        candidates = args[2]
+        engine = args[3]
+
+        try:
+            re = importlib.import_module(engine)
+            pattern = re.compile(pattern)
+            res = filter(lambda x: pattern.match(x), candidates)
+            self.queue.put((ctx, list(res),))
+        except Exception as e:
+            self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
+
     @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
     def get_users(self, args):
         event = threading.Event()

@@ -3,7 +3,7 @@ function! wilder#render#statusline#renderer(args) abort
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
         \ 'error_hl': get(a:args, 'error_hl', 'StatusLine'),
-        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', ' ')),
+        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
         \ }
