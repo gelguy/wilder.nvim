@@ -289,12 +289,19 @@ class Wilder(object):
         engine = args[3]
 
         try:
+            expand = ctx.get('expand', '')
+            has_file_args = expand == 'dir' or expand == 'file' or expand == 'file_in_path'
             re = importlib.import_module(engine)
             pattern = re.compile(pattern)
-            res = filter(lambda x: pattern.match(x), candidates)
+            res = filter(lambda x: pattern.match(x if not has_file_args else self.get_basename(x)), candidates)
             self.queue.put((ctx, list(res),))
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
+
+    def get_basename(self, f):
+        if f.endswith(os.sep) or f.endswith('/'):
+            return os.path.basename(f[:-1])
+        return os.path.basename(f)
 
     @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
     def get_users(self, args):

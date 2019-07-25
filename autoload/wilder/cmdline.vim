@@ -283,7 +283,23 @@ function! s:fuzzy_filter(ctx, candidates, query) abort
     let l:i += 1
   endwhile
 
+  if a:ctx.expand ==# 'dir' ||
+        \ a:ctx.expand ==# 'file' ||
+        \ a:ctx.expand ==# 'file_in_path'
+    return filter(a:candidates, {_, x -> match(x, s:get_path_tail(l:regex)) != -1})
+  endif
+
   return filter(a:candidates, {_, x -> match(x, l:regex) != -1})
+endfunction
+
+function! s:get_path_tail(path) abort
+  let l:tail = fnamemodify(a:path, ':t')
+
+  if empty(l:tail)
+    return fnamemodify(a:path, ':h:t')
+  endif
+
+  return l:tail
 endfunction
 
 function! wilder#cmdline#python_fuzzy_filter(...) abort
@@ -302,14 +318,27 @@ function! s:python_fuzzy_filter(ctx, engine, candidates, query) abort
   let l:regex = ''
   while l:i < len(l:split_query)
     if l:i > 0
-      let l:regex .= '\w*?'
+      let l:regex .= '.*?'
     endif
 
     let l:c = l:split_query[l:i]
 
     if l:c ==# '\'
       let l:regex .= '\\'
-    elseif l:c ==# '(' || l:c ==# ')'
+    elseif l:c ==# '\' ||
+          \ l:c ==# '.' ||
+          \ l:c ==# '^' ||
+          \ l:c ==# '$' ||
+          \ l:c ==# '*' ||
+          \ l:c ==# '+' ||
+          \ l:c ==# '?' ||
+          \ l:c ==# '|' ||
+          \ l:c ==# '(' ||
+          \ l:c ==# ')' ||
+          \ l:c ==# '{' ||
+          \ l:c ==# '}' ||
+          \ l:c ==# '[' ||
+          \ l:c ==# ']'
       let l:regex .= '\' . l:c
     elseif l:c ==# toupper(l:c)
       let l:regex .= l:c
