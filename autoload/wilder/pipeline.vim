@@ -42,7 +42,11 @@ function! s:handle(ctx, x, key) abort
 endfunction
 
 function! wilder#pipeline#run(pipeline, on_finish, on_error, ctx, x) abort
-  return s:run(a:pipeline, a:on_finish, a:on_error, a:ctx, a:x, 0)
+  let l:pipeline = type(a:pipeline) isnot v:t_list ?
+        \ [a:pipeline] :
+        \ a:pipeline
+
+  return s:run(l:pipeline, a:on_finish, a:on_error, a:ctx, a:x, 0)
 endfunction
 
 function! s:call(f, ctx, handler_id) abort

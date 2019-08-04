@@ -139,6 +139,10 @@ function! wilder#result(...) abort
   endif
 endfunction
 
+function! wilder#result_fmap(f) abort
+  return wilder#pipeline#component#result_fmap#make(a:f)
+endfunction
+
 function! wilder#result_output_escape(chars) abort
   return wilder#result({
         \'output': [{ctx, x -> escape(x, a:chars)}],
@@ -191,6 +195,10 @@ endfunction
 
 function! wilder#_python_sleep(t) abort
   return {_, x -> {ctx -> _wilder_python_sleep(a:t, ctx, x)}}
+endfunction
+
+function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
+  return {ctx -> _wilder_python_fuzzywuzzy(ctx, a:xs, a:query)}
 endfunction
 
 function! wilder#history(...) abort

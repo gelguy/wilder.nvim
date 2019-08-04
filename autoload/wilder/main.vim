@@ -283,6 +283,10 @@ function! wilder#main#on_finish(ctx, x) abort
     let s:result = l:result
   endif
 
+  if s:selected >= 0
+    let s:replaced_cmdline = getcmdline()
+  endif
+
   let s:selected = -1
   let s:clear_selection = 1
   " keep previous completion
@@ -433,8 +437,6 @@ function! wilder#main#step(num_steps) abort
     " pass
   elseif l:len == 0
     let s:selected = -1
-  elseif l:len == 1
-    let s:selected = 0
   else
     if s:selected < 0
       if a:num_steps > 0

@@ -34,8 +34,13 @@ function! s:render(state, ctx, xs) abort
     let a:state.page = [-1, -1]
   endif
 
-  let l:space_used = wilder#render#components_len(
-        \ a:state.left + a:state.right,
+  let l:space_used = wilder#render#component_len(
+        \ a:state.left,
+        \ a:ctx,
+        \ a:xs)
+
+  let l:space_used += wilder#render#component_len(
+        \ a:state.right,
         \ a:ctx,
         \ a:xs)
 
@@ -87,12 +92,14 @@ function! s:pre_hook(state, ctx) abort
   let &laststatus = 2
   let s:old_statusline = &statusline
 
-  call wilder#render#components_pre_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_pre_hook(a:state.left, a:ctx)
+  call wilder#render#component_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
   let &laststatus = s:old_laststatus
   let &statusline = s:old_statusline
 
-  call wilder#render#components_post_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_post_hook(a:state.left, a:ctx)
+  call wilder#render#component_post_hook(a:state.right, a:ctx)
 endfunction

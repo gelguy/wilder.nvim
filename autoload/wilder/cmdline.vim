@@ -3,12 +3,12 @@ function! wilder#cmdline#parse(cmdline) abort
     let l:ctx = {'cmdline': a:cmdline, 'pos': 0, 'cmd': '', 'expand': ''}
     call wilder#cmdline#main#do(l:ctx)
 
-    let s:cache_cmdline_results = l:ctx
+    let s:cache_cmdline_result = l:ctx
     let s:cache_cmdline = a:cmdline
   endif
 
-  return copy(s:cache_cmdline_results)
-endfunc
+  return copy(s:cache_cmdline_result)
+endfunction
 
 function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
   let a:ctx.expand = a:res.expand
@@ -109,9 +109,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   endif
 
   if l:expand_start != -1
-    let l:no_fuzzy = 1
-
-    while l:expand_end < len(a:res.expand_arg) &&
+    while l:expand_end + 2 < len(a:res.expand_arg) &&
           \ a:res.expand_arg[l:expand_end + 1] ==# ':' &&
           \ (a:res.expand_arg[l:expand_end + 2] ==# 'p' ||
           \ a:res.expand_arg[l:expand_end + 2] ==# 'h' ||
@@ -123,37 +121,14 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
 
     let l:prefix = a:res.expand_arg[l:expand_start : l:expand_end]
     let l:expanded_prefix = expand(l:prefix)
-
     let a:res.expand_arg = l:expanded_prefix . a:res.expand_arg[l:expand_end+1 :]
-    let l:expand_end = len(l:expanded_prefix)
   endif
 
-  " split path to check for wildcards and get tail
+  " split path into head and tail
+  " also check for wildcards
   let l:split_path = []
-
-  if l:expand_end != -1
-    let l:last_char = a:res.expand_arg[l:expand_end]
-
-    if l:last_char ==# '/' ||
-          \ l:allow_backslash && l:last_char ==# '\'
-      if l:expand_end
-        let l:split_path = [a:res.expand_arg[: l:expand_end - 1]]
-      else
-        let l:split_path = ['']
-      endif
-
-      let l:tail = ''
-    else
-      let l:tail = a:res.expand_arg[: l:expand_end]
-    endif
-
-    let l:i = l:expand_end + 1
-    let l:char = a:res.expand_arg[l:i]
-  else
-    let l:tail = ''
-    let l:i = 0
-    let l:char = a:res.expand_arg[0]
-  endif
+  let l:tail = ''
+  let l:i = 0
 
   while l:i < len(a:res.expand_arg)
     let l:char = a:res.expand_arg[l:i]
@@ -210,10 +185,6 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     let l:i += 1
   endwhile
 
-  if !empty(l:split_path)
-    let l:no_fuzzy = 0
-  endif
-
   if empty(l:split_path)
     let l:path_prefix = ''
   else
@@ -223,12 +194,8 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     endif
   endif
 
-  " don't trim leading /
-  if l:path_prefix ==# '/'
-    let a:ctx.path_prefix = ''
-  else
-    let a:ctx.path_prefix = l:path_prefix
-  endif
+  " don't trim leading / when drawing
+  let a:ctx.path_prefix = l:path_prefix ==# '/' ? '' : l:path_prefix
 
   if get(a:res, 'has_wildcard', 0)
     " don't use fuzzy match with wildcard
@@ -237,13 +204,9 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     return a:res
   endif
 
-  if !l:no_fuzzy
-    let a:ctx.match_arg = l:tail
-  else
-    let a:ctx.match_arg = ''
-  endif
+  let a:ctx.match_arg = l:tail
 
-  if l:no_fuzzy || !a:fuzzy
+  if !a:fuzzy
     return a:res
   endif
 
@@ -393,19 +356,15 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
         \ a:res.expand ==# 'file_in_path' ||
         \ a:res.expand ==# 'shellcmd'
 
-    if get(a:res, 'has_wildcard', 0)
-      return {ctx -> _wilder_python_get_file_completion(ctx, getcwd(), l:expand_arg, a:res.expand, 1)}
-    endif
-
-    return {ctx -> _wilder_python_get_file_completion(ctx, getcwd(), l:expand_arg, a:res.expand, 0)}
+    return {ctx -> _wilder_python_get_file_completion(
+          \ ctx, getcwd(), l:expand_arg, a:res.expand, get(a:res, 'has_wild_card', 0))}
   endif
 
   if a:res.expand ==# 'user'
     return {ctx -> _wilder_python_get_users(ctx, l:expand_arg, a:res.expand)}
   endif
 
-  " fallback to normal getcompletion
-  return wilder#cmdline#get_completion(a:ctx, a:res)
+  return []
 endfunction
 
 function! wilder#cmdline#getcompletion(ctx, res) abort
@@ -531,11 +490,18 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
   elseif a:res.expand ==# 'messages'
     return getcompletion(l:expand_arg, 'messages')
+  elseif a:res.expand ==# 'option'
+    return getcompletion(l:expand_arg, 'option')
+  elseif a:res.expand ==# 'option_bool'
+    return filter(wilder#cmdline#set#get_bool_options(),
+          \ {_, x -> match(x, l:expand_arg == 0)})
+  elseif a:res.expand ==# 'option_old'
+    return [eval('&' . a:res.option)]
   elseif a:res.expand ==# 'packadd'
     return getcompletion(l:expand_arg, 'packadd')
   elseif a:res.expand ==# 'profile'
-    return filter(['continue', 'dump', 'file', 'func', 'pause',
-          \ 'start'], {_, x -> match(x, l:expand_arg) == 0})
+    return filter(['continue', 'dump', 'file', 'func', 'pause', 'start'],
+          \ {_, x -> match(x, l:expand_arg) == 0})
   elseif a:res.expand ==# 'ownsyntax'
     return getcompletion(l:expand_arg, 'syntax')
   elseif a:res.expand ==# 'shellcmd'
@@ -596,8 +562,10 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
   return []
 endfunction
 
-function! wilder#cmdline#has_file_args(cmd) abort
-  return wilder#cmdline#main#has_file_args(a:cmd)
+function! wilder#cmdline#has_file_args(res) abort
+  return a:res.expand ==# 'file' ||
+        \ a:res.expand ==# 'file_in_path' ||
+        \ a:res.expand ==# 'dir'
 endfunction
 
 function! wilder#cmdline#is_user_command(cmd) abort
@@ -717,9 +685,8 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
       \ wilder#check({_, res -> has_key(res, 'expand') && !empty(res.expand)}),
       \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
       \ l:Getcompletion,
-      \ ] +
-      \ (l:fuzzy ? [{ctx, xs -> l:Filter(ctx, xs, ctx.match_arg)}] : [])
-      \ + [
+      \ {ctx, xs -> !l:fuzzy || get(ctx, 'expand', '') ==# 'help' ?
+      \   xs : l:Filter(ctx, xs, ctx.match_arg)},
       \ wilder#result({'replace': ['wilder#cmdline#replace']}),
       \ ]
 endfunction
@@ -749,7 +716,7 @@ function! wilder#cmdline#get_file_completion_pipeline(opts) abort
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#check({_, res -> wilder#cmdline#has_file_args(res.cmd)}),
+      \ wilder#check({_, res -> wilder#cmdline#has_file_args(res)}),
       \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
       \ l:Getcompletion,
       \ ] +
@@ -850,7 +817,7 @@ function! wilder#cmdline#pipeline(opts) abort
   endif
 
   if has_key(a:opts, 'use_python_for_file_completion')
-    let l:get_file_completion_opts.use_python_for_file_completion = a:opts.use_python_for_file_completion
+    let l:get_file_completion_opts.use_python = a:opts.use_python_for_file_completion
   endif
 
   return [

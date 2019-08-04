@@ -3,10 +3,10 @@ function! wilder#pipeline#component#branch#make(args) abort
     return {_, x -> v:false}
   endif
 
-  return {_, x -> {ctx -> s:start(a:args, ctx, x)}}
+  return {_, x -> {ctx -> s:branch(a:args, ctx, x)}}
 endfunction
 
-function! s:start(pipelines, ctx, x) abort
+function! s:branch(pipelines, ctx, x) abort
   let l:state = {
         \ 'index': 0,
         \ 'pipelines': a:pipelines,

@@ -39,7 +39,7 @@ function! wilder#cmdline#let#do(ctx)
                 \ 'expression' :
                 \ 'nothing'
         elseif l:char !=# ' '
-          let a:ctx.expand = 'settings'
+          let a:ctx.expand = 'option'
           if a:ctx.pos + 2 < len(a:ctx.cmdline) &&
                 \ (a:ctx.cmdline[a:ctx.pos + 1] ==# 'l' ||
                 \ a:ctx.cmdline[a:ctx.pos + 2] ==# 'g') &&

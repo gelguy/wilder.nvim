@@ -51,8 +51,13 @@ function! s:render(state, ctx, xs) abort
     return
   endif
 
-  let l:space_used = wilder#render#components_len(
-        \ a:state.left + a:state.right,
+  let l:space_used = wilder#render#component_len(
+        \ a:state.left,
+        \ a:ctx,
+        \ a:xs)
+
+  let l:space_used += wilder#render#component_len(
+        \ a:state.right,
         \ a:ctx,
         \ a:xs)
 
@@ -159,7 +164,8 @@ function! s:pre_hook(state, ctx) abort
     let a:state.win = s:new_win(a:state.buf)
   endif
 
-  call wilder#render#components_pre_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_pre_hook(a:state.left, a:ctx)
+  call wilder#render#component_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -173,5 +179,6 @@ function! s:post_hook(state, ctx) abort
     call nvim_win_close(l:win, 1)
   endif
 
-  call wilder#render#components_post_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_post_hook(a:state.left, a:ctx)
+  call wilder#render#component_post_hook(a:state.right, a:ctx)
 endfunction
