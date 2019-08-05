@@ -565,7 +565,9 @@ endfunction
 function! wilder#cmdline#has_file_args(res) abort
   return a:res.expand ==# 'file' ||
         \ a:res.expand ==# 'file_in_path' ||
-        \ a:res.expand ==# 'dir'
+        \ a:res.expand ==# 'dir' ||
+        \ a:res.expand ==# 'shellcmd' ||
+        \ a:res.expand ==# 'user'
 endfunction
 
 function! wilder#cmdline#is_user_command(cmd) abort
