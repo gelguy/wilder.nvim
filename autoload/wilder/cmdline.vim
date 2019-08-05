@@ -158,7 +158,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
       while l:i < len(a:res.expand_arg)
         let l:char = a:res.expand_arg[l:i]
         if l:char ==# '/' ||
-              \ l:char ==# '\' ||
+              \ l:allow_backslash && l:char ==# '\' ||
               \ match(l:char, '\f') != 0
           break
         endif
@@ -357,7 +357,7 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
         \ a:res.expand ==# 'shellcmd'
 
     return {ctx -> _wilder_python_get_file_completion(
-          \ ctx, getcwd(), l:expand_arg, a:res.expand, get(a:res, 'has_wild_card', 0))}
+          \ ctx, getcwd(), l:expand_arg, a:res.expand, get(a:res, 'has_wildcard', 0))}
   endif
 
   if a:res.expand ==# 'user'
@@ -796,6 +796,7 @@ endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
+  let l:use_python = get(a:opts, 'use_python', has('nvim'))
 
   if has_key(a:opts, 'hide_in_substitute')
     let l:hide_in_substitute = a:opts.hide_in_substitute
@@ -808,18 +809,16 @@ function! wilder#cmdline#pipeline(opts) abort
 
   let l:get_file_completion_opts = {
         \ 'fuzzy': l:fuzzy,
+        \ 'use_python': l:use_python,
         \ }
   let l:getcompletion_opts = {
         \ 'fuzzy': l:fuzzy,
+        \ 'use_python': l:use_python,
         \ }
 
   if has_key(a:opts, 'fuzzy_filter')
     let l:get_file_completion_opts.fuzzy_filter = a:opts.fuzzy_filter
     let l:getcompletion_opts.fuzzy_filter = a:opts.fuzzy_filter
-  endif
-
-  if has_key(a:opts, 'use_python_for_file_completion')
-    let l:get_file_completion_opts.use_python = a:opts.use_python_for_file_completion
   endif
 
   return [
