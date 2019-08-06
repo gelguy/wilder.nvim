@@ -352,6 +352,7 @@ easy modification of the result dictionary.
 COMPONENTS                          *wilder-pipeline-components*
 
 wilder#check({f}, |...|)            *wilder#check()*
+                                    Pipeline component~
             Takes a variadic list of functions. The functions should take
             {ctx} and {x} as arguments and return true or false.
             If any of the functions return false, this component will return
@@ -359,6 +360,7 @@ wilder#check({f}, |...|)            *wilder#check()*
             Returns {x} otherwise.
 
 wilder#branch({list_of_pipelines})  *wilder#branch()*
+                                    Pipeline component~
             Takes a list of pipelines. The pipelines should be a list of
             components.
             Sequentially runs each of the pipelines, using the {ctx} and {x}
@@ -389,6 +391,7 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
 
                                     *wilder#history()*
 wilder#history([{max_num}, [{cmdtype}]])
+                                    Pipeline component~
             A component which returns up to {max_num} values from the
             |history| of {cmdtype}.
             By default, {max_num} is treated as 50.
@@ -398,9 +401,11 @@ wilder#history([{max_num}, [{cmdtype}]])
             See |hist-names| for the possible values of {cmdtype}
 
 wilder#vim_substring()              *wilder#vim_substring()*
+                                    Pipeline component~
             Takes a string and appends it with a substring regex.
 
 wilder#vim_search([{options}])      *wilder#vim_search()*
+                                    Pipeline component~
             Takes a regex and searches the current buffer for completions
             matching the regex. Returns a list of unique strings.
 
@@ -412,15 +417,19 @@ wilder#vim_search([{options}])      *wilder#vim_search()*
             Default: 300
 
 wilder#vim_sort()                   *wilder#vim_sort()*
+                                    Pipeline component~
             Takes a list and returns a sorted copy of the list.
 
 wilder#vim_uniq()                   *wilder#vim_uniq()*
+                                    Pipeline component~
             Takes a list and returns a uniq-ed copy of the list.
 
 wilder#python_substring()           *wilder#python_substring()*
+                                    Pipeline component~
             Takes a string and appends it with a Python substring regex.
 
                                     *wilder#python_fuzzy_match()*
+                                    Pipeline component~
 wilder#python_fuzzy_match([{options}])
             Takes a string and converts it into a Python fuzzy regex.
             The string is split into characters and the fuzzy regex for `word`
@@ -434,6 +443,7 @@ wilder#python_fuzzy_match([{options}])
 
                                     *wilder#python_fuzzy_delimiter()*
 wilder#python_fuzzy_delimiter([{options}])
+                                    Pipeline component~
             Takes a string and converts it to a Python regex by splitting the
             string into characters. Each character either follows directly
             from the previous one, or is the start of a delimited region.
@@ -459,6 +469,7 @@ wilder#python_fuzzy_delimiter([{options}])
 wilder#python_search([{options}])   *wilder#python_search()*
                                     Neovim only~
                                     Async~
+                                    Pipeline component~
             Takes a regex and searches the current buffer for completions
             matching the regex using Python 3.
             Returns a list of unique strings.
@@ -481,14 +492,17 @@ wilder#python_search([{options}])   *wilder#python_search()*
 wilder#python_sort()                *wilder#python_sort()*
                                     Neovim only~
                                     Async~
+                                    Pipeline component~
             Takes a list and returns a sorted copy of the list.
 
 wilder#python_uniq()                *wilder#python_uniq()*
                                     Neovim only~
                                     Async~
+                                    Pipeline component~
             Takes a list and returns a uniq-ed copy of the list.
 
 wilder#result([{dictionary}])       *wilder#result()*
+                                    Pipeline component~
             Takes an {input} dictionary and returns a component which will
             transform the input into a result dictionary and modifies its
             keys.
@@ -529,11 +543,13 @@ wilder#result([{dictionary}])       *wilder#result()*
 
                                     *wilder#result_output_escape()*
 wilder#result_output_escape({chars})
+                                    Pipeline component~
             Helper function which returns a |wilder#result()| which escapes
             {chars} in the `output` when selecting a candidate. See
             |wilder-pipeline-flow| on how `output` is used.
 
 wilder#result_fmap({f})             *wilder#result_fmap()*
+                                    Pipeline component~
             Helper function which takes a function that takes a context {ctx}
             and {xs} result's 'xs' candidates and returns a new list of
             candidates or a |wilder-pipeline-thunk| which returns the new
@@ -549,15 +565,18 @@ wilder#result_fmap({f})             *wilder#result_fmap()*
 PIPELINES                           *wilder-pipelines*
 
 wilder#vim_search_pipeline()        *wilder#vim_search_pipeline()*
+                                    Pipeline~
             Returns a pipeline which does Vim substring search.
 
 wilder#python_search_pipeline()     *wilder#python_search_pipeline()*
                                     Neovim only~
                                     Async~
+                                    Pipeline~
             Returns a pipeline which does Python substring search.
 
 wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
                                     Neovim only~
+                                    Pipeline~
             Returns a pipeline which returns completions in cmdline mode.
             Handles user command completions, file completions and cmdline
             completions.
@@ -599,6 +618,7 @@ wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
 
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{opts}])
+                                    Pipeline~
             Returns a pipeline which runs the given pipeline when in a
             |:substitute| command.
             Uses the {pattern} section of the command as the argument.
@@ -838,6 +858,17 @@ Components can be of the following types:
             A function which takes a {ctx} and the list of Results {xs} and
             returns a component.
 
+            The keys of {ctx} are the same as the ones in the `render`
+            key of |wilder-renderer|, with an additional `page` key which is a
+            2 element array [{start}, {end}] indicating the start and end of
+            the candidates currently being drawn. If no candidates are drawn,
+            the page is [-1, -1].
+
+            Note: `ctx.page` is not available when determining the `len`
+            of the component. This means components depending on
+            `ctx.page` have to be wrapped in a Dictionary and provide the
+            `len` entry.
+
 Before drawing the results, the amount of space available needs to be
 calculated. This is done by calculating the total space taken by the
 components, and then subtracting that from the total space available.
@@ -870,6 +901,7 @@ together with |wilder#make_hl()|.
 Here is the list of in-built components:
 
 wilder#previous_arrow([{opts}])     *wilder#previous_arrow()*
+                                    Renderer component~
             Returns a component which shows a previous arrow when there are
             previous candidates which do not fit in the current view.
             Note Has to be used with |wilder#next_arrow()|, otherwise the
@@ -889,6 +921,7 @@ wilder#previous_arrow([{opts}])     *wilder#previous_arrow()*
             Default: None
 
 wilder#next_arrow([{opts}])         *wilder#next_arrow()*
+                                    Renderer component~
             Returns a component which shows a next arrow when there are
             additional candidates which do not fit in the current view.
             Note Has to be used with |wilder#previous_arrow()|, otherwise the
@@ -914,6 +947,7 @@ wilder#next_arrow([{opts}])         *wilder#next_arrow()*
             Default: None
 
 wilder#index([{opts}])              *wilder#index()*
+                                    Renderer component~
             Returns a component which shows the index of the currently
             selected candidate and the total number of candidates.
             For example, if there are 10 candidates and the 5th one is
@@ -927,6 +961,7 @@ wilder#index([{opts}])              *wilder#index()*
             Default: None
 
 wilder#spinner([{opts}])            *wilder#spinner()*
+                                    Renderer component~
             Returns a component which indicates whether the current pipeline
             is still running.
 
@@ -961,6 +996,7 @@ wilder#spinner([{opts}])            *wilder#spinner()*
 
                                     *wilder#separator()*
 wilder#separator({str}, {fg}, {bg}, [{key}])
+                                    Renderer component~
             Helper function to draw an airline-like separator.
             {str} should be the separator character
             {fg} is the highlight group from which the |highlight-ctermfg| and
@@ -972,6 +1008,7 @@ wilder#separator({str}, {fg}, {bg}, [{key}])
 
                                     *wilder#predicate()*
 wilder#condition({predicate}, {if_true}, [{if_false}])
+                                    Renderer component~
             Returns a component which renders the given components based on
             the {predicate}.
             {predicate} is a function which takes a {ctx} and the list of
