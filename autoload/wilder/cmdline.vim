@@ -249,7 +249,7 @@ function! s:fuzzy_filter(ctx, candidates, query) abort
   if a:ctx.expand ==# 'dir' ||
         \ a:ctx.expand ==# 'file' ||
         \ a:ctx.expand ==# 'file_in_path'
-    return filter(a:candidates, {_, x -> match(x, s:get_path_tail(l:regex)) != -1})
+    return filter(a:candidates, {_, x -> match(s:get_path_tail(x), l:regex) != -1})
   endif
 
   return filter(a:candidates, {_, x -> match(x, l:regex) != -1})
@@ -408,8 +408,6 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'compiler')
   elseif a:res.expand ==# 'cscope'
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
-  elseif a:res.expand ==# 'dir'
-    return getcompletion(l:expand_arg, 'dir', 1)
   elseif a:res.expand ==# 'events'
     return getcompletion(l:expand_arg, 'event')
   elseif a:res.expand ==# 'expression'
