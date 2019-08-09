@@ -1,4 +1,4 @@
-function! wilder#render#statusline#renderer(args) abort
+function! wilder#render#renderer#statusline#make(args) abort
   let l:state = {
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),

@@ -6,7 +6,7 @@ catch 'Not enough arguments'
 catch
 endtry
 
-function! wilder#render#float#renderer(args) abort
+function! wilder#render#renderer#float#make(args) abort
   let l:state = {
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
