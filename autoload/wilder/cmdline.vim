@@ -500,7 +500,8 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return filter(wilder#cmdline#set#get_bool_options(),
           \ {_, x -> match(x, l:expand_arg == 0)})
   elseif a:res.expand ==# 'option_old'
-    return [eval('&' . a:res.option)]
+    let l:old_option = eval('&' . a:res.option)
+    return [type(l:old_option) is v:t_string ? l:old_option : string(l:old_option)]
   elseif a:res.expand ==# 'packadd'
     return getcompletion(l:expand_arg, 'packadd')
   elseif a:res.expand ==# 'profile'
