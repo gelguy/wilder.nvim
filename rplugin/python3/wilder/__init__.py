@@ -28,6 +28,7 @@ class Wilder(object):
         self.events = []
         self.lock = threading.Lock()
         self.executor = None
+        self.run_id = -1
 
     def handle(self, ctx, x, command='resolve'):
         self.nvim.call('wilder#pipeline#' + command, ctx, x)
@@ -37,8 +38,13 @@ class Wilder(object):
 
     def run_in_background(self, fn, args):
         event = threading.Event()
+        ctx = args[0]
 
         with self.lock:
+            if ctx['run_id'] < self.run_id:
+                return
+            self.run_id = ctx['run_id']
+
             while len(self.events) > 0:
                 e = self.events.pop(0)
                 e.set()
@@ -86,7 +92,7 @@ class Wilder(object):
     def sleep(self, args):
         self.run_in_background(self.sleep_handler, args)
 
-    def sleep_handler(self, event, t, ctx, x):
+    def sleep_handler(self, event, ctx, t, x):
         if event.is_set():
             return
 
@@ -103,9 +109,9 @@ class Wilder(object):
         current_buf = self.nvim.current.buffer
         buf = current_buf[line_num:] + current_buf[:line_num]
 
-        self.run_in_background(self.search_handler, [buf] + args)
+        self.run_in_background(self.search_handler, args + [buf])
 
-    def search_handler(self, event, buf, opts, ctx, x):
+    def search_handler(self, event, ctx, opts, x, buf):
         if event.is_set():
             return
 
@@ -212,6 +218,7 @@ class Wilder(object):
                     show_hidden = tail.startswith('.')
                     pattern = ''
                     wildcard = os.path.join(directory, expand_arg)
+                    wildcard = os.path.expandvars(wildcard)
 
                     it = glob.iglob(wildcard, recursive=True)
                 else:

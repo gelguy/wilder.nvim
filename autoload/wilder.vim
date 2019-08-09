@@ -182,11 +182,11 @@ endfunction
 
 function! wilder#python_search(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
-  return {_, x -> {ctx -> _wilder_python_search(l:opts, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_search(ctx, l:opts, x)}}
 endfunction
 
 function! wilder#python_uniq() abort
-  return {_, x -> {ctx -> _wilder_python_uniq(a:opts, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_uniq(ctx, x)}}
 endfunction
 
 function! wilder#python_sort() abort
@@ -194,7 +194,7 @@ function! wilder#python_sort() abort
 endfunction
 
 function! wilder#_python_sleep(t) abort
-  return {_, x -> {ctx -> _wilder_python_sleep(a:t, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_sleep(ctx, a:t, x)}}
 endfunction
 
 function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
