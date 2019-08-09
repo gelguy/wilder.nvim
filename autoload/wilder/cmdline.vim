@@ -68,7 +68,6 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   " check prefix to see if expanding is needed
   let l:expand_start = -1
   let l:expand_end = -1
-  let l:no_fuzzy = 0
 
   if a:res.expand_arg[0] ==# '~'
     let l:allow_backslash = has('win32') || has('win64')
@@ -129,6 +128,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:split_path = []
   let l:tail = ''
   let l:i = 0
+  let l:no_fuzzy = 0
 
   while l:i < len(a:res.expand_arg)
     let l:char = a:res.expand_arg[l:i]
@@ -172,6 +172,10 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         " if result is the same, expansion failed
         if l:expanded_env_var !=# l:env_var
           let l:tail .= l:expanded_env_var
+
+          if l:i == len(a:res.expand_arg) - 1
+            let l:no_fuzzy = 1
+          endif
         endif
       endif
 
@@ -204,12 +208,14 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     return a:res
   endif
 
-  let a:ctx.match_arg = l:tail
-
-  if !a:fuzzy
+  if !a:fuzzy || !l:no_fuzzy
+    let a:res.expand_arg = l:path_prefix . l:tail
+    let a:res.fuzzy_char = ''
+    let a:ctx.match_arg = ''
     return a:res
   endif
 
+  let a:ctx.match_arg = l:tail
   let a:res.expand_arg = l:path_prefix
   let a:res.fuzzy_char = l:tail[0]
   return a:res
