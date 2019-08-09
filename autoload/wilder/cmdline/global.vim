@@ -1,9 +1,10 @@
 function! wilder#cmdline#global#do(ctx) abort
-  if a:ctx.pos < len(a:ctx.cmdline)
-    let l:delimiter = a:ctx.cmdline[a:ctx.pos]
-
-    let a:ctx.pos += 1
+  if a:ctx.pos >= len(a:ctx.cmdline)
+    return
   endif
+
+  let l:delimiter = a:ctx.cmdline[a:ctx.pos]
+  let a:ctx.pos += 1
 
   let l:arg_start = a:ctx.pos
   let l:delimiter_reached = 0
