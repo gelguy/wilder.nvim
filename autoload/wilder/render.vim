@@ -559,7 +559,7 @@ function! s:get_hl_attrs(attrs, key, hl) abort
   let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
 endfunction
 
-function! s:draw_x_cached(ctx, result, i)
+function! s:draw_x_cached(ctx, result, i) abort
   if !has_key(a:ctx, 'draw_cache')
     let a:ctx.draw_cache = {}
   endif

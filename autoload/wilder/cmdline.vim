@@ -11,10 +11,7 @@ function! wilder#cmdline#parse(cmdline) abort
 endfunction
 
 function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
-  let a:ctx.expand = a:res.expand
-  let a:ctx.match_arg = a:res.cmdline[a:res.pos :]
-  let a:res.expand_arg = a:res.cmdline[a:res.pos :]
-
+  let a:res.match_arg = a:res.cmdline[a:res.pos :]
   let a:res.expand_arg = has_key(a:res, 'subcommand_start') ?
         \ a:res.cmdline[a:res.subcommand_start :] :
         \ a:res.cmdline[a:res.pos :]
@@ -38,14 +35,14 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
         \ (a:res.expand_arg[0] ==# 'g' || a:res.expand_arg[0] ==# 's')
     let l:prefix = a:res.expand_arg[0: 1]
     let l:fuzzy_char = a:res.expand_arg[2]
-    let a:ctx.match_arg = a:res.expand_arg[2 :]
+    let a:res.match_arg = a:res.expand_arg[2 :]
   elseif a:res.expand ==# 'mapping'
     " we want < to match special characters such as <Space>
     " a shortcut is to return everything and let the fuzzy matcher
     " handle the matching
     let l:prefix = ''
     let l:fuzzy_char = ''
-    let a:ctx.match_arg = ''
+    let a:res.match_arg = ''
   else
     let l:prefix = ''
     let l:fuzzy_char = a:res.expand_arg[0]
@@ -57,7 +54,6 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
 endfunction
 
 function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
-  let a:ctx.expand = a:res.expand
   let a:res.expand_arg = a:res.cmdline[a:res.pos :]
 
   let l:slash = has('win32') || has('win64') ?
@@ -199,11 +195,11 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   endif
 
   " don't trim leading / when drawing
-  let a:ctx.path_prefix = l:path_prefix ==# '/' ? '' : l:path_prefix
+  let a:res.path_prefix = l:path_prefix ==# '/' ? '' : l:path_prefix
 
   if get(a:res, 'has_wildcard', 0)
     " don't use fuzzy match with wildcard
-    let a:ctx.match_arg = ''
+    let a:res.match_arg = ''
 
     return a:res
   endif
@@ -211,11 +207,11 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   if !a:fuzzy || !l:no_fuzzy
     let a:res.expand_arg = l:path_prefix . l:tail
     let a:res.fuzzy_char = ''
-    let a:ctx.match_arg = ''
+    let a:res.match_arg = ''
     return a:res
   endif
 
-  let a:ctx.match_arg = l:tail
+  let a:res.match_arg = l:tail
   let a:res.expand_arg = l:path_prefix
   let a:res.fuzzy_char = l:tail[0]
   return a:res
@@ -252,10 +248,15 @@ function! s:fuzzy_filter(ctx, candidates, query) abort
     let l:i += 1
   endwhile
 
-  if a:ctx.expand ==# 'dir' ||
-        \ a:ctx.expand ==# 'file' ||
-        \ a:ctx.expand ==# 'file_in_path'
-    return filter(a:candidates, {_, x -> match(s:get_path_tail(x), l:regex) != -1})
+  if has_key(a:ctx, 'meta') &&
+        \ type(a:ctx.meta) is v:t_dict &&
+        \ has_key(a:ctx.meta, 'expand')
+    let l:expand = a:ctx.meta.expand
+    if l:expand ==# 'dir' ||
+          \ l:expand ==# 'file' ||
+          \ l:expand ==# 'file_in_path'
+      return filter(a:candidates, {_, x -> match(s:get_path_tail(x), l:regex) != -1})
+    endif
   endif
 
   return filter(a:candidates, {_, x -> match(x, l:regex) != -1})
@@ -363,7 +364,9 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
         \ a:res.expand ==# 'shellcmd'
 
     return {ctx -> _wilder_python_get_file_completion(
-          \ ctx, getcwd(), l:expand_arg, a:res.expand, get(a:res, 'has_wildcard', 0))}
+          \ ctx, getcwd(), l:expand_arg, a:res.expand,
+          \ get(a:res, 'has_wildcard', 0),
+          \ get(a:res, 'path_prefix', ''))}
   endif
 
   if a:res.expand ==# 'user'
@@ -666,75 +669,58 @@ function! wilder#cmdline#user_completion_pipeline() abort
       \ ]
 endfunction
 
-function! wilder#cmdline#getcompletion_pipeline(opts) abort
-  let l:fuzzy = get(a:opts, 'fuzzy', 0)
-  let l:use_python = get(a:opts, 'use_python', has('nvim'))
-
-  let l:Completion_func = funcref('wilder#cmdline#getcompletion')
-
-  if l:fuzzy
-    if has_key(a:opts, 'fuzzy_filter')
-      let l:Filter = a:opts.fuzzy_filter
-    else
-      let l:Filter = l:use_python
-            \ ? wilder#cmdline#python_fuzzy_filter()
-            \ : wilder#cmdline#fuzzy_filter()
-    endif
-    let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
-          \ ctx, x, l:Completion_func)}
-  else
-    let l:Getcompletion = l:Completion_func
-  endif
-
-  return [
-      \ wilder#check({-> getcmdtype() ==# ':'}),
-      \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#check({_, res -> has_key(res, 'expand') && !empty(res.expand)}),
-      \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
-      \ l:Getcompletion,
-      \ {ctx, xs -> !l:fuzzy || get(ctx, 'expand', '') ==# 'help' ?
-      \   xs : l:Filter(ctx, xs, ctx.match_arg)},
-      \ wilder#result({'replace': ['wilder#cmdline#replace']}),
-      \ ]
-endfunction
-
-function! wilder#cmdline#get_file_completion_pipeline(opts) abort
-  let l:fuzzy = get(a:opts, 'fuzzy', 0)
-  let l:use_python = get(a:opts, 'use_python', has('nvim'))
-
-  let l:Completion_func = l:use_python ?
+function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
+  let l:Completion_func = a:use_python && a:has_file_args ?
         \ funcref('wilder#cmdline#python_get_file_completion') :
         \ funcref('wilder#cmdline#getcompletion')
 
-  if l:fuzzy
-    if has_key(a:opts, 'fuzzy_filter')
-      let l:Filter = a:opts.fuzzy_filter
-    else
-      let l:Filter = l:use_python
-            \ ? wilder#cmdline#python_fuzzy_filter()
-            \ : wilder#cmdline#fuzzy_filter()
-    endif
+  if a:fuzzy
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
           \ ctx, x, l:Completion_func)}
   else
     let l:Getcompletion = l:Completion_func
   endif
 
+  return wilder#wait(l:Getcompletion(a:ctx, a:res),
+        \ {ctx, xs -> wilder#resolve(ctx, {'xs': xs, 'meta': a:res})})
+endfunction
+
+function! s:result_filter(fuzzy, fuzzy_filter) abort
+  if !a:fuzzy
+    return {ctx, res -> res}
+  endif
+
+  return wilder#result({'xs': {ctx, xs -> get(ctx.meta, 'expand', '') ==# 'help' ? xs :
+        \   a:fuzzy_filter(ctx, xs, get(ctx.meta, 'match_arg', ''))
+        \ }})
+endfunction
+
+function! wilder#cmdline#getcompletion_pipeline(opts) abort
+  let l:fuzzy = get(a:opts, 'fuzzy', 0)
+  let l:use_python = get(a:opts, 'use_python', has('nvim'))
+  let l:Fuzzy_filter = s:result_filter(l:fuzzy, get(a:opts, 'fuzzy_filter', l:use_python ?
+        \ funcref('wilder#cmdline#python_fuzzy_filter') :
+        \ funcref('wilder#cmdline#fuzzy_filter')))
+
   return [
       \ wilder#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#check({_, res -> wilder#cmdline#has_file_args(res)}),
-      \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
-      \ l:Getcompletion,
-      \ ] +
-      \ (l:fuzzy ? [{ctx, xs -> l:Filter(ctx, xs, ctx.match_arg)}] : [])
-      \ + [
-      \ wilder#result({
-      \   'meta': {ctx, meta -> extend(meta is v:null ? {} : meta, {'path_prefix': ctx.path_prefix})},
-      \   'output': [{_, x -> escape(x, ' ')}],
-      \   'draw': ['wilder#cmdline#draw_path'],
-      \   'replace': ['wilder#cmdline#replace'],
-      \ }),
+      \ wilder#branch([
+      \   wilder#check({_, res -> wilder#cmdline#has_file_args(res)}),
+      \   {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
+      \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 1)},
+      \   l:Fuzzy_filter,
+      \   wilder#result({
+      \     'output': [{_, x -> escape(x, ' ')}],
+      \     'draw': ['wilder#cmdline#draw_path'],
+      \     'replace': ['wilder#cmdline#replace'],
+      \   }),
+      \ ], [
+      \   {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
+      \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 0)},
+      \   l:Fuzzy_filter,
+      \   wilder#result({'replace': ['wilder#cmdline#replace']}),
+      \ ]),
       \ ]
 endfunction
 
@@ -800,9 +786,6 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
 endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
-  let l:fuzzy = get(a:opts, 'fuzzy', 0)
-  let l:use_python = get(a:opts, 'use_python', has('nvim'))
-
   if has_key(a:opts, 'hide_in_substitute')
     let l:hide_in_substitute = a:opts.hide_in_substitute
   elseif has_key(a:opts, 'hide')
@@ -812,20 +795,6 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:hide_in_substitute = has('nvim') && !has('nvim-0.3.7')
   endif
 
-  let l:get_file_completion_opts = {
-        \ 'fuzzy': l:fuzzy,
-        \ 'use_python': l:use_python,
-        \ }
-  let l:getcompletion_opts = {
-        \ 'fuzzy': l:fuzzy,
-        \ 'use_python': l:use_python,
-        \ }
-
-  if has_key(a:opts, 'fuzzy_filter')
-    let l:get_file_completion_opts.fuzzy_filter = a:opts.fuzzy_filter
-    let l:getcompletion_opts.fuzzy_filter = a:opts.fuzzy_filter
-  endif
-
   return [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ l:hide_in_substitute ?
@@ -833,8 +802,7 @@ function! wilder#cmdline#pipeline(opts) abort
         \   {_, x -> x},
         \ wilder#branch(
         \   wilder#cmdline#user_completion_pipeline(),
-        \   wilder#cmdline#get_file_completion_pipeline(l:get_file_completion_opts),
-        \   wilder#cmdline#getcompletion_pipeline(l:getcompletion_opts),
+        \   wilder#cmdline#getcompletion_pipeline(a:opts),
         \ ),
         \ ]
 endfunction

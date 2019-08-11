@@ -520,8 +520,9 @@ wilder#result([{dictionary}])       *wilder#result()*
             using |extend()|.
 
             If {value} is a function, it should be a function which takes a
-            {ctx} and {old_value} and returns the new value to be used. If
-            input does not contain {key}, {old_value} will be |v:null|.
+            {ctx} and {old_value} and returns the new value to be used, or a
+            |wilder-pipeline-thunk| which returns the new value. If input does
+            not contain {key}, {old_value} will be |v:null|.
 
             Otherwise, it contains the current value at {input}'s {key}.
             If {value} is none of the above, the value at {input}'s {key} will
@@ -547,20 +548,6 @@ wilder#result_output_escape({chars})
             Helper function which returns a |wilder#result()| which escapes
             {chars} in the `output` when selecting a candidate. See
             |wilder-pipeline-flow| on how `output` is used.
-
-wilder#result_fmap({f})             *wilder#result_fmap()*
-                                    Pipeline component~
-            Helper function which takes a function that takes a context {ctx}
-            and {xs} result's 'xs' candidates and returns a new list of
-            candidates or a |wilder-pipeline-thunk| which returns the new
-            list.
-            The wrapping and unwrapping of the result will be handled by the
-            component.
-
-            Example:
->
-             wilder#result_fmap({_, xs -> sort(xs)})
-<
 
 PIPELINES                           *wilder-pipelines*
 
@@ -1231,12 +1218,12 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
             Takes a list of candidates and a query and returns a
             |wilder-pipeline-thunk| which sorts the candidates using
             `fuzzywuzzy`.
-            Meant to be used with |wilder#result_fmap()|.
+            Meant to be used with |wilder#result()|.
 
             Example:
 >
-             wilder#result_fmap({_, xs ->
-               wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}})
+             wilder#result({'xs': {ctx, xs ->
+               wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
 
 ==============================================================================

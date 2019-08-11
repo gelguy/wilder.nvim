@@ -198,6 +198,7 @@ class Wilder(object):
                                     expand_arg,
                                     expand_type,
                                     has_wildcard,
+                                    path_prefix,
                                     directories,
                                     wildignore_opt):
         if event.is_set():
@@ -232,11 +233,6 @@ class Wilder(object):
                     except FileNotFoundError:
                         continue
 
-                if 'path_prefix' in ctx:
-                    path_prefix = ctx['path_prefix']
-                else:
-                    path_prefix = ''
-
                 for entry in it:
                     if event.is_set():
                         return
@@ -265,6 +261,8 @@ class Wilder(object):
                             continue
                         name = str(entry) if has_wildcard else entry.name
                         if Path(name) == Path(path_prefix):
+                            if has_wildcard:
+                                continue
                             res.append(os.path.join(path_prefix, './'))
                         elif entry.is_dir():
                             res.append((str(entry) if has_wildcard else entry.name) + os.sep)
@@ -322,8 +320,10 @@ class Wilder(object):
             return
 
         try:
-            expand = ctx.get('expand', '')
-            has_file_args = expand == 'dir' or expand == 'file' or expand == 'file_in_path'
+            has_file_args = False
+            if 'meta' in ctx and 'expand' in ctx['meta']:
+                expand = ctx['meta']['expand']
+                has_file_args = expand == 'dir' or expand == 'file' or expand == 'file_in_path'
             re = importlib.import_module(engine)
             pattern = re.compile(pattern)
             res = filter(lambda x: pattern.match(x if not has_file_args else self.get_basename(x)), candidates)

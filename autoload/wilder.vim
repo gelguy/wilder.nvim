@@ -139,10 +139,6 @@ function! wilder#result(...) abort
   endif
 endfunction
 
-function! wilder#result_fmap(f) abort
-  return wilder#pipeline#component#result_fmap#make(a:f)
-endfunction
-
 function! wilder#result_output_escape(chars) abort
   return wilder#result({
         \'output': [{ctx, x -> escape(x, a:chars)}],
@@ -262,7 +258,7 @@ function! wilder#python_fuzzy_filter(...) abort
   if a:0
     return wilder#cmdline#python_fuzzy_filter(a:1)
   else
-    return wilder#cmdline#fuzzy_filter()
+    return wilder#cmdline#python_fuzzy_filter()
   endif
 endfunction
 
