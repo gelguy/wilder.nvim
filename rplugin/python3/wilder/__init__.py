@@ -315,18 +315,14 @@ class Wilder(object):
     def filter(self, args):
         self.run_in_background(self.filter_handler, args)
 
-    def filter_handler(self, event, ctx, pattern, candidates, engine):
+    def filter_handler(self, event, ctx, pattern, candidates, engine, has_file_args):
         if event.is_set():
             return
 
         try:
-            has_file_args = False
-            if 'meta' in ctx and 'expand' in ctx['meta']:
-                expand = ctx['meta']['expand']
-                has_file_args = expand == 'dir' or expand == 'file' or expand == 'file_in_path'
             re = importlib.import_module(engine)
             pattern = re.compile(pattern)
-            res = filter(lambda x: pattern.match(x if not has_file_args else self.get_basename(x)), candidates)
+            res = filter(lambda x: pattern.search(x if not has_file_args else self.get_basename(x)), candidates)
             self.queue.put((ctx, list(res),))
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))

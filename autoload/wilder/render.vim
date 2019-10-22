@@ -65,7 +65,7 @@ function! s:component_hook(component, ctx, key) abort
 endfunction
 
 function! wilder#render#make_page(ctx, result) abort
-  if empty(a:result.xs)
+  if empty(a:result.value)
     return [-1, -1]
   endif
 
@@ -125,7 +125,7 @@ function! s:make_page_from_start(ctx, result, start) abort
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
   while 1
-    if l:end + 1 >= len(a:result.xs)
+    if l:end + 1 >= len(a:result.value)
       break
     endif
 
@@ -170,7 +170,7 @@ function! s:make_page_from_end(ctx, result, end) abort
   " but there might be leftover space, so we increase l:end to fill up the
   " space e.g. to [0,6]
   while 1
-    if l:end + 1 >= len(a:result.xs)
+    if l:end + 1 >= len(a:result.value)
       break
     endif
 
@@ -188,21 +188,20 @@ function! s:make_page_from_end(ctx, result, end) abort
 endfunction
 
 function! wilder#render#draw_x(ctx, result, i)
-  let l:x = a:result.xs[a:i]
+  let l:x = a:result.value[a:i]
 
   if has_key(a:result, 'draw')
     let l:ctx = {
           \ 'i': a:i,
           \ 'selected': a:ctx.selected == a:i,
           \ }
-    let l:ctx.meta = get(a:result, 'meta', {})
 
     for l:F in a:result.draw
       if type(l:F) isnot v:t_func
         let l:F = function(l:F)
       endif
 
-      let l:x = l:F(l:ctx, l:x)
+      let l:x = l:F(l:ctx, l:x, get(a:result, 'data', {}))
     endfor
   endif
 

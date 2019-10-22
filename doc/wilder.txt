@@ -152,7 +152,7 @@ This will return the 3 completions, the current cmdline and the strings 'foo'
 and 'bar'.
 
 The result of the pipeline should be a list of strings or a dictionary. For
-the dictionary, the 'xs' value should be a list of strings. See
+the dictionary, the 'value' value should be a list of strings. See
 |wilder-pipeline-result| for more details on other keys the dictionary
 contain, and see |wilder-pipeline-flow| for more details on how the result
 will be used.
@@ -216,13 +216,20 @@ non-|v:true| value.
 Returning a function {f} in a pipeline component will cause the pipeline to be
 suspended. The function is called a thunk. The thunk will then be called with
 a new {ctx}. Use the thunk to call async code.
+
 After the async code has finished running, |wilder#resolve()| should be caled
 with {ctx} and the result {x} as arguments. The original {ctx} from the parent
 function can be ignored. The pipeline will then be resumed, and the {x} value
 will be passed on to the next component.
+
 If there is an error, |wilder#reject()| should be called instead, with {ctx}
 and {error} as arguments.
-Note exactly one of |wilder#resolve()| or |wilder#reject()| has to be called
+
+If the result of a thunk is another thunk, the result thunk will be called.
+The pipeline will resume when one of the thunks eventually returns a
+non-function result.
+
+Note: exactly one of |wilder#resolve()| or |wilder#reject()| has to be called
 eventually. Not calling either will result in a memory leak, and calling more
 than one will result in an error.
 
@@ -239,10 +246,10 @@ Use this behaviour to create async pipeline components.
 
                                     *wilder-pipeline-result*
 The result of the pipeline should be a list of strings or a dictionary. For
-the dictionary, the 'xs' value should be a list of strings.
+the dictionary, the 'value' value should be a list of strings.
 
 When the result is a list, it is implicitly converted into a dictionary with
-the list of keys under the 'xs' key.
+the list of keys under the 'value' key.
 
 The result dictionary allows you to change how the candidate is handled. For
 example, you may wish to escape certain characters when drawing the candidate
@@ -250,19 +257,20 @@ or only change certain parts of the cmdline when the candidate is selected.
 
 The Result dictionary has the following keys:
 
-            `xs`                    *wilder-pipeline-result-xs*
+            `value`                 *wilder-pipeline-result-value*
             Mandatory~
             The list of candidates as strings
 
-            `meta`                  *wilder-pipeline-result-meta*
+            `data`                  *wilder-pipeline-result-data*
             Optional~
             A dictionary containing arbitrary data. Will be passed to the
-            `draw`, `output` and `replace` functions when they are called.
+            `draw`, `output` and `replace` functions when they are called. If
+            not set, will default to an empty dictionary.
 
             `draw`                  *wilder-pipeline-result-draw*
             Optional~
-            A list of strings or functions which takes a {ctx} and {x} and
-            returns a string representing how {x} will be drawn by the
+            A list of strings or functions which takes a {ctx}, {x} and {data}
+            and returns a string representing how {x} will be drawn by the
             renderer.
             For each element in the list, if the element is a string, it is
             converted to a function using |function()|.
@@ -278,31 +286,28 @@ The Result dictionary has the following keys:
                 `i`
                 The index of the {x} in the list of candidates.
 
-                `meta`
-                See |wilder-pipeline-result-meta|. Defauts to an empty
-                dictionary if not set.
+            See |wilder-pipeline-result-data| on how {data} is gotten.
 
             Default: None
 
             `output`                *wilder-pipeline-result-output*
             Optional~
-            A list of strings or functions which takes a {ctx} and {x} and
-            returns a string representing how {x} will be output when selected
-            as a completion candidate.
+            A list of strings or functions which takes a {ctx}, {x} and {data}
+            and returns a string representing how {x} will be output when
+            selected as a completion candidate.
             See the |wilder-pipeline-result-draw| option for how iterating
             through the list works.
 
-            The keys of {ctx} are:
-                `meta`
-                See |wilder-pipeline-result-meta|. Defauts to an empty
-                dictionary if not set.
+            {ctx} has no keys.
+
+            See |wilder-pipeline-result-data| on how {data} is gotten.
 
             Default: None
 
             `replace`               *wilder-pipeline-result-replace*
             Optional~
-            A list of strings or functions which takes a {ctx} and {x} and
-            returns the cmdline to replace the current one
+            A list of strings or functions which takes a {ctx}, {x} and {data}
+            and returns the cmdline to replace the current one.
             See |wilder-option-before_cursor| on which part of the cmdline will be
             replaced.
             See the |wilder-pipeline-result-draw| option for how iterating
@@ -314,9 +319,7 @@ The Result dictionary has the following keys:
                 instead of |getcmdline()| as the current cmdline may have
                 changed.
 
-                `meta`
-                See |wilder-pipeline-result-meta|. Defauts to an empty
-                dictionary if not set.
+            See |wilder-pipeline-result-data| on how {data} is gotten.
 
             Default: None
 
@@ -326,9 +329,9 @@ The Result dictionary has the following keys:
 2. The pipeline finishes with a list of strings or a dictionary {result}.
 
 3. The list of strings is implicitly converted into a result dictionary with
-   the list of strings under the `xs` key.
+   the list of strings under the `value` key.
 
-4. Each element of the `xs` list {x} is drawn by the renderer:
+4. Each element of the `value` list {x} is drawn by the renderer:
    If {result} does not contain the key `draw`, its {x} entry is used.
    Otherwise, |wilder-pipeline-result-draw| is applied. The result is then
    passed to the renderer.
@@ -351,7 +354,7 @@ easy modification of the result dictionary.
 
 COMPONENTS                          *wilder-pipeline-components*
 
-wilder#check({f}, |...|)            *wilder#check()*
+wilder#check({f}, ...)              *wilder#check()*
                                     Pipeline component~
             Takes a variadic list of functions. The functions should take
             {ctx} and {x} as arguments and return true or false.
@@ -503,9 +506,8 @@ wilder#python_uniq()                *wilder#python_uniq()*
 
 wilder#result([{dictionary}])       *wilder#result()*
                                     Pipeline component~
-            Takes an {input} dictionary and returns a component which will
-            transform the input into a result dictionary and modifies its
-            keys.
+            Takes an dictionary and returns a component which will transform
+            the {input} into a result dictionary and modifies its keys.
             See |wilder-pipeline-result| for more information on how the
             keys of the dictionary is used.
 
@@ -520,9 +522,12 @@ wilder#result([{dictionary}])       *wilder#result()*
             using |extend()|.
 
             If {value} is a function, it should be a function which takes a
-            {ctx} and {old_value} and returns the new value to be used, or a
-            |wilder-pipeline-thunk| which returns the new value. If input does
-            not contain {key}, {old_value} will be |v:null|.
+            {ctx}, {old_value} and {data} and returns the new value to be
+            used, or a |wilder-pipeline-thunk| which returns the new value. If
+            {input} does not contain {key}, {old_value} will be |v:null|.
+            {data} is the entry for {input}'s `data` key, or an empty
+            dictionary if the key `data` does not exist. This can be used to
+            pass arbitrary data to the functions being called.
 
             Otherwise, it contains the current value at {input}'s {key}.
             If {value} is none of the above, the value at {input}'s {key} will
@@ -533,9 +538,9 @@ wilder#result([{dictionary}])       *wilder#result()*
             [
             \ {ctx, x -> MyCompletionFunction(x)},
             \ wilder#result({'draw': [{ctx, x -> (ctx['i'] + 1) . '. ' . x}]}),
-            \ wilder#result({'draw': [{ctx, x, prev -> ctx['selected'] ?
-            \                         '[' . prev(ctx, x) . ']' :
-            \                         prev(ctx, x)}]}),
+            \ wilder#result({'draw': [{ctx, x, prev -> ctx['selected']
+            \                         ? '[' . prev(ctx, x) . ']'
+            \                         : prev(ctx, x)}]}),
             \ ]
 <
             This pipeline will first prepend the index of the candidate and
@@ -668,8 +673,8 @@ A renderer is a dictionary containing the following keys:
 
             `render`
             Mandatory~
-            A function which takes a {ctx} and the pipeline result {xs} and
-            does the necessary actions to draw the results on the screen.
+            A function which takes a {ctx} and the pipeline result {result}
+            and does the necessary actions to draw the results on the screen.
 
             The keys of {ctx} are:
                 `selected`
@@ -806,8 +811,8 @@ Components can be of the following types:
                     The value of the number is used.
 
                     Function:
-                    A function which takes a {ctx} and the list of Results
-                    {xs} and returns the display width taken up by the
+                    A function which takes a {ctx} and the pipeline result
+                    {result} and returns the display width taken up by the
                     component.
                     The keys of {ctx} are the same as the ones in the `render`
                     key of |wilder-renderer|.
@@ -842,8 +847,8 @@ Components can be of the following types:
                 Default: None
 
             Function:
-            A function which takes a {ctx} and the list of Results {xs} and
-            returns a component.
+            A function which takes a {ctx} and the pipeline result {result}
+            and returns a component.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a
@@ -998,8 +1003,8 @@ wilder#condition({predicate}, {if_true}, [{if_false}])
                                     Renderer component~
             Returns a component which renders the given components based on
             the {predicate}.
-            {predicate} is a function which takes a {ctx} and the list of
-            Results {xs} and returns true or false.
+            {predicate} is a function which takes a {ctx} and the pipeline
+            result {result} and returns true or false.
             The keys of {ctx} are the same as the ones in the `render` key of
             |wilder-renderer|.
             If the result is true, {if_true} is used the component. Otherwise
@@ -1016,9 +1021,9 @@ wilder#in_context()                 *wilder#in_context()*
             Example usage:
 >
             cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
-            cmap <expr> <S-Tab> wilder#in_context() ?
-                \ wilder#previous() :
-                \ "\<S-Tab>"
+            cmap <expr> <S-Tab> wilder#in_context()
+                \ ? wilder#previous()
+                \ : "\<S-Tab>"
 <
 
 wilder#enable_cmdline_enter()       *wilder#enable_cmdline_enter()*
@@ -1054,9 +1059,9 @@ wilder#accept_completion()          *wilder#accept_completion()*
 
             Example:
 >
-            cmap <expr> <Down> wilder#can_accept_completion() ?
-                \ wilder#accept_completion() :
-                \ "\<Down>"
+            cmap <expr> <Down> wilder#can_accept_completion()
+                \ ? wilder#accept_completion() :
+                \ : "\<Down>"
 <
 
 wilder#reject_completion()          *wilder#reject_completion()*
@@ -1065,9 +1070,9 @@ wilder#reject_completion()          *wilder#reject_completion()*
 
             Example:
 >
-            cmap <expr> <Up> wilder#can_reject_completion() ?
-                \ wilder#reject_completion() :
-                \ "\<Up>"
+            cmap <expr> <Up> wilder#can_reject_completion()
+                \ ? wilder#reject_completion()
+                \ : "\<Up>"
 <
 
 wilder#resolve({ctx}, {x})          *wilder#resolve()*
@@ -1079,6 +1084,27 @@ wilder#reject({ctx}, {err})         *wilder#reject()*
             Called to throw an error from an async component in the
             |wilder-pipeline|.
             See |wilder-pipeline-thunk|.
+
+wilder#wait({f}, [{on_finish}, [{on_error}]])
+                                    *wilder#wait()*
+                                    Experimental~
+            If {f} is not a function, calls {on_finish} with it if provided,
+            otherwise calls |wilder#resolve()|.
+
+            If {f} is a function, calls it as a |wilder-pipeline-thunk|. When
+            the thunk resolves, it will call {on_finish} if provided,
+            otherwise it calls |wilder#resolve()|. If there is an error, calls
+            {on_error} if provided, otherwise it calls |wilder#reject()|.
+
+            This can be used to wait for thunks within another thunk.
+            Example:
+>
+            function! Foo(ctx, x) abort
+              return wilder#wait(Bar, {ctx, result_of_bar ->
+                    \  wilder#resolve(Baz(result_of_bar))})
+            endfunction
+<
+
 
 wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
             Used to start wilder from normal mode. To be used when the current
@@ -1218,11 +1244,10 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
             Takes a list of candidates and a query and returns a
             |wilder-pipeline-thunk| which sorts the candidates using
             `fuzzywuzzy`.
-            Meant to be used with |wilder#result()|.
 
             Example:
 >
-             wilder#result({'xs': {ctx, xs ->
+             wilder#result({'value': {ctx, xs ->
                wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
 

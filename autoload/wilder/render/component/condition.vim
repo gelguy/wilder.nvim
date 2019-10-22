@@ -24,9 +24,9 @@ function! s:post_hook(state, ctx) abort
 endfunction
 
 function! s:value(state, ctx, result) abort
-  let a:state.chosen = a:state.predicate(a:ctx, a:result) ?
-        \ a:state.if_true :
-        \ a:state.if_false
+  let a:state.chosen = a:state.predicate(a:ctx, a:result)
+        \ ? a:state.if_true
+        \ : a:state.if_false
 
   return a:state.chosen
 endfunction

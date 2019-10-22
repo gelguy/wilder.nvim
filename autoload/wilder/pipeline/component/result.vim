@@ -1,17 +1,17 @@
 function! wilder#pipeline#component#result#make(...) abort
   let l:args = a:0 ? a:1 : {}
-  return {ctx, xs -> s:result_start(l:args, ctx, xs)}
+  return {ctx, x -> s:result_start(l:args, ctx, x)}
 endfunction
 
-function! s:result_start(args, ctx, xs) abort
+function! s:result_start(args, ctx, x) abort
   let l:kvs = []
   for l:key in keys(a:args)
     call add(l:kvs, {'key': l:key, 'value': a:args[l:key]})
   endfor
 
-  let l:result = type(a:xs) isnot v:t_dict ?
-        \ {'xs': a:xs} :
-        \ a:xs
+  let l:result = type(a:x) isnot v:t_dict
+        \ ? {'value': a:x}
+        \ : a:x
 
   if empty(l:kvs)
     return l:result
@@ -34,13 +34,7 @@ function! s:result(kvs, ctx, result)
     let l:Value = l:kv.value
 
     if type(l:Value) is v:t_func
-      let l:ctx = copy(a:ctx)
-
-      if has_key(a:result, 'meta')
-        let l:ctx.meta = extend(get(l:ctx, 'meta', {}), a:result.meta)
-      endif
-
-      let l:R = l:Value(l:ctx, get(a:result, l:key, v:null))
+      let l:R = l:Value(a:ctx, get(a:result, l:key, v:null), get(a:result, 'data', {}))
 
       if type(l:R) is v:t_func
         return wilder#wait(l:R, {ctx, value ->
@@ -58,6 +52,12 @@ function! s:result(kvs, ctx, result)
   endwhile
 
   return a:result
+endfunction
+
+function! s:extend(ctx, key, value)
+  let l:ctx = copy(a:ctx)
+  let l:ctx[a:key] = extend(get(l:ctx, a:key, {}), a:value)
+  return l:ctx
 endfunction
 
 function! s:add_key(result, key, value)

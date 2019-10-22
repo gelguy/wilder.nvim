@@ -42,21 +42,20 @@ function! s:handle(ctx, x, key) abort
 endfunction
 
 function! wilder#pipeline#run(pipeline, on_finish, on_error, ctx, x) abort
-  let l:pipeline = type(a:pipeline) isnot v:t_list ?
-        \ [a:pipeline] :
-        \ a:pipeline
+  let l:pipeline = type(a:pipeline) isnot v:t_list
+        \ ? [a:pipeline]
+        \ : a:pipeline
 
   return s:run(l:pipeline, a:on_finish, a:on_error, a:ctx, a:x, 0)
 endfunction
 
 function! s:call(f, ctx, handler_id) abort
-  let l:ctx = copy(a:ctx)
-  let l:ctx.handler_id = a:handler_id
+  let a:ctx.handler_id = a:handler_id
 
   try
-    call a:f(l:ctx)
+    call a:f(a:ctx)
   catch
-    call wilder#reject(l:ctx, 'pipeline: ' . v:exception)
+    call wilder#reject(a:ctx, 'pipeline: ' . v:exception)
   endtry
 endfunction
 
@@ -67,10 +66,10 @@ function! s:prepare_call(f, pipeline, on_finish, on_error, ctx, i)
         \ }
 
   let s:id_index += 1
-  let l:id_index = s:id_index
+  let l:handler_id = s:id_index
   let s:handler_registry[s:id_index] = l:handler
 
-  call timer_start(0, {_ -> s:call(a:f, a:ctx, l:id_index)})
+  call timer_start(0, {_ -> s:call(a:f, a:ctx, l:handler_id)})
 endfunction
 
 function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
@@ -109,7 +108,7 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
     endif
 
     if type(l:Result) is v:t_func
-    let l:ctx = copy(a:ctx)
+      let l:ctx = copy(a:ctx)
       call s:prepare_call(l:Result, a:pipeline, a:on_finish, a:on_error, l:ctx, l:i+1)
       return
     endif
@@ -135,7 +134,7 @@ function! wilder#pipeline#wait(f, on_finish, ...) abort
 endfunction
 
 function! s:wait_start(state, ctx)
-  let a:state.original_ctx = copy(a:ctx)
+  let a:state.wait_handler_id = a:ctx.handler_id
 
   let a:state.handler = {
         \ 'on_finish': {ctx, x -> s:wait_on_finish(a:state, ctx, x)},
@@ -153,13 +152,14 @@ function! s:wait_call(state, ctx)
       let s:id_index += 1
       let l:id_index = s:id_index
       let s:handler_registry[s:id_index] = a:state.handler
-      let a:state.handler_id = s:id_index
 
       call timer_start(0, {_ -> s:call(a:state.f, l:ctx, l:id_index)})
     else
+      let a:ctx.handler_id = a:state.wait_handler_id
       call a:state.on_finish(a:ctx, a:state.f)
     endif
   catch
+    let a:ctx.handler_id = a:state.wait_handler_id
     call s:wait_on_error(a:state, a:ctx, v:exception)
   endtry
 endfunction
@@ -172,7 +172,7 @@ function! s:wait_on_finish(state, ctx, x)
   endif
 
   let l:ctx = copy(a:ctx)
-  let l:ctx.handler_id = a:state.original_ctx.handler_id
+  let l:ctx.handler_id = a:state.wait_handler_id
 
   try
     call a:state.on_finish(l:ctx, a:x)
@@ -187,7 +187,7 @@ endfunction
 
 function! s:wait_on_error(state, ctx, x)
   let l:ctx = copy(a:ctx)
-  let l:ctx.handler_id = a:state.original_ctx.handler_id
+  let l:ctx.handler_id = a:state.wait_handler_id
 
   if has_key(a:state, 'on_error')
     call a:state.on_error(l:ctx, a:x)

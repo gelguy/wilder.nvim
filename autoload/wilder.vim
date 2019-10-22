@@ -52,11 +52,13 @@ function! wilder#on_error(ctx, x)
   return wilder#pipeline#reject(a:ctx, a:x)
 endfunction
 
-function! wilder#wait(f, on_finish, ...)
+function! wilder#wait(f, ...)
   if !a:0
-    return wilder#pipeline#wait(a:f, a:on_finish)
+    return wilder#pipeline#wait(a:f)
+  elseif a:0 == 1
+    return wilder#pipeline#wait(a:f, a:1)
   else
-    return wilder#pipeline#wait(a:f, a:on_finish, a:1)
+    return wilder#pipeline#wait(a:f, a:1, a:2)
   endif
 endfunction
 
