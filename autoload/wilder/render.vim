@@ -1,11 +1,12 @@
 scriptencoding utf-8
 
 let s:hl_map = {}
+let s:hl_link_map = {}
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
 function! wilder#render#component_len(component, ctx, result) abort
   if type(a:component) is v:t_string
-    return strdisplaywidth(wilder#render#to_printable(a:component))
+    return wilder#render#strdisplaywidth(wilder#render#to_printable(a:component))
   endif
 
   if type(a:component) is v:t_dict
@@ -80,12 +81,12 @@ function! wilder#render#make_page(ctx, result) abort
 
     let l:i = l:page[0]
     let l:separator_width = strdisplaywidth(a:ctx.separator)
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
+    let l:width = wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
     let l:i += 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
-      let l:width += strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
+      let l:width += wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
 
       " cannot fit in current page
       if l:width > a:ctx.space
@@ -120,7 +121,7 @@ function! s:make_page_from_start(ctx, result, start) abort
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
+  let l:width = wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -129,7 +130,7 @@ function! s:make_page_from_start(ctx, result, start) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
+    let l:width = wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -147,7 +148,7 @@ function! s:make_page_from_end(ctx, result, end) abort
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
+  let l:width = wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -156,7 +157,7 @@ function! s:make_page_from_end(ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start - 1))
+    let l:width = wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start - 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -174,7 +175,7 @@ function! s:make_page_from_end(ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
+    let l:width = wilder#render#strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -210,17 +211,17 @@ endfunction
 
 function! wilder#render#make_hl_chunks(left, right, ctx, result) abort
   let l:chunks = []
-  let l:chunks += s:draw_component(a:left, a:ctx.hl, a:ctx, a:result)
+  let l:chunks += s:draw_component(a:left, a:ctx.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
-    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx.error)
+    let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
   else
     let l:chunks += s:draw_xs(a:ctx, a:result)
   endif
 
-  let l:chunks += s:draw_component(a:right, a:ctx.hl, a:ctx, a:result)
+  let l:chunks += s:draw_component(a:right, a:ctx.highlights['default'], a:ctx, a:result)
 
-  return wilder#render#normalise(a:ctx.hl, l:chunks)
+  return wilder#render#normalise(a:ctx.highlights['default'], l:chunks)
 endfunction
 
 function! wilder#render#normalise(hl, chunks) abort
@@ -260,7 +261,7 @@ function! s:draw_xs(ctx, result) abort
   let l:separator = a:ctx.separator
 
   if l:page == [-1, -1]
-    return [[repeat(' ', l:space), a:ctx.hl]]
+    return [[repeat(' ', l:space), a:ctx.highlights['default']]]
   endif
 
   let l:start = l:page[0]
@@ -270,57 +271,67 @@ function! s:draw_xs(ctx, result) abort
   if l:start == l:end
     let l:x = s:draw_x_cached(a:ctx, a:result, l:start)
 
-    if strdisplaywidth(l:x) > l:space
+    if wilder#render#strdisplaywidth(l:x) > l:space
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
       let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
 
-      if l:start == l:selected
-        let l:hl = a:ctx.selected_hl
-      else
-        let l:hl = a:ctx.hl
-      endif
-
-      let l:result = l:x . l:ellipsis
-      let l:padding = repeat(' ', l:space - strdisplaywidth(l:result))
-      return [[l:result . l:padding, l:hl]]
+      let l:res = []
+      call s:add_result(a:ctx, l:res, l:x, l:start == l:selected)
+      call add(l:res, [l:ellipsis, a:ctx.highlights['default']])
+      let l:padding = repeat(' ', l:space - wilder#render#strdisplaywidth(l:x))
+      call add(l:res, [l:padding, a:ctx.highlights['default']])
+      return l:res
     endif
   endif
 
   let l:current = l:start
-  let l:previous_selected = 0
   let l:res = [['']]
   let l:len = 0
 
-  let l:separator_same_hl = a:ctx.separator_hl ==# a:ctx.hl
-
   while l:current <= l:end
     if l:current != l:start
-      if l:previous_selected || !l:separator_same_hl
-        call add(l:res, [l:separator, a:ctx.separator_hl])
-      else
-        let l:res[-1][0] .= l:separator
-      endif
+      call add(l:res, [l:separator, a:ctx.highlights.separator])
       let l:len += strdisplaywidth(l:separator)
     endif
 
     let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
-    if l:current == l:selected
-      call add(l:res, [l:x, a:ctx.selected_hl])
-    elseif l:separator_same_hl
-      let l:res[-1][0] .= l:x
-    else
-      call add(l:res, [l:x, a:ctx.hl])
-    endif
-    let l:previous_selected = l:current == l:selected
+    call s:add_result(a:ctx, l:res, l:x, l:current == l:selected)
 
-    let l:len += strdisplaywidth(l:x)
+    let l:len += wilder#render#strdisplaywidth(l:x)
     let l:current += 1
   endwhile
 
   call add(l:res, [repeat(' ', l:space - l:len)])
   return l:res
+endfunction
+
+function! s:add_result(ctx, res, x, selected) abort
+  if type(a:x) is v:t_string
+    call add(a:res, [a:x, a:ctx.highlights[a:selected ? 'selected' : 'default']])
+    return
+  endif
+
+  if type(a:x) is v:t_dict
+    if a:selected
+      let l:hl = get(a:x, 'selected_hl', a:ctx.highlights['selected'])
+    else
+      let l:hl = get(a:x, 'hl', a:ctx.highlights['default'])
+    endif
+
+    if l:hl[0] ==# '@'
+      let l:hl = get(a:ctx.highlights, l:hl[1:], a:ctx.highlights[a:selected ? 'selected' : 'default'])
+    endif
+
+    call add(a:res, [a:x['value'], l:hl])
+    return
+  endif
+
+  " v:t_list
+  for l:elem in a:x
+    call s:add_result(a:ctx, a:res, l:elem, a:selected)
+  endfor
 endfunction
 
 function! s:draw_error(hl, ctx, error) abort
@@ -574,7 +585,35 @@ function! s:draw_x_cached(ctx, result, i) abort
   return l:x
 endfunction
 
+function! wilder#render#strdisplaywidth(x) abort
+  if type(a:x) is v:t_list
+    let l:width = 0
+
+    for l:elem in a:x
+      let l:width += wilder#render#strdisplaywidth(l:elem)
+    endfor
+
+    return l:width
+  endif
+
+  if type(a:x) is v:t_dict
+    return wilder#render#strdisplaywidth(a:x['value'])
+  endif
+
+  return strdisplaywidth(a:x)
+endfunction
+
 function! wilder#render#to_printable(x) abort
+  if type(a:x) is v:t_list
+    return map(a:x, {i, x -> wilder#render#to_printable(x)})
+  endif
+
+  if type(a:x) is v:t_dict
+    return extend(copy(a:x), {
+          \ 'value': wilder#render#to_printable(a:x['value']),
+          \ })
+  endif
+
   if !s:has_strtrans_issue
     " check if first character is a combining character
     if strdisplaywidth(' ' . a:x) == strdisplaywidth(a:x)
@@ -626,16 +665,40 @@ function! wilder#render#to_printable(x) abort
   return l:res
 endfunction
 
-function! wilder#render#truncate(len, str) abort
-  " assumes to_printable has been called on str
-  let l:chars = split(a:str, '\zs')
-  let l:width = strdisplaywidth(a:str)
-
-  if l:width <= a:len
-    return a:str
+function! wilder#render#truncate(len, x) abort
+  if type(a:x) is v:t_dict
+    return extend(copy(a:x), {
+          \ 'value': wilder#render#truncate(a:len, a:x['value']),
+          \ })
   endif
 
+  if type(a:x) is v:t_list
+    let l:width = 0
+    let l:res = []
+    let l:i = 0
+
+    while l:i < len(a:x)
+      let l:elem = a:x[l:i]
+      let l:elem_width = wilder#render#strdisplaywidth(l:elem)
+
+      if l:width + l:elem_width > a:len
+        call add(l:res, wilder#render#truncate(l:elem, a:len - l:width))
+        return l:res
+      endif
+
+      call add(l:res, l:elem)
+      let l:width += l:elem_width
+      let l:i += 1
+    endwhile
+
+    return l:res
+  endif
+
+  " v:t_string
+  let l:width = strdisplaywidth(a:x)
+  let l:chars = split(a:x, '\zs')
   let l:index = len(l:chars) - 1
+
   while l:width > a:len && l:index >= 0
     let l:width -= strdisplaywidth(l:chars[l:index])
 

@@ -1,8 +1,11 @@
 function! wilder#render#renderer#statusline#make(args) abort
+  let l:highlights = copy(get(a:args, 'highlights', {}))
   let l:state = {
-        \ 'hl': get(a:args, 'hl', 'StatusLine'),
-        \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
-        \ 'error_hl': get(a:args, 'error_hl', 'StatusLine'),
+        \ 'highlights': extend(l:highlights, {
+        \   'default': get(a:args, 'hl', 'StatusLine'),
+        \   'selected': get(a:args, 'selected_hl', 'WildMenu'),
+        \   'error': get(a:args, 'error_hl', 'WildMenu'),
+        \ }, 'keep'),
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
@@ -16,10 +19,8 @@ function! wilder#render#renderer#statusline#make(args) abort
     let l:state.right = get(a:args, 'right', [])
   endif
 
-  if has_key(a:args, 'separator_hl')
-    let l:state.separator_hl = get(a:args, 'separator_hl')
-  else
-    let l:state.separator_hl = l:state.hl
+  if !has_key(l:state.highlights, 'separator')
+    let l:state.highlights.separator = get(a:args, 'separator_hl', l:state.highlights['default'])
   endif
 
   return {
@@ -53,14 +54,11 @@ function! s:render(state, ctx, result) abort
   let a:ctx.page = l:page
   let a:state.page = l:page
 
-  let a:ctx.hl = a:state.hl
-  let a:ctx.selected_hl = a:state.selected_hl
-  let a:ctx.error_hl = a:state.error_hl
-  let a:ctx.separator_hl = a:state.separator_hl
+  let a:ctx.highlights = a:state.highlights
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result)
 
-  call s:render_chunks(l:chunks, a:state.hl)
+  call s:render_chunks(l:chunks, a:state.highlights['default'])
 endfunction
 
 function! s:render_chunks(chunks, hl) abort

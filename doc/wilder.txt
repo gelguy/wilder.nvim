@@ -279,9 +279,19 @@ The Result dictionary has the following keys:
             the next element. If there are no more elements, the final {x}
             will be used.
 
+            How the result {x} is used depends on the |wilder-renderer| used.
+            Different renderers will handle different types of output. By
+            default, it can be assumed that a result {x} of type String will
+            be drawn as it is.
+
+            Currently, there are only 2 default renderers, which both handle
+            the result the same way. See |wilder#statusline_renderer()|
+            for more details.
+
             The keys of {ctx} are:
                 `selected`
-                The index of the selected candidate. -1 indicates no selection.
+                The index of the selected candidate. -1 indicates no
+                selection.
 
                 `i`
                 The index of the {x} in the list of candidates.
@@ -719,36 +729,82 @@ wilder#statusline_renderer([{options}])
             Returns a renderer which draws the results on the statusline of
             the current window.
 
+            The renderer handles the result {x} of
+            |wilder-pipeline-result-draw| as follows:
+
+            The value of {x} can either be a String, Dictionary or List.
+
+            If {x} is a String, it is drawn as it is, using the `default`
+            highlight group.
+
+            If {x} is a Dictionary, the key {value} should be the string which
+            is to be drawn. The optional keys {hl} and {selected_hl} are the
+            |highlight-group|s to use when the candidate is not selected and
+            selected respectively. This will override the default highlight
+            group used.
+
+            Example:
+>
+                {'value': 'foo', 'hl': 'Search', 'selected_hl': 'IncSearch'}
+<
+
+                                    *wilder#statusline_renderer()-highlight-@*
+            The values of {hl} and {selected_hl} can start with the special
+            character '@'. These can be used to refer to the keys in the
+            `highlights` options mentioned below.
+
+            For example, '@selected' will refer to the `selected` highlight
+            group.
+
+            If {x} is a List, the elements should be Strings and/or
+            Dictionaries. The elements will be drawn as described above, and
+            the final output is concatenated together.
+
+            Example:
+>
+                [
+                  \   {'value': 'foo', 'hl': 'Search'},
+                  \   'bar',
+                  \   'baz',
+                  \   ]
+<
+
             {options} is a dictionary with keys:
-            `hl`
+            `highlights`
             Optional~
-            The default highlight group.
+            A dictionary whose values are |highlight-groups|. See
+            |wilder-pipeline-result-draw| on how this dictionary is used.
 
-            Default: 'StatusLine'
+            The default keys of the dictionary are:
+                `default`
+                Optional~
+                The default highlight group used.
 
-            `selected_hl`
-            Optional~
-            The highlight group for the selected candidate.
+                Default: 'StatusLine'
 
-            Default: 'WildMenu'
+                `selected`
+                Optional~
+                The highlight group used for a selected candidate.
 
-            `error_hl`
-            Optional~
-            The highlight group of error messages.
+                Default: 'WildMenu'
 
-            Default: 'StatusLine'
+                `error`
+                Optional~
+                The highlight group used for the error message.
+
+                Default: 'WildMenu'
+
+                `separator`
+                Optional~
+                The highlight group used for the separators.
+
+                Default: The same value as the `default` key
 
             `separator`
             Optional~
             The separator between candidates.
 
             Default: '  '
-
-            `separator_hl`
-            Optional~
-            The highlight group of the separator between candidates.
-
-            Default: same value as the `hl` option
 
             `ellipsis`
             Optional~
@@ -770,6 +826,34 @@ wilder#statusline_renderer([{options}])
             See |wilder-renderer-components|.
 
             Default: [wilder#next_arrow()]
+
+            `hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The default highlight group.
+
+            Default: 'StatusLine'
+
+            `selected_hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The highlight group for the selected candidate.
+
+            Default: 'WildMenu'
+
+            `error_hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The highlight group of error messages.
+
+            Default: 'StatusLine'
+
+            `separator_hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The highlight group of the separator between candidates.
+
+            Default: same value as the `hl` option
 
 wilder#float_renderer([{options}])  *wilder#float_renderer()*
                                     Experimental~
