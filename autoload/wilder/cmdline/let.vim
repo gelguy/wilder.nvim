@@ -35,11 +35,11 @@ function! wilder#cmdline#let#do(ctx)
       if l:char ==# '&' && a:ctx.pos < len(a:ctx.cmdline)
         if a:ctx.cmdline[a:ctx.pos + 1] ==# '&'
           let a:ctx.pos += 1
-          let a:ctx.expand = (a:ctx.cmd ==# 'let' || l:got_eq) ?
-                \ 'expression' :
-                \ 'nothing'
+          let a:ctx.expand = (a:ctx.cmd ==# 'let' || l:got_eq)
+                \ ? 'expression'
+                \ : 'nothing'
         elseif l:char !=# ' '
-          let a:ctx.expand = 'settings'
+          let a:ctx.expand = 'option'
           if a:ctx.pos + 2 < len(a:ctx.cmdline) &&
                 \ (a:ctx.cmdline[a:ctx.pos + 1] ==# 'l' ||
                 \ a:ctx.cmdline[a:ctx.pos + 2] ==# 'g') &&

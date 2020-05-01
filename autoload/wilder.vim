@@ -52,11 +52,13 @@ function! wilder#on_error(ctx, x)
   return wilder#pipeline#reject(a:ctx, a:x)
 endfunction
 
-function! wilder#wait(f, on_finish, ...)
+function! wilder#wait(f, ...)
   if !a:0
-    return wilder#pipeline#wait(a:f, a:on_finish)
+    return wilder#pipeline#wait(a:f)
+  elseif a:0 == 1
+    return wilder#pipeline#wait(a:f, a:1)
   else
-    return wilder#pipeline#wait(a:f, a:on_finish, a:1)
+    return wilder#pipeline#wait(a:f, a:1, a:2)
   endif
 endfunction
 
@@ -178,11 +180,11 @@ endfunction
 
 function! wilder#python_search(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
-  return {_, x -> {ctx -> _wilder_python_search(l:opts, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_search(ctx, l:opts, x)}}
 endfunction
 
 function! wilder#python_uniq() abort
-  return {_, x -> {ctx -> _wilder_python_uniq(a:opts, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_uniq(ctx, x)}}
 endfunction
 
 function! wilder#python_sort() abort
@@ -190,7 +192,11 @@ function! wilder#python_sort() abort
 endfunction
 
 function! wilder#_python_sleep(t) abort
-  return {_, x -> {ctx -> _wilder_python_sleep(a:t, ctx, x)}}
+  return {_, x -> {ctx -> _wilder_python_sleep(ctx, a:t, x)}}
+endfunction
+
+function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
+  return {ctx -> _wilder_python_fuzzywuzzy(ctx, a:xs, a:query)}
 endfunction
 
 function! wilder#history(...) abort
@@ -237,23 +243,25 @@ function! wilder#python_search_pipeline() abort
 endfunction
 
 function! wilder#cmdline_pipeline(...) abort
-  let l:opts = a:0 > 0 ? a:1 : {}
-
-  return wilder#cmdline#pipeline(l:opts)
-endfunction
-
-function! wilder#cmdline_filter(f) abort
-  return wilder#cmdline#make_filter(a:f)
-endfunction
-
-function! wilder#fuzzy_matcher() abort
-  return {ctx, candidate, query -> wilder#cmdline#fuzzy_matcher(ctx, candidate, query)}
+  return wilder#cmdline#pipeline(get(a:, 1, {}))
 endfunction
 
 function! wilder#substitute_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
   return wilder#cmdline#substitute_pipeline(l:opts)
+endfunction
+
+function! wilder#fuzzy_filter() abort
+  return wilder#cmdline#fuzzy_filter()
+endfunction
+
+function! wilder#python_fuzzy_filter(...) abort
+  if a:0
+    return wilder#cmdline#python_fuzzy_filter(a:1)
+  else
+    return wilder#cmdline#python_fuzzy_filter()
+  endif
 endfunction
 
 " render components
@@ -299,10 +307,10 @@ endfunction
 
 function! wilder#statusline_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#statusline#renderer(l:args)
+  return wilder#render#renderer#statusline#make(l:args)
 endfunction
 
 function! wilder#float_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#float#renderer(l:args)
+  return wilder#render#renderer#float#make(l:args)
 endfunction

@@ -3,15 +3,15 @@ function! wilder#pipeline#component#branch#make(args) abort
     return {_, x -> v:false}
   endif
 
-  return {_, x -> {ctx -> s:start(a:args, ctx, x)}}
+  return {_, x -> {ctx -> s:branch(a:args, ctx, x)}}
 endfunction
 
-function! s:start(pipelines, ctx, x) abort
+function! s:branch(pipelines, ctx, x) abort
   let l:state = {
         \ 'index': 0,
         \ 'pipelines': a:pipelines,
-        \ 'original_ctx': a:ctx,
-        \ 'original_x': a:x,
+        \ 'original_ctx': copy(a:ctx),
+        \ 'original_x': copy(a:x),
         \ }
 
   call wilder#pipeline#run(
@@ -25,18 +25,14 @@ endfunction
 
 function! s:on_finish(state, ctx, x) abort
   if a:x isnot v:false
-    let a:ctx.handler_id = a:state.original_ctx.handler_id
-
-    call wilder#resolve(a:ctx, a:x)
+    call s:resolve(a:state, a:ctx, a:x)
     return
   endif
 
   let a:state.index += 1
 
   if a:state.index >= len(a:state.pipelines)
-    let a:ctx.handler_id = a:state.original_ctx.handler_id
-
-    call wilder#resolve(a:ctx, v:false)
+    call s:resolve(a:state, a:ctx, v:false)
     return
   endif
 
@@ -49,8 +45,16 @@ function! s:on_finish(state, ctx, x) abort
         \ )
 endfunction
 
-function! s:on_error(state, ctx, x) abort
-  let a:ctx.handler_id = a:state.original_ctx.handler_id
+function! s:resolve(state, ctx, x) abort
+  let l:ctx = copy(a:ctx)
+  let l:ctx.handler_id = a:state.original_ctx.handler_id
 
-  call wilder#reject(a:ctx, a:x)
+  call wilder#resolve(l:ctx, a:x)
+endfunction
+
+function! s:on_error(state, ctx, x) abort
+  let l:ctx = copy(a:ctx)
+  let l:ctx.handler_id = a:state.original_ctx.handler_id
+
+  call wilder#reject(l:ctx, a:x)
 endfunction

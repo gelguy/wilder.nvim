@@ -1,9 +1,9 @@
-function! wilder#render#statusline#renderer(args) abort
+function! wilder#render#renderer#statusline#make(args) abort
   let l:state = {
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
         \ 'error_hl': get(a:args, 'error_hl', 'StatusLine'),
-        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', ' ')),
+        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
         \ }
@@ -23,28 +23,33 @@ function! wilder#render#statusline#renderer(args) abort
   endif
 
   return {
-        \ 'render': {ctx, xs -> s:render(l:state, ctx, xs)},
+        \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
-function! s:render(state, ctx, xs) abort
+function! s:render(state, ctx, result) abort
   if a:ctx.clear_previous
     let a:state.page = [-1, -1]
   endif
 
-  let l:space_used = wilder#render#components_len(
-        \ a:state.left + a:state.right,
+  let l:space_used = wilder#render#component_len(
+        \ a:state.left,
         \ a:ctx,
-        \ a:xs)
+        \ a:result)
+
+  let l:space_used += wilder#render#component_len(
+        \ a:state.right,
+        \ a:ctx,
+        \ a:result)
 
   let a:ctx.space = winwidth(0) - l:space_used
   let a:ctx.page = a:state.page
   let a:ctx.separator = a:state.separator
   let a:ctx.ellipsis = a:state.ellipsis
 
-  let l:page = wilder#render#make_page(a:ctx, a:xs)
+  let l:page = wilder#render#make_page(a:ctx, a:result)
   let a:ctx.page = l:page
   let a:state.page = l:page
 
@@ -53,7 +58,7 @@ function! s:render(state, ctx, xs) abort
   let a:ctx.error_hl = a:state.error_hl
   let a:ctx.separator_hl = a:state.separator_hl
 
-  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
+  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result)
 
   call s:render_chunks(l:chunks, a:state.hl)
 endfunction
@@ -87,12 +92,14 @@ function! s:pre_hook(state, ctx) abort
   let &laststatus = 2
   let s:old_statusline = &statusline
 
-  call wilder#render#components_pre_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_pre_hook(a:state.left, a:ctx)
+  call wilder#render#component_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
   let &laststatus = s:old_laststatus
   let &statusline = s:old_statusline
 
-  call wilder#render#components_post_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_post_hook(a:state.left, a:ctx)
+  call wilder#render#component_post_hook(a:state.right, a:ctx)
 endfunction

@@ -8,7 +8,7 @@ let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
 
-let s:result = {'xs': []}
+let s:result = {'value': []}
 let s:selected = -1
 let s:clear_selection = 1
 let s:completion_stack = []
@@ -105,7 +105,9 @@ function! s:start() abort
     let s:opts.pipeline = [
           \ wilder#branch(
           \   wilder#cmdline_pipeline(),
-          \   has('nvim') && has('python3') ? wilder#python_search_pipeline() : wilder#vim_search_pipeline(),
+          \   has('nvim') && has('python3')
+          \     ? wilder#python_search_pipeline()
+          \     : wilder#vim_search_pipeline(),
           \ ),
           \ ]
   endif
@@ -147,7 +149,7 @@ function! wilder#main#stop() abort
   endif
 
   let s:active = 0
-  let s:result = {'xs': []}
+  let s:result = {'value': []}
   let s:selected = -1
   let s:clear_selection = 0
   let s:completion_stack = []
@@ -178,12 +180,12 @@ endfunction
 function! s:pre_hook() abort
   call wilder#render#init_hl()
 
-  if has_key(s:opts.renderer, 'pre_hook')
-    call s:opts.renderer.pre_hook({})
-  endif
-
   if has_key(s:opts, 'pre_hook')
     call s:opts.pre_hook({})
+  endif
+
+  if has_key(s:opts.renderer, 'pre_hook')
+    call s:opts.renderer.pre_hook({})
   endif
 
   " create highlight before and after components since there might be
@@ -276,11 +278,17 @@ function! wilder#main#on_finish(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let l:result = (a:x is v:false || a:x is v:true) ? {'xs': []} : a:x
-  if type(l:result) is v:t_list
-    let s:result = {'xs': l:result}
+  let l:result = (a:x is v:false || a:x is v:true)
+        \ ? {'value': []}
+        \ : a:x
+  if type(l:result) isnot v:t_dict
+    let s:result = {'value': l:result}
   else
     let s:result = l:result
+  endif
+
+  if s:selected >= 0
+    let s:replaced_cmdline = getcmdline()
   endif
 
   let s:selected = -1
@@ -330,7 +338,7 @@ function! wilder#main#on_error(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:result = {'xs': []}
+  let s:result = {'value': []}
   let s:selected = -1
   " keep previous completion
 
@@ -376,15 +384,12 @@ function! s:draw(...) abort
 
       if l:has_error
         let l:ctx.error = s:error
-      endif
-
-      if l:has_error
-        let l:xs = {'xs': []}
+        let l:value = {'value': []}
       else
-        let l:xs = s:result
+        let l:value = s:result
       endif
 
-      call s:opts.renderer.render(l:ctx, l:xs)
+      call s:opts.renderer.render(l:ctx, l:value)
   catch
     echohl ErrorMsg
     echomsg 'wilder: draw: ' . v:exception
@@ -428,13 +433,11 @@ function! wilder#main#step(num_steps) abort
 
   let l:previous_selected = s:selected
 
-  let l:len = len(s:result.xs)
+  let l:len = len(s:result.value)
   if a:num_steps == 0
     " pass
   elseif l:len == 0
     let s:selected = -1
-  elseif l:len == 1
-    let s:selected = 0
   else
     if s:selected < 0
       if a:num_steps > 0
@@ -463,7 +466,7 @@ function! wilder#main#step(num_steps) abort
 
   if s:selected >= -1
     if s:selected >= 0
-      let l:candidate = s:result.xs[s:selected]
+      let l:candidate = s:result.value[s:selected]
 
       let l:output = l:candidate
 
@@ -473,7 +476,7 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:output = l:F({}, l:output)
+          let l:output = l:F({}, l:output, get(s:result, 'data', {}))
         endfor
       endif
 
@@ -484,7 +487,9 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:new_cmdline = l:F({'cmdline': s:replaced_cmdline}, l:new_cmdline)
+          let l:new_cmdline = l:F({
+                \ 'cmdline': s:replaced_cmdline,
+                \ }, l:new_cmdline, get(s:result, 'data', {}))
         endfor
       endif
     else
@@ -573,7 +578,7 @@ function! wilder#main#accept_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
-    let s:result = {'xs': []}
+    let s:result = {'value': []}
     let s:selected = -1
     let s:clear_selection = 1
 
@@ -615,7 +620,7 @@ function! wilder#main#reject_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
-    let s:result = {'xs': []}
+    let s:result = {'value': []}
     let s:selected = -1
     let s:clear_selection = 1
 

@@ -14,17 +14,19 @@ function! wilder#render#component#condition#make(predicate, if_true, if_false) a
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  call wilder#render#components_pre_hook(a:state.if_true + a:state.if_false, a:ctx)
+  call wilder#render#component_pre_hook(a:state.if_true, a:ctx)
+  call wilder#render#component_pre_hook(a:state.if_false, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  call wilder#render#components_post_hook(a:state.if_true + a:state.if_false, a:ctx)
+  call wilder#render#component_post_hook(a:state.if_true, a:ctx)
+  call wilder#render#component_post_hook(a:state.if_false, a:ctx)
 endfunction
 
 function! s:value(state, ctx, result) abort
-  let a:state.chosen = a:state.predicate(a:ctx, a:result) ?
-        \ a:state.if_true :
-        \ a:state.if_false
+  let a:state.chosen = a:state.predicate(a:ctx, a:result)
+        \ ? a:state.if_true
+        \ : a:state.if_false
 
   return a:state.chosen
 endfunction

@@ -28,15 +28,30 @@ class Wilder(object):
         self.events = []
         self.lock = threading.Lock()
         self.executor = None
+        self.run_id = -1
 
     def handle(self, ctx, x, command='resolve'):
         self.nvim.call('wilder#pipeline#' + command, ctx, x)
 
-    def echo(self, x):
+    def echomsg(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echomsg "' + x + '"'))
 
     def run_in_background(self, fn, args):
-        self.executor.submit(functools.partial( fn, *args, ))
+        event = threading.Event()
+        ctx = args[0]
+
+        with self.lock:
+            if ctx['run_id'] < self.run_id:
+                return
+            self.run_id = ctx['run_id']
+
+            while len(self.events) > 0:
+                e = self.events.pop(0)
+                e.set()
+
+            self.events.append(event)
+
+        self.executor.submit(functools.partial( fn, *([event] + args), ))
 
     def consumer(self):
         while True:
@@ -77,7 +92,10 @@ class Wilder(object):
     def sleep(self, args):
         self.run_in_background(self.sleep_handler, args)
 
-    def sleep_handler(self, t, ctx, x):
+    def sleep_handler(self, event, ctx, t, x):
+        if event.is_set():
+            return
+
         time.sleep(t)
         self.queue.put((ctx, x,))
 
@@ -91,18 +109,9 @@ class Wilder(object):
         current_buf = self.nvim.current.buffer
         buf = current_buf[line_num:] + current_buf[:line_num]
 
-        event = threading.Event()
+        self.run_in_background(self.search_handler, args + [buf])
 
-        with self.lock:
-            while len(self.events) > 0:
-                e = self.events.pop(0)
-                e.set()
-
-            self.events.append(event)
-
-        self.run_in_background(self.search_handler, [event, buf] + args)
-
-    def search_handler(self, event, buf, opts, ctx, x):
+    def search_handler(self, event, ctx, opts, x, buf):
         if event.is_set():
             return
 
@@ -138,24 +147,30 @@ class Wilder(object):
 
     @neovim.function('_wilder_python_uniq', sync=False)
     def uniq(self, args):
-        ctx = args[0]
-        items = args[1]
+        self.run_in_background(self.uniq_handler, args)
+
+    def uniq_handler(self, event, ctx, candidates):
+        if event.is_set():
+            return
 
         seen = set()
 
         try:
-            res = [x for x in items if not (x in seen or seen.add(x))]
+            res = [x for x in candidates if not (x in seen or seen.add(x))]
             self.queue.put((ctx, res,))
         except Exception as e:
             self.queue.put((ctx, 'python_uniq: ' + str(e), 'reject',))
 
     @neovim.function('_wilder_python_sort', sync=False, allow_nested=True)
     def sort(self, args):
-        ctx = args[0]
-        items = args[1]
+        self.run_in_background(self.sort_handler, args)
+
+    def sort_handler(self, event, ctx, candidates):
+        if event.is_set():
+            return
 
         try:
-            res = sorted(items)
+            res = sorted(candidates)
 
             self.queue.put((ctx, res,))
         except Exception as e:
@@ -163,8 +178,6 @@ class Wilder(object):
 
     @neovim.function('_wilder_python_get_file_completion', sync=False, allow_nested=True)
     def get_file_completion(self, args):
-        event = threading.Event()
-
         wildignore = self.nvim.options.get('wildignore')
 
         if args[3] == 'file_in_path':
@@ -176,14 +189,7 @@ class Wilder(object):
         else:
             directories = [args[1]]
 
-        with self.lock:
-            while len(self.events) > 0:
-                e = self.events.pop(0)
-                e.set()
-
-            self.events.append(event)
-
-        self.run_in_background(self.get_file_completion_handler, [event] + args + [directories, wildignore])
+        self.run_in_background(self.get_file_completion_handler, args + [directories, wildignore])
 
     def get_file_completion_handler(self,
                                     event,
@@ -192,6 +198,7 @@ class Wilder(object):
                                     expand_arg,
                                     expand_type,
                                     has_wildcard,
+                                    path_prefix,
                                     directories,
                                     wildignore_opt):
         if event.is_set():
@@ -212,6 +219,7 @@ class Wilder(object):
                     show_hidden = tail.startswith('.')
                     pattern = ''
                     wildcard = os.path.join(directory, expand_arg)
+                    wildcard = os.path.expandvars(wildcard)
 
                     it = glob.iglob(wildcard, recursive=True)
                 else:
@@ -224,11 +232,6 @@ class Wilder(object):
                         it = os.scandir(head)
                     except FileNotFoundError:
                         continue
-
-                if 'path_prefix' in ctx:
-                    path_prefix = ctx['path_prefix']
-                else:
-                    path_prefix = ''
 
                 for entry in it:
                     if event.is_set():
@@ -258,6 +261,8 @@ class Wilder(object):
                             continue
                         name = str(entry) if has_wildcard else entry.name
                         if Path(name) == Path(path_prefix):
+                            if has_wildcard:
+                                continue
                             res.append(os.path.join(path_prefix, './'))
                         elif entry.is_dir():
                             res.append((str(entry) if has_wildcard else entry.name) + os.sep)
@@ -281,18 +286,14 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'reject',))
 
+    def get_basename(self, f):
+        if f.endswith(os.sep) or f.endswith('/'):
+            return os.path.basename(f[:-1])
+        return os.path.basename(f)
+
     @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
     def get_users(self, args):
-        event = threading.Event()
-
-        with self.lock:
-            while len(self.events) > 0:
-                e = self.events.pop(0)
-                e.set()
-
-            self.events.append(event)
-
-        self.run_in_background(self.get_users_handler, [event] + args)
+        self.run_in_background(self.get_users_handler, args)
 
     def get_users_handler(self, event, ctx, expand_arg, expand_type):
         if event.is_set():
@@ -309,3 +310,37 @@ class Wilder(object):
             self.queue.put((ctx, res,))
         except Exception as e:
             self.queue.put((ctx, 'python_get_users: ' + str(e), 'reject',))
+
+    @neovim.function('_wilder_python_filter', sync=False, allow_nested=True)
+    def filter(self, args):
+        self.run_in_background(self.filter_handler, args)
+
+    def filter_handler(self, event, ctx, pattern, candidates, engine, has_file_args):
+        if event.is_set():
+            return
+
+        try:
+            re = importlib.import_module(engine)
+            pattern = re.compile(pattern)
+            res = filter(lambda x: pattern.search(x if not has_file_args else self.get_basename(x)), candidates)
+            self.queue.put((ctx, list(res),))
+        except Exception as e:
+            self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
+
+    @neovim.function('_wilder_python_fuzzywuzzy', sync=False, allow_nested=True)
+    def fuzzywuzzy(self, args):
+        self.run_in_background(self.fuzzywuzzy_handler, args)
+
+    def fuzzywuzzy_handler(self, event, ctx, candidates, query, partial=True):
+        if event.is_set():
+            return
+
+        try:
+            fuzzy = importlib.import_module('fuzzywuzzy.fuzz')
+            if partial:
+                res = sorted(candidates, key=lambda x: -fuzzy.partial_ratio(x, query))
+            else:
+                res = sorted(candidates, key=lambda x: -fuzzy.ratio(x, query))
+            self.queue.put((ctx, list(res),))
+        except Exception as e:
+            self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))

@@ -1,8 +1,8 @@
 function! wilder#pipeline#component#python_fuzzy_delimiter#make(args) abort
-  return {ctx, x -> s:make(a:args, ctx, x)}
+  return {ctx, x -> s:fuzzy_delimiter(a:args, ctx, x)}
 endfunction
 
-function! s:make(args, ctx, x) abort
+function! s:fuzzy_delimiter(args, ctx, x) abort
   if has_key(a:args, 'delimiter')
     if type(a:args.delimiter) == v:t_func
       let l:delimiter = a:args.delimiter(a:ctx, a:x)
@@ -40,6 +40,7 @@ function! s:make(args, ctx, x) abort
         let l:char .= l:chars[l:i+1]
         let l:i += 2
       else
+        let l:char .= '\'
         let l:i += 1
       endif
       let l:escaped = 1
@@ -59,7 +60,13 @@ function! s:make(args, ctx, x) abort
       continue
     endif
 
-    if l:escaped || l:char ==# toupper(l:char)
+    if !l:escaped && l:char ==# '.'
+      if l:i + 1 < l:len && l:chars[l:i+1] ==# '.'
+        let l:res .= '.'
+      else
+        let l:res .= '..*?'
+      endif
+    elseif l:escaped || l:char ==# toupper(l:char)
       let l:res .= '(?:' . l:word . '*?' . l:delimiter . '?' . l:char . ')'
     else
       let l:res .= '(?:' . l:char . '|' .

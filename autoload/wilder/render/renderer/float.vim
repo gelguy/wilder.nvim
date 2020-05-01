@@ -6,7 +6,7 @@ catch 'Not enough arguments'
 catch
 endtry
 
-function! wilder#render#float#renderer(args) abort
+function! wilder#render#renderer#float#make(args) abort
   let l:state = {
         \ 'hl': get(a:args, 'hl', 'StatusLine'),
         \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
@@ -36,13 +36,13 @@ function! wilder#render#float#renderer(args) abort
   endif
 
   return {
-        \ 'render': {ctx, xs -> s:render(l:state, ctx, xs)},
+        \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ }
 endfunction
 
-function! s:render(state, ctx, xs) abort
+function! s:render(state, ctx, result) abort
   if a:ctx.clear_previous
     let a:state.page = [-1, -1]
   endif
@@ -51,17 +51,22 @@ function! s:render(state, ctx, xs) abort
     return
   endif
 
-  let l:space_used = wilder#render#components_len(
-        \ a:state.left + a:state.right,
+  let l:space_used = wilder#render#component_len(
+        \ a:state.left,
         \ a:ctx,
-        \ a:xs)
+        \ a:result)
+
+  let l:space_used += wilder#render#component_len(
+        \ a:state.right,
+        \ a:ctx,
+        \ a:result)
 
   let a:ctx.space = &columns - l:space_used
   let a:ctx.page = a:state.page
   let a:ctx.separator = a:state.separator
   let a:ctx.ellipsis = a:state.ellipsis
 
-  let l:page = wilder#render#make_page(a:ctx, a:xs)
+  let l:page = wilder#render#make_page(a:ctx, a:result)
   let a:ctx.page = l:page
   let a:state.page = l:page
 
@@ -70,7 +75,7 @@ function! s:render(state, ctx, xs) abort
   let a:ctx.error_hl = a:state.error_hl
   let a:ctx.separator_hl = a:state.separator_hl
 
-  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:xs)
+  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result)
 
   let l:in_sandbox = 0
   try
@@ -144,6 +149,12 @@ function! s:new_win(buf) abort
 endfunction
 
 function! s:pre_hook(state, ctx) abort
+  " Fixes bug where search highlighting is not applied properly
+  if has('nvim-0.4')
+    let l:old_cursorline = &cursorline
+    let &cursorline = 0
+  endif
+
   if a:state.buf == -1
     let a:state.buf = nvim_create_buf(v:false, v:true)
   endif
@@ -159,7 +170,12 @@ function! s:pre_hook(state, ctx) abort
     let a:state.win = s:new_win(a:state.buf)
   endif
 
-  call wilder#render#components_pre_hook(a:state.left + a:state.right, a:ctx)
+  if has('nvim-0.4')
+    let &cursorline = l:old_cursorline
+  endif
+
+  call wilder#render#component_pre_hook(a:state.left, a:ctx)
+  call wilder#render#component_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -173,5 +189,6 @@ function! s:post_hook(state, ctx) abort
     call nvim_win_close(l:win, 1)
   endif
 
-  call wilder#render#components_post_hook(a:state.left + a:state.right, a:ctx)
+  call wilder#render#component_post_hook(a:state.left, a:ctx)
+  call wilder#render#component_post_hook(a:state.right, a:ctx)
 endfunction

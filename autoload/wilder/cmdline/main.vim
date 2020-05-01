@@ -360,9 +360,12 @@ function! wilder#cmdline#main#do(ctx) abort
         return
       endif
     elseif a:ctx.cmdline[a:ctx.pos] ==# '~'
+      let l:allow_backslash = has('win32') || has('win64')
+
       while a:ctx.pos < len(a:ctx.cmdline)
         let l:char = a:ctx.cmdline[a:ctx.pos]
-        if l:char ==# '/'
+        if l:char ==# '/' ||
+              \ l:allow_backslash && l:char ==# '\'
           break
         endif
 

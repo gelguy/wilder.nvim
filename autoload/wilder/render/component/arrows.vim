@@ -23,12 +23,14 @@ function! s:left(previous, ctx, result) abort
 endfunction
 
 function! s:right(previous, next, ctx, result) abort
-  let l:next_page_arrow = a:ctx.page[1] < len(a:result.xs) - 1 ?
-        \ a:next :
-        \ repeat(' ', strdisplaywidth(a:next))
+  let l:next_page_arrow = a:ctx.page[1] < len(a:result.value) - 1
+        \ ? a:next
+        \ : repeat(' ', strdisplaywidth(a:next))
 
   " add padding if previous arrow is empty
-  let l:res = a:ctx.page[0] > 0 ? '' : repeat(' ', strdisplaywidth(a:previous))
+  let l:res = a:ctx.page[0] > 0
+        \ ? ''
+        \ : repeat(' ', strdisplaywidth(a:previous))
   let l:res .= l:next_page_arrow
 
   return l:res

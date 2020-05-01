@@ -3,17 +3,7 @@ scriptencoding utf-8
 let s:hl_map = {}
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
-function! wilder#render#components_len(components, ctx, result) abort
-  let l:len = 0
-
-  for l:Component in a:components
-    let l:len += s:component_len(l:Component, a:ctx, a:result)
-  endfor
-
-  return l:len
-endfunction
-
-function! s:component_len(component, ctx, result) abort
+function! wilder#render#component_len(component, ctx, result) abort
   if type(a:component) is v:t_string
     return strdisplaywidth(wilder#render#to_printable(a:component))
   endif
@@ -33,31 +23,31 @@ function! s:component_len(component, ctx, result) abort
       let l:Value = a:component.value
     endif
 
-    return s:component_len(l:Value, a:ctx, a:result)
+    return wilder#render#component_len(l:Value, a:ctx, a:result)
   endif
 
   if type(a:component) is v:t_func
     let l:Value = a:component(a:ctx, a:result)
 
-    return s:component_len(l:Value, a:ctx, a:result)
+    return wilder#render#component_len(l:Value, a:ctx, a:result)
   endif
 
   " v:t_list
   let l:len = 0
 
   for l:Elem in a:component
-    let l:len += s:component_len(l:Elem, a:ctx, a:result)
+    let l:len += wilder#render#component_len(l:Elem, a:ctx, a:result)
   endfor
 
   return l:len
 endfunction
 
-function! wilder#render#components_pre_hook(components, ctx) abort
-  call s:component_hook(a:components, a:ctx, 'pre')
+function! wilder#render#component_pre_hook(component, ctx) abort
+  call s:component_hook(a:component, a:ctx, 'pre')
 endfunction
 
-function! wilder#render#components_post_hook(components, ctx) abort
-  call s:component_hook(a:components, a:ctx, 'post')
+function! wilder#render#component_post_hook(component, ctx) abort
+  call s:component_hook(a:component, a:ctx, 'post')
 endfunction
 
 function! s:component_hook(component, ctx, key) abort
@@ -67,17 +57,15 @@ function! s:component_hook(component, ctx, key) abort
     endif
 
     call s:component_hook(a:component.value, a:ctx, a:key)
-
-    return
   elseif type(a:component) is v:t_list
     for l:elem in a:component
-      call s:component_hook(l:elem, a:ctx)
+      call s:component_hook(l:elem, a:ctx, a:key)
     endfor
   endif
 endfunction
 
 function! wilder#render#make_page(ctx, result) abort
-  if empty(a:result.xs)
+  if empty(a:result.value)
     return [-1, -1]
   endif
 
@@ -137,7 +125,7 @@ function! s:make_page_from_start(ctx, result, start) abort
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
   while 1
-    if l:end + 1 >= len(a:result.xs)
+    if l:end + 1 >= len(a:result.value)
       break
     endif
 
@@ -182,7 +170,7 @@ function! s:make_page_from_end(ctx, result, end) abort
   " but there might be leftover space, so we increase l:end to fill up the
   " space e.g. to [0,6]
   while 1
-    if l:end + 1 >= len(a:result.xs)
+    if l:end + 1 >= len(a:result.value)
       break
     endif
 
@@ -199,40 +187,21 @@ function! s:make_page_from_end(ctx, result, end) abort
   return [l:start, l:end]
 endfunction
 
-function! wilder#render#components_pre_hook(components, ctx) abort
-  for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'pre_hook')
-      call l:Component.pre_hook(a:ctx)
-    endif
-  endfor
-endfunction
-
-function! wilder#render#components_post_hook(components, ctx) abort
-  for l:Component in a:components
-    if type(l:Component) == v:t_dict && has_key(l:Component, 'post_hook')
-      call l:Component.post_hook(a:ctx)
-    endif
-  endfor
-endfunction
-
 function! wilder#render#draw_x(ctx, result, i)
-  let l:x = a:result.xs[a:i]
+  let l:x = a:result.value[a:i]
 
   if has_key(a:result, 'draw')
     let l:ctx = {
           \ 'i': a:i,
           \ 'selected': a:ctx.selected == a:i,
           \ }
-    if has_key(a:result, 'meta')
-      let l:ctx.meta = a:result.meta
-    endif
 
     for l:F in a:result.draw
       if type(l:F) isnot v:t_func
         let l:F = function(l:F)
       endif
 
-      let l:x = l:F(l:ctx, l:x)
+      let l:x = l:F(l:ctx, l:x, get(a:result, 'data', {}))
     endfor
   endif
 
@@ -241,15 +210,15 @@ endfunction
 
 function! wilder#render#make_hl_chunks(left, right, ctx, result) abort
   let l:chunks = []
-  let l:chunks += s:draw_components(a:left, a:ctx.hl, a:ctx, a:result)
+  let l:chunks += s:draw_component(a:left, a:ctx.hl, a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
-    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx)
+    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx.error)
   else
     let l:chunks += s:draw_xs(a:ctx, a:result)
   endif
 
-  let l:chunks += s:draw_components(a:right, a:ctx.hl, a:ctx, a:result)
+  let l:chunks += s:draw_component(a:right, a:ctx.hl, a:ctx, a:result)
 
   return wilder#render#normalise(a:ctx.hl, l:chunks)
 endfunction
@@ -370,23 +339,6 @@ function! s:draw_error(hl, ctx, error) abort
   return [[l:error, a:hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
-function! s:draw_components(components, hl, ctx, result) abort
-  let l:hl = a:hl
-  let l:res = []
-
-  for l:Component in a:components
-    let l:r = s:draw_component(l:Component, l:hl, a:ctx, a:result)
-
-    if !empty(l:r)
-      let l:hl = l:r[-1][1]
-    endif
-
-    let l:res += l:r
-  endfor
-
-  return l:res
-endfunction
-
 function! s:draw_component(Component, hl, ctx, result) abort
   if type(a:Component) is v:t_string
     return [[wilder#render#to_printable(a:Component), a:hl]]
@@ -416,16 +368,9 @@ function! s:draw_component(Component, hl, ctx, result) abort
 
   " v:t_list
   let l:res = []
-  let l:hl = a:hl
 
   for l:Elem in a:Component
-    let l:r = s:draw_component(l:Elem, l:hl, a:ctx, a:result)
-
-    if !empty(l:r)
-      let l:hl = l:r[-1][1]
-    endif
-
-    let l:res += l:r
+    let l:res += s:draw_component(l:Elem, a:hl, a:ctx, a:result)
   endfor
 
   return l:res
@@ -613,12 +558,12 @@ function! s:get_hl_attrs(attrs, key, hl) abort
   let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
 endfunction
 
-function! s:draw_x_cached(ctx, result, i)
+function! s:draw_x_cached(ctx, result, i) abort
   if !has_key(a:ctx, 'draw_cache')
-    let a:ctx.draw_cache = repeat([v:null], len(a:result.xs))
+    let a:ctx.draw_cache = {}
   endif
 
-  if a:ctx.draw_cache[a:i] isnot v:null
+  if has_key(a:ctx.draw_cache, a:i)
     return a:ctx.draw_cache[a:i]
   endif
 
