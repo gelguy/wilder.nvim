@@ -50,5 +50,5 @@ function! s:hl(name, from, to) abort
 
   let l:colors = [{}, l:cterm_hl, l:gui_hl]
 
-  call wilder#render#make_hl(a:name, l:colors)
+  call wilder#make_hl(a:name, l:colors)
 endfunction

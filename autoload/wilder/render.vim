@@ -388,60 +388,134 @@ function! s:draw_component(Component, hl, ctx, result) abort
 endfunction
 
 function! wilder#render#init_hl() abort
-  for l:key in keys(s:hl_map)
-    exe s:hl_map[l:key]
+  for [l:name, l:args, l:attr] in values(s:hl_map)
+    call s:make_hl(l:name, l:args, l:attr)
   endfor
 endfunction
 
-function! wilder#render#make_hl(name, args) abort
-  let l:type = type(a:args)
-  if l:type == v:t_list
-    if type(a:args[0]) == v:t_list
-      return s:make_hl_from_list_list(a:name, a:args)
+function! wilder#render#make_hl(name, x, xs) abort
+  let l:name = s:make_hl(a:name, a:x, a:xs)
+  let s:hl_map[l:name] = [a:name, deepcopy(a:x), deepcopy(a:xs)]
+  return l:name
+endfunction
+
+function! s:make_hl(name, x, xs) abort
+  let l:x = s:to_hl_list(a:x)
+
+  for l:elem in a:xs
+    let l:y = s:to_hl_list(l:elem)
+    let l:x = s:combine_hl_list(l:x, l:y)
+  endfor
+
+  return s:make_hl_from_list(a:name, l:x)
+endfunction
+
+function! s:to_hl_list(x) abort
+  if type(a:x) is v:t_string
+    let l:x = wilder#render#get_colors(a:x)
+  else
+    let l:x = a:x
+  endif
+
+  if type(l:x) is v:t_list
+    if type(l:x[0]) is v:t_list
+      return l:x
     endif
 
-    return s:make_hl_from_dict_list(a:name, a:args)
-  else
-    return s:make_hl_from_string(a:name, a:args)
+    let l:term_hl = s:get_attrs_as_list(l:x[0])
+
+    let l:cterm_hl = [
+          \ get(l:x[1], 'foreground', 'NONE'),
+          \ get(l:x[1], 'background', 'NONE')
+          \ ] + s:get_attrs_as_list(l:x[1])
+
+    let l:gui_hl = [
+          \ get(l:x[2], 'foreground', 'NONE'),
+          \ get(l:x[2], 'background', 'NONE')
+          \ ] + s:get_attrs_as_list(l:x[2])
+
+    return [l:term_hl, l:cterm_hl, l:gui_hl]
   endif
+
 endfunction
 
-function! s:make_hl_from_string(name, args) abort
-  let l:cmd = 'hi! link ' . a:name . ' ' . a:args
+function! s:combine_hl_list(l, m) abort
+  let l:term_hl = copy(a:l[0])
+  let l:cterm_hl = copy(a:l[1])
+  let l:gui_hl = copy(a:l[2])
 
-  let s:hl_map[a:name] = l:cmd
-  return a:name
+  if len(l:term_hl) <= 2
+    let l:term_hl = copy(a:m[0])
+  else
+    let l:term_hl += a:m[0][2:]
+  endif
+
+  if get(a:m[1], 0, 'NONE') !=# 'NONE'
+    if empty(l:cterm_hl)
+      let l:cterm_hl = [a:m[1][0]]
+    else
+      let l:cterm_hl[0] = a:m[1][0]
+    endif
+  endif
+
+  if get(a:m[1], 1, 'NONE') !=# 'NONE'
+    if empty(l:cterm_hl)
+      let l:cterm_hl = ['NONE', a:m[1][1]]
+    else
+      let l:cterm_hl[1] = a:m[1][1]
+    endif
+  endif
+
+  if len(a:m[1]) > 2
+    if empty(l:cterm_hl)
+      let l:cterm_hl = ['NONE', 'NONE'] + a:m[1][2:]
+    else
+      let l:cterm_hl += a:m[1][2:]
+    endif
+  endif
+
+  if get(a:m[2], 0, 'NONE') !=# 'NONE'
+    if empty(l:gui_hl)
+      let l:gui_hl = [a:m[2][0]]
+    else
+      let l:gui_hl[0] = a:m[2][0]
+    endif
+  endif
+
+  if get(a:m[2], 1, 'NONE') !=# 'NONE'
+    if empty(l:gui_hl)
+      let l:gui_hl = ['NONE', a:m[2][1]]
+    else
+      let l:gui_hl[1] = a:m[2][1]
+    endif
+  endif
+
+  if len(a:m[2]) > 2
+    if empty(l:gui_hl)
+      let l:gui_hl = ['NONE', 'NONE'] + a:m[2][2:]
+    else
+      let l:gui_hl += a:m[2][2:]
+    endif
+  endif
+
+  return [l:term_hl, l:cterm_hl, l:gui_hl]
 endfunction
 
-function! s:make_hl_from_dict_list(name, args) abort
-  let l:term_hl = s:get_attrs_as_list(a:args[0])
-
-  let l:cterm_hl = [
-        \ get(a:args[1], 'foreground', 'NONE'),
-        \ get(a:args[1], 'background', 'NONE')
-        \ ] + s:get_attrs_as_list(a:args[1])
-
-  let l:gui_hl = [
-        \ get(a:args[2], 'foreground', 'NONE'),
-        \ get(a:args[2], 'background', 'NONE')
-        \ ] + s:get_attrs_as_list(a:args[2])
-
-  return s:make_hl_from_list_list(a:name, [l:term_hl, l:cterm_hl, l:gui_hl])
-endfunction
-
-function! s:make_hl_from_list_list(name, args) abort
+function! s:make_hl_from_list(name, args) abort
   let l:term_hl = a:args[0]
   let l:cterm_hl = a:args[1]
   let l:gui_hl = a:args[2]
 
   let l:cmd = 'hi! ' . a:name . ' '
 
-  if len(l:term_hl) > 2
-    let l:cmd .= 'term=' . join(l:term_hl[2:], ',') . ' '
+  let l:term_attr = l:term_hl[2:]
+  if len(l:term_hl) >= 2
+    let l:cmd .= 'term=' . join(l:term_attr, ',') . ' '
   endif
 
-  if len(l:cterm_hl) > 2
-    let l:cmd .= 'cterm=' . join(l:cterm_hl[2:], ',') . ' '
+  let l:cterm_attr = l:cterm_hl[2:]
+  if !empty(l:cterm_attr)
+    let l:cmd .= 'cterm=' . join(l:cterm_attr, ',') . ' '
   endif
 
   if len(l:cterm_hl) >= 1
@@ -454,8 +528,9 @@ function! s:make_hl_from_list_list(name, args) abort
     endif
   endif
 
-  if len(l:gui_hl) > 2
-    let l:cmd .= 'gui=' . join(l:gui_hl[2:], ',') . ' '
+  let l:gui_attr = l:gui_hl[2:]
+  if !empty(l:gui_attr)
+    let l:cmd .= 'gui=' . join(l:gui_attr, ',') . ' '
   endif
 
   if len(l:gui_hl) >= 1
@@ -474,7 +549,7 @@ function! s:make_hl_from_list_list(name, args) abort
     endif
   endif
 
-  let s:hl_map[a:name] = l:cmd
+  exe l:cmd
   return a:name
 endfunction
 

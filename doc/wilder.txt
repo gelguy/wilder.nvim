@@ -1199,14 +1199,17 @@ wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
             nnoremap <expr> : wilder#start_from_normal_mode() . ':'
 <
 
-wilder#make_hl({name}, {args})      *wilder#make_hl()*
-            Helper function to create a highlight group.
-            Creates a highlight group with the given {name} based on {args}.
+wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
+                                    *wilder#make_hl()*
+            Helper function to create a highlight group. Creates a highlight
+            group with the given {name} based on {args}.
+
             These highlight groups will be recreated each time wilder is
             started, or is unhidden (see |wilder-hidden|).
+
             Returns {name}.
 
-            Args can be of the types:
+            {args} can be of the types:
 
             String:
             A |:hi-link| is made to the given highlight group.
@@ -1284,6 +1287,16 @@ wilder#make_hl({name}, {args})      *wilder#make_hl()*
 
                 Default: v:false
 
+            Any number of additional {args<n>} can be provided. The original
+            {args} will be modified in order.
+
+            For both {cterm_hl} and {gui_hl}, the `foreground` and
+            `background` color is overridden if the respective color of
+            {args<n>} is not 'NONE'.
+
+            For all three of {term_hl}, {cterm_hl} and {gui_hl}, additional
+            attributes will be added.
+
                 Example:
 >
                 call wilder#make_hl('MyHighlight', [
@@ -1292,7 +1305,21 @@ wilder#make_hl({name}, {args})      *wilder#make_hl()*
                     \ {'foreground': '#000', 'background': '#fff',
                     \   'bold': v:true},
                     \ ])
+
+                call wilder#make_hl('MyHighlight2',
+                    \ 'MyHighlight'
+                    \ [{}, {}, {'underline': 1}])
 <
+
+wilder#hl_with_attr({hl_name}, {attr} [, ..., {attrN}])
+                                    *wilder#hl_with_attr()*
+            Helper function to create a new |highlight-group| by applying
+            attributes to an existing one.
+
+            The name of the new highlight group will be 'WilderAttr_' .
+            {hl_name}.
+
+            Returns the name of the new highlight group.
 
 wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
             Returns a fuzzy filter to use for `fuzzy_filter` in

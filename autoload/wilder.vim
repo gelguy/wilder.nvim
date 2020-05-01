@@ -82,8 +82,16 @@ function! wilder#start_from_normal_mode()
   return wilder#main#start_from_normal_mode()
 endfunction
 
-function! wilder#make_hl(name, args) abort
-  return wilder#render#make_hl(a:name, a:args)
+function! wilder#make_hl(name, args, ...) abort
+  return wilder#render#make_hl(a:name, a:args, a:000)
+endfunction
+
+function! wilder#hl_with_attr(name, ...) abort
+  let l:attrs = {}
+  for l:attr in a:000
+    let l:attrs[l:attr] = v:true
+  endfor
+  return wilder#make_hl('WilderBold_' . a:name, a:name, [{}, l:attrs, l:attrs])
 endfunction
 
 function! wilder#flatten(xss) abort
