@@ -149,6 +149,12 @@ function! s:new_win(buf) abort
 endfunction
 
 function! s:pre_hook(state, ctx) abort
+  " Fixes bug where search highlighting is not applied properly
+  if has('nvim-0.4')
+    let l:old_cursorline = &cursorline
+    let &cursorline = 0
+  endif
+
   if a:state.buf == -1
     let a:state.buf = nvim_create_buf(v:false, v:true)
   endif
@@ -162,6 +168,10 @@ function! s:pre_hook(state, ctx) abort
     let a:state.win = -1
     call nvim_win_close(l:old_win, 1)
     let a:state.win = s:new_win(a:state.buf)
+  endif
+
+  if has('nvim-0.4')
+    let &cursorline = l:old_cursorline
   endif
 
   call wilder#render#component_pre_hook(a:state.left, a:ctx)
