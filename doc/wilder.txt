@@ -412,7 +412,7 @@ wilder#vim_search([{options}])      *wilder#vim_search()*
             Takes a regex and searches the current buffer for completions
             matching the regex. Returns a list of unique strings.
 
-            Options:
+            {options} is a dictionary with keys:
             `max_candidates`
             Maximum number of candidates to return.
             0 or less sets no limit.
@@ -438,7 +438,7 @@ wilder#python_fuzzy_match([{options}])
             The string is split into characters and the fuzzy regex for `word`
             is added in between each character.
 
-            Options:
+            {options} is a dictionary with keys:
             `word`
             Word character for the Python regex.
 
@@ -458,7 +458,7 @@ wilder#python_fuzzy_delimiter([{options}])
             `fb` matches `FooBar`, `foo_bar`, `fooBar`
                  but not `foobar` since `bar` is not delimited
 
-            Options:
+            {options} is a dictionary with keys:
             `word`
             Python regex for word characters
 
@@ -477,7 +477,7 @@ wilder#python_search([{options}])   *wilder#python_search()*
             matching the regex using Python 3.
             Returns a list of unique strings.
 
-            Options:
+            {options} is a dictionary with keys:
             `max_candidates`
             Maximum number of candidates to return.
             0 or less sets no limit.
@@ -506,18 +506,18 @@ wilder#python_uniq()                *wilder#python_uniq()*
 
 wilder#result([{dictionary}])       *wilder#result()*
                                     Pipeline component~
-            Takes an dictionary and returns a component which will transform
-            the {input} into a result dictionary and modifies its keys.
-            See |wilder-pipeline-result| for more information on how the
-            keys of the dictionary is used.
+            Takes a dictionary and returns a component which will transform
+            the {input} into a result dictionary and modifies its keys. See
+            |wilder-pipeline-result| for more information on how the keys of
+            the dictionary is used.
 
-            For each {key} and {value} pair in {dictionary}:
-            If {value} is a list, and {input} does not contain {key},
-            {input}'s {key} is set to the list. Otherwise, the list is
-            appended to the end of the list at {input}'s {key}.
+            For each {key} and {value} pair in {dictionary}: If {value} is a
+            list, and {input} does not contain {key}, {input}'s {key} is
+            mapped to the list. Otherwise, the list is appended to the end of
+            the list at {input}'s {key}.
 
             If {value} is a dictionary, and {input} does not contain {key},
-            {input}'s {key} is set to the dictionary. Otherwise, the
+            {input}'s {key} is mapped to the dictionary. Otherwise, the
             dictionary at {input}'s {key} is extended with the dictionary
             using |extend()|.
 
@@ -529,18 +529,16 @@ wilder#result([{dictionary}])       *wilder#result()*
             dictionary if the key `data` does not exist. This can be used to
             pass arbitrary data to the functions being called.
 
-            Otherwise, it contains the current value at {input}'s {key}.
             If {value} is none of the above, the value at {input}'s {key} will
-            be replaced with {value}.
+            be mapped to {value}.
 
             For example:
 >
             [
             \ {ctx, x -> MyCompletionFunction(x)},
             \ wilder#result({'draw': [{ctx, x -> (ctx['i'] + 1) . '. ' . x}]}),
-            \ wilder#result({'draw': [{ctx, x, prev -> ctx['selected']
-            \                         ? '[' . prev(ctx, x) . ']'
-            \                         : prev(ctx, x)}]}),
+            \ wilder#result({'draw': [{ctx, x -> ctx['selected']
+            \                         ? '[' . x . ']' : x)}]}),
             \ ]
 <
             This pipeline will first prepend the index of the candidate and
@@ -566,7 +564,8 @@ wilder#python_search_pipeline()     *wilder#python_search_pipeline()*
                                     Pipeline~
             Returns a pipeline which does Python substring search.
 
-wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
+                                    *wilder#cmdline_pipeline()*
+wilder#cmdline_pipeline([{options}])
                                     Neovim only~
                                     Pipeline~
             Returns a pipeline which returns completions in cmdline mode.
@@ -575,7 +574,7 @@ wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
             For completions during |:substitute|, use
             |wilder#substitute_pipeline()|.
 
-            Options:
+            {options} is a dictionary with keys:
             `fuzzy`
             When true, use fuzzy matching for the results.
             Note: Fuzzy matching does not work in some cases, e.g. when
@@ -609,7 +608,7 @@ wilder#cmdline_pipeline([{opts}])   *wilder#cmdline_pipeline()*
             Default: has('nvim') && !has('nvim-0.3.7')
 
                                     *wilder#substitute_pipeline()*
-wilder#substitute_pipeline([{opts}])
+wilder#substitute_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which runs the given pipeline when in a
             |:substitute| command.
@@ -619,7 +618,7 @@ wilder#substitute_pipeline([{opts}])
             |wilder#cmdline_pipeline()| when using |wilder#branch()| if
             `hide_in_substitute` is true.
 
-            Options:
+            {options} is a dictionary with keys:
             `pipeline`
             The pipeline to pass the {pattern} section to.
 
@@ -716,11 +715,11 @@ There are two in-built renderers, one using the statusline and one using a
 floating window.
 
                                     *wilder#statusline_renderer()*
-wilder#statusline_renderer([{opts}])
+wilder#statusline_renderer([{options}])
             Returns a renderer which draws the results on the statusline of
             the current window.
 
-            Options:
+            {options} is a dictionary with keys:
             `hl`
             Optional~
             The default highlight group.
@@ -772,7 +771,7 @@ wilder#statusline_renderer([{opts}])
 
             Default: [wilder#next_arrow()]
 
-wilder#float_renderer([{opts}])     *wilder#float_renderer()*
+wilder#float_renderer([{options}])  *wilder#float_renderer()*
                                     Experimental~
             Requires Neovim 0.4+ with floating window API. Returns a renderer
             which draws the results on a floating window just above the
@@ -892,14 +891,14 @@ together with |wilder#make_hl()|.
 
 Here is the list of in-built components:
 
-wilder#previous_arrow([{opts}])     *wilder#previous_arrow()*
+wilder#previous_arrow([{options}])  *wilder#previous_arrow()*
                                     Renderer component~
             Returns a component which shows a previous arrow when there are
             previous candidates which do not fit in the current view.
             Note Has to be used with |wilder#next_arrow()|, otherwise the
             `len` entry will not be evaluated correctly.
 
-            Options:
+            {options} is a dictionary with keys:
             `previous`
             Optional~
             The arrow to be drawn.
@@ -912,14 +911,14 @@ wilder#previous_arrow([{opts}])     *wilder#previous_arrow()*
 
             Default: None
 
-wilder#next_arrow([{opts}])         *wilder#next_arrow()*
+wilder#next_arrow([{options}])      *wilder#next_arrow()*
                                     Renderer component~
             Returns a component which shows a next arrow when there are
             additional candidates which do not fit in the current view.
             Note Has to be used with |wilder#previous_arrow()|, otherwise the
             `len` entry will not be evaluated correctly.
 
-            Options:
+            {options} is a dictionary with keys:
             `next`
             Optional~
             The arrow to be drawn.
@@ -938,26 +937,26 @@ wilder#next_arrow([{opts}])         *wilder#next_arrow()*
 
             Default: None
 
-wilder#index([{opts}])              *wilder#index()*
+wilder#index([{options}])           *wilder#index()*
                                     Renderer component~
             Returns a component which shows the index of the currently
             selected candidate and the total number of candidates.
             For example, if there are 10 candidates and the 5th one is
             selected, it will draw ' 5/10'.
 
-            Options:
+            {options} is a dictionary with keys:
             `hl`
             Optional~
             The highlight group to use.
 
             Default: None
 
-wilder#spinner([{opts}])            *wilder#spinner()*
+wilder#spinner([{options}])         *wilder#spinner()*
                                     Renderer component~
             Returns a component which indicates whether the current pipeline
             is still running.
 
-            Options:
+            {options} is a dictionary with keys:
             `frames`
             Optional~
             The frames to use for the spinner. Can be either a string or a
