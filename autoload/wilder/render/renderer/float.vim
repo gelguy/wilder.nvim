@@ -184,7 +184,11 @@ function! s:post_hook(state, ctx) abort
   if a:state.win != -1
     let l:win = a:state.win
     let a:state.win = -1
-    call nvim_win_close(l:win, 1)
+    if getcmdwintype() ==# ''
+      call nvim_win_close(l:win, 1)
+    else
+      execute 'autocmd CmdWinLeave * ++once call timer_start(0, {-> nvim_win_close(' . l:win . ', 0)})'
+    endif
   endif
 
   call wilder#render#component_post_hook(a:state.left, a:ctx)
