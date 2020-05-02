@@ -124,6 +124,12 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
+function wilder#lua_pcre2_highlight_captures(pattern, x, hl, selected_hl)
+  return luaeval(
+        \ 'require("wilder").pcre2_highlight_captures(_A[1], _A[2], _A[3], _A[4])',
+        \ [a:pattern, a:x, a:hl, a:selected_hl])
+endfunction
+
 " pipeline components
 
 function! wilder#_sleep(t) abort
@@ -177,7 +183,7 @@ function! wilder#vim_sort() abort
 endfunction
 
 function! wilder#python_substring() abort
-  return {_, x -> x . '\w*'}
+  return {_, x -> '(' . x . ')\w*'}
 endfunction
 
 function! wilder#python_fuzzy_match(...) abort

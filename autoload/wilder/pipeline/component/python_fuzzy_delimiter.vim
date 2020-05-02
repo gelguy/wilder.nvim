@@ -27,9 +27,6 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
   let l:chars = split(a:x, '\zs')
   let l:len = len(l:chars)
 
-  if l:len == 0
-  endif
-
   let l:first = 1
   let l:i = 0
   while l:i < l:len
@@ -51,9 +48,9 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
 
     if l:first
       if l:escaped || l:char ==# toupper(l:char)
-        let l:res .= l:char
+        let l:res .= '(' . l:char . ')'
       else
-        let l:res .= '(?:(?:(?<=' . l:delimiter . ')|\b)'. l:char . '|' . toupper(l:char) . ')'
+        let l:res .= '(?:(?:(?<=' . l:delimiter . ')|\b)('. l:char . ')|(' . toupper(l:char) . '))'
       endif
 
       let l:first = 0
@@ -67,13 +64,13 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
         let l:res .= '..*?'
       endif
     elseif l:escaped || l:char ==# toupper(l:char)
-      let l:res .= '(?:' . l:word . '*?' . l:delimiter . '?' . l:char . ')'
+      let l:res .= '(?:' . l:word . '*?' . l:delimiter . '?(' . l:char . '))'
     else
-      let l:res .= '(?:' . l:char . '|' .
-            \ toupper(l:char) . '|' .
-            \ l:word . '*?' . toupper(l:char) . '|' .
-            \ l:word . '*?' . l:delimiter . l:char . '|' .
-            \ l:word . '*?' . l:delimiter . toupper(l:char) . ')'
+      let l:res .= '(?:(' . l:char . ')|(' .
+            \ toupper(l:char) . ')|' .
+            \ l:word . '*?(' . toupper(l:char) . ')|' .
+            \ l:word . '*?' . l:delimiter . '(' . l:char . ')|' .
+            \ l:word . '*?' . l:delimiter . '(' . toupper(l:char) . '))'
     endif
   endwhile
 
