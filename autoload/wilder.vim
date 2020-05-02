@@ -137,6 +137,10 @@ function! wilder#branch(...) abort
   return wilder#pipeline#component#branch#make(a:000)
 endfunction
 
+function! wilder#map(...) abort
+  return wilder#pipeline#component#map#make(a:000)
+endfunction
+
 function! wilder#check(...) abort
   return wilder#pipeline#component#check#make(a:000)
 endfunction
