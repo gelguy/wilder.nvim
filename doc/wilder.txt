@@ -279,14 +279,20 @@ The Result dictionary has the following keys:
             the next element. If there are no more elements, the final {x}
             will be used.
 
-            How the result {x} is used depends on the |wilder-renderer| used.
-            Different renderers will handle different types of output. By
-            default, it can be assumed that a result {x} of type String will
-            be drawn as it is.
+            The value of {x} can either be a String, Dictionary or List.
 
-            Currently, there are only 2 default renderers, which both handle
-            the result the same way. See |wilder#statusline_renderer()|
-            for more details.
+            If {x} is a String, it is drawn as it is.
+
+            If {x} is a Dictionary, the key `value` should be the string which
+            is to be drawn.
+            {x} can contain other keys which will be used depending on the
+            |wilder-renderer| used. For example,
+            |wilder#statusline_renderer()| uses the keys `hl` and
+            `selected_hl`.
+
+            If {x} is a List, the elements should be Strings and/or
+            Dictionaries. The elements will be drawn as described above, and
+            the final output is concatenated together.
 
             The keys of {ctx} are:
                 `selected`
@@ -809,19 +815,12 @@ wilder#statusline_renderer([{options}])
             Returns a renderer which draws the results on the statusline of
             the current window.
 
-            The renderer handles the result {x} of
-            |wilder-pipeline-result-draw| as follows:
-
-            The value of {x} can either be a String, Dictionary or List.
-
-            If {x} is a String, it is drawn as it is, using the `default`
-            highlight group.
-
-            If {x} is a Dictionary, the key {value} should be the string which
-            is to be drawn. The optional keys {hl} and {selected_hl} are the
-            |highlight-group|s to use when the candidate is not selected and
-            selected respectively. This will override the default highlight
-            group used.
+            When the result of |wilder-pipeline-result-draw| contains a
+            Dictionary, it can have two optional keys `hl` and `selected_hl`.
+            These are the |highlight-group|s to use when the candidate is not
+            selected and selected respectively.
+            Otherwise the `default` and `selected` values from the
+            `highlights` option below will be used.
 
             Example:
 >
@@ -835,10 +834,6 @@ wilder#statusline_renderer([{options}])
 
             For example, '@selected' will refer to the `selected` highlight
             group.
-
-            If {x} is a List, the elements should be Strings and/or
-            Dictionaries. The elements will be drawn as described above, and
-            the final output is concatenated together.
 
             Note: The statusline might be truncated or be rendered wrongly when
             there are too many separate highlight chunks. See |E541|.
