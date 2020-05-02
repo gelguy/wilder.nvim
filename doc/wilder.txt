@@ -588,6 +588,8 @@ wilder#python_search_pipeline([{options}])
             Optional~
             Regex engine to pass to |wilder#python_search()|.
 
+            Default: Empty
+
             `fuzzy_sort`
             Optional~
             Python 3 fuzzywuzzy module required~
@@ -599,8 +601,23 @@ wilder#python_search_pipeline([{options}])
             `highlight_captures`
             Optional~
             Lua pcre2 package required~
-            When true, apply highlighting to the matched capture groups using
+            When non-zero, apply highlighting to the matched capture groups using
             |wilder#lua_pcre2_highlight_captures()|.
+            Takes a two element list in the form of [{hl_group},
+            {selected_hl_group}], where {hl_group} is the highlight group to
+            use to highlight the captured character and {selected_hl_group} is
+            the highlight group to highlight it when the candidate is
+            currently selected.
+
+            Example:
+>
+                wilder#python_search_pipeline({
+                  \ 'highlight_captures': [
+                  \   wilder#hl_with_attr('StatusLine', 'underline'),
+                  \   wilder#hl_with_attr('WildMenu', 'underline'),
+                  \ ],
+                  \ )}
+<
 
             Default: 0
 
@@ -658,8 +675,25 @@ wilder#cmdline_pipeline([{options}])
             `highlight_captures`
             Optional~
             Lua pcre2 package required~
-            When true, apply highlighting to the matched capture groups using
+            When non-zero, apply highlighting to the matched capture groups using
             |wilder#lua_pcre2_highlight_captures()|.
+            Takes a two element list in the form of [{hl_group},
+            {selected_hl_group}], where {hl_group} is the highlight group to
+            use to highlight the captured character and {selected_hl_group} is
+            the highlight group to highlight it when the candidate is
+            currently selected.
+            Only works if `use_python` is true.
+
+            Example:
+>
+                wilder#cmdline_pipeline({
+                  \ 'use_python': 1,
+                  \ 'highlight_captures': [
+                  \   wilder#hl_with_attr('StatusLine', 'underline'),
+                  \   wilder#hl_with_attr('WildMenu', 'underline'),
+                  \ ],
+                  \ )}
+<
 
             Default: 0
 
@@ -1425,6 +1459,9 @@ wilder#lua_pcre2_highlight_captures({pattern}, {str}, {hl}, {selected_hl})
             The pcre2 package source can be found at
             `https://github.com/mah0x211/lua-pcre2` and can be installed with
             `luarocks install pcre2`.
+
+            Note: This function is slow and should be avoided by users who are
+            concerned about performance.
 
             Example:
 >
