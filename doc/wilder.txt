@@ -806,6 +806,9 @@ wilder#statusline_renderer([{options}])
             Dictionaries. The elements will be drawn as described above, and
             the final output is concatenated together.
 
+            Note: The statusline might be truncated or be rendered wrongly when
+            there are too many separate highlight chunks. See |E541|.
+
             Example:
 >
                 [

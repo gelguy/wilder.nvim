@@ -69,13 +69,17 @@ function! s:render_chunks(chunks, hl) abort
   while l:i < len(a:chunks)
     let l:statusline .= '%#' . get(a:chunks[l:i], 1, a:hl) . '#'
 
-    " prevent leading space from being truncated
-    if g:_wilder_xs[l:i][0] ==# ' '
-      let l:statusline .= ' '
-      let g:_wilder_xs[l:i] = g:_wilder_xs[l:i][1:]
-    endif
+    if stridx(g:_wilder_xs[l:i], '%') >= 0
+      " prevent leading space from being truncated
+      if g:_wilder_xs[l:i][0] ==# ' '
+        let l:statusline .= ' '
+        let g:_wilder_xs[l:i] = g:_wilder_xs[l:i][1:]
+      endif
 
-    let l:statusline .= '%{g:_wilder_xs[' . string(l:i) . ']}'
+      let l:statusline .= '%{g:_wilder_xs[' . string(l:i) . ']}'
+    else
+      let l:statusline .= g:_wilder_xs[l:i]
+    endif
 
     let l:i += 1
   endwhile
