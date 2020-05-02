@@ -13,21 +13,15 @@ local function extract_captures(pattern, str)
 	end
 
 	local head, tail, err = re:match(str)
-	if err then
+	if err or not head then
 		return {}
 	end
 
 	local captures = {}
 
-	while head do
-		for i = 1, #head do
-			if tail[i] > 0 then
-				table.insert(captures, {head[i], tail[i]})
-			end
-		end
-		head, tail, err = re:match(str, tail[1])
-		if err then
-			break
+	for i = 1, #head do
+		if tail[i] > 0 then
+			table.insert(captures, {head[i], tail[i]})
 		end
 	end
 
@@ -35,10 +29,14 @@ local function extract_captures(pattern, str)
 end
 
 local function pcre2_highlight_captures(pattern, str, hl, selected_hl)
+	if #pattern == 0 then
+		return {str}
+	end
+
 	local captures = extract_captures(pattern, str)
 
 	local result = {}
-	local start = #str
+	local start = 0
 	for i = 1, #captures do
 		local capture = captures[i]
 
