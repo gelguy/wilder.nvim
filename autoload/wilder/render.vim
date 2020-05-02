@@ -1,7 +1,6 @@
 scriptencoding utf-8
 
-let s:hl_map = {}
-let s:hl_link_map = {}
+let s:hl_list = []
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
 function! wilder#render#component_len(component, ctx, result) abort
@@ -388,14 +387,15 @@ function! s:draw_component(Component, hl, ctx, result) abort
 endfunction
 
 function! wilder#render#init_hl() abort
-  for [l:name, l:args, l:attr] in values(s:hl_map)
-    call s:make_hl(l:name, l:args, l:attr)
+  for [l:name, l:x, l:xs] in s:hl_list
+    call s:make_hl(l:name, l:x, l:xs)
   endfor
 endfunction
 
 function! wilder#render#make_hl(name, x, xs) abort
   let l:name = s:make_hl(a:name, a:x, a:xs)
-  let s:hl_map[l:name] = [a:name, deepcopy(a:x), deepcopy(a:xs)]
+  call filter(s:hl_list, {i, elem -> elem[0] !=# l:name})
+  call add(s:hl_list, [l:name, deepcopy(a:x), deepcopy(a:xs)])
   return l:name
 endfunction
 
