@@ -216,7 +216,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   if !a:fuzzy || l:no_fuzzy
     let a:res.expand_arg = l:path_prefix . l:tail
     let a:res.fuzzy_char = ''
-    let a:res.match_arg = ''
+    let a:res.match_arg = l:tail
     return a:res
   endif
 
@@ -285,10 +285,16 @@ function! s:python_fuzzy_filter(ctx, engine, candidates, query, has_file_args) a
     return a:candidates
   endif
 
-  " make fuzzy regex
+  let l:regex = s:make_python_fuzzy_regex(a:query)
+
+  return {ctx -> _wilder_python_filter(ctx, l:regex, a:candidates, a:engine, a:has_file_args)}
+endfunction
+
+function! s:make_python_fuzzy_regex(query)
   let l:split_query = split(a:query, '\zs')
-  let l:i = 0
+
   let l:regex = ''
+  let l:i = 0
   while l:i < len(l:split_query)
     if l:i > 0
       let l:regex .= '.*?'
@@ -296,9 +302,7 @@ function! s:python_fuzzy_filter(ctx, engine, candidates, query, has_file_args) a
 
     let l:c = l:split_query[l:i]
 
-    if l:c ==# '\'
-      let l:regex .= '\\'
-    elseif l:c ==# '\' ||
+    if l:c ==# '\' ||
           \ l:c ==# '.' ||
           \ l:c ==# '^' ||
           \ l:c ==# '$' ||
@@ -312,17 +316,17 @@ function! s:python_fuzzy_filter(ctx, engine, candidates, query, has_file_args) a
           \ l:c ==# '}' ||
           \ l:c ==# '[' ||
           \ l:c ==# ']'
-      let l:regex .= '\' . l:c
+      let l:regex .= '(\' . l:c . ')'
     elseif l:c ==# toupper(l:c)
-      let l:regex .= l:c
+      let l:regex .= '(' . l:c . ')'
     else
-      let l:regex .= '(?:' . l:c . '|' . toupper(l:c) . ')'
+      let l:regex .= '(' . l:c . '|' . toupper(l:c) . ')'
     endif
 
     let l:i += 1
   endwhile
 
-  return {ctx -> _wilder_python_filter(ctx, l:regex, a:candidates, a:engine, a:has_file_args)}
+  return l:regex
 endfunction
 
 function! s:get_path_tail(path) abort
@@ -807,7 +811,7 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:hide_in_substitute = has('nvim') && !has('nvim-0.3.7')
   endif
 
-  return [
+  let l:pipeline = [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ l:hide_in_substitute
         \   ? {ctx, x -> wilder#cmdline#hide_in_substitute(ctx, x)}
@@ -817,4 +821,32 @@ function! wilder#cmdline#pipeline(opts) abort
         \   wilder#cmdline#getcompletion_pipeline(a:opts),
         \ ),
         \ ]
+
+  if get(a:opts, 'fuzzy_sort', 0)
+    call add(l:pipeline, wilder#result({
+          \ 'value': {ctx, xs, data ->
+          \   wilder#python_fuzzywuzzy(ctx, xs, get(data, 'match_arg', ''))}
+          \ }))
+  endif
+
+  let l:highlight_captures = get(a:opts, 'highlight_captures', 0)
+  if type(l:highlight_captures) is v:t_list
+    if get(a:opts, 'fuzzy', 0)
+      call add(l:pipeline, wilder#result({
+            \   'draw': [{ctx, x, data ->
+            \     wilder#lua_pcre2_highlight_captures(
+            \       s:make_python_fuzzy_regex(get(data, 'match_arg', '')), x,
+            \       l:highlight_captures[0], l:highlight_captures[1])}]
+            \ }))
+    else
+      call add(l:pipeline, wilder#result({
+            \   'draw': [{ctx, x, data ->
+            \     wilder#lua_pcre2_highlight_captures(
+            \       '(' . get(data, 'match_arg') . ')', x,
+            \       l:highlight_captures[0], l:highlight_captures[1])}]
+            \ }))
+    endif
+  endif
+
+  return l:pipeline
 endfunction

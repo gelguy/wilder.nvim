@@ -568,11 +568,41 @@ wilder#vim_search_pipeline()        *wilder#vim_search_pipeline()*
                                     Pipeline~
             Returns a pipeline which does Vim substring search.
 
-wilder#python_search_pipeline()     *wilder#python_search_pipeline()*
+wilder#python_search_pipeline([{options}])
+                                    *wilder#python_search_pipeline()*
                                     Neovim only~
                                     Async~
                                     Pipeline~
-            Returns a pipeline which does Python substring search.
+            Returns a pipeline which does Python search.
+
+            {options} is a dictionary with keys:
+            `mode`
+            Optional~
+            One of 'fuzzy', 'fuzzy_delimiter' or 'substring'. Uses
+            |wilder#python_fuzzy_match()|, |wilder#python_fuzzy_delimiter()|
+            or |wilder#python_substring()| respectively to generate the regex.
+
+            Default: 'substring'
+
+            `engine`
+            Optional~
+            Regex engine to pass to |wilder#python_search()|.
+
+            `fuzzy_sort`
+            Optional~
+            Python 3 fuzzywuzzy module required~
+            When true, apply fuzzy sorting to the candidates using
+            |wilder#python_fuzzywuzzy()|.
+
+            Default: 0
+
+            `highlight_captures`
+            Optional~
+            Lua pcre2 package required~
+            When true, apply highlighting to the matched capture groups using
+            |wilder#lua_pcre2_highlight_captures()|.
+
+            Default: 0
 
                                     *wilder#cmdline_pipeline()*
 wilder#cmdline_pipeline([{options}])
@@ -616,6 +646,22 @@ wilder#cmdline_pipeline([{options}])
             See https://github.com/neovim/neovim/issues/9777.
 
             Default: has('nvim') && !has('nvim-0.3.7')
+
+            `fuzzy_sort`
+            Optional~
+            Python 3 fuzzywuzzy module required~
+            When true, apply fuzzy sorting to the candidates using
+            |wilder#python_fuzzywuzzy()|.
+
+            Default: 0
+
+            `highlight_captures`
+            Optional~
+            Lua pcre2 package required~
+            When true, apply highlighting to the matched capture groups using
+            |wilder#lua_pcre2_highlight_captures()|.
+
+            Default: 0
 
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{options}])
@@ -1360,6 +1406,33 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
              wilder#result({'value': {ctx, xs ->
                wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
+
+                                    *wilder#lua_pcre2_highlght_captures()*
+wilder#lua_pcre2_highlight_captures({pattern}, {str}, {hl}, {selected_hl})
+                                    Neovim only~
+                                    Lua pcre2 package required~
+            Takes a PCRE2 pattern {pattern} with capture groups and a
+            string {str} and returns a list to be used by
+            |wilder-pipeline-result-draw()| and
+            |wilder#statusline_renderer()|.
+
+            {hl} and {selected_hl} are the highlight groups used by the
+            renderer.
+
+            The pcre2 package source can be found at
+            `https://github.com/mah0x211/lua-pcre2` and can be installed with
+            `luarocks install pcre2`.
+
+            Example:
+>
+              wilder#result({
+                    \ 'draw': [{ctx, x, data ->
+                    \   wilder#lua_pcre2_highlight_captures(
+                    \     '(' . get(data, 'match_arg') . ')', x,
+                    \     '@bold', '@selected_bold')}]
+                    \ })
+<
+
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*

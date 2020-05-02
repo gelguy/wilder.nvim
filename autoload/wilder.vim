@@ -250,13 +250,53 @@ function! wilder#vim_search_pipeline() abort
   return wilder#search_pipeline()
 endfunction
 
-function! wilder#python_search_pipeline() abort
+function! wilder#python_search_pipeline(...) abort
+  let l:opts = get(a:, 1, {})
+
+  let l:mode = get(l:opts, 'mode', 'substring')
+  if l:mode ==# 'fuzzy'
+    let l:Pattern_component = wilder#python_fuzzy_match()
+  elseif l:mode ==# 'fuzzy_delimiter'
+    let l:Pattern_component = wilder#python_fuzzy_delimiter()
+  else
+    let l:Pattern_component = wilder#python_substring()
+  endif
+
+  if has_key(l:opts, 'engine')
+    let l:Python_search_component = wilder#python_search({'engine': l:opts['engine']})
+  else
+    let l:Python_search_component = wilder#python_search()
+  endif
+
+  let l:fuzzy_sort_part = get(l:opts, 'fuzzy_sort', 0) ?
+        \ [{ctx, xs -> wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}] :
+        \ []
+
+  let l:highlight_captures = get(l:opts, 'highlight_captures', 0)
+  if type(l:highlight_captures) is v:t_list
+    let l:pipeline = [
+          \ l:Pattern_component,
+          \ wilder#map([
+          \   l:Python_search_component,
+          \ ] + l:fuzzy_sort_part + [
+          \   wilder#result_output_escape('^$,*~[]/\'),
+          \ ], [{ctx, x -> x}]),
+          \ {ctx, xs -> wilder#result({
+          \   'draw': [{ctx, x -> wilder#lua_pcre2_highlight_captures(
+          \              xs[1], x, l:highlight_captures[0], l:highlight_captures[1])}],
+          \ })(ctx, xs[0])},
+          \ ]
+  else
+    let l:pipeline = [
+          \ l:Pattern_component,
+          \ l:Python_search_component,
+          \ ] + l:fuzzy_sort_part + [
+          \ wilder#result_output_escape('^$,*~[]/\'),
+          \ ]
+  endif
+
   return wilder#search_pipeline({
-        \ 'pipeline': [
-        \   wilder#python_substring(),
-        \   wilder#python_search(),
-        \   wilder#result_output_escape('^$,*~[]/\'),
-        \ ],
+        \ 'pipeline': l:pipeline,
         \ })
 endfunction
 
