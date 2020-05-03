@@ -13,6 +13,7 @@
 - Async query support - use Python 3 for faster and non-blocking queries
 
 # Requirements
+
 - Vim 8.1+ or Neovim 0.3+
 - Certain features (e.g. Python 3 and async search) are only enabled in Neovim
 
@@ -29,6 +30,7 @@ Plug 'gelguy/wilder.nvim'
 # Usage
 
 ## Getting started
+
 Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 
 ```vim
@@ -48,6 +50,7 @@ When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
 Use `<Tab>` to cycle through the list forwards, and `<S-Tab>` to move backwards.
 
 ## Customising the pipeline
+
 By using `wilder#set_option('pipeline', <pipeline>)`, you are able to customise the pipeline to suit your needs.
 For example, in Neovim, to use fuzzy matching instead of substring matching:
 
@@ -56,11 +59,11 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({'fuzzy': 1}),
-      \     [
-      \       wilder#python_fuzzy_match(),
-      \       wilder#python_search(),
-      \       wilder#result_output_escape('^$,*~[]/\'),  " needed to escape the output after python matching
-      \     ],
+      \     wilder#python_search_pipeline({
+      \       'mode': 'fuzzy', " use 'fuzzy_delimiter' for stricter fuzzy matching
+      \       'engine': 're',  " use 're2' for performance, requires Python re2 to be installed
+      \       'fuzzy_sort': 1, " Python fuzzywuzzy module required
+      \     }),
       \   ),
       \ ])
 ```
@@ -86,36 +89,6 @@ call wilder#set_option('pipeline', [
 
 When the cmdline is empty, provide suggestions based on the cmdline history (`:h cmdline-history`).
 
-#### Fuzzy delimiter (Neovim only)
-
-```vim
-" For Neovim
-call wilder#set_option('pipeline', [
-      \   wilder#branch(
-      \     wilder#cmdline_pipeline({'fuzzy': 1}),
-      \     [
-      \       wilder#python_fuzzy_delimiter(),
-      \       wilder#python_search(),
-      \       wilder#result_output_escape('^$,*~[]/\'),  " needed to escape the output after python matching
-      \     ],
-      \   ),
-      \ ])
-```
-
-`wilder#python_fuzzy_delimiter()` is a stricter version of fuzzy matching. Each character of the query has to either follow the previous character immediately, or be at the start of a delimited regioin. The start of a delimited region is either a delimiter character (e.g. `_` or `-`) followed by a character, or an uppercase character.
-
-For example:
-
-| pattern |  string  | Match? |
-|---------|----------|--------|
-| fb      | foobar   |   No   |
-| fb      | foo_bar  |   Yes  |
-| fb      | fooBar   |   Yes  |
-| fb      | fbar     |   Yes  |
-| foo     | foobar   |   Yes  |
-
-Use this to narrow down the suggestions more aggressively.
-
 #### Completion during :substitute
 
 ```vim
@@ -133,24 +106,27 @@ Provides suggestions while in the `pattern` part of a substitute command (i.e. w
 Note: For Neovim, read `:h wilder#substitute_pipeline()` for its interaction with `inccommand`.
 
 ## Customising the renderer
+
 By using `wilder#set_option('renderer', <renderer>)`, you are able to change how `wilder` is drawn on the statusline and which renderer components you wish to show. By default, `wilder` tries its best to look like (Neo)Vim's default wildmenu.
 
-`wilder` provides 2 built-in renderers - `wilder#statusline_renderer()` and `wilder#float_renderer()`. The float renderer is only available in Neovim nightly with `exists('*nvim_open_win')`. The statusline renderer has a limitation that it can only draw in the statusline of the current window. To replace the wildmenu, the float renderer has to be used.
+`wilder` provides 2 built-in renderers - `wilder#statusline_renderer()` and `wilder#float_renderer()`. The float renderer is only available in Neovim 0.4+ with `api-floatwin`. `exists('*nvim_open_win')` can be used to check that floating windows are supported. The statusline renderer has a limitation that it can only draw in the statusline of the current window. To replace the wildmenu, the float renderer has to be used.
 
 Both the statusline renderer and float renderer use the same options and components.
 
 ```vim
 " default settings
 call wilder#set_option('renderer', wilder#statusline_renderer({
-      \ 'hl': 'StatusLine',  " default highlight to use
-      \ 'selected_hl': 'WildMenu',  " highlight for the selected item
-      \ 'separator': '  ',  " string used to separate candidates
-      \ 'separator_hl': 'StatusLine',  " highlight for the separators
-      \ 'ellipsis': '...',  " string appended to truncated candidates which are too long
+      \ 'highlights': {
+      \   'default': 'StatusLine', " default highlight to use
+      \   'selected': 'WildMenu',  " highlight for the selected item
+      \ },
+      \ 'separator': '  ',         " string used to separate candidates
+      \ 'ellipsis': '...',         " string appended to truncated candidates which are too long
       \ })
 ```
 
 The renderer options include the fields `left` and `right`. Use these to add renderer components which help to provide more information on the current state of the candidates. Unlike pipeline components, render components can take the form of strings, functions, dictionaries and lists. See `:h wilder-renderer` for more details. Here are some examples of the built-in components:
+
 #### Index n/m
 
 ```vim
@@ -180,17 +156,20 @@ The spinner indicates when `wilder` has async work which has not been completed 
 
 ```vim
 " for vim-airline
-let s:status_hl = wilder#make_hl('WilderStatus', 'airline_c')
-let s:mode_hl = wilder#make_hl('WilderMode', 'airline_a')
-let s:index_hl = wilder#make_hl('WilderIndex', 'airline_z')
+let s:hl = 'airline_c'
+let s:mode_hl = 'airline_a'
+let s:index_hl ='airline_z'
 
 " for lightline.vim
-let s:status_hl = wilder#make_hl('WilderStatus', 'LightlineMiddle_active')
-let s:mode_hl = wilder#make_hl('WilderMode', 'LightlineLeft_active_0')
-let s:index_hl = wilder#make_hl('WilderIndex', 'LightlineRight_active_0')
+let s:hl = 'LightlineMiddle_active'
+let s:mode_hl = 'LightlineLeft_active_0'
+let s:index_hl = 'LightlineRight_active_0'
 
 call wilder#set_option('renderer', wilder#float_renderer({
-      \ 'hl': s:status_hl,
+      \ 'highlights': {
+      \   'default': s:hl,
+      \ },
+      \ 'apply_accents': funcref('wilder#lua_pcre2_extract_captures'), " requires Lua pcre2 package
       \ 'separator': ' · ',
       \ 'left': [{'value': [
       \    wilder#condition(
@@ -207,14 +186,16 @@ call wilder#set_option('renderer', wilder#float_renderer({
       \      }),
       \    ), ' ',
       \ ], 'hl': s:mode_hl,},
-      \ wilder#separator('', s:mode_hl, s:status_hl, 'left'), ' ',
+      \ wilder#separator('', s:mode_hl, s:hl, 'left'), ' ',
       \ ],
       \ 'right': [
-      \    ' ', wilder#separator('', s:index_hl, s:status_hl, 'right'),
+      \    ' ', wilder#separator('', s:index_hl, s:hl, 'right'),
       \    wilder#index({'hl': s:index_hl}),
       \ ],
       \ }))
 ```
+
+The `apply_accents` option is optional and requires the Lua `pcre2` package.
 
 Note: the more components in the renderer, the more computation is needed to draw it. This may result in noticeable input lag as the wildmenu has to be redrawn on every keystroke.
 

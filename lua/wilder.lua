@@ -3,7 +3,7 @@ local pcre2 = require 'pcre2'
 local cached_pattern = nil
 local cached_re = nil
 
-local function extract_captures(pattern, str)
+local function pcre2_extract_captures(pattern, str)
 	local re
 	if pattern == cached_pattern then
 		re = cached_re
@@ -25,36 +25,9 @@ local function extract_captures(pattern, str)
 		end
 	end
 
-	return {unpack(captures, 2)}
-end
-
-local function pcre2_highlight_captures(pattern, str, hl, selected_hl)
-	if #pattern == 0 then
-		return {str}
-	end
-
-	local captures = extract_captures(pattern, str)
-
-	local result = {}
-	local start = 0
-	for i = 1, #captures do
-		local capture = captures[i]
-
-		table.insert(result, str:sub(start, capture[1] - 1))
-		table.insert(result, {
-			value = str:sub(capture[1], capture[2]),
-			hl = hl,
-			selected_hl = selected_hl,
-		})
-
-		start = capture[2] + 1
-	end
-
-	table.insert(result, str:sub(start, #str))
-
-	return result
+	return captures
 end
 
 return {
-	pcre2_highlight_captures = pcre2_highlight_captures,
+	pcre2_extract_captures = pcre2_extract_captures,
 }

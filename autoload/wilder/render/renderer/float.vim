@@ -33,7 +33,22 @@ function! wilder#render#renderer#float#make(args) abort
   endif
 
   if !has_key(l:state.highlights, 'separator')
-    let l:state.highlights.separator = get(a:args, 'separator_hl', l:state.highlights['default'])
+    let l:state.highlights.separator =
+          \ get(a:args, 'separator_hl', l:state.highlights['default'])
+  endif
+
+  if !has_key(l:state.highlights, 'accent')
+    let l:state.highlights.accent =
+          \ wilder#hl_with_attr('WilderAccent', l:state.highlights['default'], 'underline')
+  endif
+
+  if !has_key(l:state.highlights, 'selected_accent')
+    let l:state.highlights.selected_accent =
+          \ wilder#hl_with_attr('WilderSelectedAccent', l:state.highlights['selected'], 'underline')
+  endif
+
+  if has_key(a:args, 'apply_accents')
+    let l:state.apply_accents = a:args['apply_accents']
   endif
 
   return {
@@ -73,7 +88,8 @@ function! s:render(state, ctx, result) abort
 
   let a:ctx.highlights = a:state.highlights
 
-  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result)
+  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result,
+        \ get(a:state, 'apply_accents', 0))
 
   let l:in_sandbox = 0
   try

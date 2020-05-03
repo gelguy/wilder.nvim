@@ -769,17 +769,12 @@ function! wilder#cmdline#is_substitute_command(cmd) abort
 endfunction
 
 function! wilder#cmdline#substitute_pipeline(opts) abort
-  let l:pipeline = get(a:opts, 'pipeline', has('nvim')
-        \ ? [
-        \   wilder#python_substring(),
-        \   wilder#python_search(),
-        \   wilder#result_output_escape('^$,*~[]/\'),
-        \ ]
-        \ : [
-        \   wilder#vim_substring(),
-        \   wilder#vim_search(),
-        \   wilder#result_output_escape('^$,*~[]/\'),
-        \ ])
+  let l:pipeline = [
+      \ wilder#check({-> getcmdtype() ==# ':'}),
+      \ {_, x -> wilder#cmdline#parse(x)},
+      \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
+      \ {_, res -> wilder#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
+      \ ]
 
   if has_key(a:opts, 'hide_in_replace')
     let l:hide_in_replace = a:opts.hide_in_replace
@@ -790,18 +785,28 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
     let l:hide_in_replace = has('nvim') && !has('nvim-0.3.7')
   endif
 
-  return [
-      \ wilder#check({-> getcmdtype() ==# ':'}),
-      \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-      \ {_, res -> wilder#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
-      \ {_, res -> len(res) == 2 ? res[1] : (l:hide_in_replace ? v:true : v:false)},
-      \ ] + l:pipeline + [
-      \ wilder#result({'replace': ['wilder#cmdline#replace']}),
-      \ ]
+  if l:hide_in_replace
+    call add(l:pipeline, {_, res -> len(res) == 2 ? res[1] : v:true})
+  else
+    call add(l:pipeline, {_, res -> len(res) == 2 ? res[1] : v:false})
+  endif
+
+  if has_key(a:opts, 'pipeline')
+    let l:pipeline += a:opts['pipeline']
+  elseif has('nvim')
+    let l:pipeline += wilder#python_search_pipeline({'skip_check': 1})
+  else
+    let l:pipeline += wilder#vim_search_pipeline({'skip_check': 1})
+  endif
+
+  call add(l:pipeline, wilder#result({'replace': ['wilder#cmdline#replace']}))
+
+  return l:pipeline
 endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
+  let l:pipeline = []
+
   if has_key(a:opts, 'hide_in_substitute')
     let l:hide_in_substitute = a:opts.hide_in_substitute
   elseif has_key(a:opts, 'hide')
@@ -811,16 +816,17 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:hide_in_substitute = has('nvim') && !has('nvim-0.3.7')
   endif
 
-  let l:pipeline = [
+  let l:pipeline += [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ l:hide_in_substitute
         \   ? {ctx, x -> wilder#cmdline#hide_in_substitute(ctx, x)}
         \   : {_, x -> x},
-        \ wilder#branch(
+        \ ]
+
+  call add(l:pipeline, wilder#branch(
         \   wilder#cmdline#user_completion_pipeline(),
         \   wilder#cmdline#getcompletion_pipeline(a:opts),
-        \ ),
-        \ ]
+        \ ))
 
   if get(a:opts, 'fuzzy_sort', 0)
     call add(l:pipeline, wilder#result({
@@ -829,23 +835,18 @@ function! wilder#cmdline#pipeline(opts) abort
           \ }))
   endif
 
-  let l:highlight_captures = get(a:opts, 'highlight_captures', 0)
-  if type(l:highlight_captures) is v:t_list
-    if get(a:opts, 'fuzzy', 0)
-      call add(l:pipeline, wilder#result({
-            \   'draw': [{ctx, x, data ->
-            \     wilder#lua_pcre2_highlight_captures(
-            \       s:make_python_fuzzy_regex(get(data, 'match_arg', '')), x,
-            \       l:highlight_captures[0], l:highlight_captures[1])}]
-            \ }))
-    else
-      call add(l:pipeline, wilder#result({
-            \   'draw': [{ctx, x, data ->
-            \     wilder#lua_pcre2_highlight_captures(
-            \       '(' . get(data, 'match_arg') . ')', x,
-            \       l:highlight_captures[0], l:highlight_captures[1])}]
-            \ }))
-    endif
+  if get(a:opts, 'fuzzy', 0)
+    call add(l:pipeline, wilder#result({
+          \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+          \     'pcre2_pattern': s:make_python_fuzzy_regex(get(data, 'match_arg', ''))
+          \   })},
+          \ }))
+  else
+    call add(l:pipeline, wilder#result({
+          \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+          \     'pcre2_pattern': '(' . get(data, 'match_arg', '') . ')'
+          \   })},
+          \ }))
   endif
 
   return l:pipeline

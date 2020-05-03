@@ -13,7 +13,7 @@ function! s:fuzzy_match(args, ctx, x) abort
     let l:word = '\w'
   endif
 
-  let l:res = ''
+  let l:res = '\b'
   let l:chars = split(a:x, '\zs')
   let l:len = len(l:chars)
 

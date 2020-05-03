@@ -23,7 +23,7 @@ Features include
 3. Customisable pipeline: e.g. choose between substring matching and fuzzy
    matching
 4. Async query support: use |python3| for faster and non-blocking queries
-5. Customisable skins and themes
+5. Customisable themes
 
 ==============================================================================
 2. Install                          *wilder-install*
@@ -274,25 +274,9 @@ The Result dictionary has the following keys:
             renderer.
             For each element in the list, if the element is a string, it is
             converted to a function using |function()|.
-            {ctx} and {x} are passed to the function and the result is a the
-            new value of {x}. {ctx} and the new value of {x} is then passed to
-            the next element. If there are no more elements, the final {x}
-            will be used.
-
-            The value of {x} can either be a String, Dictionary or List.
-
-            If {x} is a String, it is drawn as it is.
-
-            If {x} is a Dictionary, the key `value` should be the string which
-            is to be drawn.
-            {x} can contain other keys which will be used depending on the
-            |wilder-renderer| used. For example,
-            |wilder#statusline_renderer()| uses the keys `hl` and
-            `selected_hl`.
-
-            If {x} is a List, the elements should be Strings and/or
-            Dictionaries. The elements will be drawn as described above, and
-            the final output is concatenated together.
+            {ctx} and {x} are passed to the function and the result is the new
+            value of {x}. {ctx} and the new value of {x} is then passed to the
+            next element until there are no further elements.
 
             The keys of {ctx} are:
                 `selected`
@@ -570,9 +554,18 @@ wilder#result_output_escape({chars})
 
 PIPELINES                           *wilder-pipelines*
 
-wilder#vim_search_pipeline()        *wilder#vim_search_pipeline()*
+                                    *wilder#vim_search_pipeline()*
+wilder#vim_search_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which does Vim substring search.
+
+            {options} is a dictionary with keys:
+            `skip_check`
+            Optional~
+            If true, the checks that the input string is empty and that
+            |getcmdtype()| is '/' or '?' are skipped.
+
+            Default: 0
 
 wilder#python_search_pipeline([{options}])
                                     *wilder#python_search_pipeline()*
@@ -604,26 +597,10 @@ wilder#python_search_pipeline([{options}])
 
             Default: 0
 
-            `highlight_captures`
+            `skip_check`
             Optional~
-            Lua pcre2 package required~
-            When non-zero, apply highlighting to the matched capture groups using
-            |wilder#lua_pcre2_highlight_captures()|.
-            Takes a two element list in the form of [{hl_group},
-            {selected_hl_group}], where {hl_group} is the highlight group to
-            use to highlight the captured character and {selected_hl_group} is
-            the highlight group to highlight it when the candidate is
-            currently selected.
-
-            Example:
->
-                wilder#python_search_pipeline({
-                  \ 'highlight_captures': [
-                  \   wilder#hl_with_attr('StatusLine', 'underline'),
-                  \   wilder#hl_with_attr('WildMenu', 'underline'),
-                  \ ],
-                  \ )}
-<
+            If true, the checks that input string is empty and that
+            |getcmdtype()| is '/' or '? is skipped.
 
             Default: 0
 
@@ -678,31 +655,6 @@ wilder#cmdline_pipeline([{options}])
 
             Default: 0
 
-            `highlight_captures`
-            Optional~
-            Lua pcre2 package required~
-            When non-zero, apply highlighting to the matched capture groups using
-            |wilder#lua_pcre2_highlight_captures()|.
-            Takes a two element list in the form of [{hl_group},
-            {selected_hl_group}], where {hl_group} is the highlight group to
-            use to highlight the captured character and {selected_hl_group} is
-            the highlight group to highlight it when the candidate is
-            currently selected.
-            Only works if `use_python` is true.
-
-            Example:
->
-                wilder#cmdline_pipeline({
-                  \ 'use_python': 1,
-                  \ 'highlight_captures': [
-                  \   wilder#hl_with_attr('StatusLine', 'underline'),
-                  \   wilder#hl_with_attr('WildMenu', 'underline'),
-                  \ ],
-                  \ )}
-<
-
-            Default: 0
-
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{options}])
                                     Pipeline~
@@ -717,17 +669,14 @@ wilder#substitute_pipeline([{options}])
             {options} is a dictionary with keys:
             `pipeline`
             The pipeline to pass the {pattern} section to.
+            |wilder#vim_search_pipeline()| and
+            |wilder#python_search_pipeline()| can be used as the pipeline if
+            the `skip_check` option is set for the pipelines.
 
-            Default: For vim: [
-                     \ wilder#vim_substring(),
-                     \ wilder#vim_search(),
-                     \ wilder#result_output_escape('^$,*~[]/\'),
-                     \ ])
-                     For nvim: [
-                     \ wilder#python_substring(),
-                     \ wilder#python_search(),
-                     \ wilder#result_output_escape('^$,*~[]/\'),
-                     ]
+            Default: For vim:
+                     wilder#vim_search_pipeline({'skip_check' : 1}
+                     For nvim:
+                     wilder#python_search_pipeline({'skip_check' : 1}
 
             `hide_in_replace`
             When true, hides wilder when in the {string} section of the
@@ -754,8 +703,8 @@ wilder#substitute_pipeline([{options}])
         call wilder#set_option('post_hook', funcref('s:restore_inccommand'))
 <
 
-            Note For Neovim 0.4+, the statusline does not redraw correctly
-            when using 'inccommand'.
+            Note For Neovim 0.4+, the renderer does not redraw correctly when
+            using 'inccommand'.
             See https://github.com/neovim/neovim/issues/9783.
 
 ==============================================================================
@@ -812,40 +761,12 @@ floating window.
 
                                     *wilder#statusline_renderer()*
 wilder#statusline_renderer([{options}])
+                                    Renderer~
             Returns a renderer which draws the results on the statusline of
             the current window.
 
-            When the result of |wilder-pipeline-result-draw| contains a
-            Dictionary, it can have two optional keys `hl` and `selected_hl`.
-            These are the |highlight-group|s to use when the candidate is not
-            selected and selected respectively.
-            Otherwise the `default` and `selected` values from the
-            `highlights` option below will be used.
-
-            Example:
->
-                {'value': 'foo', 'hl': 'Search', 'selected_hl': 'IncSearch'}
-<
-
-                                    *wilder#statusline_renderer()-highlight-@*
-            The values of {hl} and {selected_hl} can start with the special
-            character '@'. These can be used to refer to the keys in the
-            `highlights` options mentioned below.
-
-            For example, '@selected' will refer to the `selected` highlight
-            group.
-
-            Note: The statusline might be truncated or be rendered wrongly when
-            there are too many separate highlight chunks. See |E541|.
-
-            Example:
->
-                [
-                  \   {'value': 'foo', 'hl': 'Search'},
-                  \   'bar',
-                  \   'baz',
-                  \   ]
-<
+            Note: The statusline might be truncated or be rendered wrongly
+            when there are too many separate highlight chunks. See |E541|.
 
             {options} is a dictionary with keys:
             `highlights`
@@ -878,6 +799,20 @@ wilder#statusline_renderer([{options}])
 
                 Default: The same value as the `default` key
 
+                `accent`
+                Optional~
+                The highlight group used for accents. See the `apply_accents`
+                option.
+
+                Default: The `default` highlight with |underline|
+
+                `selected_accent`
+                Optional~
+                The highlight group used for accents for a selected candidate.
+                See the `apply_accents` option.
+
+                Default: The `selected` highlight with |underline|
+
             `separator`
             Optional~
             The separator between candidates.
@@ -904,6 +839,41 @@ wilder#statusline_renderer([{options}])
             See |wilder-renderer-components|.
 
             Default: [wilder#next_arrow()]
+
+            `apply_accents`
+            Optional~
+            A function used to apply the `accent` and `selected_accent`
+            highlights to a candidate.
+
+            The function should take a {ctx}, {data} and {candidate} and
+            return a list of [{start}, {end}] elements, where each element
+            defines the start and end of part of the string to be highlighted.
+            For multi-byte strings, the start and end are byte indices.
+            The elements should be in strictly increasing order and should not
+            overlap.
+
+            For example, with {candidate} `abcdef` and result list [[0, 0],
+            [3, 4]], the characters `a`, `d` and `e` will be highlighted with
+            the `accent` or `selected_accent` highlights.
+
+            Returning an empty list will result in no accent highlights.
+
+            {ctx} contains no keys.
+
+            {data} is the dictionary from |wilder-pipeline-result-data|.
+
+            |wilder#lua_pcre2_extract_captures()| is a helper function which
+            can be used to apply accents to the capture groups when using
+            |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
+
+            Example:
+>
+            call wilder#set_option('renderer', wilder#statusline_renderer({
+                  \ 'separator': funcref('wilder#lua_pcre2_extract_captures'),
+                  \ }))
+<
+
+            Default: Empty
 
             `hl`
             Deprecated: Use `highlights`.
@@ -934,10 +904,10 @@ wilder#statusline_renderer([{options}])
             Default: same value as the `hl` option
 
 wilder#float_renderer([{options}])  *wilder#float_renderer()*
-                                    Experimental~
-            Requires Neovim 0.4+ with floating window API. Returns a renderer
-            which draws the results on a floating window just above the
-            cmdline.
+                                    Neovim 0.4+ only~
+                                    Renderer~
+            Requires Neovim 0.4+ with |api-floatwin|. Returns a renderer which
+            draws the results on a floating window just above the cmdline.
             Uses the same options as |wilder#statusline_renderer|.
 
 COMPONENTS                          *wilder-renderer-components*
@@ -1019,7 +989,7 @@ Components can be of the following types:
 
             Note: `ctx.page` is not available when determining the `len`
             of the component. This means components depending on
-            `ctx.page` have to be wrapped in a Dictionary and provide the
+            `ctx.page` have to be wrapped in a dictionary and provide the
             `len` entry.
 
 Before drawing the results, the amount of space available needs to be
@@ -1389,13 +1359,10 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                     \ [{}, {}, {'underline': 1}])
 <
 
-wilder#hl_with_attr({hl_name}, {attr} [, ..., {attrN}])
+wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
                                     *wilder#hl_with_attr()*
-            Helper function to create a new |highlight-group| by applying
-            attributes to an existing one.
-
-            The name of the new highlight group will be 'WilderAttr_' .
-            {hl_name}.
+            Helper function to create a new |highlight-group| named {name} by
+            applying attributes to {hl_group}.
 
             Returns the name of the new highlight group.
 
@@ -1439,17 +1406,20 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
                wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
 
-                                    *wilder#lua_pcre2_highlght_captures()*
-wilder#lua_pcre2_highlight_captures({pattern}, {str}, {hl}, {selected_hl})
+                                    *wilder#lua_pcre2_extract_captures()*
+wilder#lua_pcre2_extract_captures({ctx}, {data}, {str})
                                     Neovim only~
                                     Lua pcre2 package required~
-            Takes a PCRE2 pattern {pattern} with capture groups and a
-            string {str} and returns a list to be used by
-            |wilder-pipeline-result-draw()| and
-            |wilder#statusline_renderer()|.
+            Helper function for the `apply_accents` option for
+            |wilder#statusline_renderer()| and |wilder#float_renderer()|.
 
-            {hl} and {selected_hl} are the highlight groups used by the
-            renderer.
+            {data} should be a dictionary containing the key `pcre2_pattern`.
+            The value of `pcre2_pattern` should be a PCRE2 pattern with
+            capture groups.
+
+            Returns a list of [{start}, {end}] elements, where each element
+            defines the start and end of a captured group. For multi-byte
+            strings, the start and end are byte indices.
 
             The pcre2 package source can be found at
             `https://github.com/mah0x211/lua-pcre2` and can be installed with
@@ -1457,17 +1427,6 @@ wilder#lua_pcre2_highlight_captures({pattern}, {str}, {hl}, {selected_hl})
 
             Note: This function is slow and should be avoided by users who are
             concerned about performance.
-
-            Example:
->
-              wilder#result({
-                    \ 'draw': [{ctx, x, data ->
-                    \   wilder#lua_pcre2_highlight_captures(
-                    \     '(' . get(data, 'match_arg') . ')', x,
-                    \     '@bold', '@selected_bold')}]
-                    \ })
-<
-
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*
@@ -1486,7 +1445,7 @@ Minimal Configuration~
     call wilder#set_option('modes', ['/', '?', ':'])
 <
 
-More Pipelines~
+Pipelines (Neovim only)~
 >
     " add minimal configuration
 
@@ -1497,11 +1456,9 @@ More Pipelines~
           \       wilder#history(100),
           \     ],
           \     wilder#cmdline_pipeline(),
-          \     [
-          \       wilder#python_fuzzy_delimiter(),
-          \       wilder#python_search({'engine': 're2'}),
-          \       wilder#result_output_escape('^$,*~[]/\'),
-          \     ],
+          \     wilder#search_pipeline({
+          \       'fuzzy': 1,
+          \     }),
           \   ),
           \ ])
 <
@@ -1509,17 +1466,19 @@ More Pipelines~
 Airline/Lightline Theme Renderer~
 >
     " for vim-airline
-    let s:status_hl = wilder#make_hl('WilderStatus', 'airline_c')
-    let s:mode_hl = wilder#make_hl('WilderMode', 'airline_a')
-    let s:index_hl = wilder#make_hl('WilderIndex', 'airline_z')
+    let s:hl = 'airline_c'
+    let s:mode_hl = 'airline_a'
+    let s:index_hl ='airline_z'
 
     " for lightline.vim
-    let s:status_hl = wilder#make_hl('WilderStatus', 'LightlineMiddle_active')
-    let s:mode_hl = wilder#make_hl('WilderMode', 'LightlineLeft_active_0')
-    let s:index_hl = wilder#make_hl('WilderIndex', 'LightlineRight_active_0')
+    let s:hl = 'LightlineMiddle_active'
+    let s:mode_hl = 'LightlineLeft_active_0'
+    let s:index_hl = 'LightlineRight_active_0'
 
     call wilder#set_option('renderer', wilder#float_renderer({
-          \ 'hl': s:status_hl,
+          \ 'highlights': {
+          \   'default': s:hl,
+          \ },
           \ 'separator': ' · ',
           \ 'left': [{'value': [
           \    wilder#condition(
@@ -1536,10 +1495,10 @@ Airline/Lightline Theme Renderer~
           \      }),
           \    ), ' ',
           \ ], 'hl': s:mode_hl,},
-          \ wilder#separator('', s:mode_hl, s:status_hl, 'left'), ' ',
+          \ wilder#separator('', s:mode_hl, s:hl, 'left'), ' ',
           \ ],
           \ 'right': [
-          \    ' ', wilder#separator('', s:index_hl, s:status_hl, 'right'),
+          \    ' ', wilder#separator('', s:index_hl, s:hl, 'right'),
           \    wilder#index({'hl': s:index_hl}),
           \ ],
           \ }))
