@@ -614,6 +614,10 @@ wilder#cmdline_pipeline([{options}])
             For completions during |:substitute|, use
             |wilder#substitute_pipeline()|.
 
+            Note: Custom completions for user commands are only available in
+            Neovim. Wilder will be hidden when attempting to complete user
+            command completions in Vim. See |wilder-hidden|.
+
             {options} is a dictionary with keys:
             `fuzzy`
             When true, use fuzzy matching for the results.
@@ -1190,9 +1194,9 @@ wilder#accept_completion()          *wilder#accept_completion()*
 
             Example:
 >
-            cmap <expr> <Down> wilder#can_accept_completion()
-                \ ? wilder#accept_completion() :
-                \ : "\<Down>"
+            cmap <expr> <Down> wilder#can_accept_completion() ?
+                \ wilder#accept_completion() :
+                \ "\<Down>"
 <
 
 wilder#reject_completion()          *wilder#reject_completion()*
@@ -1201,9 +1205,9 @@ wilder#reject_completion()          *wilder#reject_completion()*
 
             Example:
 >
-            cmap <expr> <Up> wilder#can_reject_completion()
-                \ ? wilder#reject_completion()
-                \ : "\<Up>"
+            cmap <expr> <Up> wilder#can_reject_completion() ?
+                \ wilder#reject_completion() :
+                \ "\<Up>"
 <
 
 wilder#resolve({ctx}, {x})          *wilder#resolve()*
@@ -1503,7 +1507,6 @@ Airline/Lightline Theme Renderer~
           \ ],
           \ }))
 <
-
 
 ==============================================================================
  vim:tw=78:ts=4:ft=help:norl:expandtab:

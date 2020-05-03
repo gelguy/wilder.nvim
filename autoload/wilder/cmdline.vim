@@ -416,23 +416,23 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'arglist')
   elseif a:res.expand ==# 'behave'
     return getcompletion(l:expand_arg, 'behave')
-  elseif a:res.expand ==# 'buffers'
+  elseif a:res.expand ==# 'buffer'
     return getcompletion(l:expand_arg, 'buffer')
   elseif a:res.expand ==# 'checkhealth'
     return has('nvim') ? getcompletion(l:expand_arg, 'checkhealth') : []
-  elseif a:res.expand ==# 'colors'
+  elseif a:res.expand ==# 'color'
     return getcompletion(l:expand_arg, 'color')
-  elseif a:res.expand ==# 'commands'
+  elseif a:res.expand ==# 'command'
     return getcompletion(l:expand_arg, 'command')
   elseif a:res.expand ==# 'compiler'
     return getcompletion(l:expand_arg, 'compiler')
   elseif a:res.expand ==# 'cscope'
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
-  elseif a:res.expand ==# 'events'
+  elseif a:res.expand ==# 'event'
     return getcompletion(l:expand_arg, 'event')
   elseif a:res.expand ==# 'expression'
     return getcompletion(l:expand_arg, 'expression')
-  elseif a:res.expand ==# 'env_vars'
+  elseif a:res.expand ==# 'environment'
     return getcompletion(l:expand_arg, 'environment')
   elseif a:res.expand ==# 'function'
     return getcompletion(l:expand_arg, 'function')
@@ -531,8 +531,6 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'syntax')
   elseif a:res.expand ==# 'syntime'
     return getcompletion(l:expand_arg, 'syntime')
-  elseif a:res.expand ==# 'syntime'
-    return getcompletion(l:expand_arg, 'syntime')
   elseif a:res.expand ==# 'user'
     return getcompletion(l:expand_arg, 'user')
   elseif a:res.expand ==# 'user_func'
@@ -593,44 +591,48 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-function! wilder#cmdline#get_user_completion(cmdline) abort
-  let l:ctx = wilder#cmdline#parse(a:cmdline)
+" returns [{handled}, {result}]
+function! wilder#cmdline#prepare_user_completion(ctx, res) abort
+  if !wilder#cmdline#is_user_command(a:res.cmd)
+    return [0, a:res]
+  endif
+
+  if !has('nvim')
+    return [1, v:true]
+  endif
 
   let l:user_commands = nvim_get_commands({})
 
-  if !has_key(l:user_commands, l:ctx.cmd)
-    return v:false
+  if !has_key(l:user_commands, a:res.cmd)
+    return [1, v:false]
   endif
 
-  let l:user_command = l:user_commands[l:ctx.cmd]
+  let l:user_command = l:user_commands[a:res.cmd]
 
-  if has_key(l:user_command, 'complete_arg') && l:user_command.complete_arg isnot v:null
+  if has_key(l:user_command, 'complete_arg') &&
+        \ l:user_command.complete_arg isnot v:null
     let l:Completion_func = function(l:user_command.complete_arg)
 
-    " pos + 1 for the command prompt
-    let l:result = l:Completion_func(l:ctx.cmdline[l:ctx.pos :], l:ctx.cmdline, l:ctx.pos + 1)
+    let l:result = l:Completion_func(a:res.cmdline[a:res.pos :], a:res.cmdline, len(a:res.cmdline))
 
     if get(l:user_command, 'complete', '') ==# 'custom'
       let l:result = split(l:result, '\n')
     endif
 
-    return l:result
+    return [1, l:result]
   endif
 
-  if has_key(l:user_command, 'complete') && l:user_command.complete isnot v:null &&
-        \ l:user_command.complete !=# 'custom' && l:user_command.complete !=# 'customlist'
-    let l:completions = getcompletion(l:ctx.cmdline[l:ctx.pos :], l:user_command.complete, 1)
+  if has_key(l:user_command, 'complete') &&
+        \ l:user_command['complete'] isnot v:null &&
+        \ l:user_command['complete'] !=# 'custom' &&
+        \ l:user_command['complete'] !=# 'customlist'
+    let l:res = copy(a:res)
+    let l:res['expand'] = l:user_command['complete']
 
-    if l:user_command.complete ==# 'file' ||
-          \ l:user_command.complete ==# 'file_in_path' ||
-          \ l:user_command.complete ==# 'dir'
-      return map(l:completions, {_, x -> escape(x, ' ')})
-    endif
-
-    return l:completions
+    return [0, l:res]
   endif
 
-  return v:false
+  return [1, v:false]
 endfunction
 
 function! wilder#cmdline#replace(ctx, x, data) abort
@@ -668,16 +670,6 @@ function! wilder#cmdline#draw_path(ctx, x, data) abort
   return a:x
 endfunction
 
-function! wilder#cmdline#user_completion_pipeline() abort
-  return [
-      \ wilder#check({-> getcmdtype() ==# ':'}),
-      \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#check({_, res -> wilder#cmdline#is_user_command(res.cmd)}),
-      \ {_, res -> wilder#cmdline#get_user_completion(res.cmdline)},
-      \ wilder#result({'replace': ['wilder#cmdline#replace']}),
-      \ ]
-endfunction
-
 function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
   let l:Completion_func = a:use_python && a:has_file_args
         \ ? funcref('wilder#cmdline#python_get_file_completion')
@@ -694,50 +686,62 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
         \ {ctx, xs -> wilder#resolve(ctx, {'value': xs, 'data': a:res})})
 endfunction
 
-function! s:result_filter(fuzzy, fuzzy_filter) abort
-  if !a:fuzzy
-    return {ctx, res -> res}
+function! wilder#cmdline#getcompletion_pipeline(opts) abort
+  let l:use_python = get(a:opts, 'use_python', has('nvim'))
+
+  let l:fuzzy = get(a:opts, 'fuzzy', 0)
+  if l:fuzzy
+    if has_key(a:opts, 'fuzzy_filter')
+      let l:Fuzzy_filter = a:opts['fuzzy_filter']
+    elseif l:use_python
+      let l:Fuzzy_filter = wilder#cmdline#python_fuzzy_filter()
+    else
+      let l:Fuzzy_filter = wilder#cmdline#fuzzy_filter()
+    endif
+
+    let l:Result_fuzzy_filter = wilder#result({
+          \ 'value': {ctx, xs, data ->
+          \   get(data, 'expand', '') ==# 'help' ?
+          \     xs :
+          \     l:Fuzzy_filter(ctx, xs,
+          \       get(data, 'match_arg', ''),
+          \       wilder#cmdline#has_file_args(data))
+          \ }})
   endif
 
-  return wilder#result({'value': {ctx, xs, data ->
-        \ get(data, 'expand', '') ==# 'help'
-        \   ? xs
-        \   : a:fuzzy_filter(ctx,
-        \                    xs,
-        \                    get(data, 'match_arg', ''),
-        \                    wilder#cmdline#has_file_args(data))
-        \ }})
-endfunction
+  let l:file_completion_subpipeline = [
+        \ wilder#check({_, res -> wilder#cmdline#has_file_args(res)}),
+        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
+        \ {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 1)},
+        \ ]
 
-function! wilder#cmdline#getcompletion_pipeline(opts) abort
-  let l:fuzzy = get(a:opts, 'fuzzy', 0)
-  let l:use_python = get(a:opts, 'use_python', has('nvim'))
-  let l:Fuzzy_filter = s:result_filter(l:fuzzy,
-        \ get(a:opts, 'fuzzy_filter',
-        \   l:use_python
-        \     ? wilder#cmdline#python_fuzzy_filter()
-        \     : wilder#cmdline#fuzzy_filter()))
+  if l:fuzzy
+    call add(l:file_completion_subpipeline, l:Result_fuzzy_filter)
+  endif
+
+  call add(l:file_completion_subpipeline, wilder#result({
+        \ 'output': [{_, x -> escape(x, ' ')}],
+        \ 'draw': ['wilder#cmdline#draw_path'],
+        \ }))
+
+  let l:completion_subpipeline = [
+        \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
+        \ {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 0)},
+        \ ]
+
+  if l:fuzzy
+    call add(l:completion_subpipeline, l:Result_fuzzy_filter)
+  endif
 
   return [
-      \ wilder#check({-> getcmdtype() ==# ':'}),
-      \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#branch([
-      \   wilder#check({_, res -> wilder#cmdline#has_file_args(res)}),
-      \   {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
-      \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 1)},
-      \   l:Fuzzy_filter,
-      \   wilder#result({
-      \     'output': [{_, x -> escape(x, ' ')}],
-      \     'draw': ['wilder#cmdline#draw_path'],
-      \     'replace': ['wilder#cmdline#replace'],
-      \   }),
-      \ ], [
-      \   {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
-      \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 0)},
-      \   l:Fuzzy_filter,
-      \   wilder#result({'replace': ['wilder#cmdline#replace']}),
-      \ ]),
-      \ ]
+        \ wilder#branch(
+        \   l:file_completion_subpipeline,
+        \   l:completion_subpipeline,
+        \ ),
+        \ wilder#result({
+        \   'replace': ['wilder#cmdline#replace'],
+        \ }),
+        \ ]
 endfunction
 
 function! wilder#cmdline#hide_in_substitute(ctx, cmdline)
@@ -805,7 +809,9 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
 endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
-  let l:pipeline = []
+  let l:pipeline = [
+        \ wilder#check({-> getcmdtype() ==# ':'}),
+        \ ]
 
   if has_key(a:opts, 'hide_in_substitute')
     let l:hide_in_substitute = a:opts.hide_in_substitute
@@ -816,38 +822,46 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:hide_in_substitute = has('nvim') && !has('nvim-0.3.7')
   endif
 
+  if l:hide_in_substitute
+    call add(l:pipeline, {ctx, x -> wilder#cmdline#hide_in_substitute(ctx, x)})
+  endif
+
   let l:pipeline += [
-        \ wilder#check({-> getcmdtype() ==# ':'}),
-        \ l:hide_in_substitute
-        \   ? {ctx, x -> wilder#cmdline#hide_in_substitute(ctx, x)}
-        \   : {_, x -> x},
+        \ {_, x -> wilder#cmdline#parse(x)},
+        \ {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)},
         \ ]
 
-  call add(l:pipeline, wilder#branch(
-        \   wilder#cmdline#user_completion_pipeline(),
-        \   wilder#cmdline#getcompletion_pipeline(a:opts),
-        \ ))
+  let l:getcompletion_pipeline = [{ctx, res -> res[1]}] +
+        \ wilder#cmdline#getcompletion_pipeline(a:opts)
 
   if get(a:opts, 'fuzzy_sort', 0)
-    call add(l:pipeline, wilder#result({
+    call add(l:getcompletion_pipeline, wilder#result({
           \ 'value': {ctx, xs, data ->
           \   wilder#python_fuzzywuzzy(ctx, xs, get(data, 'match_arg', ''))}
           \ }))
   endif
 
   if get(a:opts, 'fuzzy', 0)
-    call add(l:pipeline, wilder#result({
-          \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+    call add(l:getcompletion_pipeline, wilder#result({
+          \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
           \     'pcre2_pattern': s:make_python_fuzzy_regex(get(data, 'match_arg', ''))
           \   })},
           \ }))
   else
-    call add(l:pipeline, wilder#result({
-          \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+    call add(l:getcompletion_pipeline, wilder#result({
+          \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
           \     'pcre2_pattern': '(' . get(data, 'match_arg', '') . ')'
           \   })},
           \ }))
   endif
+
+  call add(l:pipeline, wilder#branch(
+        \ [
+        \   {ctx, res -> res[0] ? res[1] : v:false},
+        \   wilder#result({'replace': ['wilder#cmdline#replace']}),
+        \ ],
+        \ l:getcompletion_pipeline,
+        \ ))
 
   return l:pipeline
 endfunction

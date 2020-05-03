@@ -1,6 +1,6 @@
 function! wilder#cmdline#main#do(ctx) abort
   " default
-  let a:ctx.expand = 'commands'
+  let a:ctx.expand = 'command'
   let a:ctx.force = 0
 
   if empty(a:ctx.cmdline[a:ctx.pos :])
@@ -355,7 +355,7 @@ function! wilder#cmdline#main#do(ctx) abort
       endwhile
 
       if a:ctx.pos == len(a:ctx.cmdline)
-        let a:ctx.expand = 'env_vars'
+        let a:ctx.expand = 'environment'
         let a:ctx.pos = l:arg_start + 1
         return
       endif
