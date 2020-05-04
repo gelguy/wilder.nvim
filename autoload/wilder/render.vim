@@ -58,8 +58,8 @@ function! s:component_hook(component, ctx, key) abort
 
     call s:component_hook(a:component.value, a:ctx, a:key)
   elseif type(a:component) is v:t_list
-    for l:elem in a:component
-      call s:component_hook(l:elem, a:ctx, a:key)
+    for l:Elem in a:component
+      call s:component_hook(l:Elem, a:ctx, a:key)
     endfor
   endif
 endfunction
