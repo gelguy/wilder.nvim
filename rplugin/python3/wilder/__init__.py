@@ -259,12 +259,10 @@ class Wilder(object):
                         if expand_type == 'shellcmd' and (
                                 not entry.is_file() or not os.access(os.path.join(directory, entry.name), os.X_OK)):
                             continue
-                        name = str(entry) if has_wildcard else entry.name
-                        if Path(name) == Path(path_prefix):
-                            if has_wildcard:
-                                continue
-                            res.append(os.path.join(path_prefix, './'))
-                        elif entry.is_dir():
+                        if has_wildcard and Path(entry) == Path(path_prefix):
+                            continue
+
+                        if entry.is_dir():
                             res.append((str(entry) if has_wildcard else entry.name) + os.sep)
                         else:
                             res.append(str(entry) if has_wildcard else entry.name)
