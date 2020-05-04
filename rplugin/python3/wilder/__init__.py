@@ -344,3 +344,32 @@ class Wilder(object):
             self.queue.put((ctx, list(res),))
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
+
+    @neovim.function('_wilder_python_extract_captures', sync=True, allow_nested=False)
+    def extract_captures(self, args):
+        pattern = args[0]
+        string = args[1]
+
+        if len(args) >= 3:
+            module_name = args[2]
+        else:
+            module_name = 're'
+
+        re = importlib.import_module(module_name)
+        match = re.match(pattern, string)
+
+        if not match or not match.lastindex:
+            return  []
+
+        captures = []
+        for i in range(1, match.lastindex + 1):
+            start = match.start(i)
+            end = match.end(i)
+            if start == -1 or end == -1 or start == end:
+                continue
+
+            byte_start = len(string[: start].encode('utf-8'))
+            byte_end = byte_start + len(string[start : end].encode('utf-8')) - 1
+            captures.append([byte_start, byte_end])
+
+        return captures

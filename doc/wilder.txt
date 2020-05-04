@@ -850,10 +850,11 @@ wilder#statusline_renderer([{options}])
             highlights to a candidate.
 
             The function should take a {ctx}, {data} and {candidate} and
-            return a list of [{start}, {end}] elements, where each element
+            return a list of [{start}, {end}] spans, where each span
             defines the start and end of part of the string to be highlighted.
+            {start} and {end} are inclusive.
             For multi-byte strings, the start and end are byte indices.
-            The elements should be in strictly increasing order and should not
+            The spans should be in strictly increasing order and should not
             overlap.
 
             For example, with {candidate} `abcdef` and result list [[0, 0],
@@ -866,14 +867,16 @@ wilder#statusline_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#lua_pcre2_extract_captures()| is a helper function which
-            can be used to apply accents to the capture groups when using
-            |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
+            |wilder#python_pcre2_extract_captures()| is a helper function
+            which can be used to apply accents to the capture groups when
+            using |wilder#cmdline_pipeline()| and
+            |wilder#python_search_pipeline()|.
 
             Example:
 >
             call wilder#set_option('renderer', wilder#statusline_renderer({
-                  \ 'separator': funcref('wilder#lua_pcre2_extract_captures'),
+                  \ 'separator':
+                  \     funcref('wilder#python_pcre2_extract_captures'),
                   \ }))
 <
 
@@ -1410,6 +1413,25 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
                wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
 
+                                    *wilder#python_pcre2_extract_captures()*
+wilder#python_pcre2_extract_captures({ctx}, {data}, {str})
+                                    Neovim only~
+            Helper function for the `apply_accents` option for
+            |wilder#statusline_renderer()| and |wilder#float_renderer()|.
+
+            {data} should be a dictionary containing the key `pcre2_pattern`.
+            The value of `pcre2_pattern` should be a PCRE2 pattern with
+            capture groups.
+
+            Returns a list of [{start}, {end}] elements, where each element
+            defines the start and end of a captured group. For multi-byte
+            strings, the start and end are byte indices.
+
+            Note: This function is slow and should be avoided by users who are
+            concerned about performance. Use
+            |wilder#lua_pcre2_extract_captures()| for slightly better
+            performance.
+
                                     *wilder#lua_pcre2_extract_captures()*
 wilder#lua_pcre2_extract_captures({ctx}, {data}, {str})
                                     Neovim only~
@@ -1429,8 +1451,9 @@ wilder#lua_pcre2_extract_captures({ctx}, {data}, {str})
             `https://github.com/mah0x211/lua-pcre2` and can be installed with
             `luarocks install pcre2`.
 
-            Note: This function is slow and should be avoided by users who are
-            concerned about performance.
+            Note: This function is faster than
+            |wilder#python_pcre2_extract_captures()| but is still slow and
+            should be avoided by users who are concerned about performance.
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*

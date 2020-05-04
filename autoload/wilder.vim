@@ -124,6 +124,14 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
+function wilder#python_pcre2_extract_captures(ctx, data, str)
+  if !has_key(a:data, 'pcre2_pattern')
+    return []
+  endif
+
+  return  _wilder_python_extract_captures(a:data['pcre2_pattern'], a:str)
+endfunction
+
 function wilder#lua_pcre2_extract_captures(ctx, data, str)
   if !has_key(a:data, 'pcre2_pattern')
     return []
