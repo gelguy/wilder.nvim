@@ -850,7 +850,8 @@ function! wilder#cmdline#pipeline(opts) abort
   else
     call add(l:getcompletion_pipeline, wilder#result({
           \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-          \     'pcre2_pattern': '(' . get(data, 'match_arg', '') . ')'
+          \     'pcre2_pattern': '(' .
+          \         escape(get(data, 'match_arg', ''), '\.^$*+?|(){}[]') . ')'
           \   })},
           \ }))
   endif
