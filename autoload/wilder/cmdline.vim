@@ -841,25 +841,29 @@ function! wilder#cmdline#pipeline(opts) abort
           \ }))
   endif
 
-  if get(a:opts, 'fuzzy', 0)
-    call add(l:getcompletion_pipeline, wilder#result({
-          \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-          \     'pcre2_pattern': s:make_python_fuzzy_regex(get(data, 'match_arg', ''))
-          \   })},
-          \ }))
-  else
-    call add(l:getcompletion_pipeline, wilder#result({
-          \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-          \     'pcre2_pattern': '(' .
-          \         escape(get(data, 'match_arg', ''), '\.^$*+?|(){}[]') . ')'
-          \   })},
-          \ }))
+  if get(a:opts, 'set_pcre2_pattern', 1)
+    if get(a:opts, 'fuzzy', 0)
+      call add(l:getcompletion_pipeline, wilder#result({
+            \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
+            \     'pcre2_pattern': s:make_python_fuzzy_regex(get(data, 'match_arg', ''))
+            \   })},
+            \ }))
+    else
+      call add(l:getcompletion_pipeline, wilder#result({
+            \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
+            \     'pcre2_pattern': '(' .
+            \         escape(get(data, 'match_arg', ''), '\.^$*+?|(){}[]') . ')'
+            \   })},
+            \ }))
+    endif
   endif
 
   call add(l:pipeline, wilder#branch(
         \ [
         \   {ctx, res -> res[0] ? res[1] : v:false},
-        \   wilder#result({'replace': ['wilder#cmdline#replace']}),
+        \   wilder#result({
+        \     'replace': ['wilder#cmdline#replace'],
+        \   }),
         \ ],
         \ l:getcompletion_pipeline,
         \ ))

@@ -659,6 +659,18 @@ wilder#cmdline_pipeline([{options}])
 
             Default: 0
 
+            `set_pcre2_pattern`
+            Optional~
+            When true, sets the `pcre2_pattern` key in
+            |wilder-pipeline-result-data| to the pattern used in the default
+            fuzzy filtering. This key is used by
+            |wilder#python_pcre2_extract_captures()|.
+
+            Should be set to false when using a fuzzy filter not based on
+            PCRE2.
+
+            Default: 1
+
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{options}])
                                     Pipeline~
