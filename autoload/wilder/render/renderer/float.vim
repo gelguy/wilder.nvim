@@ -48,7 +48,12 @@ function! wilder#render#renderer#float#make(args) abort
   endif
 
   if has_key(a:args, 'apply_accents')
-    let l:state.apply_accents = a:args['apply_accents']
+    let l:Apply_accents = a:args['apply_accents']
+    if type(l:Apply_accents) isnot v:t_list
+      let l:state.apply_accents = [l:Apply_accents]
+    else
+      let l:state.apply_accents = l:Apply_accents
+    endif
   endif
 
   return {
@@ -89,7 +94,7 @@ function! s:render(state, ctx, result) abort
   let a:ctx.highlights = a:state.highlights
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result,
-        \ get(a:state, 'apply_accents', 0))
+        \ get(a:state, 'apply_accents', []))
 
   let l:in_sandbox = 0
   try

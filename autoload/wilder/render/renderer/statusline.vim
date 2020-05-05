@@ -35,7 +35,11 @@ function! wilder#render#renderer#statusline#make(args) abort
   endif
 
   if has_key(a:args, 'apply_accents')
-    let l:state.apply_accents = a:args['apply_accents']
+    if type(a:args['apply_accents']) is v:t_string
+      let l:state.apply_accents = [a:args['apply_accents']]
+    else
+      let l:state.apply_accents = a:args['apply_accents']
+    endif
   endif
 
   return {
@@ -72,7 +76,7 @@ function! s:render(state, ctx, result) abort
   let a:ctx.highlights = a:state.highlights
 
   let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result,
-        \ get(a:state, 'apply_accents', 0))
+        \ get(a:state, 'apply_accents', []))
 
   call s:render_chunks(l:chunks, a:state.highlights['default'])
 endfunction

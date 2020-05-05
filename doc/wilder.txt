@@ -846,13 +846,17 @@ wilder#statusline_renderer([{options}])
 
             `apply_accents`
             Optional~
-            A function used to apply the `accent` and `selected_accent`
-            highlights to a candidate.
+            A list of functions used to apply the `accent` and
+            `selected_accent` highlights to a candidate. For convenience, also
+            accepts a single function, which will be converted to a singleton
+            list.
 
-            The function should take a {ctx}, {data} and {candidate} and
-            return a list of [{start}, {end}] spans, where each span
-            defines the start and end of part of the string to be highlighted.
-            {start} and {end} are inclusive.
+            Each function should take a {ctx}, {data} and {candidate} and
+            return 0 when accents cannot be applied and return a list
+            otherwise.
+            The returned list should consist of [{start}, {end}] spans, where
+            each span defines the start and end of part of the string to be
+            highlighted.  {start} and {end} are inclusive.
             For multi-byte strings, the start and end are byte indices.
             The spans should be in strictly increasing order and should not
             overlap.
@@ -862,6 +866,10 @@ wilder#statusline_renderer([{options}])
             the `accent` or `selected_accent` highlights.
 
             Returning an empty list will result in no accent highlights.
+
+            Each function of the list is applied in order, and the first
+            non-0 result will be used to apply the higlights. If all functions
+            return 0, no highlights will be applied.
 
             {ctx} contains no keys.
 
@@ -1421,11 +1429,11 @@ wilder#python_pcre2_extract_captures({ctx}, {data}, {str})
 
             {data} should be a dictionary containing the key `pcre2_pattern`.
             The value of `pcre2_pattern` should be a PCRE2 pattern with
-            capture groups.
+            capture groups. If the key is not found, returns 0.
 
-            Returns a list of [{start}, {end}] elements, where each element
-            defines the start and end of a captured group. For multi-byte
-            strings, the start and end are byte indices.
+            Otherwise, returns a list of [{start}, {end}] elements, where each
+            element defines the start and end of a captured group. For
+            multi-byte strings, the start and end are byte indices.
 
             Note: This function is slow and should be avoided by users who are
             concerned about performance. Use
@@ -1439,13 +1447,7 @@ wilder#lua_pcre2_extract_captures({ctx}, {data}, {str})
             Helper function for the `apply_accents` option for
             |wilder#statusline_renderer()| and |wilder#float_renderer()|.
 
-            {data} should be a dictionary containing the key `pcre2_pattern`.
-            The value of `pcre2_pattern` should be a PCRE2 pattern with
-            capture groups.
-
-            Returns a list of [{start}, {end}] elements, where each element
-            defines the start and end of a captured group. For multi-byte
-            strings, the start and end are byte indices.
+            See |wilder#python_pcre2_extract_captures()|.
 
             The pcre2 package source can be found at
             `https://github.com/mah0x211/lua-pcre2` and can be installed with

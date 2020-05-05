@@ -126,7 +126,7 @@ endfunction
 
 function wilder#python_pcre2_extract_captures(ctx, data, str)
   if !has_key(a:data, 'pcre2_pattern')
-    return []
+    return 0
   endif
 
   return  _wilder_python_extract_captures(a:data['pcre2_pattern'], a:str)
@@ -134,7 +134,7 @@ endfunction
 
 function wilder#lua_pcre2_extract_captures(ctx, data, str)
   if !has_key(a:data, 'pcre2_pattern')
-    return []
+    return 0
   endif
 
   let l:captures = luaeval(

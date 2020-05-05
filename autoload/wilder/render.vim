@@ -276,18 +276,24 @@ function! s:draw_xs(ctx, result, apply_accents) abort
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      if a:apply_accents isnot 0
+      let l:accents = 0
+      if !empty(a:apply_accents)
         let l:data = type(a:result) is v:t_dict ?
               \ get(a:result, 'data', {}) :
               \ {}
-        let l:accents = a:apply_accents({}, l:data, l:x)
-        let l:chunks = s:accents_to_chunks(
-              \ l:x,
-              \ l:accents,
-              \ a:ctx.highlights[l:selected == 0 ? 'selected' : 'default'],
-              \ a:ctx.highlights[l:selected == 0 ? 'selected_accent' : 'accent'])
-        let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
-      else
+        let l:accents = s:apply_accents(a:apply_accents, l:data, l:x)
+
+        if l:accents isnot 0
+          let l:chunks = s:accents_to_chunks(
+                \ l:x,
+                \ l:accents,
+                \ a:ctx.highlights[l:selected == 0 ? 'selected' : 'default'],
+                \ a:ctx.highlights[l:selected == 0 ? 'selected_accent' : 'accent'])
+          let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
+        endif
+      endif
+
+      if l:accents is 0
         let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
         call add(l:res, [l:x, a:ctx.highlights[l:selected == 0 ? 'selected' : 'default']])
       endif
@@ -311,18 +317,24 @@ function! s:draw_xs(ctx, result, apply_accents) abort
 
     let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
 
-    if a:apply_accents isnot 0
+    let l:accents = 0
+    if !empty(a:apply_accents)
       let l:data = type(a:result) is v:t_dict ?
             \ get(a:result, 'data', {}) :
             \ {}
-      let l:accents = a:apply_accents({}, l:data, l:x)
-      let l:s =  s:accents_to_chunks(
-            \ l:x,
-            \ l:accents,
-            \ a:ctx.highlights[l:current == l:selected ? 'selected' : 'default'],
-            \ a:ctx.highlights[l:current == l:selected ? 'selected_accent' : 'accent'])
-      let l:res += s
-    else
+      let l:accents = s:apply_accents(a:apply_accents, l:data, l:x)
+
+      if l:accents isnot 0
+        let l:chunks = s:accents_to_chunks(
+              \ l:x,
+              \ l:accents,
+              \ a:ctx.highlights[l:selected == l:current ? 'selected' : 'default'],
+              \ a:ctx.highlights[l:selected == l:current ? 'selected_accent' : 'accent'])
+        let l:res += chunks
+      endif
+    endif
+
+    if l:accents is 0
       call add(l:res, [l:x, a:ctx.highlights[l:current == l:selected ? 'selected' : 'default']])
     endif
 
@@ -332,6 +344,17 @@ function! s:draw_xs(ctx, result, apply_accents) abort
 
   call add(l:res, [repeat(' ', l:space - l:len)])
   return l:res
+endfunction
+
+function! s:apply_accents(apply_accents, data, x)
+  for l:Apply in a:apply_accents
+    let l:accents = l:Apply({}, a:data, a:x)
+    if l:accents isnot 0
+      return l:accents
+    endif
+  endfor
+
+  return 0
 endfunction
 
 function! s:accents_to_chunks(str, accents, hl, accent_hl) abort
