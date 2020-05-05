@@ -375,9 +375,14 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
         \ a:res.expand ==# 'shellcmd'
 
     return {ctx -> _wilder_python_get_file_completion(
-          \ ctx, getcwd(), l:expand_arg, a:res.expand,
+          \ ctx,
+          \ getcwd(),
+          \ l:expand_arg,
+          \ a:res.expand,
           \ get(a:res, 'has_wildcard', 0),
-          \ get(a:res, 'path_prefix', ''))}
+          \ get(a:res, 'path_prefix', ''),
+          \ &wildignore,
+          \ &path)}
   endif
 
   if a:res.expand ==# 'user'

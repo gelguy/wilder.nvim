@@ -11,6 +11,7 @@ wilder                                *wilder*
 5. Renderer                         |wilder-renderer|
 6. API                              |wilder-api|
 7. Configurations                   |wilder-configurations|
+8. FAQs                             |wilder-faqs|
 
 ==============================================================================
 1. Introduction                     *wilder-introduction*
@@ -1544,6 +1545,15 @@ Airline/Lightline Theme Renderer~
           \ ],
           \ }))
 <
+
+==============================================================================
+8. FAQs                             *wilder-faqs*
+
+a. Error: Vim(return):E475: Invalid argument: Channel doesn't exist
+   Error: Error invoking '...' on channel {id}: Invalid channel: {id}
+
+Try updating both Python and the `pynvim` package to the latest version. Also
+check whether the OS is terminating the Python process due to high load.
 
 ==============================================================================
  vim:tw=78:ts=4:ft=help:norl:expandtab:

@@ -124,12 +124,13 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
-function wilder#python_pcre2_extract_captures(ctx, data, str)
+function wilder#python_pcre2_extract_captures(ctx, data, str, ...)
   if !has_key(a:data, 'pcre2_pattern')
     return 0
   endif
 
-  return  _wilder_python_extract_captures(a:data['pcre2_pattern'], a:str)
+  let l:engine = get(a:, 1, 're')
+  return _wilder_pcre2_extract_captures(a:data['pcre2_pattern'], a:str, l:engine)
 endfunction
 
 function wilder#lua_pcre2_extract_captures(ctx, data, str)

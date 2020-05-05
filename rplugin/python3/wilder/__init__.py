@@ -75,7 +75,7 @@ class Wilder(object):
             else:
                 self.nvim.async_call(self.handle, ctx, res)
 
-    @neovim.function('_wilder_init', sync=True, allow_nested=True)
+    @neovim.function('_wilder_init', sync=True)
     def init(self, args):
         if self.has_init:
             return
@@ -88,7 +88,7 @@ class Wilder(object):
         t = threading.Thread(target=self.consumer, daemon=True)
         t.start()
 
-    @neovim.function('_wilder_python_sleep', sync=False)
+    @neovim.function('_wilder_python_sleep', sync=False, allow_nested=True)
     def sleep(self, args):
         self.run_in_background(self.sleep_handler, args)
 
@@ -99,7 +99,7 @@ class Wilder(object):
         time.sleep(t)
         self.queue.put((ctx, x,))
 
-    @neovim.function('_wilder_python_search', sync=False, allow_nested=True)
+    @neovim.function('_wilder_python_search', sync=False)
     def search(self, args):
         if args[2] == "":
             self.handle(args[1], [])
@@ -145,7 +145,7 @@ class Wilder(object):
             with self.lock:
                 self.events.remove(event)
 
-    @neovim.function('_wilder_python_uniq', sync=False)
+    @neovim.function('_wilder_python_uniq', sync=False, allow_nested=True)
     def uniq(self, args):
         self.run_in_background(self.uniq_handler, args)
 
@@ -178,10 +178,8 @@ class Wilder(object):
 
     @neovim.function('_wilder_python_get_file_completion', sync=False, allow_nested=True)
     def get_file_completion(self, args):
-        wildignore = self.nvim.options.get('wildignore')
-
         if args[3] == 'file_in_path':
-            path_opt = self.nvim.options.get('path') if args[3] == 'file_in_path' else ''
+            path_opt = args[7] if args[3] == 'file_in_path' else ''
             directories = path_opt.split(',')
         elif args[3] == 'shellcmd':
             path = os.environ['PATH']
@@ -189,7 +187,7 @@ class Wilder(object):
         else:
             directories = [args[1]]
 
-        self.run_in_background(self.get_file_completion_handler, args + [directories, wildignore])
+        self.run_in_background(self.get_file_completion_handler, args[:7] + [directories])
 
     def get_file_completion_handler(self,
                                     event,
@@ -199,8 +197,8 @@ class Wilder(object):
                                     expand_type,
                                     has_wildcard,
                                     path_prefix,
-                                    directories,
-                                    wildignore_opt):
+                                    wildignore_opt,
+                                    directories):
         if event.is_set():
             return
 
@@ -343,15 +341,11 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_extract_captures', sync=True, allow_nested=False)
+    @neovim.function('_wilder_pcre2_extract_captures', sync=True)
     def extract_captures(self, args):
         pattern = args[0]
         string = args[1]
-
-        if len(args) >= 3:
-            module_name = args[2]
-        else:
-            module_name = 're'
+        module_name = args[2]
 
         re = importlib.import_module(module_name)
         match = re.match(pattern, string)
@@ -367,7 +361,7 @@ class Wilder(object):
                 continue
 
             byte_start = len(string[: start].encode('utf-8'))
-            byte_end = byte_start + len(string[start : end].encode('utf-8')) - 1
-            captures.append([byte_start, byte_end])
+            byte_len = len(string[start : end].encode('utf-8'))
+            captures.append([byte_start, byte_len])
 
         return captures
