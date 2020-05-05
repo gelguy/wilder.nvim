@@ -1,46 +1,5 @@
 function! wilder#render#renderer#statusline#make(args) abort
-  let l:highlights = copy(get(a:args, 'highlights', {}))
-  let l:state = {
-        \ 'highlights': extend(l:highlights, {
-        \   'default': get(a:args, 'hl', 'StatusLine'),
-        \   'selected': get(a:args, 'selected_hl', 'WildMenu'),
-        \   'error': get(a:args, 'error_hl', 'WildMenu'),
-        \ }, 'keep'),
-        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
-        \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
-        \ 'page': [-1, -1],
-        \ }
-
-  if !has_key(a:args, 'left') && !has_key(a:args, 'right')
-    let l:state.left = [wilder#previous_arrow()]
-    let l:state.right = [wilder#next_arrow()]
-  else
-    let l:state.left = get(a:args, 'left', [])
-    let l:state.right = get(a:args, 'right', [])
-  endif
-
-  if !has_key(l:state.highlights, 'separator')
-    let l:state.highlights.separator =
-          \ get(a:args, 'separator_hl', l:state.highlights['default'])
-  endif
-
-  if !has_key(l:state.highlights, 'accent')
-    let l:state.highlights.accent =
-          \ wilder#hl_with_attr('WilderAccent', l:state.highlights['default'], 'underline')
-  endif
-
-  if !has_key(l:state.highlights, 'selected_accent')
-    let l:state.highlights.selected_accent =
-          \ wilder#hl_with_attr('WilderSelectedAccent', l:state.highlights['selected'], 'underline')
-  endif
-
-  if has_key(a:args, 'apply_accents')
-    if type(a:args['apply_accents']) is v:t_string
-      let l:state.apply_accents = [a:args['apply_accents']]
-    else
-      let l:state.apply_accents = a:args['apply_accents']
-    endif
-  endif
+  let l:state = wilder#render#renderer#prepare_state(a:args)
 
   return {
         \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
@@ -50,33 +9,7 @@ function! wilder#render#renderer#statusline#make(args) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
-  if a:ctx.clear_previous
-    let a:state.page = [-1, -1]
-  endif
-
-  let l:space_used = wilder#render#component_len(
-        \ a:state.left,
-        \ a:ctx,
-        \ a:result)
-
-  let l:space_used += wilder#render#component_len(
-        \ a:state.right,
-        \ a:ctx,
-        \ a:result)
-
-  let a:ctx.space = winwidth(0) - l:space_used
-  let a:ctx.page = a:state.page
-  let a:ctx.separator = a:state.separator
-  let a:ctx.ellipsis = a:state.ellipsis
-
-  let l:page = wilder#render#make_page(a:ctx, a:result)
-  let a:ctx.page = l:page
-  let a:state.page = l:page
-
-  let a:ctx.highlights = a:state.highlights
-
-  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result,
-        \ get(a:state, 'apply_accents', []))
+  let l:chunks = wilder#render#renderer#make_hl_chunks(a:state, a:ctx, a:result)
 
   call s:render_chunks(l:chunks, a:state.highlights['default'])
 endfunction
