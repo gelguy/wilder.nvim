@@ -299,7 +299,7 @@ function! wilder#cmdline#main#do(ctx) abort
       let a:ctx.pos += 1
       let l:arg_start = a:ctx.pos
     else
-      if l:char ==# '\\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
+      if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
         let a:ctx.pos += 1
       endif
     endif
