@@ -98,7 +98,7 @@ pipeline                            *wilder-option-pipeline*
             See |wilder-pipeline|.
 
             Default: |wilder#cmdline_pipeline()| and
-                     |wilder#search_pipeline()| for Vim
+                     |wilder#vim_search_pipeline()| for Vim
                      |wilder#cmdline_pipeline()| and
                      |wilder#python_search_pipeline()| for Neovim with
                                                        Python 3 support
@@ -662,7 +662,7 @@ wilder#cmdline_pipeline([{options}])
 
             `set_pcre2_pattern`
             Optional~
-            When true, sets the `pcre2_pattern` key in
+            When true, sets the `pcre2.pattern` key in
             |wilder-pipeline-result-data| to the pattern used in the default
             fuzzy filtering. This key is used by
             |wilder#python_pcre2_extract_captures()|.
@@ -1439,8 +1439,8 @@ wilder#python_pcre2_extract_captures({ctx}, {data}, {str})
             Helper function for the `apply_accents` option for
             |wilder#statusline_renderer()| and |wilder#float_renderer()|.
 
-            {data} should be a dictionary containing the key `pcre2_pattern`.
-            The value of `pcre2_pattern` should be a PCRE2 pattern with
+            {data} should be a dictionary containing the key `pcre2.pattern`.
+            The value of `pcre2.pattern` should be a PCRE2 pattern with
             capture groups. If the key is not found, returns 0.
 
             Otherwise, returns a list of [{start}, {len}] spans, where each

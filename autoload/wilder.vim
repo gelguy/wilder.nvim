@@ -125,22 +125,24 @@ function! wilder#uniq(xs, ...) abort
 endfunction
 
 function wilder#python_pcre2_extract_captures(ctx, data, str, ...)
-  if !has_key(a:data, 'pcre2_pattern')
+  if !has_key(a:data, 'pcre2.pattern')
     return 0
   endif
 
   let l:engine = get(a:, 1, 're')
-  return _wilder_pcre2_extract_captures(a:data['pcre2_pattern'], a:str, l:engine)
+  let l:pattern = a:data['pcre2.pattern']
+  return _wilder_pcre2_extract_captures(l:pattern, a:str, l:engine)
 endfunction
 
 function wilder#lua_pcre2_extract_captures(ctx, data, str)
-  if !has_key(a:data, 'pcre2_pattern')
+  if !has_key(a:data, 'pcre2.pattern')
     return 0
   endif
 
+  let l:pattern = a:data['pcre2.pattern']
   let l:captures = luaeval(
         \ 'require("wilder").pcre2_extract_captures(_A[1], _A[2])',
-        \ [a:data['pcre2_pattern'], a:str])
+        \ [l:pattern, a:str])
 
   " remove first element which is the matched string
   " convert from [{start+1}, {end+1}] to [{start}, {len}]
@@ -249,22 +251,22 @@ endfunction
 function! wilder#search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
-  let l:result = []
-
   if !get(l:opts, 'skip_check', 0)
-    let l:result = [
+    let l:pipeline = [
           \ wilder#check({_, x -> !empty(x)}),
           \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
           \ ]
+  else
+    let l:pipeline = []
   endif
 
-  let l:result += get(l:opts, 'pipeline', [
+  let l:pipeline += get(l:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
         \ wilder#result_output_escape('^$,*~[]/\'),
         \ ])
 
-  return l:result
+  return l:pipeline
 endfunction
 
 function! wilder#vim_search_pipeline(...) abort
@@ -305,7 +307,7 @@ function! wilder#python_search_pipeline(...) abort
         \ ))
 
   call add(l:pipeline, {ctx, xs -> wilder#result({
-        \ 'data': {'pcre2_pattern': xs[1]},
+        \ 'data': {'pcre2.pattern': xs[1]},
         \ })(ctx, xs[0])})
 
   return wilder#search_pipeline({
