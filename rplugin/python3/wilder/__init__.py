@@ -99,7 +99,7 @@ class Wilder(object):
         time.sleep(t)
         self.queue.put((ctx, x,))
 
-    @neovim.function('_wilder_python_search', sync=False)
+    @neovim.function('_wilder_python_search', sync=True)
     def search(self, args):
         if args[2] == "":
             self.handle(args[1], [])

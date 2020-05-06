@@ -276,24 +276,24 @@ function! s:draw_xs(ctx, result, apply_accents) abort
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      let l:accents = 0
+      let l:spans = 0
       if !empty(a:apply_accents)
         let l:data = type(a:result) is v:t_dict ?
               \ get(a:result, 'data', {}) :
               \ {}
-        let l:accents = s:apply_accents(a:apply_accents, l:data, l:x)
+        let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
 
-        if l:accents isnot 0
-          let l:chunks = s:accents_to_chunks(
+        if l:spans isnot 0
+          let l:chunks = s:spans_to_chunks(
                 \ l:x,
-                \ l:accents,
+                \ l:spans,
                 \ a:ctx.highlights[l:selected == 0 ? 'selected' : 'default'],
                 \ a:ctx.highlights[l:selected == 0 ? 'selected_accent' : 'accent'])
           let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
         endif
       endif
 
-      if l:accents is 0
+      if l:spans is 0
         let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
         call add(l:res, [l:x, a:ctx.highlights[l:selected == 0 ? 'selected' : 'default']])
       endif
@@ -317,24 +317,24 @@ function! s:draw_xs(ctx, result, apply_accents) abort
 
     let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
 
-    let l:accents = 0
+    let l:spans = 0
     if !empty(a:apply_accents)
       let l:data = type(a:result) is v:t_dict ?
             \ get(a:result, 'data', {}) :
             \ {}
-      let l:accents = s:apply_accents(a:apply_accents, l:data, l:x)
+      let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
 
-      if l:accents isnot 0
-        let l:chunks = s:accents_to_chunks(
+      if l:spans isnot 0
+        let l:chunks = s:spans_to_chunks(
               \ l:x,
-              \ l:accents,
+              \ l:spans,
               \ a:ctx.highlights[l:selected == l:current ? 'selected' : 'default'],
               \ a:ctx.highlights[l:selected == l:current ? 'selected_accent' : 'accent'])
         let l:res += chunks
       endif
     endif
 
-    if l:accents is 0
+    if l:spans is 0
       call add(l:res, [l:x, a:ctx.highlights[l:current == l:selected ? 'selected' : 'default']])
     endif
 
@@ -348,37 +348,38 @@ endfunction
 
 function! s:apply_accents(apply_accents, data, x)
   for l:Apply in a:apply_accents
-    let l:accents = l:Apply({}, a:data, a:x)
-    if l:accents isnot 0
-      return l:accents
+    let l:spans = l:Apply({}, a:data, a:x)
+    if l:spans isnot 0
+      return l:spans
     endif
   endfor
 
   return 0
 endfunction
 
-function! s:accents_to_chunks(str, accents, hl, accent_hl) abort
+function! s:spans_to_chunks(str, spans, hl, span_hl) abort
   let l:res = []
 
-  let l:non_accent_start = 0
+  let l:non_span_start = 0
+  let l:end = 0
 
   let l:i = 0
-  while l:i < len(a:accents)
-    let l:accent = a:accents[l:i]
-    let l:start = l:accent[0]
-    let l:end = l:accent[1]
+  while l:i < len(a:spans)
+    let l:span = a:spans[l:i]
+    let l:start = l:span[0]
+    let l:len = l:span[1]
 
     if l:start > 0
-      call add(l:res, [a:str[l:non_accent_start : l:start - 1], a:hl])
+      call add(l:res, [strpart(a:str, l:non_span_start, l:start - l:non_span_start), a:hl])
     endif
 
-    call add(l:res, [a:str[l:start : l:end], a:accent_hl])
+    call add(l:res, [strpart(a:str, l:start, l:len), a:span_hl])
 
-    let l:non_accent_start = l:end + 1
+    let l:non_span_start = l:start + l:len
     let l:i += 1
   endwhile
 
-  call add(l:res, [a:str[l:non_accent_start :], a:hl])
+  call add(l:res, [strpart(a:str, l:non_span_start), a:hl])
 
   return l:res
 endfunction

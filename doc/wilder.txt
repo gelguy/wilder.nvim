@@ -867,15 +867,14 @@ wilder#statusline_renderer([{options}])
             Each function should take a {ctx}, {data} and {candidate} and
             return 0 when accents cannot be applied and return a list
             otherwise.
-            The returned list should consist of [{start}, {end}] spans, where
-            each span defines the start and end of part of the string to be
-            highlighted.  {start} and {end} are inclusive.
-            For multi-byte strings, the start and end are byte indices.
+            The returned list should consist of [{start}, {len}] spans, where
+            each span defines the byte start and byte length of the part of
+            the string to be highlighted to be respectively.
             The spans should be in strictly increasing order and should not
             overlap.
 
-            For example, with {candidate} `abcdef` and result list [[0, 0],
-            [3, 4]], the characters `a`, `d` and `e` will be highlighted with
+            For example, with {candidate} `abcdef` and result list [[0, 1],
+            [3, 2]], the characters `a`, `d` and `e` will be highlighted with
             the `accent` or `selected_accent` highlights.
 
             Returning an empty list will result in no accent highlights.
@@ -1444,9 +1443,9 @@ wilder#python_pcre2_extract_captures({ctx}, {data}, {str})
             The value of `pcre2_pattern` should be a PCRE2 pattern with
             capture groups. If the key is not found, returns 0.
 
-            Otherwise, returns a list of [{start}, {end}] elements, where each
-            element defines the start and end of a captured group. For
-            multi-byte strings, the start and end are byte indices.
+            Otherwise, returns a list of [{start}, {len}] spans, where each
+            element defines the byte start and byte length of a captured
+            group.
 
             Note: This function is slow and should be avoided by users who are
             concerned about performance. Use

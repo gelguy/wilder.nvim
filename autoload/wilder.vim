@@ -143,8 +143,8 @@ function wilder#lua_pcre2_extract_captures(ctx, data, str)
         \ [a:data['pcre2_pattern'], a:str])
 
   " remove first element which is the matched string
-  " decrement all indices by 1 as lua is 1-indexed
-  return map(l:captures[1:], {i, c -> [c[0] - 1, c[1] -1]})
+  " convert from [{start+1}, {end+1}] to [{start}, {len}]
+  return map(l:captures[1:], {i, c -> [c[0] - 1, c[1] - c[0] + 1]})
 endfunction
 
 " pipeline components
