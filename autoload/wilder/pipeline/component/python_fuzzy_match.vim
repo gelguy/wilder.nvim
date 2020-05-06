@@ -28,8 +28,11 @@ function! s:fuzzy_match(args, ctx, x) abort
       else
         let l:i += 1
       endif
-    else
+    elseif l:char ==# toupper(l:char)
       let l:res .= '(' . l:char . ')'
+      let l:i += 1
+    else
+      let l:res .= '(' . l:char . '|' . toupper(l:char) . ')'
       let l:i += 1
     endif
 
