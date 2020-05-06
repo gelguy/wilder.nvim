@@ -8,7 +8,7 @@ local function pcre2_extract_captures(pattern, str)
 	if pattern == cached_pattern then
 		re = cached_re
 	else
-		re = assert(pcre2.new(pattern))
+		re = assert(pcre2.new(pattern, pcre2.UCP, pcre2.UTF))
 		re:jit_compile()
 	end
 
