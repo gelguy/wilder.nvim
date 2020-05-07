@@ -726,11 +726,9 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
 
     let l:Result_fuzzy_filter = wilder#result({
           \ 'value': {ctx, xs, data ->
-          \   get(data, 'cmdline.expand', '') ==# 'help' ?
-          \     xs :
-          \     l:Fuzzy_filter(ctx, xs,
-          \       get(data, 'cmdline.match_arg', ''),
-          \       wilder#cmdline#has_file_args(data['cmdline.expand']))
+          \   l:Fuzzy_filter(ctx, xs,
+          \     get(data, 'cmdline.match_arg', ''),
+          \     wilder#cmdline#has_file_args(data['cmdline.expand']))
           \ }})
   endif
 
