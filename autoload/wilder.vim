@@ -124,29 +124,19 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
-function wilder#python_pcre2_extract_captures(ctx, data, str, ...)
-  if !has_key(a:data, 'pcre2.pattern')
-    return 0
-  endif
-
+function wilder#python_pcre2_extract_captures(pattern, str, ...)
   let l:engine = get(a:, 1, 're')
-  let l:pattern = a:data['pcre2.pattern']
-  return _wilder_pcre2_extract_captures(l:pattern, a:str, l:engine)
+  return _wilder_pcre2_extract_captures(a:pattern, a:str, l:engine)
 endfunction
 
-function wilder#lua_pcre2_extract_captures(ctx, data, str)
-  if !has_key(a:data, 'pcre2.pattern')
-    return 0
-  endif
-
-  let l:pattern = a:data['pcre2.pattern']
-  let l:captures = luaeval(
+function wilder#lua_pcre2_extract_captures(pattern, str)
+  let l:spans = luaeval(
         \ 'require("wilder").pcre2_extract_captures(_A[1], _A[2])',
-        \ [l:pattern, a:str])
+        \ [a:pattern, a:str])
 
   " remove first element which is the matched string
   " convert from [{start+1}, {end+1}] to [{start}, {len}]
-  return map(l:captures[1:], {i, c -> [c[0] - 1, c[1] - c[0] + 1]})
+  return map(l:spans[1:], {i, s -> [s[0] - 1, s[1] - s[0] + 1]})
 endfunction
 
 " pipeline components

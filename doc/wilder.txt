@@ -894,8 +894,10 @@ wilder#statusline_renderer([{options}])
             Example:
 >
             call wilder#set_option('renderer', wilder#statusline_renderer({
-                  \ 'separator':
-                  \     funcref('wilder#python_pcre2_extract_captures'),
+                  \ 'apply_accents': {ctx, data, str ->
+                  \   has_key(data, 'pcre2.pattern') ?
+                  \     wilder#python_pcre2_extract_captures(
+                  \       data['pcre2.pattern'], str) : 0}
                   \ }))
 <
 
@@ -1433,18 +1435,14 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
 <
 
                                     *wilder#python_pcre2_extract_captures()*
-wilder#python_pcre2_extract_captures({ctx}, {data}, {str})
+wilder#python_pcre2_extract_captures({pattern}, {str})
                                     Neovim only~
             Helper function for the `apply_accents` option for
             |wilder#statusline_renderer()| and |wilder#float_renderer()|.
 
-            {data} should be a dictionary containing the key `pcre2.pattern`.
-            The value of `pcre2.pattern` should be a PCRE2 pattern with
-            capture groups. If the key is not found, returns 0.
-
-            Otherwise, returns a list of [{start}, {len}] spans, where each
-            element defines the byte start and byte length of a captured
-            group.
+            Returns a list of [{start}, {len}] spans, where each element is
+            the byte start and byte length of a capture group of the matched
+            regex.
 
             Note: This function is slow and should be avoided by users who are
             concerned about performance. Use
