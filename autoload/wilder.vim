@@ -35,11 +35,11 @@ function! wilder#previous()
 endfunction
 
 function! wilder#resolve(ctx, x)
-  return wilder#pipeline#resolve(a:ctx, a:x)
+  call timer_start(0, {-> wilder#pipeline#resolve(a:ctx, a:x)})
 endfunction
 
 function! wilder#reject(ctx, x)
-  return wilder#pipeline#reject(a:ctx, a:x)
+  call timer_start(0, {-> wilder#pipeline#reject(a:ctx, a:x)})
 endfunction
 
 " DEPRECATED: use wilder#resolve()

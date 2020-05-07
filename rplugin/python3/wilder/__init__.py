@@ -31,7 +31,7 @@ class Wilder(object):
         self.run_id = -1
 
     def handle(self, ctx, x, command='resolve'):
-        self.nvim.call('wilder#pipeline#' + command, ctx, x)
+        self.nvim.call('wilder#' + command, ctx, x)
 
     def echomsg(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echomsg "' + x + '"'))
@@ -99,7 +99,7 @@ class Wilder(object):
         time.sleep(t)
         self.queue.put((ctx, x,))
 
-    @neovim.function('_wilder_python_search', sync=True)
+    @neovim.function('_wilder_python_search', sync=False)
     def search(self, args):
         if args[2] == "":
             self.handle(args[1], [])
