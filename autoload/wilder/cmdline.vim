@@ -893,5 +893,11 @@ function! wilder#cmdline#pipeline(opts) abort
         \ l:getcompletion_pipeline,
         \ ))
 
+  call add(l:pipeline, wilder#result({
+        \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
+        \     'query': get(data, 'cmdline.match_arg', ''),
+        \   })},
+        \ }))
+
   return l:pipeline
 endfunction

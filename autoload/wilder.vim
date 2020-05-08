@@ -264,11 +264,21 @@ function! wilder#search_pipeline(...) abort
     let l:pipeline = []
   endif
 
-  let l:pipeline += get(l:opts, 'pipeline', [
+  let l:search_pipeline = get(l:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
         \ wilder#result_output_escape('^$,*~[]/\'),
         \ ])
+
+  let l:pipeline += [
+        \ wilder#map(
+        \   l:search_pipeline,
+        \   [{ctx, x -> x}]
+        \ ),
+        \ {ctx, xs -> wilder#result({
+        \   'data': {'query': xs[1]},
+        \ })(ctx, xs[0])}
+        \ ]
 
   return l:pipeline
 endfunction
