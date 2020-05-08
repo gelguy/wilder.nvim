@@ -574,6 +574,10 @@ wilder#python_search_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which does Python search.
 
+            Forwards the respective options to |wilder#python_fuzzy_match()|,
+            |wilder#python_fuzzy_delimiter()|, |wilder#python_substring()| and
+            |wilder#python_search()|.
+
             {options} is a dictionary with keys:
             `mode`
             Optional~

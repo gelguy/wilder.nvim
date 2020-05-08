@@ -263,6 +263,18 @@ function! wilder#vim_search_pipeline(...) abort
   return wilder#search_pipeline(get(a:, 1, {}))
 endfunction
 
+function! s:extract_keys(obj, ...)
+  let l:res = {}
+
+  for l:key in a:000
+    if has_key(a:obj, l:key)
+      let l:res[l:key] = a:obj[l:key]
+    endif
+  endfor
+
+  return l:res
+endfunction
+
 function! wilder#python_search_pipeline(...) abort
   let l:opts = get(a:, 1, {})
 
@@ -270,20 +282,19 @@ function! wilder#python_search_pipeline(...) abort
 
   let l:mode = get(l:opts, 'mode', 'substring')
   if l:mode ==# 'fuzzy'
-    call add(l:pipeline, wilder#python_fuzzy_match())
+    call add(l:pipeline, wilder#python_fuzzy_match(
+          \ s:extract_keys(l:opts, 'word')))
   elseif l:mode ==# 'fuzzy_delimiter'
-    call add(l:pipeline, wilder#python_fuzzy_delimiter())
+    call add(l:pipeline, wilder#python_fuzzy_delimiter(
+          \ s:extract_keys(l:opts, 'word', 'delimiter')))
   else
     call add(l:pipeline, wilder#python_substring())
   endif
 
   let l:subpipeline = []
 
-  if has_key(l:opts, 'engine')
-    call add(l:subpipeline, wilder#python_search({'engine': l:opts['engine']}))
-  else
-    call add(l:subpipeline, wilder#python_search())
-  endif
+  call add(l:subpipeline, wilder#python_search(
+        \ s:extract_keys(l:opts, 'max_candidates', 'engine')))
 
   if get(l:opts, 'fuzzy_sort', 0)
     call add(l:subpipeline, {ctx, xs -> wilder#python_fuzzywuzzy(ctx, xs, ctx.input)})
