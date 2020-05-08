@@ -124,12 +124,26 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
-function wilder#python_pcre2_extract_captures(pattern, str, ...)
+function! wilder#pcre2_apply_accents(...)
+  let l:opts = get(a:, 1, {})
+  let l:language = get(l:opts, 'language', 'python')
+
+  if l:language ==# 'lua'
+    return {ctx, data, str -> has_key(data, 'pcre2.pattern') ?
+          \ wilder#lua_pcre2_extract_captures(data['pcre2.pattern'], str) : 0}
+  endif
+
+  let l:engine = get(l:opts, 'engine', 're')
+  return {ctx, data, str -> has_key(data, 'pcre2.pattern') ?
+        \ wilder#python_pcre2_extract_captures(data['pcre2.pattern'], str, l:engine) : 0}
+endfunction
+
+function! wilder#python_pcre2_extract_captures(pattern, str, ...)
   let l:engine = get(a:, 1, 're')
   return _wilder_pcre2_extract_captures(a:pattern, a:str, l:engine)
 endfunction
 
-function wilder#lua_pcre2_extract_captures(pattern, str)
+function! wilder#lua_pcre2_extract_captures(pattern, str)
   let l:spans = luaeval(
         \ 'require("wilder").pcre2_extract_captures(_A[1], _A[2])',
         \ [a:pattern, a:str])

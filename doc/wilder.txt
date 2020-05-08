@@ -668,7 +668,7 @@ wilder#cmdline_pipeline([{options}])
             When true, sets the `pcre2.pattern` key in
             |wilder-pipeline-result-data| to the pattern used in the default
             fuzzy filtering. This key is used by
-            |wilder#python_pcre2_extract_captures()|.
+            |wilder#pcre2_apply_accents()|.
 
             Should be set to false when using a fuzzy filter not based on
             PCRE2.
@@ -890,18 +890,14 @@ wilder#statusline_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#python_pcre2_extract_captures()| is a helper function
-            which can be used to apply accents to the capture groups when
-            using |wilder#cmdline_pipeline()| and
-            |wilder#python_search_pipeline()|.
+            |wilder#pcre2_apply_accents()| is a helper function which can be
+            used to apply accents to the capture groups when using
+            |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
 
             Example:
 >
             call wilder#set_option('renderer', wilder#statusline_renderer({
-                  \ 'apply_accents': {ctx, data, str ->
-                  \   has_key(data, 'pcre2.pattern') ?
-                  \     wilder#python_pcre2_extract_captures(
-                  \       data['pcre2.pattern'], str) : 0}
+                  \ 'apply_accents': wilder#pcre2_apply_accents(),
                   \ }))
 <
 
@@ -1438,37 +1434,43 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
                wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
 
-                                    *wilder#python_pcre2_extract_captures()*
-wilder#python_pcre2_extract_captures({pattern}, {str})
+                                    *wilder#pcre2_apply_accents()*
+wilder#pcre2_apply_accents([{opts}])
                                     Neovim only~
-            Helper function for the `apply_accents` option for
-            |wilder#statusline_renderer()| and |wilder#float_renderer()|.
+                                    pcre2 package required for lua option~
+            Helper function which returns a function for the `apply_accents`
+            option for |wilder#statusline_renderer()| and
+            |wilder#float_renderer()|.
 
-            Returns a list of [{start}, {len}] spans, where each element is
-            the byte start and byte length of a capture group of the matched
-            regex.
+            Returns a function which takes {ctx}, {data} and {candidate} as
+            arguments.
+            If {data} does not contain the key `pcre2.pattern`, returns 0.
+            Otherwise, returns a list of [{start}, {len}] spans, where each
+            span corresponds to the byte start and byte length of a capture
+            group matched by {data}['pcre2.pattern'].
 
-            Note: This function is slow and should be avoided by users who are
-            concerned about performance. Use
-            |wilder#lua_pcre2_extract_captures()| for slightly better
-            performance.
+            {options} is a dictionary with keys:
+            `language`
+            Optional~
+            One of 'python' or 'lua'. If 'lua', uses a lua script to retrieve
+            the results.
+            Otherwise, uses a Python |remote-plugin| function to retrieve the
+            results.
 
-                                    *wilder#lua_pcre2_extract_captures()*
-wilder#lua_pcre2_extract_captures({ctx}, {data}, {str})
-                                    Neovim only~
-                                    Lua pcre2 package required~
-            Helper function for the `apply_accents` option for
-            |wilder#statusline_renderer()| and |wilder#float_renderer()|.
-
-            See |wilder#python_pcre2_extract_captures()|.
-
+            The Lua pcre2 package is required this option is set to 'lua'.
             The pcre2 package source can be found at
             `https://github.com/mah0x211/lua-pcre2` and can be installed with
             `luarocks install pcre2`.
 
-            Note: This function is faster than
-            |wilder#python_pcre2_extract_captures()| but is still slow and
-            should be avoided by users who are concerned about performance.
+            `engine`
+            Optional~
+            The regex engine to use. Only used when `language` is 'python'.
+
+            Default: 're'
+
+            Note: This function is slow and should be avoided by users who are
+            concerned about performance. Using 'lua' is slightly faster, but
+            will still have performance issues.
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*
