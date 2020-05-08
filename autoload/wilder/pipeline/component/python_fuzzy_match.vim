@@ -13,7 +13,9 @@ function! s:fuzzy_match(args, ctx, x) abort
     let l:word = '\w'
   endif
 
-  let l:res = '\b'
+  " starts with word boundary or is preceded by a non-word character
+  let l:res = '(?:\b|^|(?!' . l:word  . '))'
+
   let l:chars = split(a:x, '\zs')
   let l:len = len(l:chars)
 
@@ -23,11 +25,25 @@ function! s:fuzzy_match(args, ctx, x) abort
 
     if l:char ==# '\'
       if l:i+1 < len(l:chars)
-        let l:res .= '(' . l:chars[l:i+1] . ')'
+        let l:res .= '(\' . l:chars[l:i+1] . ')'
         let l:i += 2
       else
+        let l:res .= '(\\)'
         let l:i += 1
       endif
+    elseif l:char ==# '^' ||
+          \ l:char ==# '$' ||
+          \ l:char ==# '*' ||
+          \ l:char ==# '+' ||
+          \ l:char ==# '?' ||
+          \ l:char ==# '|' ||
+          \ l:char ==# '(' ||
+          \ l:char ==# ')' ||
+          \ l:char ==# '{' ||
+          \ l:char ==# '}' ||
+          \ l:char ==# '[' ||
+          \ l:char ==# ']'
+      let l:res .= '(\' . l:char . ')'
     elseif l:char ==# toupper(l:char)
       let l:res .= '(' . l:char . ')'
       let l:i += 1

@@ -41,6 +41,21 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
         let l:i += 1
       endif
       let l:escaped = 1
+    elseif l:char ==# '^' ||
+          \ l:char ==# '$' ||
+          \ l:char ==# '*' ||
+          \ l:char ==# '+' ||
+          \ l:char ==# '?' ||
+          \ l:char ==# '|' ||
+          \ l:char ==# '(' ||
+          \ l:char ==# ')' ||
+          \ l:char ==# '{' ||
+          \ l:char ==# '}' ||
+          \ l:char ==# '[' ||
+          \ l:char ==# ']'
+        let l:char = '\' . l:char
+        let l:i += 1
+        let l:escaped = 1
     else
       let l:i += 1
       let l:escaped = 0

@@ -169,7 +169,6 @@ call wilder#set_option('renderer', wilder#float_renderer({
       \ 'highlights': {
       \   'default': s:hl,
       \ },
-      \ 'apply_accents': funcref('wilder#lua_pcre2_extract_captures'), " requires Lua pcre2 package
       \ 'separator': ' · ',
       \ 'left': [{'value': [
       \    wilder#condition(

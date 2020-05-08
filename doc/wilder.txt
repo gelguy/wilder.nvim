@@ -385,7 +385,7 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
                   \       wilder#check({ctx, x -> empty(x)}),
                   \       wilder#history(),
                   \     ],
-                  \     wilder#search_pipeline(),
+                  \     wilder#vim_search_pipeline(),
                   \   ),
                   \   ]
 <
@@ -559,6 +559,9 @@ wilder#vim_search_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which does Vim substring search.
 
+            Sets the `query` key in
+            |wilder-pipeline-result-data| to the input of the pipeline.
+
             {options} is a dictionary with keys:
             `skip_check`
             Optional~
@@ -577,6 +580,9 @@ wilder#python_search_pipeline([{options}])
             Forwards the respective options to |wilder#python_fuzzy_match()|,
             |wilder#python_fuzzy_delimiter()|, |wilder#python_substring()| and
             |wilder#python_search()|.
+
+            Sets the `query` key in
+            |wilder-pipeline-result-data| to the input of the pipeline.
 
             {options} is a dictionary with keys:
             `mode`
@@ -617,6 +623,9 @@ wilder#cmdline_pipeline([{options}])
             completions.
             For completions during |:substitute|, use
             |wilder#substitute_pipeline()|.
+
+            Sets the `query` key in
+            |wilder-pipeline-result-data| to the completion argument.
 
             Note: Custom completions for user commands are only available in
             Neovim. Wilder will be hidden when attempting to complete user
@@ -862,6 +871,7 @@ wilder#statusline_renderer([{options}])
 
             `apply_accents`
             Optional~
+            Experimental~
             A list of functions used to apply the `accent` and
             `selected_accent` highlights to a candidate. For convenience, also
             accepts a single function, which will be converted to a singleton
@@ -890,18 +900,12 @@ wilder#statusline_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#pcre2_apply_accents()| is a helper function which can be
+            |wilder#query_common_subsequence()| and
+            |wilder#pcre2_apply_accents()| are helper functions which can be
             used to apply accents to the capture groups when using
             |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
 
-            Example:
->
-            call wilder#set_option('renderer', wilder#statusline_renderer({
-                  \ 'apply_accents': wilder#pcre2_apply_accents(),
-                  \ }))
-<
-
-            Default: Empty
+            Default: wilder#query_common_subsequence()
 
             `hl`
             Deprecated: Use `highlights`.
@@ -1434,6 +1438,37 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
                wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
 
+                                    *wilder#query_common_subsequence()*
+wilder#query_common_subsequence([{opts}])
+                                    python option only for Neovim~
+            Helper function which returns a function for the `apply_accents`
+            option for |wilder#statusline_renderer()| and
+            |wilder#float_renderer()|.
+
+            Returns a function which takes {ctx}, {data} and {candidate} as
+            arguments.
+            If {data} does not contain the key `query`, returns 0.  Otherwise,
+            calculates the common subsequence between {candidate} and
+            {data}['query'] and returns a list of [{start}, {len}] spans,
+            where each span corresponds to the byte start and byte length of a
+            subsequence block.
+
+            {options} is a dictionary with keys:
+            `language`
+            Optional~
+            One of 'vim' or 'python'. If 'python', uses a Python
+            |remote-plugin| function to retrieve the results.
+            Otherwise, uses a Vim function.
+
+            Default: 'vim'
+
+            `case_sensitive`
+            Optional~
+            If true, the matching is case insensitive, and case insensitive
+            otherwise.
+
+            Default: 0
+
                                     *wilder#pcre2_apply_accents()*
 wilder#pcre2_apply_accents([{opts}])
                                     Neovim only~
@@ -1461,6 +1496,8 @@ wilder#pcre2_apply_accents([{opts}])
             The pcre2 package source can be found at
             `https://github.com/mah0x211/lua-pcre2` and can be installed with
             `luarocks install pcre2`.
+
+            Default: 'python'
 
             `engine`
             Optional~
@@ -1500,7 +1537,7 @@ Pipelines (Neovim only)~
           \       wilder#history(100),
           \     ],
           \     wilder#cmdline_pipeline(),
-          \     wilder#search_pipeline({
+          \     wilder#python_search_pipeline({
           \       'fuzzy': 1,
           \     }),
           \   ),

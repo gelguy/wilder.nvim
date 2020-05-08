@@ -124,6 +124,70 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
+function! wilder#query_common_subsequence(...)
+  let l:opts = get(a:, 1, {})
+  let l:language = get(l:opts, 'language', 'vim')
+  let l:case_sensitive = get(l:opts, 'case_sensitive', 0)
+
+  if l:language ==# 'python'
+    return {ctx, data, str -> has_key(data, 'query') ?
+          \ wilder#python_common_subsequence(
+          \   str, data['query'], l:case_sensitive) : 0}
+  endif
+
+  return {ctx, data, str -> has_key(data, 'query') ?
+        \ wilder#vim_common_subsequence(
+        \   str, data['query'], l:case_sensitive) : 0}
+endfunction
+
+function! wilder#vim_common_subsequence(str, query, case_sensitive)
+  let l:split_str = split(a:str, '\zs')
+  let l:split_query = split(a:query, '\zs')
+
+  let l:spans = []
+  let l:span = [-1, -1]
+
+  let l:byte_pos = 0
+  let l:i = 0
+  let l:j = 0
+  while l:i < len(l:split_str) && l:j < len(l:split_query)
+    if a:case_sensitive
+      let l:match = l:split_str[l:i] ==# l:split_query[l:j]
+    else
+      let l:match = l:split_str[l:i] ==? l:split_query[l:j]
+    endif
+
+    if l:match
+      let l:j += 1
+
+      if l:span[0] == -1
+        let l:span[0] = l:byte_pos
+        let l:span[1] = strlen(l:split_str[l:i])
+      else
+        let l:span[1] += strlen(l:split_str[l:i])
+      endif
+    endif
+
+    if !l:match && l:span[0] != -1
+      call add(l:spans, l:span)
+      let l:span = [-1, -1]
+    endif
+
+    let l:byte_pos += strlen(l:split_str[l:i])
+    let l:i += 1
+  endwhile
+
+  if l:span[0] != -1
+    call add(l:spans, l:span)
+  endif
+
+  return l:spans
+endfunction
+
+function! wilder#python_common_subsequence(str, query, case_sensitive)
+  return _wilder_python_common_subsequence(a:str, a:query, a:case_sensitive)
+endfunction
+
 function! wilder#pcre2_apply_accents(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'python')
@@ -140,7 +204,7 @@ endfunction
 
 function! wilder#python_pcre2_extract_captures(pattern, str, ...)
   let l:engine = get(a:, 1, 're')
-  return _wilder_pcre2_extract_captures(a:pattern, a:str, l:engine)
+  return _wilder_python_pcre2_extract_captures(a:pattern, a:str, l:engine)
 endfunction
 
 function! wilder#lua_pcre2_extract_captures(pattern, str)
@@ -193,7 +257,7 @@ function! wilder#sequence(...) abort
 endfunction
 
 function! wilder#vim_substring() abort
-  return {_, x -> x . '\k*'}
+  return {_, x -> x . (x[-1:] ==# '\' ? '\' : '') . '\k*'}
 endfunction
 
 function! wilder#vim_search(...) abort
@@ -205,8 +269,37 @@ function! wilder#vim_sort() abort
   return {_, x -> sort(copy(x))}
 endfunction
 
+function! wilder#escape_python(str, ...) abort
+  let l:escaped_chars = get(a:, 1, '^$*+?|(){}[]')
+
+  let l:chars = split(a:str, '\zs')
+  let l:res = ''
+
+  let l:i = 0
+  while l:i < len(l:chars)
+    let l:char = l:chars[l:i]
+    if l:char ==# '\'
+      if l:i+1 < len(l:chars)
+        let l:res .= '\' . l:chars[l:i+1]
+        let l:i += 2
+      else
+        let l:res .= '\\'
+        let l:i += 1
+      endif
+    elseif stridx(l:escaped_chars, l:char) != -1
+      let l:res .= '\' . l:char
+      let l:i += 1
+    else
+      let l:res .= l:char
+      let l:i += 1
+    endif
+  endwhile
+
+  return l:res
+endfunction
+
 function! wilder#python_substring() abort
-  return {_, x -> '(' . x . ')\w*'}
+  return {_, x -> '(' . wilder#escape_python(x) . ')\w*'}
 endfunction
 
 function! wilder#python_fuzzy_match(...) abort
@@ -267,7 +360,7 @@ function! wilder#search_pipeline(...) abort
   let l:search_pipeline = get(l:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
-        \ wilder#result_output_escape('^$,*~[]/\'),
+        \ wilder#result_output_escape('^$*~[]/\'),
         \ ])
 
   let l:pipeline += [
@@ -324,7 +417,7 @@ function! wilder#python_search_pipeline(...) abort
     call add(l:subpipeline, {ctx, xs -> wilder#python_fuzzywuzzy(ctx, xs, ctx.input)})
   endif
 
-  call add(l:subpipeline, wilder#result_output_escape('^$,*~[]/\'))
+  call add(l:subpipeline, wilder#result_output_escape('^$*~[]/\'))
 
   call add(l:pipeline, wilder#map(
         \ l:subpipeline,

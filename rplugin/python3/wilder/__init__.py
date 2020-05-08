@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+import difflib
 import fnmatch
 import functools
 import glob
@@ -341,7 +342,29 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_pcre2_extract_captures', sync=True)
+    @neovim.function('_wilder_python_common_subsequence', sync=True)
+    def common_subsequence(self, args):
+        string = args[0]
+        query = args[1]
+        case_sensitive = args[2]
+
+        if not case_sensitive:
+            string = string.upper()
+            query = query.upper()
+
+        result = []
+        blocks = difflib.SequenceMatcher(None, string, query).get_matching_blocks()
+        for block in blocks[: -1]:
+            start = block.a
+            end = block.a + block.size
+
+            byte_start = len(string[: start].encode('utf-8'))
+            byte_len = len(string[start : end].encode('utf-8'))
+            result.append([byte_start, byte_len])
+
+        return result
+
+    @neovim.function('_wilder_python_pcre2_extract_captures', sync=True)
     def extract_captures(self, args):
         pattern = args[0]
         string = args[1]

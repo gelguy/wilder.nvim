@@ -45,6 +45,8 @@ function! wilder#render#renderer#prepare_state(args) abort
     else
       let l:state.apply_accents = l:Apply_accents
     endif
+  else
+      let l:state.apply_accents = [wilder#query_common_subsequence()]
   endif
 
   return l:state
