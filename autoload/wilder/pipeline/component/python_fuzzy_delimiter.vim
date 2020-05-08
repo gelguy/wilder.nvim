@@ -10,7 +10,7 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
       let l:delimiter = a:args.delimiter
     endif
   else
-    let l:delimiter = '[_-]'
+    let l:delimiter = '(?:[^\w\s]|-)'
   endif
 
   if has_key(a:args, 'word')
