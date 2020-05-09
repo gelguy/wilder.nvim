@@ -376,6 +376,7 @@ function! s:draw(...) abort
             \ 'clear_previous': get(s:, 'clear_selection', 0),
             \ 'selected': s:selected,
             \ 'direction': l:direction,
+            \ 'run_id': s:result_run_id,
             \ 'done': s:run_id == s:result_run_id,
             \ }
       let s:clear_selection = 0

@@ -253,6 +253,9 @@ function! wilder#render#normalise(hl, chunks) abort
   return l:res
 endfunction
 
+let s:apply_accents_cache = {}
+let s:apply_accents_run_id = -1
+
 function! s:draw_xs(ctx, result, apply_accents) abort
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
@@ -262,6 +265,12 @@ function! s:draw_xs(ctx, result, apply_accents) abort
   if l:page == [-1, -1]
     return [[repeat(' ', l:space), a:ctx.highlights['default']]]
   endif
+
+  let l:use_apply_accents_cache = a:ctx.run_id == s:apply_accents_run_id
+  if !l:use_apply_accents_cache
+    let s:apply_accents_cache = {}
+  endif
+  let s:apply_accents_run_id = a:ctx.run_id
 
   let l:start = l:page[0]
   let l:end = l:page[1]
@@ -281,7 +290,12 @@ function! s:draw_xs(ctx, result, apply_accents) abort
         let l:data = type(a:result) is v:t_dict ?
               \ get(a:result, 'data', {}) :
               \ {}
-        let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
+        if l:use_apply_accents_cache && has_key(s:apply_accents_cache, l:x)
+          let l:spans = s:apply_accents_cache[l:x]
+        else
+          let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
+          let s:apply_accents_cache[l:x] = l:spans
+        endif
 
         if l:spans isnot 0
           let l:chunks = s:spans_to_chunks(
@@ -322,7 +336,12 @@ function! s:draw_xs(ctx, result, apply_accents) abort
       let l:data = type(a:result) is v:t_dict ?
             \ get(a:result, 'data', {}) :
             \ {}
-      let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
+      if l:use_apply_accents_cache && has_key(s:apply_accents_cache, l:x)
+        let l:spans = s:apply_accents_cache[l:x]
+      else
+        let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
+        let s:apply_accents_cache[l:x] = l:spans
+      endif
 
       if l:spans isnot 0
         let l:chunks = s:spans_to_chunks(

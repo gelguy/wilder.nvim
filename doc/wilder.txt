@@ -794,6 +794,10 @@ A renderer is a dictionary containing the following keys:
                 A boolean to indicate whether the previous state should be
                 cleared.
 
+                `run_id`
+                The `run_id` from the context which returned {result}. See
+                |wilder-pipeline-context|.
+
             `pre_hook`
             Optional~
             A function which takes a {ctx}. This function is called when
