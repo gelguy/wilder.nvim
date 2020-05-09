@@ -400,10 +400,10 @@ function! wilder#python_search_pipeline(...) abort
   let l:mode = get(l:opts, 'mode', 'substring')
   if l:mode ==# 'fuzzy'
     call add(l:pipeline, wilder#python_fuzzy_match(
-          \ s:extract_keys(l:opts, 'word')))
+          \ s:extract_keys(l:opts, 'word', 'start_at_boundary')))
   elseif l:mode ==# 'fuzzy_delimiter'
     call add(l:pipeline, wilder#python_fuzzy_delimiter(
-          \ s:extract_keys(l:opts, 'word', 'delimiter')))
+          \ s:extract_keys(l:opts, 'word', 'delimiter', 'start_at_boundary')))
   else
     call add(l:pipeline, wilder#python_substring())
   endif

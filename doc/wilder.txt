@@ -440,9 +440,17 @@ wilder#python_fuzzy_match([{options}])
 
             {options} is a dictionary with keys:
             `word`
+            Optional~
             Word character for the Python regex.
 
             Default: '\w'
+
+            `start_at_boundary`
+            Optional~
+            If true, the regex will only match at the beginning of a word
+            boundary.
+
+            Default: 1
 
                                     *wilder#python_fuzzy_delimiter()*
 wilder#python_fuzzy_delimiter([{options}])
@@ -460,14 +468,23 @@ wilder#python_fuzzy_delimiter([{options}])
 
             {options} is a dictionary with keys:
             `word`
+            Optional~
             Python regex for word characters
 
             Default: '\w'
 
             `delimiter`
+            Optional~
             Python regex for delimiter characters
 
             Default: '(?:[^\w\s]|_)' non-word non-space character or '_'
+
+            `start_at_boundary`
+            Optional~
+            If true, the regex will only match at the beginning of a word
+            boundary.
+
+            Default: 1
 
 wilder#python_search([{options}])   *wilder#python_search()*
                                     Neovim only~
@@ -606,6 +623,14 @@ wilder#python_search_pipeline([{options}])
             |wilder#python_fuzzywuzzy()|.
 
             Default: 0
+
+            `start_at_boundary`
+            Optional~
+            Passed to |wilder#python_fuzzy_match()| and
+            |wilder#python_fuzzy_delimiter()|.  Only used if `mode` is 'fuzzy'
+            or 'fuzzy_delimiter'.
+
+            Default: 1
 
             `skip_check`
             Optional~

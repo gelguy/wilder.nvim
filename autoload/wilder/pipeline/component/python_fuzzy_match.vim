@@ -13,8 +13,12 @@ function! s:fuzzy_match(args, ctx, x) abort
     let l:word = '\w'
   endif
 
-  " starts with word boundary or is preceded by a non-word character
-  let l:res = '(?:\b|^|(?!' . l:word  . '))'
+  if get(a:args, 'start_at_boundary', 0)
+    " starts with word boundary or is preceded by a non-word character
+    let l:res = '(?:\b|^|(?!' . l:word  . '))'
+  else
+    let l:res = ''
+  endif
 
   let l:chars = split(a:x, '\zs')
   let l:len = len(l:chars)

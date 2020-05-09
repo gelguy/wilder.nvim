@@ -64,8 +64,10 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
     if l:first
       if l:escaped || l:char ==# toupper(l:char)
         let l:res .= '(' . l:char . ')'
-      else
+      elseif get(a:args, 'start_at_boundary', 0)
         let l:res .= '(?:(?:(?<=' . l:delimiter . ')|\b)('. l:char . ')|(' . toupper(l:char) . '))'
+      else
+        let l:res .= '('. l:char . '|' . toupper(l:char) . ')'
       endif
 
       let l:first = 0
