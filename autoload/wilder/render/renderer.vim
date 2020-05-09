@@ -30,12 +30,14 @@ function! wilder#render#renderer#prepare_state(args) abort
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
-          \ wilder#hl_with_attr('WilderAccent', l:state.highlights['default'], 'underline')
+          \ wilder#hl_with_attr('WilderAccent',
+          \   l:state.highlights['default'], 'underline', 'bold')
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
     let l:state.highlights.selected_accent =
-          \ wilder#hl_with_attr('WilderSelectedAccent', l:state.highlights['selected'], 'underline')
+          \ wilder#hl_with_attr('WilderSelectedAccent', l:state.highlights['selected'],
+          \   'underline', 'bold')
   endif
 
   if has_key(a:args, 'apply_accents')
@@ -46,7 +48,7 @@ function! wilder#render#renderer#prepare_state(args) abort
       let l:state.apply_accents = l:Apply_accents
     endif
   else
-      let l:state.apply_accents = [wilder#query_common_subsequence()]
+      let l:state.apply_accents = []
   endif
 
   return l:state

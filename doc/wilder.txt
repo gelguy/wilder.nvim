@@ -833,14 +833,14 @@ wilder#statusline_renderer([{options}])
                 The highlight group used for accents. See the `apply_accents`
                 option.
 
-                Default: The `default` highlight with |underline|
+                Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
                 The highlight group used for accents for a selected candidate.
                 See the `apply_accents` option.
 
-                Default: The `selected` highlight with |underline|
+                Default: The `selected` highlight with |underline| and |bold|
 
             `separator`
             Optional~
@@ -905,7 +905,14 @@ wilder#statusline_renderer([{options}])
             used to apply accents to the capture groups when using
             |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
 
-            Default: wilder#query_common_subsequence()
+            Example:
+>
+            call wilder#set_option('renderer', wilder#statusline_renderer({
+                  \ 'apply_accents': wilder#query_common_subsequence(),
+                  \ }))
+<
+
+            Default: []
 
             `hl`
             Deprecated: Use `highlights`.
