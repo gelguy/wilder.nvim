@@ -6,6 +6,7 @@ import functools
 import glob
 import importlib
 from importlib.util import find_spec
+import itertools
 import multiprocessing
 import os
 from pathlib import Path
@@ -29,6 +30,7 @@ class Wilder(object):
         self.events = []
         self.lock = threading.Lock()
         self.executor = None
+        self.cached_buffer = {'bufnr': -1, 'undotree_seq_cur': -1, 'buffer': []}
         self.run_id = -1
 
     def handle(self, ctx, x, command='resolve'):
@@ -106,11 +108,17 @@ class Wilder(object):
             self.handle(args[1], [])
             return
 
-        line_num = self.nvim.current.window.cursor[0] - 1
-        current_buf = self.nvim.current.buffer
-        buf = current_buf[line_num:] + current_buf[:line_num]
+        bufnr = self.nvim.current.buffer.number
+        undotree_seq_cur = self.nvim.eval('undotree().seq_cur')
+        if (bufnr != self.cached_buffer['bufnr'] or
+                undotree_seq_cur != self.cached_buffer['undotree_seq_cur']):
+            self.cached_buffer = {
+                'bufnr': bufnr,
+                'undotree_seq_cur': undotree_seq_cur,
+                'buffer': list(self.nvim.current.buffer),
+                }
 
-        self.run_in_background(self.search_handler, args + [buf])
+        self.run_in_background(self.search_handler, args + [self.cached_buffer['buffer']])
 
     def search_handler(self, event, ctx, opts, x, buf):
         if event.is_set():
