@@ -22,7 +22,8 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  let l:chunks = wilder#render#renderer#make_hl_chunks(a:state, a:ctx, a:result)
+  let l:chunks = wilder#render#renderer#make_hl_chunks(
+        \ a:state, &columns, a:ctx, a:result)
 
   let l:in_sandbox = 0
   try

@@ -54,7 +54,7 @@ function! wilder#render#renderer#prepare_state(args) abort
   return l:state
 endfunction
 
-function! wilder#render#renderer#make_hl_chunks(state, ctx, result) abort
+function! wilder#render#renderer#make_hl_chunks(state, width, ctx, result) abort
   if a:ctx.clear_previous
     let a:state.page = [-1, -1]
   endif
@@ -69,7 +69,7 @@ function! wilder#render#renderer#make_hl_chunks(state, ctx, result) abort
         \ a:ctx,
         \ a:result)
 
-  let a:ctx.space = &columns - l:space_used
+  let a:ctx.space = a:width - l:space_used
   let a:ctx.page = a:state.page
   let a:ctx.separator = a:state.separator
   let a:ctx.ellipsis = a:state.ellipsis

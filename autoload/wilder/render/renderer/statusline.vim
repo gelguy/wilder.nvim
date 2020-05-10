@@ -9,7 +9,8 @@ function! wilder#render#renderer#statusline#make(args) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
-  let l:chunks = wilder#render#renderer#make_hl_chunks(a:state, a:ctx, a:result)
+  let l:chunks = wilder#render#renderer#make_hl_chunks(
+        \ a:state, winwidth(0), a:ctx, a:result)
 
   call s:render_chunks(l:chunks, a:state.highlights['default'])
 endfunction
