@@ -629,20 +629,24 @@ function! s:get_attrs_as_list(attrs) abort
   if get(a:attrs, 'bold', 0)
     call add(l:res, 'bold')
   endif
-  if get(a:attrs, 'italic', 0)
-    call add(l:res, 'italic')
-  endif
-  if get(a:attrs, 'reverse', 0)
-    call add(l:res, 'reverse')
-  endif
-  if get(a:attrs, 'standout', 0)
-    call add(l:res, 'standout')
-  endif
   if get(a:attrs, 'underline', 0)
     call add(l:res, 'underline')
   endif
   if get(a:attrs, 'undercurl', 0)
     call add(l:res, 'undercurl')
+  endif
+  if get(a:attrs, 'strikethrough', 0)
+    call add(l:res, 'strikethrough')
+  endif
+  if get(a:attrs, 'reverse', 0) ||
+        \ get(a:attrs, 'inverse', 0)
+    call add(l:res, 'reverse')
+  endif
+  if get(a:attrs, 'italic', 0)
+    call add(l:res, 'italic')
+  endif
+  if get(a:attrs, 'standout', 0)
+    call add(l:res, 'standout')
   endif
 
   return l:res

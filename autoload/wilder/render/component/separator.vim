@@ -24,25 +24,25 @@ function! s:hl(name, from, to) abort
   let l:cterm_hl = {}
   let l:gui_hl = {}
 
-  if get(l:from_hl[1], 'reverse', 0)
+  if get(l:from_hl[1], 'reverse', 0) || get(l:from_hl[1], 'standout', 0)
     let l:cterm_hl.foreground = get(l:from_hl[1], 'foreground', 'NONE')
   else
     let l:cterm_hl.foreground = get(l:from_hl[1], 'background', 'NONE')
   endif
 
-  if get(l:to_hl[1], 'reverse', 0)
+  if get(l:to_hl[1], 'reverse', 0) || get(l:to_hl[1], 'standout', 0)
     let l:cterm_hl.background = get(l:to_hl[1], 'foreground', 'NONE')
   else
     let l:cterm_hl.background = get(l:to_hl[1], 'background', 'NONE')
   endif
 
-  if get(l:from_hl[2], 'reverse', 0)
+  if get(l:from_hl[2], 'reverse', 0) || get(l:from_hl[2], 'standout', 0)
     let l:gui_hl.foreground = get(l:from_hl[2], 'foreground', 'NONE')
   else
     let l:gui_hl.foreground = get(l:from_hl[2], 'background', 'NONE')
   endif
 
-  if get(l:to_hl[2], 'reverse', 0)
+  if get(l:to_hl[2], 'reverse', 0) || get(l:to_hl[2], 'standout', 0)
     let l:gui_hl.background = get(l:to_hl[2], 'foreground', 'NONE')
   else
     let l:gui_hl.background = get(l:to_hl[2], 'background', 'NONE')
