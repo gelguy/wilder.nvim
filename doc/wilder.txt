@@ -823,8 +823,9 @@ wilder#statusline_renderer([{options}])
             Returns a renderer which draws the results on the statusline of
             the current window.
 
-            Note: The statusline might be truncated or be rendered wrongly
+            Note: The statusline might be truncated or not update correctly
             when there are too many separate highlight chunks. See |E541|.
+            This can be mitigated by turning off the `apply_accents` option.
 
             {options} is a dictionary with keys:
             `highlights`
