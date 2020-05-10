@@ -373,16 +373,13 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
         \ a:res.expand ==# 'file' ||
         \ a:res.expand ==# 'file_in_path' ||
         \ a:res.expand ==# 'shellcmd'
-
     return {ctx -> _wilder_python_get_file_completion(
           \ ctx,
-          \ getcwd(),
           \ l:expand_arg,
           \ a:res.expand,
           \ get(a:res, 'has_wildcard', 0),
           \ get(a:res, 'path_prefix', ''),
-          \ &wildignore,
-          \ &path)}
+          \ )}
   endif
 
   if a:res.expand ==# 'user'
@@ -394,6 +391,11 @@ endfunction
 
 function! wilder#cmdline#getcompletion(ctx, res) abort
   let l:expand_arg = a:res.expand_arg
+
+  " getting all shellcmds takes a significant amount of time
+  if a:res.expand ==# 'shellcmd' && empty(l:expand_arg)
+    return []
+  endif
 
   if a:res.expand ==# 'dir' ||
         \ a:res.expand ==# 'file' ||

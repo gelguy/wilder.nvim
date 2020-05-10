@@ -185,23 +185,25 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_sort: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_get_file_completion', sync=False, allow_nested=True)
+    @neovim.function('_wilder_python_get_file_completion', sync=False)
     def get_file_completion(self, args):
-        if args[3] == 'file_in_path':
-            path_opt = args[7] if args[3] == 'file_in_path' else ''
+        if args[2] == 'file_in_path':
+            path_opt = self.nvim.eval('&path')
             directories = path_opt.split(',')
-        elif args[3] == 'shellcmd':
+            directories += [self.nvim.eval('expand("%:h")')]
+        elif args[2] == 'shellcmd':
             path = os.environ['PATH']
             directories = path.split(':')
         else:
-            directories = [args[1]]
+            directories = [self.nvim.eval('getcwd()')]
 
-        self.run_in_background(self.get_file_completion_handler, args[:7] + [directories])
+        wildignore_opt = self.nvim.eval('&wildignore')
+
+        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories])
 
     def get_file_completion_handler(self,
                                     event,
                                     ctx,
-                                    working_directory,
                                     expand_arg,
                                     expand_type,
                                     has_wildcard,
