@@ -487,26 +487,23 @@ function! s:to_hl_list(x) abort
     let l:x = a:x
   endif
 
-  if type(l:x) is v:t_list
-    if type(l:x[0]) is v:t_list
-      return l:x
-    endif
-
-    let l:term_hl = s:get_attrs_as_list(l:x[0])
-
-    let l:cterm_hl = [
-          \ get(l:x[1], 'foreground', 'NONE'),
-          \ get(l:x[1], 'background', 'NONE')
-          \ ] + s:get_attrs_as_list(l:x[1])
-
-    let l:gui_hl = [
-          \ get(l:x[2], 'foreground', 'NONE'),
-          \ get(l:x[2], 'background', 'NONE')
-          \ ] + s:get_attrs_as_list(l:x[2])
-
-    return [l:term_hl, l:cterm_hl, l:gui_hl]
+  if type(l:x[0]) is v:t_list
+    return l:x
   endif
 
+  let l:term_hl = s:get_attrs_as_list(l:x[0])
+
+  let l:cterm_hl = [
+        \ get(l:x[1], 'foreground', 'NONE'),
+        \ get(l:x[1], 'background', 'NONE')
+        \ ] + s:get_attrs_as_list(l:x[1])
+
+  let l:gui_hl = [
+        \ get(l:x[2], 'foreground', 'NONE'),
+        \ get(l:x[2], 'background', 'NONE')
+        \ ] + s:get_attrs_as_list(l:x[2])
+
+  return [l:term_hl, l:cterm_hl, l:gui_hl]
 endfunction
 
 function! s:combine_hl_list(l, m) abort
@@ -673,12 +670,11 @@ endfunction
 
 function! wilder#render#get_colors_vim(group) abort
   try
-    redir => l:highlight
-    silent execute 'silent highlight ' . a:group
-    redir END
+    let l:highlight = execute('silent highlight ' . a:group)
 
     let l:link_matches = matchlist(l:highlight, 'links to \(\S\+\)')
-    if len(l:link_matches) > 0 " follow the link
+     " follow the link
+    if len(l:link_matches) > 0
       return wilder#render#get_colors_vim(l:link_matches[1])
     endif
 
@@ -710,12 +706,15 @@ function! wilder#render#get_colors_vim(group) abort
 endfunction
 
 function! s:get_hl_attrs(attrs, key, hl) abort
-  let a:attrs.bold = match(a:hl, a:key . '=\S*bold\S*') >= 0
-  let a:attrs.italic = match(a:hl, a:key . '=\S*italic\S*') >= 0
-  let a:attrs.reverse = match(a:hl, a:key . '=\S*reverse\S*') >= 0
-  let a:attrs.standout = match(a:hl, a:key . '=\S*standout\S*') >= 0
-  let a:attrs.underline = match(a:hl, a:key . '=\S*underline\S*') >= 0
-  let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
+  let l:prefix = ' ' . a:key . '=\S*'
+  let a:attrs.bold = match(a:hl, l:prefix . 'bold') >= 0
+  let a:attrs.underline = match(a:hl, l:prefix . 'underline') >= 0
+  let a:attrs.undercurl = match(a:hl, l:prefix . 'undercurl') >= 0
+  let a:attrs.strikethrough = match(a:hl, l:prefix . 'strikethrough') >= 0
+  let a:attrs.reverse = match(a:hl, l:prefix . 'reverse') >= 0 ||
+        \ match(a:hl, l:prefix . 'inverse') >= 0
+  let a:attrs.italic = match(a:hl, l:prefix . 'italic') >= 0
+  let a:attrs.standout = match(a:hl, l:prefix . 'standout') >= 0
 endfunction
 
 function! s:draw_x_cached(ctx, result, i) abort
