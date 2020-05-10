@@ -689,7 +689,7 @@ wilder#cmdline_pipeline([{options}])
 
             Default: has('nvim') && !has('nvim-0.3.7')
 
-            `fuzzy_sort`
+            `python_fuzzy_sort`
             Optional~
             Python 3 fuzzywuzzy module required~
             When true, apply fuzzy sorting to the candidates using

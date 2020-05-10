@@ -859,7 +859,7 @@ function! wilder#cmdline#pipeline(opts) abort
   let l:getcompletion_pipeline = [{ctx, res -> res[1]}] +
         \ wilder#cmdline#getcompletion_pipeline(a:opts)
 
-  if get(a:opts, 'fuzzy_sort', 0)
+  if get(a:opts, 'python_fuzzy_sort', 0)
     call add(l:getcompletion_pipeline, wilder#result({
           \ 'value': {ctx, xs, data ->
           \   wilder#python_fuzzywuzzy(ctx, xs, get(data, 'cmdline.match_arg', ''))}

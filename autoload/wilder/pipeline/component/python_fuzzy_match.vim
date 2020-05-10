@@ -48,6 +48,7 @@ function! s:fuzzy_match(args, ctx, x) abort
           \ l:char ==# '[' ||
           \ l:char ==# ']'
       let l:res .= '(\' . l:char . ')'
+      let l:i += 1
     elseif l:char ==# toupper(l:char)
       let l:res .= '(' . l:char . ')'
       let l:i += 1
