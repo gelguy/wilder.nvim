@@ -54,6 +54,7 @@ endfunction
 function! s:post_hook(state, ctx) abort
   let &laststatus = s:old_laststatus
   let &statusline = s:old_statusline
+  redrawstatus
 
   call wilder#render#component_post_hook(a:state.left, a:ctx)
   call wilder#render#component_post_hook(a:state.right, a:ctx)
