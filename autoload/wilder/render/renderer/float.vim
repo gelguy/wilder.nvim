@@ -46,7 +46,16 @@ function! s:render_chunks(state, chunks) abort
   endif
 
   let a:state.columns = &columns
-  let a:state.cmdheight = &cmdheight
+
+  let l:cmdheight = s:get_cmdheight()
+  if a:state.cmdheight != l:cmdheight
+    call nvim_win_set_config(a:state.win, {
+          \ 'relative': 'editor',
+          \ 'row': &lines - s:get_cmdheight() - 1,
+          \ 'col': 0,
+          \ })
+    let a:state.cmdheight = l:cmdheight
+  endif
 
   let l:text = ''
   for l:elem in a:chunks
@@ -73,7 +82,7 @@ function! s:new_win(buf) abort
   if s:open_win_num_args == 5
     let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
           \ 'relative': 'editor',
-          \ 'row': &lines - &cmdheight - 1,
+          \ 'row': &lines - s:get_cmdheight() - 1,
           \ 'col': 0,
           \ 'focusable': 0,
           \ })
@@ -82,7 +91,7 @@ function! s:new_win(buf) abort
           \ 'relative': 'editor',
           \ 'height': 1,
           \ 'width': &columns,
-          \ 'row': &lines - &cmdheight - 1,
+          \ 'row': &lines - s:get_cmdheight() - 1,
           \ 'col': 0,
           \ 'focusable': 0,
           \ })
@@ -109,7 +118,7 @@ function! s:pre_hook(state, ctx) abort
 
   if a:state.win == -1
     let a:state.win = s:new_win(a:state.buf)
-  elseif a:state.columns != &columns || a:state.cmdheight != &cmdheight
+  elseif a:state.columns != &columns || a:state.cmdheight != s:get_cmdheight()
     let l:old_win = a:state.win
 
     " set to -1 preemptively in case API calls fail
@@ -144,4 +153,23 @@ function! s:post_hook(state, ctx) abort
 
   call wilder#render#component_post_hook(a:state.left, a:ctx)
   call wilder#render#component_post_hook(a:state.right, a:ctx)
+endfunction
+
+function! s:get_cmdheight() abort
+  let l:cmdheight = &cmdheight
+  let l:columns = &columns
+  let l:cmdline = getcmdline()
+
+  " include the cmdline character
+  let l:display_width = strdisplaywidth(l:cmdline) + 1
+  let l:actual_height = l:display_width / l:columns
+  if l:display_width % l:columns != 0
+    let l:actual_height += 1
+  endif
+
+  if l:cmdheight > l:actual_height
+    return l:cmdheight
+  endif
+
+  return l:actual_height
 endfunction
