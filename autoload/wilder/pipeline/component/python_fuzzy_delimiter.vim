@@ -10,7 +10,7 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
       let l:delimiter = a:args.delimiter
     endif
   else
-    let l:delimiter = '(?:[^\w\s]|-)'
+    let l:delimiter = '(?:[^\w\s]|_)'
   endif
 
   if has_key(a:args, 'word')
@@ -22,6 +22,8 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
   else
     let l:word = '\w'
   endif
+
+  let l:word_or_delimiter = '(?:' . l:word . '|' . l:delimiter . ')'
 
   let l:res = ''
   let l:chars = split(a:x, '\zs')
@@ -81,13 +83,13 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
         let l:res .= '..*?'
       endif
     elseif l:escaped || l:char ==# toupper(l:char)
-      let l:res .= '(?:' . l:word . '*?' . l:delimiter . '?(' . l:char . '))'
+      let l:res .= '(?:' . l:word_or_delimiter . '*?' . l:delimiter . '?(' . l:char . '))'
     else
       let l:res .= '(?:(' . l:char . ')|(' .
             \ toupper(l:char) . ')|' .
-            \ l:word . '*?(' . toupper(l:char) . ')|' .
-            \ l:word . '*?' . l:delimiter . '(' . l:char . ')|' .
-            \ l:word . '*?' . l:delimiter . '(' . toupper(l:char) . '))'
+            \ l:word_or_delimiter . '*?(' . toupper(l:char) . ')|' .
+            \ l:word_or_delimiter . '*?' . l:delimiter . '(' . l:char . ')|' .
+            \ l:word_or_delimiter . '*?' . l:delimiter . '(' . toupper(l:char) . '))'
     endif
   endwhile
 
