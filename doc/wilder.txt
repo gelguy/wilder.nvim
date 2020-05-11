@@ -616,11 +616,19 @@ wilder#python_search_pipeline([{options}])
 
             Default: Empty
 
-            `fuzzy_sort`
+            `sort`
             Optional~
-            Python 3 fuzzywuzzy module required~
-            When true, apply fuzzy sorting to the candidates using
-            |wilder#python_fuzzywuzzy()|.
+            One of 0, 'python_fuzzywuzzy' or a function.
+            When this option is 0, this option is disabled.
+
+            When the value is a function, the function is used to sort the
+            candidates. The function should take a {ctx}, {candidates} and
+            {query} and return the sorted {candidates} based on {query}. The
+            function can return a |wilder-pipeline-thunk| as well.
+
+            If the value is 'python_fuzzywuzzy', |wilder#python_fuzzywuzzy()|
+            is used as the function. This value is only available for Neovim
+            with Python 3 and the Python 3 fuzzywuzzy module installed.
 
             Default: 0
 
@@ -689,11 +697,19 @@ wilder#cmdline_pipeline([{options}])
 
             Default: has('nvim') && !has('nvim-0.3.7')
 
-            `python_fuzzy_sort`
+            `sort`
             Optional~
-            Python 3 fuzzywuzzy module required~
-            When true, apply fuzzy sorting to the candidates using
-            |wilder#python_fuzzywuzzy()|.
+            One of 0, 'python_fuzzywuzzy' or a function.
+            When this option is 0, this option is disabled.
+
+            When the value is a function, the function is used to sort the
+            candidates. The function should take a {ctx}, {candidates} and
+            {query} and return the sorted {candidates} based on {query}. The
+            function can return a |wilder-pipeline-thunk| as well.
+
+            If the value is 'python_fuzzywuzzy', |wilder#python_fuzzywuzzy()|
+            is used as the function. This value is only available for Neovim
+            with Python 3 and the Python 3 fuzzywuzzy module installed.
 
             Default: 0
 

@@ -413,8 +413,13 @@ function! wilder#python_search_pipeline(...) abort
   call add(l:subpipeline, wilder#python_search(
         \ s:extract_keys(l:opts, 'max_candidates', 'engine')))
 
-  if get(l:opts, 'fuzzy_sort', 0)
-    call add(l:subpipeline, {ctx, xs -> wilder#python_fuzzywuzzy(ctx, xs, ctx.input)})
+  let l:Sort = get(l:opts, 'sort', 0)
+  if l:Sort isnot 0
+    if l:Sort is 'python_fuzzywuzzy'
+      let l:Sort = function('wilder#python_fuzzywuzzy')
+    endif
+
+    call add(l:subpipeline, {ctx, xs -> l:Sort(ctx, xs, ctx.input)})
   endif
 
   call add(l:subpipeline, wilder#result_output_escape('^$*~[]/\'))
