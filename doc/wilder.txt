@@ -618,13 +618,17 @@ wilder#python_search_pipeline([{options}])
 
             `sort`
             Optional~
-            One of 0, 'python_fuzzywuzzy' or a function.
+            One of 0, 'python_sort_difflib', 'python_fuzzywuzzy' or a function.
             When this option is 0, this option is disabled.
 
             When the value is a function, the function is used to sort the
             candidates. The function should take a {ctx}, {candidates} and
             {query} and return the sorted {candidates} based on {query}. The
             function can return a |wilder-pipeline-thunk| as well.
+
+            If the value is 'python_sort_difflib',
+            |wilder#python_sort_difflib()| is used as the function. This value
+            is only available for Neovim with Python 3.
 
             If the value is 'python_fuzzywuzzy', |wilder#python_fuzzywuzzy()|
             is used as the function. This value is only available for Neovim
@@ -699,13 +703,17 @@ wilder#cmdline_pipeline([{options}])
 
             `sort`
             Optional~
-            One of 0, 'python_fuzzywuzzy' or a function.
+            One of 0, 'python_sort_difflib', 'python_fuzzywuzzy' or a function.
             When this option is 0, this option is disabled.
 
             When the value is a function, the function is used to sort the
             candidates. The function should take a {ctx}, {candidates} and
             {query} and return the sorted {candidates} based on {query}. The
             function can return a |wilder-pipeline-thunk| as well.
+
+            If the value is 'python_sort_difflib',
+            |wilder#python_sort_difflib()| is used as the function. This value
+            is only available for Neovim with Python 3.
 
             If the value is 'python_fuzzywuzzy', |wilder#python_fuzzywuzzy()|
             is used as the function. This value is only available for Neovim
@@ -1475,6 +1483,20 @@ wilder#python_fuzzy_filter([{engine}])
 
             e.g. `foobar` will match `fbr`
                  `foobar` will not match `frb`
+
+                                    *wilder#python_sort_difflib()*
+wilder#python_sort_difflib({ctx}, {candidates}, {query})
+                                    Neovim only~
+                                    Async~
+            Takes a list of candidates and a query and returns a
+            |wilder-pipeline-thunk| which sorts the candidates using
+            `difflib.SequenceMatcher`.
+
+            Example:
+>
+             wilder#result({'value': {ctx, xs ->
+               wilder#python_sort_difflib(ctx, xs, ctx.input)}}})
+<
 
                                     *wilder#python_fuzzywuzzy()*
 wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})

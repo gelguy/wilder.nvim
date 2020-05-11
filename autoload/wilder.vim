@@ -329,6 +329,10 @@ function! wilder#_python_sleep(t) abort
   return {_, x -> {ctx -> _wilder_python_sleep(ctx, a:t, x)}}
 endfunction
 
+function! wilder#python_sort_difflib(ctx, xs, query) abort
+  return {ctx -> _wilder_python_sort_difflib(ctx, a:xs, a:query)}
+endfunction
+
 function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
   return {ctx -> _wilder_python_fuzzywuzzy(ctx, a:xs, a:query)}
 endfunction
@@ -417,6 +421,8 @@ function! wilder#python_search_pipeline(...) abort
   if l:Sort isnot 0
     if l:Sort is 'python_fuzzywuzzy'
       let l:Sort = function('wilder#python_fuzzywuzzy')
+    elseif l:Sort is 'python_sort_difflib'
+      let l:Sort = function('wilder#python_sort_difflib')
     endif
 
     call add(l:subpipeline, {ctx, xs -> l:Sort(ctx, xs, ctx.input)})

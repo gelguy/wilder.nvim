@@ -865,6 +865,8 @@ function! wilder#cmdline#pipeline(opts) abort
   if l:Sort isnot 0
     if l:Sort is 'python_fuzzywuzzy'
       let l:Sort = function('wilder#python_fuzzywuzzy')
+    elseif l:Sort is 'python_sort_difflib'
+      let l:Sort = function('wilder#python_sort_difflib')
     endif
 
     call add(l:getcompletion_pipeline, wilder#result({

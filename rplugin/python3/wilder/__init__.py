@@ -336,6 +336,25 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
 
+    @neovim.function('_wilder_python_sort_difflib', sync=False, allow_nested=True)
+    def sort_difflib(self, args):
+        self.run_in_background(self.sort_difflib_handler, args)
+
+    def sort_difflib_handler(self, event, ctx, candidates, query, quick=True):
+        if event.is_set():
+            return
+
+        try:
+            if quick:
+                res = sorted(candidates, key=lambda x: -difflib.SequenceMatcher(
+                    None, x, query).quick_ratio())
+            else:
+                res = sorted(candidates, key=lambda x: -difflib.SequenceMatcher(
+                    None, x, query).ratio())
+            self.queue.put((ctx, list(res),))
+        except Exception as e:
+            self.queue.put((ctx, 'python_sort_difflib: ' + str(e), 'reject',))
+
     @neovim.function('_wilder_python_fuzzywuzzy', sync=False, allow_nested=True)
     def fuzzywuzzy(self, args):
         self.run_in_background(self.fuzzywuzzy_handler, args)
@@ -352,7 +371,7 @@ class Wilder(object):
                 res = sorted(candidates, key=lambda x: -fuzzy.ratio(x, query))
             self.queue.put((ctx, list(res),))
         except Exception as e:
-            self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_fuzzywuzzy: ' + str(e), 'reject',))
 
     @neovim.function('_wilder_python_common_subsequence', sync=True)
     def common_subsequence(self, args):
