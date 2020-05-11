@@ -40,15 +40,15 @@ function! wilder#render#renderer#prepare_state(args) abort
           \   'underline', 'bold')
   endif
 
-  if has_key(a:args, 'apply_accents')
-    let l:Apply_accents = a:args['apply_accents']
-    if type(l:Apply_accents) isnot v:t_list
-      let l:state.apply_accents = [l:Apply_accents]
+  if has_key(a:args, 'apply_highlights')
+    let l:Apply_highlights = a:args['apply_highlights']
+    if type(l:Apply_highlights) isnot v:t_list
+      let l:state.apply_highlights = [l:Apply_highlights]
     else
-      let l:state.apply_accents = l:Apply_accents
+      let l:state.apply_highlights = l:Apply_highlights
     endif
   else
-      let l:state.apply_accents = []
+      let l:state.apply_highlights = []
   endif
 
   return l:state
@@ -81,5 +81,5 @@ function! wilder#render#renderer#make_hl_chunks(state, width, ctx, result) abort
   let a:ctx.highlights = a:state.highlights
 
   return wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result,
-        \ get(a:state, 'apply_accents', []))
+        \ get(a:state, 'apply_highlights', []))
 endfunction

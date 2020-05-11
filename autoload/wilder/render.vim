@@ -208,14 +208,14 @@ function! wilder#render#draw_x(ctx, result, i)
   return wilder#render#to_printable(l:x)
 endfunction
 
-function! wilder#render#make_hl_chunks(left, right, ctx, result, apply_accents) abort
+function! wilder#render#make_hl_chunks(left, right, ctx, result, apply_highlights) abort
   let l:chunks = []
   let l:chunks += s:draw_component(a:left, a:ctx.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
     let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
   else
-    let l:chunks += s:draw_xs(a:ctx, a:result, a:apply_accents)
+    let l:chunks += s:draw_xs(a:ctx, a:result, a:apply_highlights)
   endif
 
   let l:chunks += s:draw_component(a:right, a:ctx.highlights['default'], a:ctx, a:result)
@@ -253,10 +253,10 @@ function! wilder#render#normalise(hl, chunks) abort
   return l:res
 endfunction
 
-let s:apply_accents_cache = {}
-let s:apply_accents_run_id = -1
+let s:apply_highlights_cache = {}
+let s:apply_highlights_run_id = -1
 
-function! s:draw_xs(ctx, result, apply_accents) abort
+function! s:draw_xs(ctx, result, apply_highlights) abort
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
@@ -266,11 +266,11 @@ function! s:draw_xs(ctx, result, apply_accents) abort
     return [[repeat(' ', l:space), a:ctx.highlights['default']]]
   endif
 
-  let l:use_apply_accents_cache = a:ctx.run_id == s:apply_accents_run_id
-  if !l:use_apply_accents_cache
-    let s:apply_accents_cache = {}
+  let l:use_apply_highlights_cache = a:ctx.run_id == s:apply_highlights_run_id
+  if !l:use_apply_highlights_cache
+    let s:apply_highlights_cache = {}
   endif
-  let s:apply_accents_run_id = a:ctx.run_id
+  let s:apply_highlights_run_id = a:ctx.run_id
 
   let l:start = l:page[0]
   let l:end = l:page[1]
@@ -286,15 +286,15 @@ function! s:draw_xs(ctx, result, apply_accents) abort
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
       let l:spans = 0
-      if !empty(a:apply_accents)
+      if !empty(a:apply_highlights)
         let l:data = type(a:result) is v:t_dict ?
               \ get(a:result, 'data', {}) :
               \ {}
-        if l:use_apply_accents_cache && has_key(s:apply_accents_cache, l:x)
-          let l:spans = s:apply_accents_cache[l:x]
+        if l:use_apply_highlights_cache && has_key(s:apply_highlights_cache, l:x)
+          let l:spans = s:apply_highlights_cache[l:x]
         else
-          let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
-          let s:apply_accents_cache[l:x] = l:spans
+          let l:spans = s:apply_highlights(a:apply_highlights, l:data, l:x)
+          let s:apply_highlights_cache[l:x] = l:spans
         endif
 
         if l:spans isnot 0
@@ -332,15 +332,15 @@ function! s:draw_xs(ctx, result, apply_accents) abort
     let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
 
     let l:spans = 0
-    if !empty(a:apply_accents)
+    if !empty(a:apply_highlights)
       let l:data = type(a:result) is v:t_dict ?
             \ get(a:result, 'data', {}) :
             \ {}
-      if l:use_apply_accents_cache && has_key(s:apply_accents_cache, l:x)
-        let l:spans = s:apply_accents_cache[l:x]
+      if l:use_apply_highlights_cache && has_key(s:apply_highlights_cache, l:x)
+        let l:spans = s:apply_highlights_cache[l:x]
       else
-        let l:spans = s:apply_accents(a:apply_accents, l:data, l:x)
-        let s:apply_accents_cache[l:x] = l:spans
+        let l:spans = s:apply_highlights(a:apply_highlights, l:data, l:x)
+        let s:apply_highlights_cache[l:x] = l:spans
       endif
 
       if l:spans isnot 0
@@ -365,9 +365,9 @@ function! s:draw_xs(ctx, result, apply_accents) abort
   return l:res
 endfunction
 
-function! s:apply_accents(apply_accents, data, x)
-  for l:Apply in a:apply_accents
-    let l:spans = l:Apply({}, a:data, a:x)
+function! s:apply_highlights(apply_highlights, data, x)
+  for l:Apply_highlights in a:apply_highlights
+    let l:spans = l:Apply_highlights({}, a:data, a:x)
     if l:spans isnot 0
       return l:spans
     endif

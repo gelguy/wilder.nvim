@@ -124,23 +124,23 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
-function! wilder#query_common_subsequence(...)
+function! wilder#query_common_subsequence_spans(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'vim')
   let l:case_sensitive = get(l:opts, 'case_sensitive', 0)
 
   if l:language ==# 'python'
     return {ctx, data, str -> has_key(data, 'query') ?
-          \ wilder#python_common_subsequence(
+          \ wilder#python_common_subsequence_spans(
           \   str, data['query'], l:case_sensitive) : 0}
   endif
 
   return {ctx, data, str -> has_key(data, 'query') ?
-        \ wilder#vim_common_subsequence(
+        \ wilder#vim_common_subsequence_spans(
         \   str, data['query'], l:case_sensitive) : 0}
 endfunction
 
-function! wilder#vim_common_subsequence(str, query, case_sensitive)
+function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
   let l:split_str = split(a:str, '\zs')
   let l:split_query = split(a:query, '\zs')
 
@@ -184,32 +184,32 @@ function! wilder#vim_common_subsequence(str, query, case_sensitive)
   return l:spans
 endfunction
 
-function! wilder#python_common_subsequence(str, query, case_sensitive)
-  return _wilder_python_common_subsequence(a:str, a:query, a:case_sensitive)
+function! wilder#python_common_subsequence_spans(str, query, case_sensitive)
+  return _wilder_python_common_subsequence_spans(a:str, a:query, a:case_sensitive)
 endfunction
 
-function! wilder#pcre2_apply_accents(...)
+function! wilder#pcre2_capture_spans(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'python')
 
   if l:language ==# 'lua'
     return {ctx, data, str -> has_key(data, 'pcre2.pattern') ?
-          \ wilder#lua_pcre2_extract_captures(data['pcre2.pattern'], str) : 0}
+          \ wilder#lua_pcre2_capture_spans(data['pcre2.pattern'], str) : 0}
   endif
 
   let l:engine = get(l:opts, 'engine', 're')
   return {ctx, data, str -> has_key(data, 'pcre2.pattern') ?
-        \ wilder#python_pcre2_extract_captures(data['pcre2.pattern'], str, l:engine) : 0}
+        \ wilder#python_pcre2_capture_spans(data['pcre2.pattern'], str, l:engine) : 0}
 endfunction
 
-function! wilder#python_pcre2_extract_captures(pattern, str, ...)
+function! wilder#python_pcre2_capture_spans(pattern, str, ...)
   let l:engine = get(a:, 1, 're')
-  return _wilder_python_pcre2_extract_captures(a:pattern, a:str, l:engine)
+  return _wilder_python_pcre2_capture_spans(a:pattern, a:str, l:engine)
 endfunction
 
-function! wilder#lua_pcre2_extract_captures(pattern, str)
+function! wilder#lua_pcre2_capture_spans(pattern, str)
   let l:spans = luaeval(
-        \ 'require("wilder").pcre2_extract_captures(_A[1], _A[2])',
+        \ 'require("wilder").pcre2_capture_spans(_A[1], _A[2])',
         \ [a:pattern, a:str])
 
   " remove first element which is the matched string
@@ -424,8 +424,8 @@ function! wilder#python_search_pipeline(...) abort
 
   let l:Sort = get(l:opts, 'sort', 0)
   if l:Sort isnot 0
-    if l:Sort is 'python_fuzzywuzzy'
-      let l:Sort = function('wilder#python_fuzzywuzzy')
+    if l:Sort is 'python_sort_fuzzywuzzy'
+      let l:Sort = function('wilder#python_sort_fuzzywuzzy')
     elseif l:Sort is 'python_sort_difflib'
       let l:Sort = function('wilder#python_sort_difflib')
     endif

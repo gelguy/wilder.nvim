@@ -3,7 +3,7 @@ local pcre2 = require 'pcre2'
 local cached_pattern = nil
 local cached_re = nil
 
-local function pcre2_extract_captures(pattern, str)
+local function pcre2_capture_spans(pattern, str)
 	local re
 	if pattern == cached_pattern then
 		re = cached_re
@@ -29,5 +29,5 @@ local function pcre2_extract_captures(pattern, str)
 end
 
 return {
-	pcre2_extract_captures = pcre2_extract_captures,
+	pcre2_capture_spans = pcre2_capture_spans,
 }

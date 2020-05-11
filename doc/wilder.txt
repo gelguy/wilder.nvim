@@ -728,7 +728,7 @@ wilder#cmdline_pipeline([{options}])
             When true, sets the `pcre2.pattern` key in
             |wilder-pipeline-result-data| to the pattern used in the default
             fuzzy filtering. This key is used by
-            |wilder#pcre2_apply_accents()|.
+            |wilder#pcre2_apply_highlights()|.
 
             Should be set to false when using a fuzzy filter not based on
             PCRE2.
@@ -851,7 +851,8 @@ wilder#statusline_renderer([{options}])
 
             Note: The statusline might be truncated or not update correctly
             when there are too many separate highlight chunks. See |E541|.
-            This can be mitigated by turning off the `apply_accents` option.
+            This can be mitigated by turning off the `apply_highlights`
+            option.
 
             {options} is a dictionary with keys:
             `highlights`
@@ -886,15 +887,15 @@ wilder#statusline_renderer([{options}])
 
                 `accent`
                 Optional~
-                The highlight group used for accents. See the `apply_accents`
-                option.
+                The highlight group used for accents. See the
+                `apply_highlights` option.
 
                 Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
                 The highlight group used for accents for a selected candidate.
-                See the `apply_accents` option.
+                See the `apply_highlights` option.
 
                 Default: The `selected` highlight with |underline| and |bold|
 
@@ -925,7 +926,7 @@ wilder#statusline_renderer([{options}])
 
             Default: [wilder#next_arrow()]
 
-            `apply_accents`
+            `apply_highlights`
             Optional~
             Experimental~
             A list of functions used to apply the `accent` and
@@ -956,15 +957,15 @@ wilder#statusline_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#query_common_subsequence()| and
-            |wilder#pcre2_apply_accents()| are helper functions which can be
-            used to apply accents to the capture groups when using
+            |wilder#query_common_subsequence_spans()| and
+            |wilder#pcre2_capture_spans()| are helper functions which can be
+            used to apply accents to the candidates from
             |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
 
             Example:
 >
             call wilder#set_option('renderer', wilder#statusline_renderer({
-                  \ 'apply_accents': wilder#query_common_subsequence(),
+                  \ 'apply_highlights': wilder#pcre2_capture_spans(),
                   \ }))
 <
 
@@ -1520,11 +1521,11 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
                                     Deprecated~
             Deprecated: Use |wilder#python_sort_fuzzywuzzy()|.
 
-                                    *wilder#query_common_subsequence()*
-wilder#query_common_subsequence([{opts}])
+                                    *wilder#query_common_subsequence_spans()*
+wilder#query_common_subsequence_spans([{opts}])
                                     python option only for Neovim~
-            Helper function which returns a function for the `apply_accents`
-            option for |wilder#statusline_renderer()| and
+            Helper function which returns a function for the
+            `apply_highlights` option for |wilder#statusline_renderer()| and
             |wilder#float_renderer()|.
 
             Returns a function which takes {ctx}, {data} and {candidate} as
@@ -1551,12 +1552,12 @@ wilder#query_common_subsequence([{opts}])
 
             Default: 0
 
-                                    *wilder#pcre2_apply_accents()*
-wilder#pcre2_apply_accents([{opts}])
+                                    *wilder#pcre2_capture_spans()*
+wilder#pcre2_capture_spans([{opts}])
                                     Neovim only~
                                     pcre2 package required for lua option~
-            Helper function which returns a function for the `apply_accents`
-            option for |wilder#statusline_renderer()| and
+            Helper function which returns a function for the
+            `apply_highlights` option for |wilder#statusline_renderer()| and
             |wilder#float_renderer()|.
 
             Returns a function which takes {ctx}, {data} and {candidate} as

@@ -371,10 +371,10 @@ class Wilder(object):
                 res = sorted(candidates, key=lambda x: -fuzzy.ratio(x, query))
             self.queue.put((ctx, list(res),))
         except Exception as e:
-            self.queue.put((ctx, 'python_fuzzywuzzy: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_sort_fuzzywuzzy: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_common_subsequence', sync=True)
-    def common_subsequence(self, args):
+    @neovim.function('_wilder_python_common_subsequence_spans', sync=True)
+    def common_subsequence_spans(self, args):
         string = args[0]
         query = args[1]
         case_sensitive = args[2]
@@ -395,8 +395,8 @@ class Wilder(object):
 
         return result
 
-    @neovim.function('_wilder_python_pcre2_extract_captures', sync=True)
-    def extract_captures(self, args):
+    @neovim.function('_wilder_python_pcre2_capture_spans', sync=True)
+    def capture_spans(self, args):
         pattern = args[0]
         string = args[1]
         module_name = args[2]

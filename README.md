@@ -169,6 +169,7 @@ call wilder#set_option('renderer', wilder#float_renderer({
       \ 'highlights': {
       \   'default': s:hl,
       \ },
+      \ 'apply_highlights': wilder#query_common_subsequence_spans(),
       \ 'separator': ' · ',
       \ 'left': [{'value': [
       \    wilder#condition(
@@ -193,8 +194,6 @@ call wilder#set_option('renderer', wilder#float_renderer({
       \ ],
       \ }))
 ```
-
-The `apply_accents` option is optional and requires the Lua `pcre2` package.
 
 Note: the more components in the renderer, the more computation is needed to draw it. This may result in noticeable input lag as the wildmenu has to be redrawn on every keystroke.
 
