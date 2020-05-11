@@ -355,11 +355,11 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_sort_difflib: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_fuzzywuzzy', sync=False, allow_nested=True)
-    def fuzzywuzzy(self, args):
-        self.run_in_background(self.fuzzywuzzy_handler, args)
+    @neovim.function('_wilder_python_sort_fuzzywuzzy', sync=False, allow_nested=True)
+    def sort_fuzzywuzzy(self, args):
+        self.run_in_background(self.sort_fuzzywuzzy_handler, args)
 
-    def fuzzywuzzy_handler(self, event, ctx, candidates, query, partial=True):
+    def sort_fuzzywuzzy_handler(self, event, ctx, candidates, query, partial=True):
         if event.is_set():
             return
 

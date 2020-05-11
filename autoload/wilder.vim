@@ -333,8 +333,13 @@ function! wilder#python_sort_difflib(ctx, xs, query) abort
   return {ctx -> _wilder_python_sort_difflib(ctx, a:xs, a:query)}
 endfunction
 
+function! wilder#python_sort_fuzzywuzzy(ctx, xs, query) abort
+  return {ctx -> _wilder_python_sort_fuzzywuzzy(ctx, a:xs, a:query)}
+endfunction
+
+" DEPRECATED: use wilder#python_sort_fuzzywuzzy()
 function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
-  return {ctx -> _wilder_python_fuzzywuzzy(ctx, a:xs, a:query)}
+  return wilder#python_sort_fuzzywuzzy(a:ctx, a:xs, a:query)
 endfunction
 
 function! wilder#history(...) abort

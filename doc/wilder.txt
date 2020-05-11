@@ -618,8 +618,8 @@ wilder#python_search_pipeline([{options}])
 
             `sort`
             Optional~
-            One of 0, 'python_sort_difflib', 'python_fuzzywuzzy' or a function.
-            When this option is 0, this option is disabled.
+            One of 0, 'python_sort_difflib', 'python_sort_fuzzywuzzy' or a
+            function.  When this option is 0, this option is disabled.
 
             When the value is a function, the function is used to sort the
             candidates. The function should take a {ctx}, {candidates} and
@@ -630,9 +630,10 @@ wilder#python_search_pipeline([{options}])
             |wilder#python_sort_difflib()| is used as the function. This value
             is only available for Neovim with Python 3.
 
-            If the value is 'python_fuzzywuzzy', |wilder#python_fuzzywuzzy()|
-            is used as the function. This value is only available for Neovim
-            with Python 3 and the Python 3 fuzzywuzzy module installed.
+            If the value is 'python_sort_fuzzywuzzy',
+            |wilder#python_sort_fuzzywuzzy()| is used as the function. This
+            value is only available for Neovim with Python 3 and the Python 3
+            fuzzywuzzy module installed.
 
             Default: 0
 
@@ -703,8 +704,8 @@ wilder#cmdline_pipeline([{options}])
 
             `sort`
             Optional~
-            One of 0, 'python_sort_difflib', 'python_fuzzywuzzy' or a function.
-            When this option is 0, this option is disabled.
+            One of 0, 'python_sort_difflib', 'python_sort_fuzzywuzzy' or a
+            function.  When this option is 0, this option is disabled.
 
             When the value is a function, the function is used to sort the
             candidates. The function should take a {ctx}, {candidates} and
@@ -715,9 +716,10 @@ wilder#cmdline_pipeline([{options}])
             |wilder#python_sort_difflib()| is used as the function. This value
             is only available for Neovim with Python 3.
 
-            If the value is 'python_fuzzywuzzy', |wilder#python_fuzzywuzzy()|
-            is used as the function. This value is only available for Neovim
-            with Python 3 and the Python 3 fuzzywuzzy module installed.
+            If the value is 'python_sort_fuzzywuzzy',
+            |wilder#python_sort_fuzzywuzzy()| is used as the function. This
+            value is only available for Neovim with Python 3 and the Python 3
+            fuzzywuzzy module installed.
 
             Default: 0
 
@@ -1498,8 +1500,8 @@ wilder#python_sort_difflib({ctx}, {candidates}, {query})
                wilder#python_sort_difflib(ctx, xs, ctx.input)}}})
 <
 
-                                    *wilder#python_fuzzywuzzy()*
-wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
+                                    *wilder#python_sort_fuzzywuzzy()*
+wilder#python_sort_fuzzywuzzy({ctx}, {candidates}, {query})
                                     Neovim only~
                                     Async~
                                     Python 3 fuzzywuzzy module required~
@@ -1510,8 +1512,13 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
             Example:
 >
              wilder#result({'value': {ctx, xs ->
-               wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
+               wilder#python_sort_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
+
+                                    *wilder#python_fuzzywuzzy()*
+wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
+                                    Deprecated~
+            Deprecated: Use |wilder#python_sort_fuzzywuzzy()|.
 
                                     *wilder#query_common_subsequence()*
 wilder#query_common_subsequence([{opts}])
