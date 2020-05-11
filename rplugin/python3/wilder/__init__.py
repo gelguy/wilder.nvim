@@ -132,7 +132,8 @@ class Wilder(object):
             candidates = []
 
             re = importlib.import_module(module_name)
-            pattern = re.compile(x)
+            # re2 does not use re.UNICODE by default
+            pattern = re.compile(x, re.UNICODE)
 
             for line in buf:
                 if event.is_set():
@@ -328,7 +329,8 @@ class Wilder(object):
 
         try:
             re = importlib.import_module(engine)
-            pattern = re.compile(pattern)
+            # re2 does not use re.UNICODE by default
+            pattern = re.compile(pattern, re.UNICODE)
             res = filter(lambda x: pattern.search(x if not has_file_args else self.get_basename(x)), candidates)
             self.queue.put((ctx, list(res),))
         except Exception as e:
