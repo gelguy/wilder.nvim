@@ -292,6 +292,7 @@ function! wilder#cmdline#main#do(ctx) abort
 
   " find start of last argument
   let l:arg_start = a:ctx.pos
+  let l:before_args = a:ctx.pos
   while a:ctx.pos < len(a:ctx.cmdline)
     let l:char = a:ctx.cmdline[a:ctx.pos]
 
@@ -302,9 +303,8 @@ function! wilder#cmdline#main#do(ctx) abort
       if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
         let a:ctx.pos += 1
       endif
+      let a:ctx.pos += 1
     endif
-
-    let a:ctx.pos += 1
   endwhile
 
   let a:ctx.pos = l:arg_start
@@ -549,6 +549,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lexpr' ||
         \ a:ctx.cmd ==# 'laddexpr' ||
         \ a:ctx.cmd ==# 'lgetexpr'
+    let a:ctx.pos = l:before_args
     call wilder#cmdline#let#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'unlet'

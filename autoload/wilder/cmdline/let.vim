@@ -78,16 +78,9 @@ function! wilder#cmdline#let#do(ctx)
 
           let a:ctx.expand = 'nothing'
         elseif l:char ==# "'"
-          while a:ctx.pos < len(a:ctx.cmdline)
-            if a:ctx.cmdline[a:ctx.pos] ==# "'" &&
-                  \ a:ctx.pos + 1 < len(a:ctx.cmdline) &&
-                  \ a:ctx.cmdline[a:ctx.pos + 1] ==# "'"
+          while a:ctx.pos < len(a:ctx.cmdline) &&
+                \ a:ctx.cmdline[a:ctx.pos] !=# "'"
               let a:ctx.pos += 1
-            else
-              break
-            endif
-
-            let a:ctx.pos += 1
           endwhile
 
           let a:ctx.expand = 'nothing'
