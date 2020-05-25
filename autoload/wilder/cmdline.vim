@@ -861,14 +861,8 @@ function! wilder#cmdline#pipeline(opts) abort
   let l:getcompletion_pipeline = [{ctx, res -> res[1]}] +
         \ wilder#cmdline#getcompletion_pipeline(a:opts)
 
-  let l:Sort = get(a:opts, 'sort', 0)
-  if l:Sort isnot 0
-    if l:Sort is 'python_sort_fuzzywuzzy'
-      let l:Sort = function('wilder#python_sort_fuzzywuzzy')
-    elseif l:Sort is 'python_sort_difflib'
-      let l:Sort = function('wilder#python_sort_difflib')
-    endif
-
+  if has_key(a:opts, 'sort')
+    let l:Sort = get(a:opts, 'sort')
     call add(l:getcompletion_pipeline, wilder#result({
           \ 'value': {ctx, xs, data ->
           \   l:Sort(ctx, xs, get(data, 'cmdline.match_arg', ''))}

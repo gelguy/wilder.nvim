@@ -406,13 +406,13 @@ function! wilder#python_search_pipeline(...) abort
 
   let l:pipeline = []
 
-  let l:mode = get(l:opts, 'mode', 'substring')
-  if l:mode ==# 'fuzzy'
-    call add(l:pipeline, wilder#python_fuzzy_match(
-          \ s:extract_keys(l:opts, 'word', 'start_at_boundary')))
-  elseif l:mode ==# 'fuzzy_delimiter'
-    call add(l:pipeline, wilder#python_fuzzy_delimiter(
-          \ s:extract_keys(l:opts, 'word', 'delimiter', 'start_at_boundary')))
+  let l:Regex = get(l:opts, 'regex', 'substring')
+  if type(l:Regex) is v:t_func
+    call add(l:pipeline, l:Regex)
+  elseif l:Regex ==# 'fuzzy'
+    call add(l:pipeline, wilder#python_fuzzy_match())
+  elseif l:Regex ==# 'fuzzy_delimiter'
+    call add(l:pipeline, wilder#python_fuzzy_delimiter())
   else
     call add(l:pipeline, wilder#python_substring())
   endif

@@ -594,19 +594,23 @@ wilder#python_search_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which does Python search.
 
-            Forwards the respective options to |wilder#python_fuzzy_match()|,
-            |wilder#python_fuzzy_delimiter()|, |wilder#python_substring()| and
-            |wilder#python_search()|.
+            Forwards the respective options to |wilder#python_search()|.
 
             Sets the `query` key in
             |wilder-pipeline-result-data| to the input of the pipeline.
 
             {options} is a dictionary with keys:
-            `mode`
+            `regex`
             Optional~
-            One of 'fuzzy', 'fuzzy_delimiter' or 'substring'. Uses
+            One of 'fuzzy', 'fuzzy_delimiter', 'substring' or a function.
+            Generates the Python regex to pass to |wilder#python_search()|.
+
+            The function should take a {ctx} and the input {x} and return a
+            Python regex.
+
+            The special values 'fuzzy', 'fuzzy_delimiter' and 'substring' uses
             |wilder#python_fuzzy_match()|, |wilder#python_fuzzy_delimiter()|
-            or |wilder#python_substring()| respectively to generate the regex.
+            and |wilder#python_substring()| respectively as the function.
 
             Default: 'substring'
 
@@ -618,32 +622,18 @@ wilder#python_search_pipeline([{options}])
 
             `sort`
             Optional~
-            One of 0, 'python_sort_difflib', 'python_sort_fuzzywuzzy' or a
-            function.  When this option is 0, this option is disabled.
+            A function is used to sort the candidates. The function should
+            take a {ctx}, {candidates} and {query} and return the sorted
+            {candidates} based on {query}. The function can return a
+            |wilder-pipeline-thunk| as well.
 
-            When the value is a function, the function is used to sort the
-            candidates. The function should take a {ctx}, {candidates} and
-            {query} and return the sorted {candidates} based on {query}. The
-            function can return a |wilder-pipeline-thunk| as well.
+            If no function is provided, no sorting will be done on the
+            candidates.
 
-            If the value is 'python_sort_difflib',
-            |wilder#python_sort_difflib()| is used as the function. This value
-            is only available for Neovim with Python 3.
+            For Neovim, |wilder#python_sort_difflib()| and
+            |wilder#python_sort_fuzzywuzzy()| can be used here.
 
-            If the value is 'python_sort_fuzzywuzzy',
-            |wilder#python_sort_fuzzywuzzy()| is used as the function. This
-            value is only available for Neovim with Python 3 and the Python 3
-            fuzzywuzzy module installed.
-
-            Default: 0
-
-            `start_at_boundary`
-            Optional~
-            Passed to |wilder#python_fuzzy_match()| and
-            |wilder#python_fuzzy_delimiter()|.  Only used if `mode` is 'fuzzy'
-            or 'fuzzy_delimiter'.
-
-            Default: 1
+            Default: Empty
 
             `skip_check`
             Optional~
@@ -704,24 +694,18 @@ wilder#cmdline_pipeline([{options}])
 
             `sort`
             Optional~
-            One of 0, 'python_sort_difflib', 'python_sort_fuzzywuzzy' or a
-            function.  When this option is 0, this option is disabled.
+            A function is used to sort the candidates. The function should
+            take a {ctx}, {candidates} and {query} and return the sorted
+            {candidates} based on {query}. The function can return a
+            |wilder-pipeline-thunk| as well.
 
-            When the value is a function, the function is used to sort the
-            candidates. The function should take a {ctx}, {candidates} and
-            {query} and return the sorted {candidates} based on {query}. The
-            function can return a |wilder-pipeline-thunk| as well.
+            If no function is provided, no sorting will be done on the
+            candidates.
 
-            If the value is 'python_sort_difflib',
-            |wilder#python_sort_difflib()| is used as the function. This value
-            is only available for Neovim with Python 3.
+            For Neovim, |wilder#python_sort_difflib()| and
+            |wilder#python_sort_fuzzywuzzy()| can be used here.
 
-            If the value is 'python_sort_fuzzywuzzy',
-            |wilder#python_sort_fuzzywuzzy()| is used as the function. This
-            value is only available for Neovim with Python 3 and the Python 3
-            fuzzywuzzy module installed.
-
-            Default: 0
+            Default: Empty
 
             `set_pcre2_pattern`
             Optional~
@@ -1643,6 +1627,7 @@ Airline/Lightline Theme Renderer~
           \ 'highlights': {
           \   'default': s:hl,
           \ },
+          \ 'apply_highlights': wilder#query_common_subsequence_spans(),
           \ 'separator': ' · ',
           \ 'left': [{'value': [
           \    wilder#condition(

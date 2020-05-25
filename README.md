@@ -58,11 +58,14 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 " For Neovim
 call wilder#set_option('pipeline', [
       \   wilder#branch(
-      \     wilder#cmdline_pipeline({'fuzzy': 1}),
+      \     wilder#cmdline_pipeline({
+      \       'fuzzy': 1,
+      \       'use_python': 1,
+      \     }),
       \     wilder#python_search_pipeline({
-      \       'mode': 'fuzzy', " use 'fuzzy_delimiter' for stricter fuzzy matching
-      \       'engine': 're',  " use 're2' for performance, requires Python re2 to be installed
-      \       'fuzzy_sort': 1, " Python fuzzywuzzy module required
+      \       'regex': 'fuzzy',   " use 'fuzzy_delimiter' for stricter fuzzy matching
+      \       'engine': 're',     " use 're2' for performance, requires Python re2 to be installed
+      \       'sort': function('wilder#python_sort_difflib'),
       \     }),
       \   ),
       \ ])
@@ -120,7 +123,9 @@ call wilder#set_option('renderer', wilder#statusline_renderer({
       \   'default': 'StatusLine', " default highlight to use
       \   'selected': 'WildMenu',  " highlight for the selected item
       \ },
-      \ 'separator': '  ',         " string used to separate candidates
+      \ 'apply_highlights':        " Experimental: applies highlighting to candidates
+      \    wilder#query_common_subsequence_spans(),
+      \ 'separator': ' ',         " string used to separate candidates
       \ 'ellipsis': '...',         " string appended to truncated candidates which are too long
       \ })
 ```
