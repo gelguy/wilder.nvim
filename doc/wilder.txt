@@ -584,6 +584,8 @@ wilder#vim_search_pipeline([{options}])
             Optional~
             If true, the checks that the input string is empty and that
             |getcmdtype()| is '/' or '?' are skipped.
+            This is useful when using the pipeline as the `pipeline` option
+            for |wilder#substitute_pipeline()|.
 
             Default: 0
 
@@ -639,6 +641,8 @@ wilder#python_search_pipeline([{options}])
             Optional~
             If true, the checks that input string is empty and that
             |getcmdtype()| is '/' or '? is skipped.
+            This is useful when using the pipeline as the `pipeline` option
+            for |wilder#substitute_pipeline()|.
 
             Default: 0
 
@@ -738,9 +742,9 @@ wilder#substitute_pipeline([{options}])
             the `skip_check` option is set for the pipelines.
 
             Default: For vim:
-                     wilder#vim_search_pipeline({'skip_check' : 1}
+                     wilder#vim_search_pipeline({'skip_check' : 1})
                      For nvim:
-                     wilder#python_search_pipeline({'skip_check' : 1}
+                     wilder#python_search_pipeline({'skip_check' : 1})
 
             `hide_in_replace`
             When true, hides wilder when in the {string} section of the
