@@ -98,7 +98,7 @@ function! s:new_win(buf) abort
   endif
 
   call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
-  call nvim_win_set_option(l:win, 'listchars', '')
+  call nvim_win_set_option(l:win, 'list', v:false)
   call nvim_win_set_option(l:win, 'number', v:false)
   call nvim_win_set_option(l:win, 'relativenumber', v:false)
 
