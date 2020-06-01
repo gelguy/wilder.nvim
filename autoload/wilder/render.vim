@@ -266,8 +266,7 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
     return [[repeat(' ', l:space), a:ctx.highlights['default']]]
   endif
 
-  let l:use_apply_highlights_cache = a:ctx.run_id == s:apply_highlights_run_id
-  if !l:use_apply_highlights_cache
+  if a:ctx.run_id != s:apply_highlights_run_id
     let s:apply_highlights_cache = {}
   endif
   let s:apply_highlights_run_id = a:ctx.run_id
@@ -275,9 +274,34 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
   let l:start = l:page[0]
   let l:end = l:page[1]
 
+  let l:xs = []
+  let l:len = l:end - l:start + 1
+  let l:data = type(a:result) is v:t_dict ?
+        \ get(a:result, 'data', {}) :
+        \ {}
+
+  let l:i = 0
+  while l:i < l:len
+    let l:current = l:i + l:start
+    let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
+
+    if !has_key(s:apply_highlights_cache, l:x) &&
+          \ !empty(a:apply_highlights)
+      let l:x_highlight = s:apply_highlights(a:apply_highlights, l:data, l:x)
+
+      if l:x_highlight isnot 0
+        let s:apply_highlights_cache[l:x] = l:x_highlight
+      endif
+    endif
+
+    call add(l:xs, l:x)
+    let l:i += 1
+  endwhile
+
   " only 1 x, possible that it exceeds l:space
-  if l:start == l:end
-    let l:x = s:draw_x_cached(a:ctx, a:result, l:start)
+  if l:len == 1
+    let l:x = l:xs[0]
+    let l:is_selected = l:selected == 0
 
     if strdisplaywidth(l:x) > l:space
       let l:res = []
@@ -285,31 +309,16 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      let l:spans = 0
-      if !empty(a:apply_highlights)
-        let l:data = type(a:result) is v:t_dict ?
-              \ get(a:result, 'data', {}) :
-              \ {}
-        if l:use_apply_highlights_cache && has_key(s:apply_highlights_cache, l:x)
-          let l:spans = s:apply_highlights_cache[l:x]
-        else
-          let l:spans = s:apply_highlights(a:apply_highlights, l:data, l:x)
-          let s:apply_highlights_cache[l:x] = l:spans
-        endif
-
-        if l:spans isnot 0
-          let l:chunks = s:spans_to_chunks(
-                \ l:x,
-                \ l:spans,
-                \ a:ctx.highlights[l:selected == 0 ? 'selected' : 'default'],
-                \ a:ctx.highlights[l:selected == 0 ? 'selected_accent' : 'accent'])
-          let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
-        endif
-      endif
-
-      if l:spans is 0
+      if has_key(s:apply_highlights_cache, l:x)
+        let l:chunks = s:spans_to_chunks(
+              \ l:x,
+              \ s:apply_highlights_cache[l:x],
+              \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
+              \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+        let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
+      else
         let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
-        call add(l:res, [l:x, a:ctx.highlights[l:selected == 0 ? 'selected' : 'default']])
+        call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
       endif
 
       call add(l:res, [l:ellipsis, a:ctx.highlights['default']])
@@ -321,47 +330,34 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
 
   let l:current = l:start
   let l:res = [['']]
-  let l:len = 0
+  let l:width = 0
 
-  while l:current <= l:end
-    if l:current != l:start
+  let l:i = 0
+  while l:i < l:len
+    if l:i > 0
       call add(l:res, [l:separator, a:ctx.highlights.separator])
-      let l:len += strdisplaywidth(l:separator)
+      let l:width += strdisplaywidth(l:separator)
     endif
 
-    let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
+    let l:x = l:xs[l:i]
+    let l:is_selected = l:selected == l:i + l:start
 
-    let l:spans = 0
-    if !empty(a:apply_highlights)
-      let l:data = type(a:result) is v:t_dict ?
-            \ get(a:result, 'data', {}) :
-            \ {}
-      if l:use_apply_highlights_cache && has_key(s:apply_highlights_cache, l:x)
-        let l:spans = s:apply_highlights_cache[l:x]
-      else
-        let l:spans = s:apply_highlights(a:apply_highlights, l:data, l:x)
-        let s:apply_highlights_cache[l:x] = l:spans
-      endif
-
-      if l:spans isnot 0
-        let l:chunks = s:spans_to_chunks(
-              \ l:x,
-              \ l:spans,
-              \ a:ctx.highlights[l:selected == l:current ? 'selected' : 'default'],
-              \ a:ctx.highlights[l:selected == l:current ? 'selected_accent' : 'accent'])
-        let l:res += chunks
-      endif
+    if has_key(s:apply_highlights_cache, l:x)
+      let l:chunks = s:spans_to_chunks(
+            \ l:x,
+            \ s:apply_highlights_cache[l:x],
+            \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
+            \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+      let l:res += chunks
+    else
+      call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
     endif
 
-    if l:spans is 0
-      call add(l:res, [l:x, a:ctx.highlights[l:current == l:selected ? 'selected' : 'default']])
-    endif
-
-    let l:len += strdisplaywidth(l:x)
-    let l:current += 1
+    let l:width += strdisplaywidth(l:x)
+    let l:i += 1
   endwhile
 
-  call add(l:res, [repeat(' ', l:space - l:len)])
+  call add(l:res, [repeat(' ', l:space - l:width)])
   return l:res
 endfunction
 
