@@ -357,13 +357,10 @@ endfunction
 function! wilder#search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
-  if !get(l:opts, 'skip_check', 0)
-    let l:pipeline = [
-          \ wilder#check({_, x -> !empty(x)}),
-          \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
-          \ ]
-  else
-    let l:pipeline = []
+  let l:pipeline = [wilder#check({_, x -> !empty(x)})]
+  if !get(l:opts, 'skip_cmdtype_check', 0)
+    call add(l:pipeline,
+          \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}))
   endif
 
   let l:search_pipeline = get(l:opts, 'pipeline', [
@@ -446,7 +443,7 @@ function! wilder#python_search_pipeline(...) abort
 
   return wilder#search_pipeline({
         \ 'pipeline': l:pipeline,
-        \ 'skip_check': get(l:opts, 'skip_check', 0),
+        \ 'skip_cmdtype_check': get(l:opts, 'skip_cmdtype_check', 0),
         \ })
 endfunction
 

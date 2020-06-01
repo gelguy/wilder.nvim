@@ -580,12 +580,11 @@ wilder#vim_search_pipeline([{options}])
             |wilder-pipeline-result-data| to the input of the pipeline.
 
             {options} is a dictionary with keys:
-            `skip_check`
+            `skip_cmdtype_check`
             Optional~
-            If true, the checks that the input string is empty and that
-            |getcmdtype()| is '/' or '?' are skipped.
-            This is useful when using the pipeline as the `pipeline` option
-            for |wilder#substitute_pipeline()|.
+            If true, skips checking that |getcmdtype()| is '/' or '?'.  This
+            is useful when using the pipeline as the `pipeline` option for
+            |wilder#substitute_pipeline()|.
 
             Default: 0
 
@@ -637,12 +636,11 @@ wilder#python_search_pipeline([{options}])
 
             Default: Empty
 
-            `skip_check`
+            `skip_cmdtype_check`
             Optional~
-            If true, the checks that input string is empty and that
-            |getcmdtype()| is '/' or '? is skipped.
-            This is useful when using the pipeline as the `pipeline` option
-            for |wilder#substitute_pipeline()|.
+            If true, skips checking that |getcmdtype()| is '/' or '?'.  This
+            is useful when using the pipeline as the `pipeline` option for
+            |wilder#substitute_pipeline()|.
 
             Default: 0
 
@@ -739,12 +737,12 @@ wilder#substitute_pipeline([{options}])
             The pipeline to pass the {pattern} section to.
             |wilder#vim_search_pipeline()| and
             |wilder#python_search_pipeline()| can be used as the pipeline if
-            the `skip_check` option is set for the pipelines.
+            the `skip_cmdtype_check` option is set for the pipelines.
 
             Default: For vim:
-                     wilder#vim_search_pipeline({'skip_check' : 1})
+                     wilder#vim_search_pipeline({'skip_cmdtype_check' : 1})
                      For nvim:
-                     wilder#python_search_pipeline({'skip_check' : 1})
+                     wilder#python_search_pipeline({'skip_cmdtype_check' : 1})
 
             `hide_in_replace`
             When true, hides wilder when in the {string} section of the
