@@ -1,11 +1,11 @@
 # wilder.nvim
-![search](https://i.imgur.com/kjgwCRz.png)
+![wilder](https://i.imgur.com/BHA7Rf6.gif)
 
 ### A more adventurous wildmenu
 
 `wilder.nvim` adds new features and capabilities to `wildmenu`.
 - Automatically provides suggestions as you type
-  - `/` search support - get search suggestions as from the current buffer
+  - `/` search support - get search suggestions from the current buffer
   - `:` cmdline support - autocomplete commands, expressions, filenames, etc.
 - High level of customisation
   - build your own custom pipeline to suit your needs
@@ -24,6 +24,7 @@
 call dein#add('gelguy/wilder.nvim')
 
 " with vim-plug
+" UpdateRemotePlugins needed
 Plug 'gelguy/wilder.nvim'
 ```
 
