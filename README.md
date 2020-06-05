@@ -106,7 +106,7 @@ call wilder#set_option('pipeline', [
 
 Provides suggestions while in the `pattern` part of a substitute command (i.e. when in `:s/{pattern}`). Has to be placed above `wilder#cmdline_pipeline()` in order to work.
 
-Note: For Neovim, read `:h wilder#substitute_pipeline()` for its interaction with `inccommand`.
+Note: For Neovim 0.4+, the renderer does not redraw correctly if `inccommand` is active.
 
 ## Customising the renderer
 
