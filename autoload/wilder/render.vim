@@ -1,5 +1,9 @@
 scriptencoding utf-8
 
+let s:draw_cache = {}
+let s:apply_highlights_cache = {}
+let s:cached_run_id = -1
+
 let s:hl_list = []
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
@@ -65,6 +69,8 @@ function! s:component_hook(component, ctx, key) abort
 endfunction
 
 function! wilder#render#make_page(ctx, result) abort
+  call s:clear_cache_if_needed(a:ctx.run_id)
+
   if empty(a:result.value)
     return [-1, -1]
   endif
@@ -80,12 +86,12 @@ function! wilder#render#make_page(ctx, result) abort
 
     let l:i = l:page[0]
     let l:separator_width = strdisplaywidth(a:ctx.separator)
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:i))
     let l:i += 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
-      let l:width += strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
+      let l:width += strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:i))
 
       " cannot fit in current page
       if l:width > a:ctx.space
@@ -120,7 +126,7 @@ function! s:make_page_from_start(ctx, result, start) abort
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -129,7 +135,7 @@ function! s:make_page_from_start(ctx, result, start) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -147,7 +153,7 @@ function! s:make_page_from_end(ctx, result, end) abort
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -156,7 +162,7 @@ function! s:make_page_from_end(ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start - 1))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:start - 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -174,7 +180,7 @@ function! s:make_page_from_end(ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -188,6 +194,10 @@ function! s:make_page_from_end(ctx, result, end) abort
 endfunction
 
 function! wilder#render#draw_x(ctx, result, i)
+  if has_key(s:draw_cache, a:i)
+    return s:draw_cache[a:i]
+  endif
+
   let l:x = a:result.value[a:i]
 
   if has_key(a:result, 'draw')
@@ -205,7 +215,10 @@ function! wilder#render#draw_x(ctx, result, i)
     endfor
   endif
 
-  return wilder#render#to_printable(l:x)
+  let l:result = wilder#render#to_printable(l:x)
+  let s:draw_cache[a:i] = l:result
+
+  return l:result
 endfunction
 
 function! wilder#render#make_hl_chunks(left, right, ctx, result, apply_highlights) abort
@@ -253,10 +266,9 @@ function! wilder#render#normalise(hl, chunks) abort
   return l:res
 endfunction
 
-let s:apply_highlights_cache = {}
-let s:apply_highlights_run_id = -1
-
 function! s:draw_xs(ctx, result, apply_highlights) abort
+  call s:clear_cache_if_needed(a:ctx.run_id)
+
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
@@ -265,11 +277,6 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
   if l:page == [-1, -1]
     return [[repeat(' ', l:space), a:ctx.highlights['default']]]
   endif
-
-  if a:ctx.run_id != s:apply_highlights_run_id
-    let s:apply_highlights_cache = {}
-  endif
-  let s:apply_highlights_run_id = a:ctx.run_id
 
   let l:start = l:page[0]
   let l:end = l:page[1]
@@ -283,7 +290,7 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
   let l:i = 0
   while l:i < l:len
     let l:current = l:i + l:start
-    let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
+    let l:x = wilder#render#draw_x(a:ctx, a:result, l:current)
 
     if !has_key(s:apply_highlights_cache, l:x) &&
           \ !empty(a:apply_highlights)
@@ -359,6 +366,15 @@ function! s:draw_xs(ctx, result, apply_highlights) abort
 
   call add(l:res, [repeat(' ', l:space - l:width)])
   return l:res
+endfunction
+
+function! s:clear_cache_if_needed(run_id) abort
+  if a:run_id != s:cached_run_id
+    let s:draw_cache = {}
+    let s:apply_highlights_cache = {}
+  endif
+
+  let s:cached_run_id = a:run_id
 endfunction
 
 function! s:apply_highlights(apply_highlights, data, x)
@@ -711,22 +727,6 @@ function! s:get_hl_attrs(attrs, key, hl) abort
         \ match(a:hl, l:prefix . 'inverse') >= 0
   let a:attrs.italic = match(a:hl, l:prefix . 'italic') >= 0
   let a:attrs.standout = match(a:hl, l:prefix . 'standout') >= 0
-endfunction
-
-function! s:draw_x_cached(ctx, result, i) abort
-  if !has_key(a:ctx, 'draw_cache')
-    let a:ctx.draw_cache = {}
-  endif
-
-  if has_key(a:ctx.draw_cache, a:i)
-    return a:ctx.draw_cache[a:i]
-  endif
-
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
-
-  let a:ctx.draw_cache[a:i] = l:x
-
-  return l:x
 endfunction
 
 function! wilder#render#to_printable(x) abort
