@@ -1,6 +1,10 @@
 scriptencoding utf-8
 
-let s:hl_map = {}
+let s:draw_cache = {}
+let s:apply_highlights_cache = {}
+let s:cached_run_id = -1
+
+let s:hl_list = []
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
 function! wilder#render#component_len(component, ctx, result) abort
@@ -65,6 +69,8 @@ function! s:component_hook(component, ctx, key) abort
 endfunction
 
 function! wilder#render#make_page(ctx, result) abort
+  call s:clear_cache_if_needed(a:ctx.run_id)
+
   if empty(a:result.value)
     return [-1, -1]
   endif
@@ -80,12 +86,12 @@ function! wilder#render#make_page(ctx, result) abort
 
     let l:i = l:page[0]
     let l:separator_width = strdisplaywidth(a:ctx.separator)
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:i))
     let l:i += 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
-      let l:width += strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:i))
+      let l:width += strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:i))
 
       " cannot fit in current page
       if l:width > a:ctx.space
@@ -120,7 +126,7 @@ function! s:make_page_from_start(ctx, result, start) abort
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -129,7 +135,7 @@ function! s:make_page_from_start(ctx, result, start) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -147,7 +153,7 @@ function! s:make_page_from_end(ctx, result, end) abort
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -156,7 +162,7 @@ function! s:make_page_from_end(ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:start - 1))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:start - 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -174,7 +180,7 @@ function! s:make_page_from_end(ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x_cached(a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(wilder#render#draw_x(a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -188,6 +194,10 @@ function! s:make_page_from_end(ctx, result, end) abort
 endfunction
 
 function! wilder#render#draw_x(ctx, result, i)
+  if has_key(s:draw_cache, a:i)
+    return s:draw_cache[a:i]
+  endif
+
   let l:x = a:result.value[a:i]
 
   if has_key(a:result, 'draw')
@@ -205,22 +215,25 @@ function! wilder#render#draw_x(ctx, result, i)
     endfor
   endif
 
-  return wilder#render#to_printable(l:x)
+  let l:result = wilder#render#to_printable(l:x)
+  let s:draw_cache[a:i] = l:result
+
+  return l:result
 endfunction
 
-function! wilder#render#make_hl_chunks(left, right, ctx, result) abort
+function! wilder#render#make_hl_chunks(left, right, ctx, result, apply_highlights) abort
   let l:chunks = []
-  let l:chunks += s:draw_component(a:left, a:ctx.hl, a:ctx, a:result)
+  let l:chunks += s:draw_component(a:left, a:ctx.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
-    let l:chunks += s:draw_error(a:ctx.hl, a:ctx, a:ctx.error)
+    let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
   else
-    let l:chunks += s:draw_xs(a:ctx, a:result)
+    let l:chunks += s:draw_xs(a:ctx, a:result, a:apply_highlights)
   endif
 
-  let l:chunks += s:draw_component(a:right, a:ctx.hl, a:ctx, a:result)
+  let l:chunks += s:draw_component(a:right, a:ctx.highlights['default'], a:ctx, a:result)
 
-  return wilder#render#normalise(a:ctx.hl, l:chunks)
+  return wilder#render#normalise(a:ctx.highlights['default'], l:chunks)
 endfunction
 
 function! wilder#render#normalise(hl, chunks) abort
@@ -253,73 +266,152 @@ function! wilder#render#normalise(hl, chunks) abort
   return l:res
 endfunction
 
-function! s:draw_xs(ctx, result) abort
+function! s:draw_xs(ctx, result, apply_highlights) abort
+  call s:clear_cache_if_needed(a:ctx.run_id)
+
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
   let l:separator = a:ctx.separator
 
   if l:page == [-1, -1]
-    return [[repeat(' ', l:space), a:ctx.hl]]
+    return [[repeat(' ', l:space), a:ctx.highlights['default']]]
   endif
 
   let l:start = l:page[0]
   let l:end = l:page[1]
 
+  let l:xs = []
+  let l:len = l:end - l:start + 1
+  let l:data = type(a:result) is v:t_dict ?
+        \ get(a:result, 'data', {}) :
+        \ {}
+
+  let l:i = 0
+  while l:i < l:len
+    let l:current = l:i + l:start
+    let l:x = wilder#render#draw_x(a:ctx, a:result, l:current)
+
+    if !has_key(s:apply_highlights_cache, l:x) &&
+          \ !empty(a:apply_highlights)
+      let l:x_highlight = s:apply_highlights(a:apply_highlights, l:data, l:x)
+
+      if l:x_highlight isnot 0
+        let s:apply_highlights_cache[l:x] = l:x_highlight
+      endif
+    endif
+
+    call add(l:xs, l:x)
+    let l:i += 1
+  endwhile
+
   " only 1 x, possible that it exceeds l:space
-  if l:start == l:end
-    let l:x = s:draw_x_cached(a:ctx, a:result, l:start)
+  if l:len == 1
+    let l:x = l:xs[0]
+    let l:is_selected = l:selected == 0
 
     if strdisplaywidth(l:x) > l:space
+      let l:res = []
+
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
-
-      if l:start == l:selected
-        let l:hl = a:ctx.selected_hl
+      if has_key(s:apply_highlights_cache, l:x)
+        let l:chunks = s:spans_to_chunks(
+              \ l:x,
+              \ s:apply_highlights_cache[l:x],
+              \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
+              \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+        let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
       else
-        let l:hl = a:ctx.hl
+        let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
+        call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
       endif
 
-      let l:result = l:x . l:ellipsis
-      let l:padding = repeat(' ', l:space - strdisplaywidth(l:result))
-      return [[l:result . l:padding, l:hl]]
+      call add(l:res, [l:ellipsis, a:ctx.highlights['default']])
+      let l:padding = repeat(' ', l:space - strdisplaywidth(l:x))
+      call add(l:res, [l:padding, a:ctx.highlights['default']])
+      return l:res
     endif
   endif
 
   let l:current = l:start
-  let l:previous_selected = 0
   let l:res = [['']]
-  let l:len = 0
+  let l:width = 0
 
-  let l:separator_same_hl = a:ctx.separator_hl ==# a:ctx.hl
-
-  while l:current <= l:end
-    if l:current != l:start
-      if l:previous_selected || !l:separator_same_hl
-        call add(l:res, [l:separator, a:ctx.separator_hl])
-      else
-        let l:res[-1][0] .= l:separator
-      endif
-      let l:len += strdisplaywidth(l:separator)
+  let l:i = 0
+  while l:i < l:len
+    if l:i > 0
+      call add(l:res, [l:separator, a:ctx.highlights.separator])
+      let l:width += strdisplaywidth(l:separator)
     endif
 
-    let l:x = s:draw_x_cached(a:ctx, a:result, l:current)
-    if l:current == l:selected
-      call add(l:res, [l:x, a:ctx.selected_hl])
-    elseif l:separator_same_hl
-      let l:res[-1][0] .= l:x
+    let l:x = l:xs[l:i]
+    let l:is_selected = l:selected == l:i + l:start
+
+    if has_key(s:apply_highlights_cache, l:x)
+      let l:chunks = s:spans_to_chunks(
+            \ l:x,
+            \ s:apply_highlights_cache[l:x],
+            \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
+            \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+      let l:res += chunks
     else
-      call add(l:res, [l:x, a:ctx.hl])
+      call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
     endif
-    let l:previous_selected = l:current == l:selected
 
-    let l:len += strdisplaywidth(l:x)
-    let l:current += 1
+    let l:width += strdisplaywidth(l:x)
+    let l:i += 1
   endwhile
 
-  call add(l:res, [repeat(' ', l:space - l:len)])
+  call add(l:res, [repeat(' ', l:space - l:width)])
+  return l:res
+endfunction
+
+function! s:clear_cache_if_needed(run_id) abort
+  if a:run_id != s:cached_run_id
+    let s:draw_cache = {}
+    let s:apply_highlights_cache = {}
+  endif
+
+  let s:cached_run_id = a:run_id
+endfunction
+
+function! s:apply_highlights(apply_highlights, data, x)
+  for l:Apply_highlights in a:apply_highlights
+    let l:spans = l:Apply_highlights({}, a:data, a:x)
+    if l:spans isnot 0
+      return l:spans
+    endif
+  endfor
+
+  return 0
+endfunction
+
+function! s:spans_to_chunks(str, spans, hl, span_hl) abort
+  let l:res = []
+
+  let l:non_span_start = 0
+  let l:end = 0
+
+  let l:i = 0
+  while l:i < len(a:spans)
+    let l:span = a:spans[l:i]
+    let l:start = l:span[0]
+    let l:len = l:span[1]
+
+    if l:start > 0
+      call add(l:res, [strpart(a:str, l:non_span_start, l:start - l:non_span_start), a:hl])
+    endif
+
+    call add(l:res, [strpart(a:str, l:start, l:len), a:span_hl])
+
+    let l:non_span_start = l:start + l:len
+    let l:i += 1
+  endwhile
+
+  call add(l:res, [strpart(a:str, l:non_span_start), a:hl])
+
   return l:res
 endfunction
 
@@ -377,60 +469,132 @@ function! s:draw_component(Component, hl, ctx, result) abort
 endfunction
 
 function! wilder#render#init_hl() abort
-  for l:key in keys(s:hl_map)
-    exe s:hl_map[l:key]
+  for [l:name, l:x, l:xs] in s:hl_list
+    call s:make_hl(l:name, l:x, l:xs)
   endfor
 endfunction
 
-function! wilder#render#make_hl(name, args) abort
-  let l:type = type(a:args)
-  if l:type == v:t_list
-    if type(a:args[0]) == v:t_list
-      return s:make_hl_from_list_list(a:name, a:args)
-    endif
+function! wilder#render#make_hl(name, x, xs) abort
+  let l:name = s:make_hl(a:name, a:x, a:xs)
+  call filter(s:hl_list, {i, elem -> elem[0] !=# l:name})
+  call add(s:hl_list, [l:name, deepcopy(a:x), deepcopy(a:xs)])
+  return l:name
+endfunction
 
-    return s:make_hl_from_dict_list(a:name, a:args)
+function! s:make_hl(name, x, xs) abort
+  let l:x = s:to_hl_list(a:x)
+
+  for l:elem in a:xs
+    let l:y = s:to_hl_list(l:elem)
+    let l:x = s:combine_hl_list(l:x, l:y)
+  endfor
+
+  return s:make_hl_from_list(a:name, l:x)
+endfunction
+
+function! s:to_hl_list(x) abort
+  if type(a:x) is v:t_string
+    let l:x = wilder#render#get_colors(a:x)
   else
-    return s:make_hl_from_string(a:name, a:args)
+    let l:x = a:x
   endif
-endfunction
 
-function! s:make_hl_from_string(name, args) abort
-  let l:cmd = 'hi! link ' . a:name . ' ' . a:args
+  if type(l:x[0]) is v:t_list
+    return l:x
+  endif
 
-  let s:hl_map[a:name] = l:cmd
-  return a:name
-endfunction
-
-function! s:make_hl_from_dict_list(name, args) abort
-  let l:term_hl = s:get_attrs_as_list(a:args[0])
+  let l:term_hl = s:get_attrs_as_list(l:x[0])
 
   let l:cterm_hl = [
-        \ get(a:args[1], 'foreground', 'NONE'),
-        \ get(a:args[1], 'background', 'NONE')
-        \ ] + s:get_attrs_as_list(a:args[1])
+        \ get(l:x[1], 'foreground', 'NONE'),
+        \ get(l:x[1], 'background', 'NONE')
+        \ ] + s:get_attrs_as_list(l:x[1])
 
   let l:gui_hl = [
-        \ get(a:args[2], 'foreground', 'NONE'),
-        \ get(a:args[2], 'background', 'NONE')
-        \ ] + s:get_attrs_as_list(a:args[2])
+        \ get(l:x[2], 'foreground', 'NONE'),
+        \ get(l:x[2], 'background', 'NONE')
+        \ ] + s:get_attrs_as_list(l:x[2])
 
-  return s:make_hl_from_list_list(a:name, [l:term_hl, l:cterm_hl, l:gui_hl])
+  return [l:term_hl, l:cterm_hl, l:gui_hl]
 endfunction
 
-function! s:make_hl_from_list_list(name, args) abort
+function! s:combine_hl_list(l, m) abort
+  let l:term_hl = copy(a:l[0])
+  let l:cterm_hl = copy(a:l[1])
+  let l:gui_hl = copy(a:l[2])
+
+  if len(l:term_hl) <= 2
+    let l:term_hl = copy(a:m[0])
+  else
+    let l:term_hl += a:m[0][2:]
+  endif
+
+  if get(a:m[1], 0, 'NONE') !=# 'NONE'
+    if empty(l:cterm_hl)
+      let l:cterm_hl = [a:m[1][0]]
+    else
+      let l:cterm_hl[0] = a:m[1][0]
+    endif
+  endif
+
+  if get(a:m[1], 1, 'NONE') !=# 'NONE'
+    if empty(l:cterm_hl)
+      let l:cterm_hl = ['NONE', a:m[1][1]]
+    else
+      let l:cterm_hl[1] = a:m[1][1]
+    endif
+  endif
+
+  if len(a:m[1]) > 2
+    if empty(l:cterm_hl)
+      let l:cterm_hl = ['NONE', 'NONE'] + a:m[1][2:]
+    else
+      let l:cterm_hl += a:m[1][2:]
+    endif
+  endif
+
+  if get(a:m[2], 0, 'NONE') !=# 'NONE'
+    if empty(l:gui_hl)
+      let l:gui_hl = [a:m[2][0]]
+    else
+      let l:gui_hl[0] = a:m[2][0]
+    endif
+  endif
+
+  if get(a:m[2], 1, 'NONE') !=# 'NONE'
+    if empty(l:gui_hl)
+      let l:gui_hl = ['NONE', a:m[2][1]]
+    else
+      let l:gui_hl[1] = a:m[2][1]
+    endif
+  endif
+
+  if len(a:m[2]) > 2
+    if empty(l:gui_hl)
+      let l:gui_hl = ['NONE', 'NONE'] + a:m[2][2:]
+    else
+      let l:gui_hl += a:m[2][2:]
+    endif
+  endif
+
+  return [l:term_hl, l:cterm_hl, l:gui_hl]
+endfunction
+
+function! s:make_hl_from_list(name, args) abort
   let l:term_hl = a:args[0]
   let l:cterm_hl = a:args[1]
   let l:gui_hl = a:args[2]
 
   let l:cmd = 'hi! ' . a:name . ' '
 
-  if len(l:term_hl) > 2
-    let l:cmd .= 'term=' . join(l:term_hl[2:], ',') . ' '
+  let l:term_attr = l:term_hl[2:]
+  if len(l:term_hl) >= 2
+    let l:cmd .= 'term=' . join(l:term_attr, ',') . ' '
   endif
 
-  if len(l:cterm_hl) > 2
-    let l:cmd .= 'cterm=' . join(l:cterm_hl[2:], ',') . ' '
+  let l:cterm_attr = l:cterm_hl[2:]
+  if !empty(l:cterm_attr)
+    let l:cmd .= 'cterm=' . join(l:cterm_attr, ',') . ' '
   endif
 
   if len(l:cterm_hl) >= 1
@@ -443,8 +607,9 @@ function! s:make_hl_from_list_list(name, args) abort
     endif
   endif
 
-  if len(l:gui_hl) > 2
-    let l:cmd .= 'gui=' . join(l:gui_hl[2:], ',') . ' '
+  let l:gui_attr = l:gui_hl[2:]
+  if !empty(l:gui_attr)
+    let l:cmd .= 'gui=' . join(l:gui_attr, ',') . ' '
   endif
 
   if len(l:gui_hl) >= 1
@@ -463,7 +628,7 @@ function! s:make_hl_from_list_list(name, args) abort
     endif
   endif
 
-  let s:hl_map[a:name] = l:cmd
+  exe l:cmd
   return a:name
 endfunction
 
@@ -473,20 +638,24 @@ function! s:get_attrs_as_list(attrs) abort
   if get(a:attrs, 'bold', 0)
     call add(l:res, 'bold')
   endif
-  if get(a:attrs, 'italic', 0)
-    call add(l:res, 'italic')
-  endif
-  if get(a:attrs, 'reverse', 0)
-    call add(l:res, 'reverse')
-  endif
-  if get(a:attrs, 'standout', 0)
-    call add(l:res, 'standout')
-  endif
   if get(a:attrs, 'underline', 0)
     call add(l:res, 'underline')
   endif
   if get(a:attrs, 'undercurl', 0)
     call add(l:res, 'undercurl')
+  endif
+  if get(a:attrs, 'strikethrough', 0)
+    call add(l:res, 'strikethrough')
+  endif
+  if get(a:attrs, 'reverse', 0) ||
+        \ get(a:attrs, 'inverse', 0)
+    call add(l:res, 'reverse')
+  endif
+  if get(a:attrs, 'italic', 0)
+    call add(l:res, 'italic')
+  endif
+  if get(a:attrs, 'standout', 0)
+    call add(l:res, 'standout')
   endif
 
   return l:res
@@ -513,12 +682,11 @@ endfunction
 
 function! wilder#render#get_colors_vim(group) abort
   try
-    redir => l:highlight
-    silent execute 'silent highlight ' . a:group
-    redir END
+    let l:highlight = execute('silent highlight ' . a:group)
 
     let l:link_matches = matchlist(l:highlight, 'links to \(\S\+\)')
-    if len(l:link_matches) > 0 " follow the link
+     " follow the link
+    if len(l:link_matches) > 0
       return wilder#render#get_colors_vim(l:link_matches[1])
     endif
 
@@ -550,28 +718,15 @@ function! wilder#render#get_colors_vim(group) abort
 endfunction
 
 function! s:get_hl_attrs(attrs, key, hl) abort
-  let a:attrs.bold = match(a:hl, a:key . '=\S*bold\S*') >= 0
-  let a:attrs.italic = match(a:hl, a:key . '=\S*italic\S*') >= 0
-  let a:attrs.reverse = match(a:hl, a:key . '=\S*reverse\S*') >= 0
-  let a:attrs.standout = match(a:hl, a:key . '=\S*standout\S*') >= 0
-  let a:attrs.underline = match(a:hl, a:key . '=\S*underline\S*') >= 0
-  let a:attrs.undercurl = match(a:hl, a:key . '=\S*undercurl\S*') >= 0
-endfunction
-
-function! s:draw_x_cached(ctx, result, i) abort
-  if !has_key(a:ctx, 'draw_cache')
-    let a:ctx.draw_cache = {}
-  endif
-
-  if has_key(a:ctx.draw_cache, a:i)
-    return a:ctx.draw_cache[a:i]
-  endif
-
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
-
-  let a:ctx.draw_cache[a:i] = l:x
-
-  return l:x
+  let l:prefix = ' ' . a:key . '=\S*'
+  let a:attrs.bold = match(a:hl, l:prefix . 'bold') >= 0
+  let a:attrs.underline = match(a:hl, l:prefix . 'underline') >= 0
+  let a:attrs.undercurl = match(a:hl, l:prefix . 'undercurl') >= 0
+  let a:attrs.strikethrough = match(a:hl, l:prefix . 'strikethrough') >= 0
+  let a:attrs.reverse = match(a:hl, l:prefix . 'reverse') >= 0 ||
+        \ match(a:hl, l:prefix . 'inverse') >= 0
+  let a:attrs.italic = match(a:hl, l:prefix . 'italic') >= 0
+  let a:attrs.standout = match(a:hl, l:prefix . 'standout') >= 0
 endfunction
 
 function! wilder#render#to_printable(x) abort
@@ -626,16 +781,11 @@ function! wilder#render#to_printable(x) abort
   return l:res
 endfunction
 
-function! wilder#render#truncate(len, str) abort
-  " assumes to_printable has been called on str
-  let l:chars = split(a:str, '\zs')
-  let l:width = strdisplaywidth(a:str)
-
-  if l:width <= a:len
-    return a:str
-  endif
-
+function! wilder#render#truncate(len, x) abort
+  let l:width = strdisplaywidth(a:x)
+  let l:chars = split(a:x, '\zs')
   let l:index = len(l:chars) - 1
+
   while l:width > a:len && l:index >= 0
     let l:width -= strdisplaywidth(l:chars[l:index])
 
@@ -643,6 +793,28 @@ function! wilder#render#truncate(len, str) abort
   endwhile
 
   return join(l:chars[:l:index], '')
+endfunction
+
+function! wilder#render#truncate_chunks(len, xs) abort
+  let l:width = 0
+  let l:res = []
+  let l:i = 0
+
+  while l:i < len(a:xs)
+    let l:chunk = a:xs[l:i]
+    let l:chunk_width = strdisplaywidth(l:chunk[0])
+
+    if l:width + l:chunk_width > a:len
+      call add(l:res, [wilder#render#truncate(a:len - l:width, l:chunk[0]), l:chunk[1]])
+      return l:res
+    endif
+
+    call add(l:res, l:chunk)
+    let l:width += l:chunk_width
+    let l:i += 1
+  endwhile
+
+  return l:res
 endfunction
 
 let s:high_control_characters = {

@@ -1,6 +1,6 @@
 function! wilder#cmdline#main#do(ctx) abort
   " default
-  let a:ctx.expand = 'commands'
+  let a:ctx.expand = 'command'
   let a:ctx.force = 0
 
   if empty(a:ctx.cmdline[a:ctx.pos :])
@@ -71,8 +71,8 @@ function! wilder#cmdline#main#do(ctx) abort
         let a:ctx.pos += 1
         let l:char = a:ctx.cmdline[a:ctx.pos]
       else
-        " for py3*, only set of default commands with numbers
-        " other commands are alphabet only
+        " py3, python3, py3file and py3do are the only commands with numbers
+        " all other commands are alphabet only
         if a:ctx.cmdline[a:ctx.pos] ==# 'p' &&
               \ a:ctx.cmdline[a:ctx.pos + 1] ==# 'y' &&
               \ a:ctx.cmdline[a:ctx.pos + 2] ==# '3'
@@ -80,8 +80,15 @@ function! wilder#cmdline#main#do(ctx) abort
           let l:char = a:ctx.cmdline[a:ctx.pos]
         endif
 
+        " this should check for [a-zA-Z] only, but the Vim implementation
+        " skips over wildcards. This matters for commands which accept
+        " non-alphanumeric arugments e.g. 'e*' would be parsed as an 'edit'
+        " command with a '*' argument otherwise. These commands typically
+        " don't need a space between the command and argument e.g. 'e++opt'
+        " is a valid command.
         while l:char >=# 'a' && l:char <=# 'z' ||
-              \ l:char >=# 'A' && l:char <=# 'Z'
+              \ l:char >=# 'A' && l:char <=# 'Z' ||
+              \ l:char ==# '*'
           let a:ctx.pos += 1
           let l:char = a:ctx.cmdline[a:ctx.pos]
         endwhile
@@ -173,7 +180,7 @@ function! wilder#cmdline#main#do(ctx) abort
   elseif a:ctx.cmd ==# 'read'
     if a:ctx.cmdline[a:ctx.pos] ==# '!'
       let a:ctx.pos += 1
-      let l:use_fitler = 1
+      let l:use_filter = 1
     else
       let l:use_filter = a:ctx.force
     endif
@@ -185,14 +192,39 @@ function! wilder#cmdline#main#do(ctx) abort
     call wilder#cmdline#main#skip_whitespace(a:ctx)
   endif
 
-  " +command
+  " +cmd or ++opt
   if and(l:flags, s:EDITCMD) &&
         \ !l:use_filter && a:ctx.cmdline[a:ctx.pos] ==# '+'
-    call wilder#cmdline#skip_plus_command#do(a:ctx)
+    let a:ctx.pos += 1
 
-    if !wilder#cmdline#main#skip_whitespace(a:ctx)
+    if a:ctx.cmdline[a:ctx.pos] ==# '+'
+      let a:ctx.pos += 1
+      let l:expand = 'option'
+    else
+      let l:expand = 'command'
+    endif
+
+    let l:arg_start = a:ctx.pos
+
+    while a:ctx.pos < len(a:ctx.cmdline)
+          \ && !wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+      if a:ctx.cmdline[a:ctx.pos] ==# '\\' &&
+            \ a:ctx.pos + 1 < len(a:ctx.cmdline)
+        let a:ctx.pos += 1
+      endif
+
+      " TODO: multibyte
+      let a:ctx.pos += 1
+    endwhile
+
+    " still in command or option
+    if empty(a:ctx.cmdline[a:ctx.pos])
+      let a:ctx.pos = l:arg_start
+      let a:ctx.expand = l:expand
       return
     endif
+
+    call wilder#cmdline#main#skip_whitespace(a:ctx)
   endif
 
   " look for | for new command and " for comment
@@ -259,8 +291,8 @@ function! wilder#cmdline#main#do(ctx) abort
   endif
 
   " find start of last argument
-  let l:first_arg_start = a:ctx.pos
   let l:arg_start = a:ctx.pos
+  let l:before_args = a:ctx.pos
   while a:ctx.pos < len(a:ctx.cmdline)
     let l:char = a:ctx.cmdline[a:ctx.pos]
 
@@ -268,15 +300,14 @@ function! wilder#cmdline#main#do(ctx) abort
       let a:ctx.pos += 1
       let l:arg_start = a:ctx.pos
     else
-      if l:char ==# '\\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
+      if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
         let a:ctx.pos += 1
       endif
+      let a:ctx.pos += 1
     endif
-
-    let a:ctx.pos += 1
   endwhile
 
-  let a:ctx.pos = l:first_arg_start
+  let a:ctx.pos = l:arg_start
 
   if and(l:flags, s:XFILE)
     let l:in_quote = 0
@@ -355,7 +386,7 @@ function! wilder#cmdline#main#do(ctx) abort
       endwhile
 
       if a:ctx.pos == len(a:ctx.cmdline)
-        let a:ctx.expand = 'env_vars'
+        let a:ctx.expand = 'environment'
         let a:ctx.pos = l:arg_start + 1
         return
       endif
@@ -518,6 +549,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lexpr' ||
         \ a:ctx.cmd ==# 'laddexpr' ||
         \ a:ctx.cmd ==# 'lgetexpr'
+    let a:ctx.pos = l:before_args
     call wilder#cmdline#let#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'unlet'

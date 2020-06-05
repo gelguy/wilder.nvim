@@ -7,33 +7,8 @@ catch
 endtry
 
 function! wilder#render#renderer#float#make(args) abort
-  let l:state = {
-        \ 'hl': get(a:args, 'hl', 'StatusLine'),
-        \ 'selected_hl': get(a:args, 'selected_hl', 'WildMenu'),
-        \ 'error_hl': get(a:args, 'error_hl', 'StatusLine'),
-        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
-        \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
-        \ 'page': [-1, -1],
-        \ 'buf': -1,
-        \ 'win': -1,
-        \ 'ns_id': nvim_create_namespace(''),
-        \ 'columns': -1,
-        \ 'cmdheight': -1,
-        \ }
-
-  if !has_key(a:args, 'left') && !has_key(a:args, 'right')
-    let l:state.left = [wilder#previous_arrow()]
-    let l:state.right = [wilder#next_arrow()]
-  else
-    let l:state.left = get(a:args, 'left', [])
-    let l:state.right = get(a:args, 'right', [])
-  endif
-
-  if has_key(a:args, 'separator_hl')
-    let l:state.separator_hl = get(a:args, 'separator_hl')
-  else
-    let l:state.separator_hl = l:state.hl
-  endif
+  let l:state = wilder#render#renderer#prepare_state(a:args)
+  let l:state.ns_id = nvim_create_namespace('')
 
   return {
         \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
@@ -43,39 +18,12 @@ function! wilder#render#renderer#float#make(args) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
-  if a:ctx.clear_previous
-    let a:state.page = [-1, -1]
-  endif
-
   if a:state.win == -1
     return
   endif
 
-  let l:space_used = wilder#render#component_len(
-        \ a:state.left,
-        \ a:ctx,
-        \ a:result)
-
-  let l:space_used += wilder#render#component_len(
-        \ a:state.right,
-        \ a:ctx,
-        \ a:result)
-
-  let a:ctx.space = &columns - l:space_used
-  let a:ctx.page = a:state.page
-  let a:ctx.separator = a:state.separator
-  let a:ctx.ellipsis = a:state.ellipsis
-
-  let l:page = wilder#render#make_page(a:ctx, a:result)
-  let a:ctx.page = l:page
-  let a:state.page = l:page
-
-  let a:ctx.hl = a:state.hl
-  let a:ctx.selected_hl = a:state.selected_hl
-  let a:ctx.error_hl = a:state.error_hl
-  let a:ctx.separator_hl = a:state.separator_hl
-
-  let l:chunks = wilder#render#make_hl_chunks(a:state.left, a:state.right, a:ctx, a:result)
+  let l:chunks = wilder#render#renderer#make_hl_chunks(
+        \ a:state, &columns, a:ctx, a:result)
 
   let l:in_sandbox = 0
   try
@@ -98,7 +46,16 @@ function! s:render_chunks(state, chunks) abort
   endif
 
   let a:state.columns = &columns
-  let a:state.cmdheight = &cmdheight
+
+  let l:cmdheight = s:get_cmdheight()
+  if a:state.cmdheight != l:cmdheight
+    call nvim_win_set_config(a:state.win, {
+          \ 'relative': 'editor',
+          \ 'row': &lines - s:get_cmdheight() - 1,
+          \ 'col': 0,
+          \ })
+    let a:state.cmdheight = l:cmdheight
+  endif
 
   let l:text = ''
   for l:elem in a:chunks
@@ -112,7 +69,7 @@ function! s:render_chunks(state, chunks) abort
   for l:elem in a:chunks
     let l:end = l:start + len(l:elem[0])
 
-    let l:hl = get(l:elem, 1, a:state.hl)
+    let l:hl = get(l:elem, 1, a:state.highlights['default'])
     call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, 0, l:start, l:end)
 
     let l:start = l:end
@@ -125,7 +82,7 @@ function! s:new_win(buf) abort
   if s:open_win_num_args == 5
     let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
           \ 'relative': 'editor',
-          \ 'row': &lines - &cmdheight - 1,
+          \ 'row': &lines - s:get_cmdheight() - 1,
           \ 'col': 0,
           \ 'focusable': 0,
           \ })
@@ -134,14 +91,14 @@ function! s:new_win(buf) abort
           \ 'relative': 'editor',
           \ 'height': 1,
           \ 'width': &columns,
-          \ 'row': &lines - &cmdheight - 1,
+          \ 'row': &lines - s:get_cmdheight() - 1,
           \ 'col': 0,
           \ 'focusable': 0,
           \ })
   endif
 
   call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
-  call nvim_win_set_option(l:win, 'listchars', '')
+  call nvim_win_set_option(l:win, 'list', v:false)
   call nvim_win_set_option(l:win, 'number', v:false)
   call nvim_win_set_option(l:win, 'relativenumber', v:false)
 
@@ -161,7 +118,7 @@ function! s:pre_hook(state, ctx) abort
 
   if a:state.win == -1
     let a:state.win = s:new_win(a:state.buf)
-  elseif a:state.columns != &columns || a:state.cmdheight != &cmdheight
+  elseif a:state.columns != &columns || a:state.cmdheight != s:get_cmdheight()
     let l:old_win = a:state.win
 
     " set to -1 preemptively in case API calls fail
@@ -186,9 +143,33 @@ function! s:post_hook(state, ctx) abort
   if a:state.win != -1
     let l:win = a:state.win
     let a:state.win = -1
-    call nvim_win_close(l:win, 1)
+    " cannot call nvim_win_close() while cmdline-window is open
+    if getcmdwintype() ==# ''
+      call nvim_win_close(l:win, 1)
+    else
+      execute 'autocmd CmdWinLeave * ++once call timer_start(0, {-> nvim_win_close(' . l:win . ', 0)})'
+    endif
   endif
 
   call wilder#render#component_post_hook(a:state.left, a:ctx)
   call wilder#render#component_post_hook(a:state.right, a:ctx)
+endfunction
+
+function! s:get_cmdheight() abort
+  let l:cmdheight = &cmdheight
+  let l:columns = &columns
+  let l:cmdline = getcmdline()
+
+  " include the cmdline character
+  let l:display_width = strdisplaywidth(l:cmdline) + 1
+  let l:actual_height = l:display_width / l:columns
+  if l:display_width % l:columns != 0
+    let l:actual_height += 1
+  endif
+
+  if l:cmdheight > l:actual_height
+    return l:cmdheight
+  endif
+
+  return l:actual_height
 endfunction

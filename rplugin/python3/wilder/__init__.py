@@ -1,10 +1,12 @@
 import asyncio
 import concurrent.futures
+import difflib
 import fnmatch
 import functools
 import glob
 import importlib
 from importlib.util import find_spec
+import itertools
 import multiprocessing
 import os
 from pathlib import Path
@@ -28,10 +30,11 @@ class Wilder(object):
         self.events = []
         self.lock = threading.Lock()
         self.executor = None
+        self.cached_buffer = {'bufnr': -1, 'undotree_seq_cur': -1, 'buffer': []}
         self.run_id = -1
 
     def handle(self, ctx, x, command='resolve'):
-        self.nvim.call('wilder#pipeline#' + command, ctx, x)
+        self.nvim.call('wilder#' + command, ctx, x)
 
     def echomsg(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echomsg "' + x + '"'))
@@ -75,7 +78,7 @@ class Wilder(object):
             else:
                 self.nvim.async_call(self.handle, ctx, res)
 
-    @neovim.function('_wilder_init', sync=True, allow_nested=True)
+    @neovim.function('_wilder_init', sync=True)
     def init(self, args):
         if self.has_init:
             return
@@ -88,7 +91,7 @@ class Wilder(object):
         t = threading.Thread(target=self.consumer, daemon=True)
         t.start()
 
-    @neovim.function('_wilder_python_sleep', sync=False)
+    @neovim.function('_wilder_python_sleep', sync=False, allow_nested=True)
     def sleep(self, args):
         self.run_in_background(self.sleep_handler, args)
 
@@ -99,17 +102,23 @@ class Wilder(object):
         time.sleep(t)
         self.queue.put((ctx, x,))
 
-    @neovim.function('_wilder_python_search', sync=False, allow_nested=True)
+    @neovim.function('_wilder_python_search', sync=False)
     def search(self, args):
         if args[2] == "":
             self.handle(args[1], [])
             return
 
-        line_num = self.nvim.current.window.cursor[0] - 1
-        current_buf = self.nvim.current.buffer
-        buf = current_buf[line_num:] + current_buf[:line_num]
+        bufnr = self.nvim.current.buffer.number
+        undotree_seq_cur = self.nvim.eval('undotree().seq_cur')
+        if (bufnr != self.cached_buffer['bufnr'] or
+                undotree_seq_cur != self.cached_buffer['undotree_seq_cur']):
+            self.cached_buffer = {
+                'bufnr': bufnr,
+                'undotree_seq_cur': undotree_seq_cur,
+                'buffer': list(self.nvim.current.buffer),
+                }
 
-        self.run_in_background(self.search_handler, args + [buf])
+        self.run_in_background(self.search_handler, args + [self.cached_buffer['buffer']])
 
     def search_handler(self, event, ctx, opts, x, buf):
         if event.is_set():
@@ -123,7 +132,8 @@ class Wilder(object):
             candidates = []
 
             re = importlib.import_module(module_name)
-            pattern = re.compile(x)
+            # re2 does not use re.UNICODE by default
+            pattern = re.compile(x, re.UNICODE)
 
             for line in buf:
                 if event.is_set():
@@ -145,7 +155,7 @@ class Wilder(object):
             with self.lock:
                 self.events.remove(event)
 
-    @neovim.function('_wilder_python_uniq', sync=False)
+    @neovim.function('_wilder_python_uniq', sync=False, allow_nested=True)
     def uniq(self, args):
         self.run_in_background(self.uniq_handler, args)
 
@@ -176,31 +186,31 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_sort: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_get_file_completion', sync=False, allow_nested=True)
+    @neovim.function('_wilder_python_get_file_completion', sync=False)
     def get_file_completion(self, args):
-        wildignore = self.nvim.options.get('wildignore')
-
-        if args[3] == 'file_in_path':
-            path_opt = self.nvim.options.get('path') if args[3] == 'file_in_path' else ''
+        if args[2] == 'file_in_path':
+            path_opt = self.nvim.eval('&path')
             directories = path_opt.split(',')
-        elif args[3] == 'shellcmd':
+            directories += [self.nvim.eval('expand("%:h")')]
+        elif args[2] == 'shellcmd':
             path = os.environ['PATH']
             directories = path.split(':')
         else:
-            directories = [args[1]]
+            directories = [self.nvim.eval('getcwd()')]
 
-        self.run_in_background(self.get_file_completion_handler, args + [directories, wildignore])
+        wildignore_opt = self.nvim.eval('&wildignore')
+
+        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories])
 
     def get_file_completion_handler(self,
                                     event,
                                     ctx,
-                                    working_directory,
                                     expand_arg,
                                     expand_type,
                                     has_wildcard,
                                     path_prefix,
-                                    directories,
-                                    wildignore_opt):
+                                    wildignore_opt,
+                                    directories):
         if event.is_set():
             return
 
@@ -259,12 +269,10 @@ class Wilder(object):
                         if expand_type == 'shellcmd' and (
                                 not entry.is_file() or not os.access(os.path.join(directory, entry.name), os.X_OK)):
                             continue
-                        name = str(entry) if has_wildcard else entry.name
-                        if Path(name) == Path(path_prefix):
-                            if has_wildcard:
-                                continue
-                            res.append(os.path.join(path_prefix, './'))
-                        elif entry.is_dir():
+                        if has_wildcard and Path(entry) == Path(path_prefix):
+                            continue
+
+                        if entry.is_dir():
                             res.append((str(entry) if has_wildcard else entry.name) + os.sep)
                         else:
                             res.append(str(entry) if has_wildcard else entry.name)
@@ -321,17 +329,37 @@ class Wilder(object):
 
         try:
             re = importlib.import_module(engine)
-            pattern = re.compile(pattern)
+            # re2 does not use re.UNICODE by default
+            pattern = re.compile(pattern, re.UNICODE)
             res = filter(lambda x: pattern.search(x if not has_file_args else self.get_basename(x)), candidates)
             self.queue.put((ctx, list(res),))
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_fuzzywuzzy', sync=False, allow_nested=True)
-    def fuzzywuzzy(self, args):
-        self.run_in_background(self.fuzzywuzzy_handler, args)
+    @neovim.function('_wilder_python_sort_difflib', sync=False, allow_nested=True)
+    def sort_difflib(self, args):
+        self.run_in_background(self.sort_difflib_handler, args)
 
-    def fuzzywuzzy_handler(self, event, ctx, candidates, query, partial=True):
+    def sort_difflib_handler(self, event, ctx, candidates, query, quick=True):
+        if event.is_set():
+            return
+
+        try:
+            if quick:
+                res = sorted(candidates, key=lambda x: -difflib.SequenceMatcher(
+                    None, x, query).quick_ratio())
+            else:
+                res = sorted(candidates, key=lambda x: -difflib.SequenceMatcher(
+                    None, x, query).ratio())
+            self.queue.put((ctx, list(res),))
+        except Exception as e:
+            self.queue.put((ctx, 'python_sort_difflib: ' + str(e), 'reject',))
+
+    @neovim.function('_wilder_python_sort_fuzzywuzzy', sync=False, allow_nested=True)
+    def sort_fuzzywuzzy(self, args):
+        self.run_in_background(self.sort_fuzzywuzzy_handler, args)
+
+    def sort_fuzzywuzzy_handler(self, event, ctx, candidates, query, partial=True):
         if event.is_set():
             return
 
@@ -343,4 +371,51 @@ class Wilder(object):
                 res = sorted(candidates, key=lambda x: -fuzzy.ratio(x, query))
             self.queue.put((ctx, list(res),))
         except Exception as e:
-            self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_sort_fuzzywuzzy: ' + str(e), 'reject',))
+
+    @neovim.function('_wilder_python_common_subsequence_spans', sync=True)
+    def common_subsequence_spans(self, args):
+        string = args[0]
+        query = args[1]
+        case_sensitive = args[2]
+
+        if not case_sensitive:
+            string = string.upper()
+            query = query.upper()
+
+        result = []
+        blocks = difflib.SequenceMatcher(None, string, query).get_matching_blocks()
+        for block in blocks[: -1]:
+            start = block.a
+            end = block.a + block.size
+
+            byte_start = len(string[: start].encode('utf-8'))
+            byte_len = len(string[start : end].encode('utf-8'))
+            result.append([byte_start, byte_len])
+
+        return result
+
+    @neovim.function('_wilder_python_pcre2_capture_spans', sync=True)
+    def capture_spans(self, args):
+        pattern = args[0]
+        string = args[1]
+        module_name = args[2]
+
+        re = importlib.import_module(module_name)
+        match = re.match(pattern, string)
+
+        if not match or not match.lastindex:
+            return  []
+
+        captures = []
+        for i in range(1, match.lastindex + 1):
+            start = match.start(i)
+            end = match.end(i)
+            if start == -1 or end == -1 or start == end:
+                continue
+
+            byte_start = len(string[: start].encode('utf-8'))
+            byte_len = len(string[start : end].encode('utf-8'))
+            captures.append([byte_start, byte_len])
+
+        return captures

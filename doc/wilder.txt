@@ -23,7 +23,7 @@ Features include
 3. Customisable pipeline: e.g. choose between substring matching and fuzzy
    matching
 4. Async query support: use |python3| for faster and non-blocking queries
-5. Customisable skins and themes
+5. Customisable themes
 
 ==============================================================================
 2. Install                          *wilder-install*
@@ -97,7 +97,7 @@ pipeline                            *wilder-option-pipeline*
             See |wilder-pipeline|.
 
             Default: |wilder#cmdline_pipeline()| and
-                     |wilder#search_pipeline()| for Vim
+                     |wilder#vim_search_pipeline()| for Vim
                      |wilder#cmdline_pipeline()| and
                      |wilder#python_search_pipeline()| for Neovim with
                                                        Python 3 support
@@ -274,14 +274,14 @@ The Result dictionary has the following keys:
             renderer.
             For each element in the list, if the element is a string, it is
             converted to a function using |function()|.
-            {ctx} and {x} are passed to the function and the result is a the
-            new value of {x}. {ctx} and the new value of {x} is then passed to
-            the next element. If there are no more elements, the final {x}
-            will be used.
+            {ctx} and {x} are passed to the function and the result is the new
+            value of {x}. {ctx} and the new value of {x} is then passed to the
+            next element until there are no further elements.
 
             The keys of {ctx} are:
                 `selected`
-                The index of the selected candidate. -1 indicates no selection.
+                The index of the selected candidate. -1 indicates no
+                selection.
 
                 `i`
                 The index of the {x} in the list of candidates.
@@ -385,7 +385,7 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
                   \       wilder#check({ctx, x -> empty(x)}),
                   \       wilder#history(),
                   \     ],
-                  \     wilder#search_pipeline(),
+                  \     wilder#vim_search_pipeline(),
                   \   ),
                   \   ]
 <
@@ -440,9 +440,17 @@ wilder#python_fuzzy_match([{options}])
 
             {options} is a dictionary with keys:
             `word`
+            Optional~
             Word character for the Python regex.
 
             Default: '\w'
+
+            `start_at_boundary`
+            Optional~
+            If true, the regex will only match at the beginning of a word
+            boundary.
+
+            Default: 1
 
                                     *wilder#python_fuzzy_delimiter()*
 wilder#python_fuzzy_delimiter([{options}])
@@ -460,14 +468,23 @@ wilder#python_fuzzy_delimiter([{options}])
 
             {options} is a dictionary with keys:
             `word`
+            Optional~
             Python regex for word characters
 
             Default: '\w'
 
             `delimiter`
+            Optional~
             Python regex for delimiter characters
 
-            Default: '[_-]'
+            Default: '(?:[^\w\s]|_)' non-word non-space character or '_'
+
+            `start_at_boundary`
+            Optional~
+            If true, the regex will only match at the beginning of a word
+            boundary.
+
+            Default: 1
 
 wilder#python_search([{options}])   *wilder#python_search()*
                                     Neovim only~
@@ -554,15 +571,78 @@ wilder#result_output_escape({chars})
 
 PIPELINES                           *wilder-pipelines*
 
-wilder#vim_search_pipeline()        *wilder#vim_search_pipeline()*
+                                    *wilder#vim_search_pipeline()*
+wilder#vim_search_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which does Vim substring search.
 
-wilder#python_search_pipeline()     *wilder#python_search_pipeline()*
+            Sets the `query` key in
+            |wilder-pipeline-result-data| to the input of the pipeline.
+
+            {options} is a dictionary with keys:
+            `skip_cmdtype_check`
+            Optional~
+            If true, skips checking that |getcmdtype()| is '/' or '?'.  This
+            is useful when using the pipeline as the `pipeline` option for
+            |wilder#substitute_pipeline()|.
+
+            Default: 0
+
+wilder#python_search_pipeline([{options}])
+                                    *wilder#python_search_pipeline()*
                                     Neovim only~
                                     Async~
                                     Pipeline~
-            Returns a pipeline which does Python substring search.
+            Returns a pipeline which does Python search.
+
+            Forwards the respective options to |wilder#python_search()|.
+
+            Sets the `query` key in
+            |wilder-pipeline-result-data| to the input of the pipeline.
+
+            {options} is a dictionary with keys:
+            `regex`
+            Optional~
+            One of 'fuzzy', 'fuzzy_delimiter', 'substring' or a function.
+            Generates the Python regex to pass to |wilder#python_search()|.
+
+            The function should take a {ctx} and the input {x} and return a
+            Python regex.
+
+            The special values 'fuzzy', 'fuzzy_delimiter' and 'substring' uses
+            |wilder#python_fuzzy_match()|, |wilder#python_fuzzy_delimiter()|
+            and |wilder#python_substring()| respectively as the function.
+
+            Default: 'substring'
+
+            `engine`
+            Optional~
+            Regex engine to pass to |wilder#python_search()|.
+
+            Default: Empty
+
+            `sort`
+            Optional~
+            A function is used to sort the candidates. The function should
+            take a {ctx}, {candidates} and {query} and return the sorted
+            {candidates} based on {query}. The function can return a
+            |wilder-pipeline-thunk| as well.
+
+            If no function is provided, no sorting will be done on the
+            candidates.
+
+            For Neovim, |wilder#python_sort_difflib()| and
+            |wilder#python_sort_fuzzywuzzy()| can be used here.
+
+            Default: Empty
+
+            `skip_cmdtype_check`
+            Optional~
+            If true, skips checking that |getcmdtype()| is '/' or '?'.  This
+            is useful when using the pipeline as the `pipeline` option for
+            |wilder#substitute_pipeline()|.
+
+            Default: 0
 
                                     *wilder#cmdline_pipeline()*
 wilder#cmdline_pipeline([{options}])
@@ -573,6 +653,13 @@ wilder#cmdline_pipeline([{options}])
             completions.
             For completions during |:substitute|, use
             |wilder#substitute_pipeline()|.
+
+            Sets the `query` key in
+            |wilder-pipeline-result-data| to the completion argument.
+
+            Note: Custom completions for user commands are only available in
+            Neovim. Wilder will be hidden when attempting to complete user
+            command completions in Vim. See |wilder-hidden|.
 
             {options} is a dictionary with keys:
             `fuzzy`
@@ -607,6 +694,33 @@ wilder#cmdline_pipeline([{options}])
 
             Default: has('nvim') && !has('nvim-0.3.7')
 
+            `sort`
+            Optional~
+            A function is used to sort the candidates. The function should
+            take a {ctx}, {candidates} and {query} and return the sorted
+            {candidates} based on {query}. The function can return a
+            |wilder-pipeline-thunk| as well.
+
+            If no function is provided, no sorting will be done on the
+            candidates.
+
+            For Neovim, |wilder#python_sort_difflib()| and
+            |wilder#python_sort_fuzzywuzzy()| can be used here.
+
+            Default: Empty
+
+            `set_pcre2_pattern`
+            Optional~
+            When true, sets the `pcre2.pattern` key in
+            |wilder-pipeline-result-data| to the pattern used in the default
+            fuzzy filtering. This key is used by
+            |wilder#pcre2_apply_highlights()|.
+
+            Should be set to false when using a fuzzy filter not based on
+            PCRE2.
+
+            Default: 1
+
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{options}])
                                     Pipeline~
@@ -621,17 +735,14 @@ wilder#substitute_pipeline([{options}])
             {options} is a dictionary with keys:
             `pipeline`
             The pipeline to pass the {pattern} section to.
+            |wilder#vim_search_pipeline()| and
+            |wilder#python_search_pipeline()| can be used as the pipeline if
+            the `skip_cmdtype_check` option is set for the pipelines.
 
-            Default: For vim: [
-                     \ wilder#vim_substring(),
-                     \ wilder#vim_search(),
-                     \ wilder#result_output_escape('^$,*~[]/\'),
-                     \ ])
-                     For nvim: [
-                     \ wilder#python_substring(),
-                     \ wilder#python_search(),
-                     \ wilder#result_output_escape('^$,*~[]/\'),
-                     ]
+            Default: For vim:
+                     wilder#vim_search_pipeline({'skip_cmdtype_check' : 1})
+                     For nvim:
+                     wilder#python_search_pipeline({'skip_cmdtype_check' : 1})
 
             `hide_in_replace`
             When true, hides wilder when in the {string} section of the
@@ -658,8 +769,8 @@ wilder#substitute_pipeline([{options}])
         call wilder#set_option('post_hook', funcref('s:restore_inccommand'))
 <
 
-            Note For Neovim 0.4+, the statusline does not redraw correctly
-            when using 'inccommand'.
+            Note For Neovim 0.4+, the renderer does not redraw correctly when
+            using 'inccommand'.
             See https://github.com/neovim/neovim/issues/9783.
 
 ==============================================================================
@@ -695,6 +806,10 @@ A renderer is a dictionary containing the following keys:
                 A boolean to indicate whether the previous state should be
                 cleared.
 
+                `run_id`
+                The `run_id` from the context which returned {result}. See
+                |wilder-pipeline-context|.
+
             `pre_hook`
             Optional~
             A function which takes a {ctx}. This function is called when
@@ -716,39 +831,65 @@ floating window.
 
                                     *wilder#statusline_renderer()*
 wilder#statusline_renderer([{options}])
+                                    Renderer~
             Returns a renderer which draws the results on the statusline of
             the current window.
 
+            Note: The statusline might be truncated or not update correctly
+            when there are too many separate highlight chunks. See |E541|.
+            This can be mitigated by turning off the `apply_highlights`
+            option.
+
             {options} is a dictionary with keys:
-            `hl`
+            `highlights`
             Optional~
-            The default highlight group.
+            A dictionary whose values are |highlight-groups|. See
+            |wilder-pipeline-result-draw| on how this dictionary is used.
 
-            Default: 'StatusLine'
+            The default keys of the dictionary are:
+                `default`
+                Optional~
+                The default highlight group used.
 
-            `selected_hl`
-            Optional~
-            The highlight group for the selected candidate.
+                Default: 'StatusLine'
 
-            Default: 'WildMenu'
+                `selected`
+                Optional~
+                The highlight group used for a selected candidate.
 
-            `error_hl`
-            Optional~
-            The highlight group of error messages.
+                Default: 'WildMenu'
 
-            Default: 'StatusLine'
+                `error`
+                Optional~
+                The highlight group used for the error message.
+
+                Default: 'WildMenu'
+
+                `separator`
+                Optional~
+                The highlight group used for the separators.
+
+                Default: The same value as the `default` key
+
+                `accent`
+                Optional~
+                The highlight group used for accents. See the
+                `apply_highlights` option.
+
+                Default: The `default` highlight with |underline| and |bold|
+
+                `selected_accent`
+                Optional~
+                The highlight group used for accents for a selected candidate.
+                See the `apply_highlights` option.
+
+                Default: The `selected` highlight with |underline| and |bold|
 
             `separator`
             Optional~
             The separator between candidates.
 
             Default: '  '
-
-            `separator_hl`
-            Optional~
-            The highlight group of the separator between candidates.
-
-            Default: same value as the `hl` option
 
             `ellipsis`
             Optional~
@@ -771,11 +912,84 @@ wilder#statusline_renderer([{options}])
 
             Default: [wilder#next_arrow()]
 
+            `apply_highlights`
+            Optional~
+            Experimental~
+            A list of functions used to apply the `accent` and
+            `selected_accent` highlights to a candidate. For convenience, also
+            accepts a single function, which will be converted to a singleton
+            list.
+
+            Each function should take a {ctx}, {data} and {candidate} and
+            return 0 when accents cannot be applied and return a list
+            otherwise.
+            The returned list should consist of [{start}, {len}] spans, where
+            each span defines the byte start and byte length of the part of
+            the string to be highlighted to be respectively.
+            The spans should be in strictly increasing order and should not
+            overlap.
+
+            For example, with {candidate} `abcdef` and result list [[0, 1],
+            [3, 2]], the characters `a`, `d` and `e` will be highlighted with
+            the `accent` or `selected_accent` highlights.
+
+            Returning an empty list will result in no accent highlights.
+
+            Each function of the list is applied in order, and the first
+            non-0 result will be used to apply the higlights. If all functions
+            return 0, no highlights will be applied.
+
+            {ctx} contains no keys.
+
+            {data} is the dictionary from |wilder-pipeline-result-data|.
+
+            |wilder#query_common_subsequence_spans()| and
+            |wilder#pcre2_capture_spans()| are helper functions which can be
+            used to apply accents to the candidates from
+            |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
+
+            Example:
+>
+            call wilder#set_option('renderer', wilder#statusline_renderer({
+                  \ 'apply_highlights': wilder#pcre2_capture_spans(),
+                  \ }))
+<
+
+            Default: []
+
+            `hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The default highlight group.
+
+            Default: 'StatusLine'
+
+            `selected_hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The highlight group for the selected candidate.
+
+            Default: 'WildMenu'
+
+            `error_hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The highlight group of error messages.
+
+            Default: 'StatusLine'
+
+            `separator_hl`
+            Deprecated: Use `highlights`.
+            Optional~
+            The highlight group of the separator between candidates.
+
+            Default: same value as the `hl` option
+
 wilder#float_renderer([{options}])  *wilder#float_renderer()*
-                                    Experimental~
-            Requires Neovim 0.4+ with floating window API. Returns a renderer
-            which draws the results on a floating window just above the
-            cmdline.
+                                    Neovim 0.4+ only~
+                                    Renderer~
+            Requires Neovim 0.4+ with |api-floatwin|. Returns a renderer which
+            draws the results on a floating window just above the cmdline.
             Uses the same options as |wilder#statusline_renderer|.
 
 COMPONENTS                          *wilder-renderer-components*
@@ -857,7 +1071,7 @@ Components can be of the following types:
 
             Note: `ctx.page` is not available when determining the `len`
             of the component. This means components depending on
-            `ctx.page` have to be wrapped in a Dictionary and provide the
+            `ctx.page` have to be wrapped in a dictionary and provide the
             `len` entry.
 
 Before drawing the results, the amount of space available needs to be
@@ -1058,9 +1272,9 @@ wilder#accept_completion()          *wilder#accept_completion()*
 
             Example:
 >
-            cmap <expr> <Down> wilder#can_accept_completion()
-                \ ? wilder#accept_completion() :
-                \ : "\<Down>"
+            cmap <expr> <Down> wilder#can_accept_completion() ?
+                \ wilder#accept_completion() :
+                \ "\<Down>"
 <
 
 wilder#reject_completion()          *wilder#reject_completion()*
@@ -1069,9 +1283,9 @@ wilder#reject_completion()          *wilder#reject_completion()*
 
             Example:
 >
-            cmap <expr> <Up> wilder#can_reject_completion()
-                \ ? wilder#reject_completion()
-                \ : "\<Up>"
+            cmap <expr> <Up> wilder#can_reject_completion() ?
+                \ wilder#reject_completion() :
+                \ "\<Up>"
 <
 
 wilder#resolve({ctx}, {x})          *wilder#resolve()*
@@ -1115,14 +1329,17 @@ wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
             nnoremap <expr> : wilder#start_from_normal_mode() . ':'
 <
 
-wilder#make_hl({name}, {args})      *wilder#make_hl()*
-            Helper function to create a highlight group.
-            Creates a highlight group with the given {name} based on {args}.
+wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
+                                    *wilder#make_hl()*
+            Helper function to create a highlight group. Creates a highlight
+            group with the given {name} based on {args}.
+
             These highlight groups will be recreated each time wilder is
             started, or is unhidden (see |wilder-hidden|).
+
             Returns {name}.
 
-            Args can be of the types:
+            {args} can be of the types:
 
             String:
             A |:hi-link| is made to the given highlight group.
@@ -1200,6 +1417,16 @@ wilder#make_hl({name}, {args})      *wilder#make_hl()*
 
                 Default: v:false
 
+            Any number of additional {args<n>} can be provided. The original
+            {args} will be modified in order.
+
+            For both {cterm_hl} and {gui_hl}, the `foreground` and
+            `background` color is overridden if the respective color of
+            {args<n>} is not 'NONE'.
+
+            For all three of {term_hl}, {cterm_hl} and {gui_hl}, additional
+            attributes will be added.
+
                 Example:
 >
                 call wilder#make_hl('MyHighlight', [
@@ -1208,7 +1435,18 @@ wilder#make_hl({name}, {args})      *wilder#make_hl()*
                     \ {'foreground': '#000', 'background': '#fff',
                     \   'bold': v:true},
                     \ ])
+
+                call wilder#make_hl('MyHighlight2',
+                    \ 'MyHighlight'
+                    \ [{}, {}, {'underline': 1}])
 <
+
+wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
+                                    *wilder#hl_with_attr()*
+            Helper function to create a new |highlight-group| named {name} by
+            applying attributes to {hl_group}.
+
+            Returns the name of the new highlight group.
 
 wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
             Returns a fuzzy filter to use for `fuzzy_filter` in
@@ -1235,8 +1473,22 @@ wilder#python_fuzzy_filter([{engine}])
             e.g. `foobar` will match `fbr`
                  `foobar` will not match `frb`
 
-                                    *wilder#python_fuzzywuzzy()*
-wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
+                                    *wilder#python_sort_difflib()*
+wilder#python_sort_difflib({ctx}, {candidates}, {query})
+                                    Neovim only~
+                                    Async~
+            Takes a list of candidates and a query and returns a
+            |wilder-pipeline-thunk| which sorts the candidates using
+            `difflib.SequenceMatcher`.
+
+            Example:
+>
+             wilder#result({'value': {ctx, xs ->
+               wilder#python_sort_difflib(ctx, xs, ctx.input)}}})
+<
+
+                                    *wilder#python_sort_fuzzywuzzy()*
+wilder#python_sort_fuzzywuzzy({ctx}, {candidates}, {query})
                                     Neovim only~
                                     Async~
                                     Python 3 fuzzywuzzy module required~
@@ -1247,8 +1499,84 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
             Example:
 >
              wilder#result({'value': {ctx, xs ->
-               wilder#python_fuzzywuzzy(ctx, xs, ctx.input)}}})
+               wilder#python_sort_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
+
+                                    *wilder#python_fuzzywuzzy()*
+wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
+                                    Deprecated~
+            Deprecated: Use |wilder#python_sort_fuzzywuzzy()|.
+
+                                    *wilder#query_common_subsequence_spans()*
+wilder#query_common_subsequence_spans([{opts}])
+                                    python option only for Neovim~
+            Helper function which returns a function for the
+            `apply_highlights` option for |wilder#statusline_renderer()| and
+            |wilder#float_renderer()|.
+
+            Returns a function which takes {ctx}, {data} and {candidate} as
+            arguments.
+            If {data} does not contain the key `query`, returns 0.  Otherwise,
+            calculates the common subsequence between {candidate} and
+            {data}['query'] and returns a list of [{start}, {len}] spans,
+            where each span corresponds to the byte start and byte length of a
+            subsequence block.
+
+            {options} is a dictionary with keys:
+            `language`
+            Optional~
+            One of 'vim' or 'python'. If 'python', uses a Python
+            |remote-plugin| function to retrieve the results.
+            Otherwise, uses a Vim function.
+
+            Default: 'vim'
+
+            `case_sensitive`
+            Optional~
+            If true, the matching is case insensitive, and case insensitive
+            otherwise.
+
+            Default: 0
+
+                                    *wilder#pcre2_capture_spans()*
+wilder#pcre2_capture_spans([{opts}])
+                                    Neovim only~
+                                    pcre2 package required for lua option~
+            Helper function which returns a function for the
+            `apply_highlights` option for |wilder#statusline_renderer()| and
+            |wilder#float_renderer()|.
+
+            Returns a function which takes {ctx}, {data} and {candidate} as
+            arguments.
+            If {data} does not contain the key `pcre2.pattern`, returns 0.
+            Otherwise, returns a list of [{start}, {len}] spans, where each
+            span corresponds to the byte start and byte length of a capture
+            group matched by {data}['pcre2.pattern'].
+
+            {options} is a dictionary with keys:
+            `language`
+            Optional~
+            One of 'python' or 'lua'. If 'lua', uses a lua script to retrieve
+            the results.
+            Otherwise, uses a Python |remote-plugin| function to retrieve the
+            results.
+
+            The Lua pcre2 package is required this option is set to 'lua'.
+            The pcre2 package source can be found at
+            `https://github.com/mah0x211/lua-pcre2` and can be installed with
+            `luarocks install pcre2`.
+
+            Default: 'python'
+
+            `engine`
+            Optional~
+            The regex engine to use. Only used when `language` is 'python'.
+
+            Default: 're'
+
+            Note: This function is slow and should be avoided by users who are
+            concerned about performance. Using 'lua' is slightly faster, but
+            will still have performance issues.
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*
@@ -1267,7 +1595,7 @@ Minimal Configuration~
     call wilder#set_option('modes', ['/', '?', ':'])
 <
 
-More Pipelines~
+Pipelines (Neovim only)~
 >
     " add minimal configuration
 
@@ -1278,11 +1606,9 @@ More Pipelines~
           \       wilder#history(100),
           \     ],
           \     wilder#cmdline_pipeline(),
-          \     [
-          \       wilder#python_fuzzy_delimiter(),
-          \       wilder#python_search({'engine': 're2'}),
-          \       wilder#result_output_escape('^$,*~[]/\'),
-          \     ],
+          \     wilder#python_search_pipeline({
+          \       'fuzzy': 1,
+          \     }),
           \   ),
           \ ])
 <
@@ -1290,17 +1616,20 @@ More Pipelines~
 Airline/Lightline Theme Renderer~
 >
     " for vim-airline
-    let s:status_hl = wilder#make_hl('WilderStatus', 'airline_c')
-    let s:mode_hl = wilder#make_hl('WilderMode', 'airline_a')
-    let s:index_hl = wilder#make_hl('WilderIndex', 'airline_z')
+    let s:hl = 'airline_c'
+    let s:mode_hl = 'airline_a'
+    let s:index_hl ='airline_z'
 
     " for lightline.vim
-    let s:status_hl = wilder#make_hl('WilderStatus', 'LightlineMiddle_active')
-    let s:mode_hl = wilder#make_hl('WilderMode', 'LightlineLeft_active_0')
-    let s:index_hl = wilder#make_hl('WilderIndex', 'LightlineRight_active_0')
+    let s:hl = 'LightlineMiddle_active'
+    let s:mode_hl = 'LightlineLeft_active_0'
+    let s:index_hl = 'LightlineRight_active_0'
 
     call wilder#set_option('renderer', wilder#float_renderer({
-          \ 'hl': s:status_hl,
+          \ 'highlights': {
+          \   'default': s:hl,
+          \ },
+          \ 'apply_highlights': wilder#query_common_subsequence_spans(),
           \ 'separator': ' · ',
           \ 'left': [{'value': [
           \    wilder#condition(
@@ -1317,15 +1646,14 @@ Airline/Lightline Theme Renderer~
           \      }),
           \    ), ' ',
           \ ], 'hl': s:mode_hl,},
-          \ wilder#separator('', s:mode_hl, s:status_hl, 'left'), ' ',
+          \ wilder#separator('', s:mode_hl, s:hl, 'left'), ' ',
           \ ],
           \ 'right': [
-          \    ' ', wilder#separator('', s:index_hl, s:status_hl, 'right'),
+          \    ' ', wilder#separator('', s:index_hl, s:hl, 'right'),
           \    wilder#index({'hl': s:index_hl}),
           \ ],
           \ }))
 <
-
 
 ==============================================================================
  vim:tw=78:ts=4:ft=help:norl:expandtab:
