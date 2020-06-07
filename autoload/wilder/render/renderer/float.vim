@@ -49,9 +49,10 @@ function! s:render_chunks(state, chunks) abort
 
   let l:cmdheight = s:get_cmdheight()
   if a:state.cmdheight != l:cmdheight
+    let l:offset = l:cmdheight != 1 && stridx(&display, 'msgsep') >= 0 ? 2 : 1
     call nvim_win_set_config(a:state.win, {
           \ 'relative': 'editor',
-          \ 'row': &lines - s:get_cmdheight() - 1,
+          \ 'row': &lines - s:get_cmdheight() - l:offset,
           \ 'col': 0,
           \ })
     let a:state.cmdheight = l:cmdheight
