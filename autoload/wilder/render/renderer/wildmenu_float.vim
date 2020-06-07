@@ -102,6 +102,7 @@ function! s:new_win(buf) abort
   call nvim_win_set_option(l:win, 'list', v:false)
   call nvim_win_set_option(l:win, 'number', v:false)
   call nvim_win_set_option(l:win, 'relativenumber', v:false)
+  call nvim_win_set_option(l:win, 'spell', v:false)
 
   return l:win
 endfunction
