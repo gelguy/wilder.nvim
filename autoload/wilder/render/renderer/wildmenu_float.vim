@@ -6,8 +6,8 @@ catch 'Not enough arguments'
 catch
 endtry
 
-function! wilder#render#renderer#float#make(args) abort
-  let l:state = wilder#render#renderer#prepare_state(a:args)
+function! wilder#render#renderer#wildmenu_float#make(args) abort
+  let l:state = wilder#render#renderer#wildmenu#prepare_state(a:args)
   let l:state.ns_id = nvim_create_namespace('')
 
   return {
@@ -22,7 +22,7 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  let l:chunks = wilder#render#renderer#make_hl_chunks(
+  let l:chunks = wilder#render#renderer#wildmenu#make_hl_chunks(
         \ a:state, &columns, a:ctx, a:result)
 
   let l:in_sandbox = 0
@@ -132,8 +132,8 @@ function! s:pre_hook(state, ctx) abort
     let &cursorline = l:old_cursorline
   endif
 
-  call wilder#render#component_pre_hook(a:state.left, a:ctx)
-  call wilder#render#component_pre_hook(a:state.right, a:ctx)
+  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.left, a:ctx)
+  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -152,8 +152,8 @@ function! s:post_hook(state, ctx) abort
     endif
   endif
 
-  call wilder#render#component_post_hook(a:state.left, a:ctx)
-  call wilder#render#component_post_hook(a:state.right, a:ctx)
+  call wilder#render#renderer#wildmenu#component_post_hook(a:state.left, a:ctx)
+  call wilder#render#renderer#wildmenu#component_post_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:get_cmdheight() abort
