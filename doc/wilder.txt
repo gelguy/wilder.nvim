@@ -19,11 +19,12 @@ wilder.nvim adds new features to 'wildmenu'.
 Features include
 
 1. Automatically provides completions as you type
-2. |/| search support: get completions as you type your search query
-3. Customisable pipeline: e.g. choose between substring matching and fuzzy
+2. |:| cmdline support: autocomplete commands, expressions, filenames, etc.
+3. |/| search support: get completions as you type your search query
+4. Customisable pipeline: e.g. choose between substring matching and fuzzy
    matching
-4. Async query support: use |python3| for faster and non-blocking queries
-5. Customisable themes
+5. Async query support: use |python3| for faster and non-blocking queries
+6. Customisable themes
 
 ==============================================================================
 2. Install                          *wilder-install*
@@ -106,7 +107,7 @@ renderer                            *wilder-option-renderer*
             Sets the renderer to used to display the completions.
             See |wilder-renderer|.
 
-            Default: |wilder#statusline_renderer()| with
+            Default: |wilder#wildmenu_renderer()| with
                      |wilder#previous_arrow()| and |wilder#next_arrow()|
 
 pre_hook                            *wilder-option-pre_hook*
@@ -826,21 +827,31 @@ A renderer is a dictionary containing the following keys:
 
             {ctx} contains no keys.
 
-There are two in-built renderers, one using the statusline and one using a
-floating window.
+There is one in-built renderer, which can be set to be drawn using the
+statusline or drawn using a floating window for Neovim 0.4+.
 
-                                    *wilder#statusline_renderer()*
-wilder#statusline_renderer([{options}])
+                                    *wilder#wildmenu_renderer()*
+wilder#wildmenu_renderer([{options}])
                                     Renderer~
-            Returns a renderer which draws the results on the statusline of
-            the current window.
+            Returns a renderer which draws the results on the statusline or
+            with a floating window.
+
+            {options} is a dictionary with keys:
+            `mode`
+            One of 'float' or 'statusline'. The 'float' option requires Neovim
+            0.4+ with |api-floatwin|.
+
+            When this option is 'float', the results are drawn using a
+            floating window. Otherwise, the results will be drawn on the
+            statusline.
 
             Note: The statusline might be truncated or not update correctly
             when there are too many separate highlight chunks. See |E541|.
             This can be mitigated by turning off the `apply_highlights`
             option.
 
-            {options} is a dictionary with keys:
+            Default: has('nvim-0.4') ? 'float' : 'statusline'
+
             `highlights`
             Optional~
             A dictionary whose values are |highlight-groups|. See
@@ -950,7 +961,7 @@ wilder#statusline_renderer([{options}])
 
             Example:
 >
-            call wilder#set_option('renderer', wilder#statusline_renderer({
+            call wilder#set_option('renderer', wilder#wildmenu_renderer({
                   \ 'apply_highlights': wilder#pcre2_capture_spans(),
                   \ }))
 <
@@ -985,18 +996,8 @@ wilder#statusline_renderer([{options}])
 
             Default: same value as the `hl` option
 
-wilder#float_renderer([{options}])  *wilder#float_renderer()*
-                                    Neovim 0.4+ only~
-                                    Renderer~
-            Requires Neovim 0.4+ with |api-floatwin|. Returns a renderer which
-            draws the results on a floating window just above the cmdline.
-            Uses the same options as |wilder#statusline_renderer|.
-
 COMPONENTS                          *wilder-renderer-components*
                                     *wilder-renderer-component*
-
-Both |wilder#statusline_renderer()| and |wilder#float_renderer()| use the same
-components.
 
 Components can be of the following types:
 
@@ -1211,7 +1212,7 @@ wilder#separator({str}, {fg}, {bg}, [{key}])
             {key} is an optional argument which will be used to name the new
             highlight group. Otherwise, a new name will be generated.
 
-                                    *wilder#predicate()*
+                                    *wilder#condition()*
 wilder#condition({predicate}, {if_true}, [{if_false}])
                                     Renderer component~
             Returns a component which renders the given components based on
@@ -1511,8 +1512,7 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
 wilder#query_common_subsequence_spans([{opts}])
                                     python option only for Neovim~
             Helper function which returns a function for the
-            `apply_highlights` option for |wilder#statusline_renderer()| and
-            |wilder#float_renderer()|.
+            `apply_highlights` option for |wilder#wildmenu_renderer()|.
 
             Returns a function which takes {ctx}, {data} and {candidate} as
             arguments.
@@ -1543,8 +1543,7 @@ wilder#pcre2_capture_spans([{opts}])
                                     Neovim only~
                                     pcre2 package required for lua option~
             Helper function which returns a function for the
-            `apply_highlights` option for |wilder#statusline_renderer()| and
-            |wilder#float_renderer()|.
+            `apply_highlights` option for |wilder#wildmenu_renderer()|.
 
             Returns a function which takes {ctx}, {data} and {candidate} as
             arguments.
@@ -1625,7 +1624,7 @@ Airline/Lightline Theme Renderer~
     let s:mode_hl = 'LightlineLeft_active_0'
     let s:index_hl = 'LightlineRight_active_0'
 
-    call wilder#set_option('renderer', wilder#float_renderer({
+    call wilder#set_option('renderer', wilder#wildmenu_renderer({
           \ 'highlights': {
           \   'default': s:hl,
           \ },

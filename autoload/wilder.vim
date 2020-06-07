@@ -508,12 +508,30 @@ endfunction
 
 " renderers
 
+" DEPRECATED: use wilder#wildmenu_renderer()
 function! wilder#statusline_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#renderer#statusline#make(l:args)
+  call extend(l:args, {'mode': 'statusline'})
+  return wilder#wildmenu_renderer(l:args)
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_renderer()
 function! wilder#float_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#renderer#float#make(l:args)
+  call extend(l:args, {'mode': 'float'})
+  return wilder#wildmenu_renderer(l:args)
+endfunction
+
+function! wilder#wildmenu_renderer(...)
+  let l:args = a:0 > 0 ? a:1 : {}
+
+  if !has_key(l:args, 'mode')
+    let l:args.mode = has('nvim-0.4') ? 'float' : 'statusline'
+  endif
+
+  if l:args.mode ==# 'float'
+    return wilder#render#renderer#wildmenu_float#make(l:args)
+  endif
+
+    return wilder#render#renderer#wildmenu_statusline#make(l:args)
 endfunction

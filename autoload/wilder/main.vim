@@ -98,7 +98,7 @@ function! s:start() abort
   let s:hidden = 0
 
   if !has_key(s:opts, 'renderer')
-    let s:opts.renderer = wilder#statusline_renderer()
+    let s:opts.renderer = wilder#wildmenu_renderer()
   endif
 
   if !has_key(s:opts, 'pipeline')
