@@ -589,6 +589,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'unabbreviate' ||
         \ a:ctx.cmd[-3 :] ==# 'map' ||
         \ a:ctx.cmd[-6 :] ==# 'abbrev'
+    let a:ctx.pos = l:before_args
     call wilder#cmdline#map#do(a:ctx)
     return
   elseif a:ctx.cmd[-8 :] ==# 'mapclear'
