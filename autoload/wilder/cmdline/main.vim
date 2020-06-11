@@ -430,6 +430,7 @@ function! wilder#cmdline#main#do(ctx) abort
     endif
     return
   elseif a:ctx.cmd ==# 'help'
+    let a:ctx.pos = l:before_args
     let a:ctx.expand = 'help'
     return
   " command modifiers
