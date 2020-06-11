@@ -603,7 +603,7 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-" returns [{handled}, {result}]
+" returns [{handled}, {result}, {pos}]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
     return [0, a:res]
@@ -631,7 +631,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:result = split(l:result, '\n')
     endif
 
-    return [1, l:result]
+    return [1, l:result, a:res.pos]
   endif
 
   if has_key(l:user_command, 'complete') &&
@@ -796,9 +796,11 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
   let l:pipeline = [
       \ wilder#check({-> getcmdtype() ==# ':'}),
       \ {_, x -> wilder#cmdline#parse(x)},
-      \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-      \ {_, res -> wilder#cmdline#substitute#parse({'cmdline': res.cmdline[res.pos :], 'pos': 0})},
       \ ]
+
+  let l:search_pipeline = [
+        \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
+        \ ]
 
   if has_key(a:opts, 'hide_in_replace')
     let l:hide_in_replace = a:opts.hide_in_replace
@@ -810,18 +812,36 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
   endif
 
   if l:hide_in_replace
-    call add(l:pipeline, {_, res -> len(res) == 2 ? res[1] : v:true})
+    let l:search_pipeline += [{_, res -> len(res.substitute_args) == 2 ?
+          \ res.substitute_args[1] : v:true}]
   else
-    call add(l:pipeline, {_, res -> len(res) == 2 ? res[1] : v:false})
+    let l:search_pipeline += [{_, res -> len(res.substitute_args) == 2 ?
+          \ res.substitute_args[1] : v:false}]
   endif
 
   if has_key(a:opts, 'pipeline')
-    let l:pipeline += a:opts['pipeline']
+    let l:search_pipeline += a:opts['pipeline']
   elseif has('nvim')
-    let l:pipeline += wilder#python_search_pipeline({'skip_cmdtype_check': 1})
+    let l:search_pipeline += wilder#python_search_pipeline({'skip_cmdtype_check': 1})
   else
-    let l:pipeline += wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
+    let l:search_pipeline += wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
   endif
+
+  let l:pipeline += [
+        \ wilder#map(
+        \   l:search_pipeline,
+        \   [{ctx, res -> res}]
+        \ ),
+        \ {ctx, xs -> xs[0] is v:false || xs[0] is v:true ?
+        \   xs[0] :
+        \   wilder#result({
+        \     'data': {
+        \       'cmdline.command': xs[1].cmd,
+        \     },
+        \     'pos': xs[1].pos + 1,
+        \   })(ctx, xs[0])
+        \ },
+        \ ]
 
   call add(l:pipeline, wilder#result({
         \ 'replace': ['wilder#cmdline#replace'],
@@ -844,14 +864,13 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:hide_in_substitute = has('nvim') && !has('nvim-0.3.7')
   endif
 
+  call add(l:pipeline, {_, x -> wilder#cmdline#parse(x)})
+
   if l:hide_in_substitute
-    call add(l:pipeline, {ctx, x -> wilder#cmdline#hide_in_substitute(ctx, x)})
+    call add(l:pipeline, {ctx, res -> len(get(res, 'substitute_args', [])) >= 2 ? v:true : res})
   endif
 
-  let l:pipeline += [
-        \ {_, x -> wilder#cmdline#parse(x)},
-        \ {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)},
-        \ ]
+  call add(l:pipeline, {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)})
 
   let l:getcompletion_pipeline = [{ctx, res -> res[1]}] +
         \ wilder#cmdline#getcompletion_pipeline(a:opts)
@@ -883,10 +902,10 @@ function! wilder#cmdline#pipeline(opts) abort
 
   call add(l:pipeline, wilder#branch(
         \ [
-        \   {ctx, res -> res[0] ? res[1] : v:false},
-        \   wilder#result({
+        \   {ctx, res -> res[0] ? res : v:false},
+        \   {ctx, res -> wilder#result({
         \     'replace': ['wilder#cmdline#replace'],
-        \   }),
+        \   })(ctx, res[1])},
         \ ],
         \ l:getcompletion_pipeline,
         \ ))

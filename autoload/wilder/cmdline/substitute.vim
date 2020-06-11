@@ -1,23 +1,8 @@
 function! wilder#cmdline#substitute#do(ctx) abort
-  call wilder#cmdline#substitute#parse(a:ctx)
-endfunction
+  let a:ctx.substitute_args = []
 
-function! wilder#cmdline#substitute#parse(ctx) abort
-  let l:cmdline = a:ctx.cmdline[a:ctx.pos :]
-
-  if !exists('s:cache_cmdline') || l:cmdline !=# s:cache_cmdline
-    let l:res = s:parse(a:ctx)
-
-    let s:cache_cmdline = l:cmdline
-    let s:cache_parsed_cmdline = l:res
-  endif
-
-  return copy(s:cache_parsed_cmdline)
-endfunction
-
-function! s:parse(ctx) abort
   if a:ctx.pos >= len(a:ctx.cmdline)
-    return []
+    return
   endif
 
   let l:cmd_start = a:ctx.pos
@@ -29,27 +14,27 @@ function! s:parse(ctx) abort
         \ l:delimiter >=# 'A' && l:delimiter <=# 'Z' ||
         \ l:delimiter >=# '0' && l:delimiter <=# '9' ||
         \ l:delimiter ==# '\' || l:delimiter ==# '|'
-    return []
+    return
   endif
 
-  let l:result = [l:delimiter]
+  call add(a:ctx.substitute_args, l:delimiter)
 
   let a:ctx.pos += 1
   let l:arg_start = a:ctx.pos
 
   " delimiter not reached
   if !wilder#cmdline#skip_regex#do(a:ctx, l:delimiter)
-    call add(l:result, a:ctx.cmdline[l:arg_start :])
-    let a:ctx.pos = l:cmd_start
-    return l:result
+    call add(a:ctx.substitute_args, a:ctx.cmdline[l:arg_start :])
+    let a:ctx.pos = l:arg_start
+    return
   endif
 
-  call add(l:result, a:ctx.cmdline[l:arg_start : a:ctx.pos - 1])
+  call add(a:ctx.substitute_args, a:ctx.cmdline[l:arg_start : a:ctx.pos - 1])
 
   " skip delimiter
   let a:ctx.pos += 1
   let l:arg_start = a:ctx.pos
-  call add(l:result, l:delimiter)
+  call add(a:ctx.substitute_args, l:delimiter)
 
   let l:delimiter_reached = 0
 
@@ -67,17 +52,17 @@ function! s:parse(ctx) abort
   endwhile
 
   if !l:delimiter_reached
-    call add(l:result, a:ctx.cmdline[l:arg_start :])
-    let a:ctx.pos = l:cmd_start
-    return l:result
+    call add(a:ctx.substitute_args, a:ctx.cmdline[l:arg_start :])
+    let a:ctx.pos = l:arg_start
+    return
   endif
 
-  call add(l:result, a:ctx.cmdline[l:arg_start : a:ctx.pos - 1])
+  call add(a:ctx.substitute_args, a:ctx.cmdline[l:arg_start : a:ctx.pos - 1])
 
   " skip delimiter
   let a:ctx.pos += 1
   let l:arg_start = a:ctx.pos
-  call add(l:result, l:delimiter)
+  call add(a:ctx.substitute_args, l:delimiter)
 
   " consume until | or " is reached
   while a:ctx.pos < len(a:ctx.cmdline)
@@ -98,10 +83,8 @@ function! s:parse(ctx) abort
   endwhile
 
   if a:ctx.pos != l:arg_start
-    call add(l:result, a:ctx.cmdline[l:arg_start :])
+    call add(a:ctx.substitute_args, a:ctx.cmdline[l:arg_start :])
   endif
 
-  let a:ctx.pos = l:cmd_start
-
-  return l:result
+  return
 endfunction
