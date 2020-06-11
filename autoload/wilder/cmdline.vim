@@ -513,6 +513,11 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return wilder#uniq(l:result)
   elseif a:res.expand ==# 'mapclear'
     return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
+  elseif a:res.expand ==# 'menu'
+    if !has_key(a:res, 'menu_arg')
+      return []
+    endif
+    return getcompletion(a:res.menu_arg, 'menu')
   elseif a:res.expand ==# 'messages'
     return getcompletion(l:expand_arg, 'messages')
   elseif a:res.expand ==# 'option'
@@ -647,16 +652,6 @@ function! wilder#cmdline#replace(ctx, x, data) abort
 
   if l:result.pos == 0
     return a:x
-  endif
-
-  if l:result.cmd[-4 :] ==# 'menu'
-    return l:result.cmdline[: l:result.pos - 1] . a:x
-  endif
-
-  if wilder#cmdline#is_substitute_command(l:result.cmd)
-    let l:delimiter = l:result.cmdline[l:result.pos]
-
-    return l:result.cmdline[: l:result.pos - 1] . l:delimiter . a:x
   endif
 
   return l:result.cmdline[: l:result.pos - 1] . a:x
