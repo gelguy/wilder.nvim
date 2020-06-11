@@ -5,10 +5,7 @@ function! wilder#cmdline#filter#do(ctx) abort
     return
   endif
 
-  if !wilder#cmdline#main#skip_whitespace(a:ctx)
-    let a:ctx.expand = 'nothing'
-    return
-  endif
+  call wilder#cmdline#main#skip_whitespace(a:ctx)
 
   let a:ctx.cmd = ''
 

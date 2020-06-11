@@ -1,6 +1,6 @@
 function! wilder#cmdline#skip_vimgrep#do(ctx) abort
   " isident
-  if match(a:ctx.cmdline[a:ctx.pos], '\i')
+  if match(a:ctx.cmdline[a:ctx.pos], '\i') != -1
     if !wilder#cmdline#main#skip_nonwhitespace(a:ctx)
       return
     endif

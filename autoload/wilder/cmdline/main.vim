@@ -472,6 +472,7 @@ function! wilder#cmdline#main#do(ctx) abort
 
     return
   elseif a:ctx.cmd ==# 'filter'
+    let a:ctx.pos = l:before_args
     call wilder#cmdline#filter#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'match'
