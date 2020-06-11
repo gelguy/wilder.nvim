@@ -55,6 +55,7 @@ endfunction
 
 function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let a:res.expand_arg = a:res.cmdline[a:res.pos :]
+  let l:file_arg_start = a:res.pos
 
   let l:slash = !has('win32') && !has('win64')
         \ ? '/'
@@ -63,77 +64,13 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         \ : '\'
   let l:allow_backslash = has('win32') || has('win64')
 
-  " check prefix to see if expanding is needed
-  let l:expand_start = -1
-  let l:expand_end = -1
-
-  if a:res.expand_arg[0] ==# '~'
-    let l:allow_backslash = has('win32') || has('win64')
-    let l:expand_start = 0
-    let l:expand_end = 0
-
-    while l:expand_end + 1 < len(a:res.expand_arg)
-      let l:char = a:res.expand_arg[l:expand_end + 1]
-
-      if l:char ==# '\'
-        if a:res.expand_arg[l:expand_end + 2] ==# ' '
-          let l:expand_end += 2
-          continue
-        endif
-
-        if l:allow_backslash
-          break
-        endif
-      elseif l:char ==# '/'
-        break
-      endif
-
-      let l:expand_end += 1
-    endwhile
-  elseif a:res.expand_arg[0] ==# '%' ||
-        \ a:res.expand_arg[0] ==# '#'
-
-    let l:expand_start = 0
-    let l:expand_end = 0
-  elseif a:res.expand_arg[0 : 6] ==# '<cfile>' ||
-        \ a:res.expand_arg[0 : 6] ==# '<cword>' ||
-        \ a:res.expand_arg[0 : 6] ==# '<cWORD>'
-      let l:expand_start = 0
-      let l:expand_end = 6
-  elseif a:res.expand_arg[0 : 7] ==# '<client>'
-      let l:expand_start = 0
-      let l:expand_end = 7
-  endif
-
-  if l:expand_start != -1
-    while l:expand_end + 2 < len(a:res.expand_arg) &&
-          \ a:res.expand_arg[l:expand_end + 1] ==# ':' &&
-          \ (a:res.expand_arg[l:expand_end + 2] ==# 'p' ||
-          \ a:res.expand_arg[l:expand_end + 2] ==# 'h' ||
-          \ a:res.expand_arg[l:expand_end + 2] ==# 't' ||
-          \ a:res.expand_arg[l:expand_end + 2] ==# 'r' ||
-          \ a:res.expand_arg[l:expand_end + 2] ==# 'e')
-      let l:expand_end += 2
-    endwhile
-
-    let l:whole_path_expanded = l:expand_end == len(a:res.expand_arg) - 1
-
-    let l:prefix = a:res.expand_arg[l:expand_start : l:expand_end]
-    let l:expanded_prefix = expand(l:prefix)
-    let a:res.expand_arg = l:expanded_prefix . a:res.expand_arg[l:expand_end+1 :]
-
-    if l:whole_path_expanded
-      let a:res.use_arg = 1
-      return a:res
-    endif
-  endif
-
   " split path into head and tail
   " also check for wildcards
   let l:split_path = []
   let l:tail = ''
   let l:i = 0
   let l:no_fuzzy = 0
+  let l:offset = 0
 
   while l:i < len(a:res.expand_arg)
     let l:char = a:res.expand_arg[l:i]
@@ -177,6 +114,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         " if result is the same, expansion failed
         if l:expanded_env_var !=# l:env_var
           let l:tail .= l:expanded_env_var
+          let l:offset += len(l:expanded_env_var) - len(l:env_var) - 1
 
           if l:i == len(a:res.expand_arg) - 1
             let l:no_fuzzy = 1
@@ -186,13 +124,109 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
 
       continue
     elseif l:char ==# '*'
-      let a:res.has_wildcard = 1
-      break
+      if !get(a:res, 'has_wildcard', 0)
+        let a:res.has_wildcard = 1
+        let a:res.pos = l:file_arg_start
+      endif
     endif
 
     let l:tail .= l:char
     let l:i += 1
   endwhile
+
+  if !get(a:res, 'has_wildcard', 0)
+    for l:split in l:split_path
+      let a:res.pos += len(l:split) + 1
+    endfor
+
+    let a:res.expanded_pos = a:res.pos
+    let a:res.pos -= l:offset
+  endif
+
+  let l:prefix = !empty(l:split_path) ?
+        \ l:split_path[0] :
+        \ l:tail
+  if !empty(l:prefix)
+    " check head to see if expanding is needed
+    let l:expand_start = -1
+    let l:expand_end = -1
+
+    if l:prefix[0] ==# '~'
+      let l:allow_backslash = has('win32') || has('win64')
+      let l:expand_start = 0
+      let l:expand_end = 0
+
+      while l:expand_end + 1 < len(l:prefix)
+        let l:char = l:prefix[l:expand_end + 1]
+
+        if l:char ==# '\'
+          if l:prefix[l:expand_end + 2] ==# ' '
+            let l:expand_end += 2
+            continue
+          endif
+
+          if l:allow_backslash
+            break
+          endif
+        elseif l:char ==# '/'
+          break
+        endif
+
+        let l:expand_end += 1
+      endwhile
+    elseif l:prefix[0] ==# '%' ||
+          \ l:prefix[0] ==# '#'
+
+      let l:expand_start = 0
+      let l:expand_end = 0
+    elseif l:prefix[0 : 6] ==# '<cfile>' ||
+          \ l:prefix[0 : 6] ==# '<cword>' ||
+          \ l:prefix[0 : 6] ==# '<cWORD>'
+        let l:expand_start = 0
+        let l:expand_end = 6
+    elseif l:prefix[0 : 7] ==# '<client>'
+        let l:expand_start = 0
+        let l:expand_end = 7
+    endif
+
+    if l:expand_start != -1
+      while l:expand_end + 2 < len(l:prefix) &&
+            \ l:prefix[l:expand_end + 1] ==# ':' &&
+            \ (l:prefix[l:expand_end + 2] ==# 'p' ||
+            \ l:prefix[l:expand_end + 2] ==# 'h' ||
+            \ l:prefix[l:expand_end + 2] ==# 't' ||
+            \ l:prefix[l:expand_end + 2] ==# 'r' ||
+            \ l:prefix[l:expand_end + 2] ==# 'e')
+        let l:expand_end += 2
+      endwhile
+
+      let l:whole_path_expanded = l:expand_end == len(l:prefix) - 1
+      let l:expanded = expand(l:prefix[l:expand_start : l:expand_end])
+      let l:offset += len(l:expanded) - len(l:prefix[l:expand_start : l:expand_end])
+
+      if !empty(l:expanded)
+        if l:expanded[0] ==# '~'
+          let l:expanded = expand('~') . l:expanded[1:]
+        endif
+
+        if l:whole_path_expanded && empty(l:split_path)
+          let a:res.expand_arg = l:expanded . l:prefix[l:expand_end + 1]
+          let a:res.use_arg = 1
+          return a:res
+        endif
+
+        if !get(a:res, 'has_wildcard', 0)
+          let a:res.expanded_pos = a:res.pos + l:offset
+        endif
+
+        if empty(l:split_path)
+          let l:tail = l:expanded . l:prefix[l:expand_end+1 :]
+        else
+          let l:split_path[0] = l:expanded . l:prefix[l:expand_end+1 :]
+        endif
+      endif
+    endif
+  endif
 
   if empty(l:split_path)
     let l:path_prefix = ''
@@ -203,15 +237,16 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     endif
   endif
 
-  " don't trim leading / when drawing
-  let a:res.path_prefix = l:path_prefix ==# '/' ? '' : l:path_prefix
-
   if get(a:res, 'has_wildcard', 0)
     " don't use fuzzy match with wildcard
     let a:res.match_arg = ''
+    let a:res.expand_arg = l:path_prefix . l:tail
 
     return a:res
   endif
+
+  " don't trim leading / when drawing
+  let a:res.path_prefix = l:path_prefix ==# '/' ? '' : l:path_prefix
 
   if !a:fuzzy || l:no_fuzzy
     let a:res.expand_arg = l:path_prefix . l:tail
@@ -658,18 +693,18 @@ function! wilder#cmdline#replace(ctx, x, data) abort
 endfunction
 
 function! wilder#cmdline#draw_path(ctx, x, data) abort
-  if has_key(a:data, 'cmdline.path_prefix')
-    let l:path_prefix = a:data['cmdline.path_prefix']
-    let l:i = 0
-    while l:i < len(l:path_prefix) &&
-          \ l:path_prefix[l:i] ==# a:x[l:i]
-      let l:i += 1
-    endwhile
-
-    return a:x[l:i :]
+  if !has_key(a:data, 'cmdline.path_prefix')
+    return a:x
   endif
 
-  return a:x
+  let l:path_prefix = a:data['cmdline.path_prefix']
+  let l:i = 0
+  while l:i < len(l:path_prefix) &&
+        \ l:path_prefix[l:i] ==# a:x[l:i]
+    let l:i += 1
+  endwhile
+
+  return a:x[l:i :]
 endfunction
 
 function! s:convert_result_to_data(res)
@@ -684,6 +719,14 @@ function! s:convert_result_to_data(res)
 
   if has_key(a:res, 'match_arg')
     let l:data['cmdline.match_arg'] = a:res.match_arg
+  endif
+
+  if has_key(a:res, 'has_wildcard')
+    let l:data['cmdline.has_wildcard'] = a:res.has_wildcard
+  endif
+
+  if has_key(a:res, 'expanded_pos')
+    let l:data['cmdline.expanded_pos'] = a:res.expanded_pos
   endif
 
   return l:data
