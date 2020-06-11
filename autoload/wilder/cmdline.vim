@@ -747,8 +747,19 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
   return wilder#wait(l:Getcompletion(a:ctx, a:res),
         \ {ctx, xs -> wilder#resolve(ctx, {
         \ 'value': xs,
+        \ 'pos': a:has_file_args ?
+        \   [{ctx, x, data -> s:get_file_args_pos(ctx, x, data, a:res.pos)}] :
+        \   a:res.pos,
         \ 'data': s:convert_result_to_data(a:res),
         \ })})
+endfunction
+
+function! s:get_file_args_pos(ctx, x, data, pos) abort
+  if a:x is v:null || !has_key(a:data, 'cmdline.expanded_pos')
+    return a:pos
+  endif
+
+  return a:data['cmdline.expanded_pos']
 endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
@@ -947,6 +958,7 @@ function! wilder#cmdline#pipeline(opts) abort
         \ [
         \   {ctx, res -> res[0] ? res : v:false},
         \   {ctx, res -> wilder#result({
+        \     'pos': res[2],
         \     'replace': ['wilder#cmdline#replace'],
         \   })(ctx, res[1])},
         \ ],

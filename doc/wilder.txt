@@ -291,6 +291,28 @@ The Result dictionary has the following keys:
 
             Default: None
 
+            `pos`                   *wilder-pipeline-result-pos*
+            Optional~
+            A number or a list with one element. It is used to indicate the
+            visual position of where the cmdline argument is changed. This is
+            used to determine the position of the popup menu for renderers
+            which support it. Has no effect on `replace`.
+
+            If `pos` is a number, the number is used as the position.
+
+            Otherwise, `pos` should be a singleton list which contains a
+            function which takes {ctx}, {x} and {data} and returns the
+            position to use.
+
+            {ctx} has no keys.
+
+            {x} is the currently selected candidate, or |v:null| if there is
+            none.
+
+            See |wilder-pipeline-result-data| on how {data} is gotten.
+
+            Default: None
+
             `output`                *wilder-pipeline-result-output*
             Optional~
             A list of strings or functions which takes a {ctx}, {x} and {data}
