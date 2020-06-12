@@ -415,6 +415,7 @@ function! wilder#cmdline#main#do(ctx) abort
   if a:ctx.cmd ==# 'find' ||
         \ a:ctx.cmd ==# 'sfind' ||
         \ a:ctx.cmd ==# 'tabfind'
+    let a:ctx.pos = l:before_args
     if a:ctx.expand ==# 'file'
       let a:ctx.expand = 'file_in_path'
     endif
