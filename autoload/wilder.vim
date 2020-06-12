@@ -145,12 +145,14 @@ function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
   let l:split_query = split(a:query, '\zs')
 
   let l:spans = []
-  let l:span = [-1, -1]
+  let l:span = [-1, 0]
 
   let l:byte_pos = 0
   let l:i = 0
   let l:j = 0
   while l:i < len(l:split_str) && l:j < len(l:split_query)
+    let l:str_len = strlen(l:split_str[l:i])
+
     if a:case_sensitive
       let l:match = l:split_str[l:i] ==# l:split_query[l:j]
     else
@@ -162,18 +164,17 @@ function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
 
       if l:span[0] == -1
         let l:span[0] = l:byte_pos
-        let l:span[1] = strlen(l:split_str[l:i])
-      else
-        let l:span[1] += strlen(l:split_str[l:i])
       endif
+
+      let l:span[1] += l:strlen
     endif
 
     if !l:match && l:span[0] != -1
       call add(l:spans, l:span)
-      let l:span = [-1, -1]
+      let l:span = [-1, 0]
     endif
 
-    let l:byte_pos += strlen(l:split_str[l:i])
+    let l:byte_pos += l:str_len
     let l:i += 1
   endwhile
 

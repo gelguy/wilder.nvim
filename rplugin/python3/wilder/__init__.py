@@ -386,17 +386,33 @@ class Wilder(object):
             string = string.upper()
             query = query.upper()
 
-        result = []
-        blocks = difflib.SequenceMatcher(None, string, query).get_matching_blocks()
-        for block in blocks[: -1]:
-            start = block.a
-            end = block.a + block.size
+        spans = []
+        span = [-1, 0]
 
-            byte_start = len(string[: start].encode('utf-8'))
-            byte_len = len(string[start : end].encode('utf-8'))
-            result.append([byte_start, byte_len])
+        byte_pos = 0
+        i = 0
+        j = 0
+        while i < len(string) and j < len(query):
+            match = string[i] == query[j]
 
-        return result
+            if match:
+                j += 1
+
+                if span[0] == -1:
+                    span[0] = byte_pos
+                span[1] += len(string[i].encode('utf-8'))
+
+            if not match and span[0] != -1:
+                spans.append(span)
+                span = [-1, 0]
+
+            byte_pos += len(string[i].encode('utf-8'))
+            i += 1
+
+        if span[0] != -1:
+            spans.append(span)
+
+        return spans
 
     @neovim.function('_wilder_python_pcre2_capture_spans', sync=True)
     def capture_spans(self, args):
