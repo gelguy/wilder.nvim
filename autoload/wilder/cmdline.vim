@@ -871,25 +871,14 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
     let l:search_pipeline += wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
   endif
 
-  let l:pipeline += [
-        \ wilder#map(
-        \   l:search_pipeline,
-        \   [{ctx, res -> res}]
-        \ ),
-        \ {ctx, xs -> xs[0] is v:false || xs[0] is v:true ?
-        \   xs[0] :
-        \   wilder#result({
-        \     'data': {
-        \       'cmdline.command': xs[1].cmd,
-        \     },
-        \     'pos': xs[1].pos + 1,
-        \   })(ctx, xs[0])
-        \ },
-        \ ]
-
-  call add(l:pipeline, wilder#result({
-        \ 'replace': ['wilder#cmdline#replace'],
-        \ }))
+  call add(l:pipeline, wilder#subpipeline({ctx, res -> l:search_pipeline + [
+        \ wilder#result({
+        \   'data': {
+        \     'cmdline.command': res.cmd,
+        \   },
+        \   'pos': res.pos + 1,
+        \   'replace': ['wilder#cmdline#replace'],
+        \ })]}))
 
   return l:pipeline
 endfunction

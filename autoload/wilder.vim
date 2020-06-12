@@ -234,6 +234,10 @@ function! wilder#map(...) abort
   return wilder#pipeline#component#map#make(a:000)
 endfunction
 
+function! wilder#subpipeline(f) abort
+  return wilder#pipeline#component#subpipeline#make(a:f)
+endfunction
+
 function! wilder#check(...) abort
   return wilder#pipeline#component#check#make(a:000)
 endfunction
@@ -369,15 +373,10 @@ function! wilder#search_pipeline(...) abort
         \ wilder#result_output_escape('^$*~[]/\'),
         \ ])
 
-  let l:pipeline += [
-        \ wilder#map(
-        \   l:search_pipeline,
-        \   [{ctx, x -> x}]
-        \ ),
-        \ {ctx, xs -> wilder#result({
-        \   'data': {'query': xs[1]},
-        \ })(ctx, xs[0])}
-        \ ]
+  call add(l:pipeline,
+        \ wilder#subpipeline({ctx, x -> l:search_pipeline + [
+        \   wilder#result({'data': {'query': x}}),
+        \ ]}))
 
   return l:pipeline
 endfunction
@@ -432,14 +431,9 @@ function! wilder#python_search_pipeline(...) abort
 
   call add(l:subpipeline, wilder#result_output_escape('^$*~[]/\'))
 
-  call add(l:pipeline, wilder#map(
-        \ l:subpipeline,
-        \ [{ctx, x -> x}]
-        \ ))
-
-  call add(l:pipeline, {ctx, xs -> wilder#result({
-        \ 'data': {'pcre2.pattern': xs[1]},
-        \ })(ctx, xs[0])})
+  call add(l:pipeline, wilder#subpipeline({ctx, x -> l:subpipeline + [
+        \ wilder#result({'data': {'pcre2.pattern': x}}),
+        \ ]}))
 
   return wilder#search_pipeline({
         \ 'pipeline': l:pipeline,
