@@ -1,5 +1,11 @@
 let s:handler_registry = {}
 let s:id_index = 0
+let s:last_cleared_id = -1
+
+function! wilder#pipeline#clear_handlers() abort
+  let s:last_cleared_id = s:id_index
+  let s:handler_registry = {}
+endfunction
 
 function! wilder#pipeline#resolve(ctx, x) abort
   call s:handle(a:ctx, a:x, 'resolve')
@@ -13,15 +19,19 @@ function! s:handle(ctx, x, key) abort
   let l:handler_id = get(a:ctx, 'handler_id', 0)
 
   if !has_key(s:handler_registry, l:handler_id)
-    let l:message = 'wilder: ' . a:key
-    let l:message .= ' handler not found - id: ' . l:handler_id
-    let l:message .= ': ' . string(a:x)
+    " only show error if handler has not been cleared
+    if l:handler_id > s:last_cleared_id
+      let l:message = 'wilder: ' . a:key
+      let l:message .= ' handler not found - id: ' . l:handler_id
+      let l:message .= ': ' . string(a:x)
 
-    " avoid echoerr since this in a try-catch block
-    " see try-echoerr
-    echohl ErrorMsg
-    echomsg l:message
-    echohl Normal
+      " avoid echoerr since this in a try-catch block
+      " see try-echoerr
+      echohl ErrorMsg
+      echomsg l:message
+      echohl Normal
+    endif
+
     return
   endif
 
