@@ -281,8 +281,7 @@ The Result dictionary has the following keys:
 
             The keys of {ctx} are:
                 `selected`
-                The index of the selected candidate. -1 indicates no
-                selection.
+                Boolean indicating whether the candidate is selected.
 
                 `i`
                 The index of the {x} in the list of candidates.
