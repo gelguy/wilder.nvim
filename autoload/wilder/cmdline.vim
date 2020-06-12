@@ -116,15 +116,16 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
       endwhile
 
       if !empty(l:env_var)
-        let l:expanded_env_var = expand('$' . l:env_var)
-        " if result is the same, expansion failed
-        if l:expanded_env_var !=# l:env_var
+        if exists('$' . l:env_var)
+          let l:expanded_env_var = expand('$' . l:env_var)
           let l:tail .= l:expanded_env_var
           let l:current_offset += len(l:expanded_env_var) - len(l:env_var) - 1
 
           if l:i == len(a:res.expand_arg)
             let l:no_fuzzy = 1
           endif
+        else
+          let l:current_offset += -len(l:env_var) - 1
         endif
       endif
 
@@ -150,6 +151,17 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
 
     " l:split_path includes the expanded $env_vars
     let a:res.pos = a:res.expanded_pos - l:offset
+  endif
+
+  if len(l:split_path) > 1
+    let l:filtered_empty = filter(l:split_path[1:], {i, x -> !empty(x)})
+
+    if !get(a:res, 'has_wildcard', 0)
+      " -1 offset for each filtered element
+      let a:res.expanded_pos -= len(l:split_path) - len(l:filtered_empty) - 1
+    endif
+
+    let l:split_path = [l:split_path[0]] + l:filtered_empty
   endif
 
   " get first segment of path
