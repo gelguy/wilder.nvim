@@ -703,9 +703,23 @@ wilder#cmdline_pipeline([{options}])
 
             `fuzzy_filter`
             The function to use when matching candidates in fuzzy completion.
-            Takes a {ctx}, {candidates} and {query} and returns the list of
-            filtered candidates. Can return a |wilder-pipeline-thunk|.
-            Only used if `fuzzy` is true.
+            Takes a {ctx}, {candidates}, {query} and optional {transform}
+            function and returns the list of filtered candidates.
+            The {transform} function takes a {x} and returns the transformed
+            {x}.
+            The filtering should be done on the transformed candidates, but
+            the returned list should contain the untransformed candidates.
+
+            For example:
+>
+            function! MyFilter(ctx, candidates, query, ...) abort
+              let l:Transform = get(a:, 1, {x -> x})
+              return filter(copy(a:candidates), {_, x ->
+                  \ SomeCondition(l:Transform(x))})
+            endfunction
+<
+            Can return a |wilder-pipeline-thunk|.  Only used if `fuzzy` is
+            true.
 
             Default: |wilder#python_fuzzy_filter()| if `use_python` is true
                      |wilder#fuzzy_filter()| otherwise

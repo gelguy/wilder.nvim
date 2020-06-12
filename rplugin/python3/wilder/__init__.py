@@ -323,15 +323,18 @@ class Wilder(object):
     def filter(self, args):
         self.run_in_background(self.filter_handler, args)
 
-    def filter_handler(self, event, ctx, pattern, candidates, engine, has_file_args):
+    def filter_handler(self, event, ctx, pattern, candidates, transformed, engine):
         if event.is_set():
             return
 
         try:
+            if transformed == 0:
+                transformed = candidates
+
             re = importlib.import_module(engine)
             # re2 does not use re.UNICODE by default
             pattern = re.compile(pattern, re.UNICODE)
-            res = filter(lambda x: pattern.search(x if not has_file_args else self.get_basename(x)), candidates)
+            res = [x for i, x in enumerate(candidates) if pattern.search(transformed[i])]
             self.queue.put((ctx, list(res),))
         except Exception as e:
             self.queue.put((ctx, 'python_filter: ' + str(e), 'reject',))

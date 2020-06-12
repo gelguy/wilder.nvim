@@ -456,15 +456,12 @@ function! wilder#substitute_pipeline(...) abort
 endfunction
 
 function! wilder#fuzzy_filter() abort
-  return wilder#cmdline#fuzzy_filter()
+  return function('wilder#cmdline#fuzzy_filter')
 endfunction
 
 function! wilder#python_fuzzy_filter(...) abort
-  if a:0
-    return wilder#cmdline#python_fuzzy_filter(a:1)
-  else
-    return wilder#cmdline#python_fuzzy_filter()
-  endif
+  let l:engine = get(a:, 1, 're')
+  return function('wilder#cmdline#python_fuzzy_filter', [l:engine])
 endfunction
 
 " render components
