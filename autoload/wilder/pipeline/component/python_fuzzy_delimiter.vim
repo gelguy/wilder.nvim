@@ -78,9 +78,9 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
 
     if !l:escaped && l:char ==# '.'
       if l:i + 1 < l:len && l:chars[l:i+1] ==# '.'
-        let l:res .= '.'
+        let l:res .= '(.)'
       else
-        let l:res .= '..*?'
+        let l:res .= '(.).*?'
       endif
     elseif l:escaped || l:char ==# toupper(l:char)
       let l:res .= '(?:' . l:word_or_delimiter . '*?' . l:delimiter . '?(' . l:char . '))'
