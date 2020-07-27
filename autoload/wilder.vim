@@ -459,7 +459,7 @@ function! wilder#python_fuzzy_filter(...) abort
   return function('wilder#cmdline#python_fuzzy_filter', [l:engine])
 endfunction
 
-" render components
+" wildmenu components
 
 function! wilder#index(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
@@ -490,12 +490,28 @@ endfunction
 
 function! wilder#spinner(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#component#spinner#make(l:args)
+  return wilder#render#component#wildmenu_spinner#make(l:args)
 endfunction
 
 function! wilder#condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
   return wilder#render#component#condition#make(a:predicate, a:if_true, l:if_false)
+endfunction
+
+" popupmenu components
+"
+function! wilder#popupmenu_padding(left, ...) abort
+  return wilder#render#component#popupmenu_padding#make({
+        \ 'left': a:left,
+        \ 'right': get(a:, 1, 0),
+        \ 'top': get(a:, 2, 0),
+        \ 'bottom': get(a:, 3, 0),
+        \ })
+endfunction
+
+function! wilder#popupmenu_spinner(...) abort
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wilder#render#component#popupmenu_spinner#make(l:args)
 endfunction
 
 " renderers

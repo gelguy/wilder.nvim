@@ -4,8 +4,8 @@ let s:enabled = 1
 let s:init = 0
 let s:active = 0
 let s:hidden = 0
-let s:run_id = 0
-let s:result_run_id = -1
+let s:run_id = 1
+let s:result_run_id = 0
 let s:draw_done = 0
 
 let s:result = {'value': []}
@@ -396,6 +396,7 @@ function! s:draw(...) abort
   catch
     echohl ErrorMsg
     echomsg 'wilder: draw: ' . v:exception
+    echom v:throwpoint
     echohl Normal
   finally
     let s:draw_done = 1

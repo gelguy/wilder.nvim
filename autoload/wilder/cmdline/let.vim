@@ -26,7 +26,7 @@ function! wilder#cmdline#let#do(ctx)
   let l:arg_start = a:ctx.pos
 
   while a:ctx.pos < len(a:ctx.cmdline)
-    let l:match = match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,#]')
+    let l:match = match(a:ctx.cmdline[a:ctx.pos :], '[' . "'" . '"+\-*/%.=!?~|&$([<>,# ]')
 
     if l:match != -1
       let a:ctx.pos += l:match

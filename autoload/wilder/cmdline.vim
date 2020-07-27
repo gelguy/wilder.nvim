@@ -217,15 +217,25 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         let l:expand_start = 0
         let l:expand_end = 7
     endif
+    let print = 0
 
     if l:expand_start != -1
+      let l:is_dir = 0
+
+      if l:prefix[l:expand_end + 1 : l:expand_end + 2] ==# ':p'
+        let l:expand_end += 2
+      endif
+
       while l:expand_end + 2 < len(l:prefix) &&
             \ l:prefix[l:expand_end + 1] ==# ':' &&
-            \ (l:prefix[l:expand_end + 2] ==# 'p' ||
-            \ l:prefix[l:expand_end + 2] ==# 'h' ||
+            \ (l:prefix[l:expand_end + 2] ==# 'h' ||
             \ l:prefix[l:expand_end + 2] ==# 't' ||
             \ l:prefix[l:expand_end + 2] ==# 'r' ||
             \ l:prefix[l:expand_end + 2] ==# 'e')
+        let l:is_dir = l:prefix[l:expand_end + 2] ==# 'h'
+        if l:prefix[l:expand_end+2] == 'r'
+          let print = 1
+        endif
         let l:expand_end += 2
       endwhile
 
@@ -235,6 +245,9 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
       if !empty(l:expanded)
         if l:whole_path_expanded && empty(l:split_path)
           let a:res.expand_arg = l:expanded . l:prefix[l:expand_end + 1]
+          if l:is_dir && a:res.expand_arg[-1:] !=# l:slash
+            let a:res.expand_arg .= l:slash
+          endif
           let a:res.use_arg = 1
           return a:res
         endif
@@ -244,9 +257,21 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         endif
 
         if empty(l:split_path)
-          let l:tail = l:expanded . l:prefix[l:expand_end+1 :]
+          let l:head = fnamemodify(l:expanded, ':h')
+
+          " path has no parent directory
+          if l:head ==# l:expanded
+            let l:tail = l:expanded . l:prefix[l:expand_end+1 :]
+          else
+            let l:tail = fnamemodify(l:expanded, ':t')
+            call add(l:split_path, l:head)
+            let l:tail = l:tail . l:prefix[l:expand_end+1 : ]
+          endif
         else
           let l:split_path[0] = l:expanded . l:prefix[l:expand_end+1 :]
+        endif
+        if print
+          echom l:split_path [l:tail]
         endif
       endif
     endif
@@ -740,19 +765,9 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
   return wilder#wait(l:Getcompletion(a:ctx, a:res),
         \ {ctx, xs -> wilder#resolve(ctx, {
         \ 'value': xs,
-        \ 'pos': a:has_file_args ?
-        \   [{ctx, x, data -> s:get_file_args_pos(ctx, x, data, a:res.pos)}] :
-        \   a:res.pos,
+        \ 'pos': a:res.pos,
         \ 'data': s:convert_result_to_data(a:res),
         \ })})
-endfunction
-
-function! s:get_file_args_pos(ctx, x, data, pos) abort
-  if a:x is v:null || !has_key(a:data, 'cmdline.expanded_pos')
-    return a:pos
-  endif
-
-  return a:data['cmdline.expanded_pos']
 endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort

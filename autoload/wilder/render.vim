@@ -26,7 +26,7 @@ endfunction
 
 function! wilder#render#normalise_chunks(hl, chunks) abort
   if empty(a:chunks)
-    return []
+    return a:chunks
   endif
 
   let l:res = []
@@ -37,11 +37,16 @@ function! wilder#render#normalise_chunks(hl, chunks) abort
   for l:chunk in a:chunks
     let l:chunk_hl = get(l:chunk, 1, a:hl)
 
-    if l:chunk_hl ==# l:hl
+    if l:chunk_hl ==# l:hl ||
+          \ empty(l:chunk_hl) && empty(l:hl)
       let l:text .= l:chunk[0]
     else
       if !empty(l:text)
-        call add(l:res, [l:text, l:hl])
+        if empty(l:hl)
+          call add(l:res, [l:text])
+        else
+          call add(l:res, [l:text, l:hl])
+        endif
       endif
 
       let l:text = l:chunk[0]
@@ -49,7 +54,11 @@ function! wilder#render#normalise_chunks(hl, chunks) abort
     endif
   endfor
 
-  call add(l:res, [l:text, l:hl])
+  if empty(l:hl)
+    call add(l:res, [l:text])
+  else
+    call add(l:res, [l:text, l:hl])
+  endif
 
   return l:res
 endfunction
@@ -408,17 +417,45 @@ function! wilder#render#truncate(len, x) abort
   return join(l:chars[:l:index], '')
 endfunction
 
-function! wilder#render#truncate_chunks(len, xs) abort
+function! wilder#render#chunks_displaywidth(chunks) abort
   let l:width = 0
-  let l:res = []
-  let l:i = 0
 
-  while l:i < len(a:xs)
-    let l:chunk = a:xs[l:i]
+  for l:chunk in a:chunks
+    let l:width += strdisplaywidth(l:chunk[0])
+  endfor
+
+  return l:width
+endfunction
+
+function! wilder#render#truncate_chunks(len, chunks) abort
+  return wilder#render#truncate_or_pad_chunks(a:len, a:chunks, '')
+endfunction
+
+function! wilder#render#truncate_or_pad_chunks(len, chunks, hl, ...) abort
+  let l:ellipsis = get(a:, 1, '')
+  let l:padding = get(a:, 2, '')
+
+  let l:res = []
+  let l:width = 0
+
+  let l:i = 0
+  while l:i < len(a:chunks)
+    let l:chunk = a:chunks[l:i]
     let l:chunk_width = strdisplaywidth(l:chunk[0])
 
-    if l:width + l:chunk_width > a:len
-      call add(l:res, [wilder#render#truncate(a:len - l:width, l:chunk[0]), l:chunk[1]])
+    if l:width + l:chunk_width == a:len
+      call add(l:res, l:chunk)
+
+      return l:res
+    elseif l:width + l:chunk_width > a:len
+      let l:len_minus_ellipsis = a:len - strdisplaywidth(l:ellipsis)
+      call add(l:res, [wilder#render#truncate(
+            \ l:len_minus_ellipsis - l:width, l:chunk[0]), l:chunk[1]])
+
+      if !empty(l:ellipsis)
+        call add(l:res, [l:ellipsis, a:hl])
+      endif
+
       return l:res
     endif
 
@@ -426,6 +463,10 @@ function! wilder#render#truncate_chunks(len, xs) abort
     let l:width += l:chunk_width
     let l:i += 1
   endwhile
+
+  if !empty(l:padding) && l:width < a:len
+    call add(l:res, [repeat(l:padding, a:len - l:width), a:hl])
+  endif
 
   return l:res
 endfunction

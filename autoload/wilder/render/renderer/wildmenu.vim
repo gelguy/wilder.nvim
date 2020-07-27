@@ -9,10 +9,6 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
-        \ 'buf': -1,
-        \ 'win': -1,
-        \ 'columns': -1,
-        \ 'cmdheight': -1,
         \ 'draw_cache': {},
         \ 'apply_highlights_cache': {},
         \ 'run_id': -1,
@@ -79,19 +75,16 @@ function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, resu
         \ a:ctx,
         \ a:result)
 
-  let a:ctx.space = a:width - l:space_used
-  let a:ctx.page = a:state.page
-  let a:ctx.separator = a:state.separator
-  let a:ctx.ellipsis = a:state.ellipsis
+  let a:state.space = a:width - l:space_used
 
+  let a:ctx.page = a:state.page
   let l:page = s:make_page(a:state, a:ctx, a:result)
-  let a:ctx.page = l:page
   let a:state.page = l:page
 
+  let a:ctx.page = l:page
   let a:ctx.highlights = a:state.highlights
 
-  return s:make_hl_chunks(a:state, a:ctx, a:result,
-        \ get(a:state, 'apply_highlights', []))
+  return s:make_hl_chunks(a:state, a:ctx, a:result)
 endfunction
 
 function! wilder#render#renderer#wildmenu#component_len(component, ctx, result) abort
@@ -149,9 +142,18 @@ function! s:component_hook(component, ctx, key) abort
 
     call s:component_hook(a:component.value, a:ctx, a:key)
   elseif type(a:component) is v:t_list
-    for l:Elem in a:component
-      call s:component_hook(l:Elem, a:ctx, a:key)
-    endfor
+    if a:key ==# 'pre'
+      for l:Elem in a:component
+        call s:component_hook(l:Elem, a:ctx, a:key)
+      endfor
+    else
+      let l:i = len(a:component) - 1
+      while l:i >= 0
+        let l:Elem = a:component[l:i]
+        call s:component_hook(l:Elem, a:ctx, a:key)
+        let l:i -= 1
+      endwhile
+    endif
   endif
 endfunction
 
@@ -170,23 +172,25 @@ function! s:make_page(state, ctx, result) abort
     let l:selected = a:ctx.selected
 
     let l:i = l:page[0]
-    let l:separator_width = strdisplaywidth(a:ctx.separator)
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:i))
+    let l:separator_width = strdisplaywidth(a:state.separator)
+    let l:width = strdisplaywidth(wilder#render#renderer#draw_x(
+          \ a:state.draw_cache, a:ctx, a:result, l:i))
     let l:i += 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
-      let l:width += strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:i))
+      let l:width += strdisplaywidth(wilder#render#renderer#draw_x(
+            \ a:state.draw_cache, a:ctx, a:result, l:i))
 
       " cannot fit in current page
-      if l:width > a:ctx.space
+      if l:width > a:state.space
         break
       endif
 
       let l:i += 1
     endwhile
 
-    if l:width <= a:ctx.space
+    if l:width <= a:state.space
       return l:page
     endif
 
@@ -206,36 +210,23 @@ function! s:make_page(state, ctx, result) abort
   return s:make_page_from_start(a:state, a:ctx, a:result, l:selected)
 endfunction
 
-function! s:draw_x(state, ctx, result, i) abort
-  let l:use_cache = a:ctx.selected == a:i
-  if l:use_cache && has_key(a:state.draw_cache, a:i)
-    return a:state.draw_cache[a:i]
-  endif
-
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
-
-  if l:use_cache
-    let a:state.draw_cache[a:i] = l:x
-  endif
-
-  return l:x
-endfunction
-
 function! s:make_page_from_start(state, ctx, result, start) abort
-  let l:space = a:ctx.space
+  let l:space = a:state.space
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(wilder#render#renderer#draw_x(
+        \ a:state.draw_cache, a:ctx, a:result, l:start))
   let l:space = l:space - l:width
-  let l:separator_width = strdisplaywidth(a:ctx.separator)
+  let l:separator_width = strdisplaywidth(a:state.separator)
 
   while 1
     if l:end + 1 >= len(a:result.value)
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(wilder#render#renderer#draw_x(
+          \ a:state.draw_cache, a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -249,20 +240,22 @@ function! s:make_page_from_start(state, ctx, result, start) abort
 endfunction
 
 function! s:make_page_from_end(state, ctx, result, end) abort
-  let l:space = a:ctx.space
+  let l:space = a:state.space
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(wilder#render#renderer#draw_x(
+        \ a:state.draw_cache, a:ctx, a:result, l:start))
   let l:space = l:space - l:width
-  let l:separator_width = strdisplaywidth(a:ctx.separator)
+  let l:separator_width = strdisplaywidth(a:state.separator)
 
   while 1
     if l:start - 1 < 0
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:start - 1))
+    let l:width = strdisplaywidth(wilder#render#renderer#draw_x(
+          \ a:state.draw_cache, a:ctx, a:result, l:start - 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -280,7 +273,8 @@ function! s:make_page_from_end(state, ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(wilder#render#renderer#draw_x(
+          \ a:state.draw_cache, a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -293,19 +287,19 @@ function! s:make_page_from_end(state, ctx, result, end) abort
   return [l:start, l:end]
 endfunction
 
-function! s:make_hl_chunks(state, ctx, result, apply_highlights) abort
+function! s:make_hl_chunks(state, ctx, result) abort
   let l:chunks = []
-  let l:chunks += s:draw_component(a:state.left, a:ctx.highlights['default'], a:ctx, a:result)
+  let l:chunks += s:draw_component(a:state.left, a:state.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
-    let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
+    let l:chunks += s:draw_error(a:state, a:state.highlights['error'], a:ctx, a:ctx.error)
   else
-    let l:chunks += s:draw_xs(a:state, a:ctx, a:result, a:apply_highlights)
+    let l:chunks += s:draw_xs(a:state, a:ctx, a:result)
   endif
 
-  let l:chunks += s:draw_component(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
+  let l:chunks += s:draw_component(a:state.right, a:state.highlights['default'], a:ctx, a:result)
 
-  return wilder#render#normalise_chunks(a:ctx.highlights['default'], l:chunks)
+  return wilder#render#normalise_chunks(a:state.highlights['default'], l:chunks)
 endfunction
 
 function! s:draw_component(Component, hl, ctx, result) abort
@@ -345,12 +339,12 @@ function! s:draw_component(Component, hl, ctx, result) abort
   return l:res
 endfunction
 
-function! s:draw_error(hl, ctx, error) abort
-  let l:space = a:ctx.space
+function! s:draw_error(state, hl, ctx, error) abort
+  let l:space = a:state.space
   let l:error = wilder#render#to_printable(a:error)
 
-  if strdisplaywidth(l:error) > a:ctx.space
-    let l:ellipsis = wilder#render#to_printable(a:ctx.ellipsis)
+  if strdisplaywidth(l:error) > a:state.space
+    let l:ellipsis = wilder#render#to_printable(a:state.ellipsis)
     let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
     let l:error = wilder#render#truncate(l:space_minus_ellipsis, l:error)
@@ -361,14 +355,15 @@ function! s:draw_error(hl, ctx, error) abort
   return [[l:error, a:hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
-function! s:draw_xs(state, ctx, result, apply_highlights) abort
+function! s:draw_xs(state, ctx, result) abort
+  let l:space = a:state.space
+  let l:separator = a:state.separator
+  let l:Apply_highlights = a:state.apply_highlights
   let l:selected = a:ctx.selected
-  let l:space = a:ctx.space
   let l:page = a:ctx.page
-  let l:separator = a:ctx.separator
 
   if l:page == [-1, -1]
-    return [[repeat(' ', l:space), a:ctx.highlights['default']]]
+    return [[repeat(' ', l:space), a:state.highlights['default']]]
   endif
 
   let l:start = l:page[0]
@@ -383,47 +378,43 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
   let l:i = 0
   while l:i < l:len
     let l:current = l:i + l:start
-    let l:x = s:draw_x(a:state, a:ctx, a:result, l:current)
-
-    if !has_key(a:state.apply_highlights_cache, l:x) &&
-          \ !empty(a:apply_highlights)
-      let l:x_highlight = s:apply_highlights(a:apply_highlights, l:data, l:x)
-
-      if l:x_highlight isnot 0
-        let a:state.apply_highlights_cache[l:x] = l:x_highlight
-      endif
-    endif
+    let l:x = wilder#render#renderer#draw_x(
+          \ a:state.draw_cache, a:ctx, a:result, l:current)
 
     call add(l:xs, l:x)
     let l:i += 1
   endwhile
 
+  call wilder#render#renderer#cache_apply_highlights(
+        \ a:state.apply_highlights_cache, l:Apply_highlights, a:ctx, l:xs, l:data)
+
   " only 1 x, possible that it exceeds l:space
   if l:len == 1
     let l:x = l:xs[0]
-    let l:is_selected = l:selected == 0
+    let l:is_selected = l:selected == l:start
 
     if strdisplaywidth(l:x) > l:space
       let l:res = []
 
-      let l:ellipsis = a:ctx.ellipsis
+      let l:ellipsis = a:state.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
+      let l:hl = a:state.highlights[l:is_selected ? 'selected' : 'default']
 
       if has_key(a:state.apply_highlights_cache, l:x)
         let l:chunks = wilder#render#spans_to_chunks(
               \ l:x,
               \ a:state.apply_highlights_cache[l:x],
-              \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-              \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+              \ a:state.highlights[l:is_selected ? 'selected' : 'default'],
+              \ a:state.highlights[l:is_selected ? 'selected_accent' : 'accent'])
         let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
       else
         let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
-        call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
+        call add(l:res, [l:x, l:hl])
       endif
 
-      call add(l:res, [l:ellipsis, a:ctx.highlights['default']])
+      call add(l:res, [l:ellipsis, l:hl])
       let l:padding = repeat(' ', l:space - strdisplaywidth(l:x))
-      call add(l:res, [l:padding, a:ctx.highlights['default']])
+      call add(l:res, [l:padding, a:state.highlights['default']])
       return l:res
     endif
   endif
@@ -435,7 +426,7 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
   let l:i = 0
   while l:i < l:len
     if l:i > 0
-      call add(l:res, [l:separator, a:ctx.highlights.separator])
+      call add(l:res, [l:separator, a:state.highlights.separator])
       let l:width += strdisplaywidth(l:separator)
     endif
 
@@ -446,11 +437,11 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
       let l:chunks = wilder#render#spans_to_chunks(
             \ l:x,
             \ a:state.apply_highlights_cache[l:x],
-            \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-            \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+            \ a:state.highlights[l:is_selected ? 'selected' : 'default'],
+            \ a:state.highlights[l:is_selected ? 'selected_accent' : 'accent'])
       let l:res += chunks
     else
-      call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
+      call add(l:res, [l:x, a:state.highlights[l:is_selected ? 'selected' : 'default']])
     endif
 
     let l:width += strdisplaywidth(l:x)
@@ -459,15 +450,4 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
 
   call add(l:res, [repeat(' ', l:space - l:width)])
   return l:res
-endfunction
-
-function! s:apply_highlights(apply_highlights, data, x)
-  for l:Apply_highlights in a:apply_highlights
-    let l:spans = l:Apply_highlights({}, a:data, a:x)
-    if l:spans isnot 0
-      return l:spans
-    endif
-  endfor
-
-  return 0
 endfunction

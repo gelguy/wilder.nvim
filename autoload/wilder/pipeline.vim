@@ -47,6 +47,7 @@ function! s:handle(ctx, x, key) abort
   try
     call l:handler.on_finish(a:ctx, a:x)
   catch
+    echom v:throwpoint
     call l:handler.on_error(a:ctx, 'pipeline: ' . v:exception)
   endtry
 endfunction
@@ -65,6 +66,7 @@ function! s:call(f, ctx, handler_id) abort
   try
     call a:f(a:ctx)
   catch
+    echom v:throwpoint
     call wilder#reject(a:ctx, 'pipeline: ' . v:exception)
   endtry
 endfunction
@@ -108,6 +110,7 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
     try
       let l:Result = l:F(a:ctx, l:x)
     catch
+      echom v:throwpoint
       call a:on_error(a:ctx, 'pipeline: ' . v:exception)
       return
     endtry
@@ -169,6 +172,7 @@ function! s:wait_call(state, ctx)
       call a:state.on_finish(a:ctx, a:state.f)
     endif
   catch
+    echom v:throwpoint
     let a:ctx.handler_id = a:state.wait_handler_id
     call s:wait_on_error(a:state, a:ctx, v:exception)
   endtry
@@ -187,6 +191,7 @@ function! s:wait_on_finish(state, ctx, x)
   try
     call a:state.on_finish(l:ctx, a:x)
   catch
+    echom v:throwpoint
     if has_key(a:state, 'on_error')
       call a:state.on_error(l:ctx, v:exception)
     else

@@ -1,14 +1,9 @@
-let s:open_win_num_args = 3
-try
-  let l:win = nvim_open_win(0, 0, {})
-catch 'Not enough arguments'
-  let s:open_win_num_args = 5
-catch
-endtry
-
 function! wilder#render#renderer#wildmenu_float#make(args) abort
   let l:state = wilder#render#renderer#wildmenu#prepare_state(a:args)
   let l:state.ns_id = nvim_create_namespace('')
+  let l:state.buf = -1
+  let l:state.win = -1
+  let l:state.cmdheight = -1
 
   return {
         \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
@@ -34,7 +29,8 @@ function! s:render(state, ctx, result) abort
   endtry
 
   if l:in_sandbox
-    call timer_start(0, {-> s:render_chunks(a:state, l:chunks)})
+    let l:state = copy(a:state)
+    call timer_start(0, {-> s:render_chunks(l:state, l:chunks)})
   else
     call s:render_chunks(a:state, l:chunks)
   endif
@@ -79,58 +75,16 @@ function! s:render_chunks(state, chunks) abort
   redraw
 endfunction
 
-function! s:new_win(buf) abort
-  if s:open_win_num_args == 5
-    let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
-          \ 'relative': 'editor',
-          \ 'row': &lines - s:get_cmdheight() - 1,
-          \ 'col': 0,
-          \ 'focusable': 0,
-          \ })
-  else
-    let l:win = nvim_open_win(a:buf, 0, {
-          \ 'relative': 'editor',
-          \ 'height': 1,
-          \ 'width': &columns,
-          \ 'row': &lines - s:get_cmdheight() - 1,
-          \ 'col': 0,
-          \ 'focusable': 0,
-          \ })
-  endif
-
-  call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
-  call nvim_win_set_option(l:win, 'list', v:false)
-  call nvim_win_set_option(l:win, 'number', v:false)
-  call nvim_win_set_option(l:win, 'relativenumber', v:false)
-  call nvim_win_set_option(l:win, 'spell', v:false)
-
-  return l:win
-endfunction
-
 function! s:pre_hook(state, ctx) abort
-  " Fixes bug where search highlighting is not applied properly
-  if has('nvim-0.4')
-    let l:old_cursorline = &cursorline
-    let &cursorline = 0
-  endif
-
   if a:state.buf == -1
     let a:state.buf = nvim_create_buf(v:false, v:true)
   endif
 
   if a:state.win == -1
-    let a:state.win = s:new_win(a:state.buf)
-  elseif a:state.columns != &columns || a:state.cmdheight != s:get_cmdheight()
-    let l:old_win = a:state.win
-
-    " set to -1 preemptively in case API calls fail
-    let a:state.win = -1
-    call nvim_win_close(l:old_win, 1)
-    let a:state.win = s:new_win(a:state.buf)
-  endif
-
-  if has('nvim-0.4')
-    let &cursorline = l:old_cursorline
+    let a:state.cmdheight = &cmdheight
+    let a:state.win = wilder#render#renderer#open_win(
+          \ a:state.buf, &lines - s:get_cmdheight() - 1,
+          \ 0, 1, &columns)
   endif
 
   call wilder#render#renderer#wildmenu#component_pre_hook(a:state.left, a:ctx)
