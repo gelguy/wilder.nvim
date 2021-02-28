@@ -218,14 +218,20 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         let l:expand_end = 7
     endif
 
+    let l:is_dir = 0
+
+    if l:prefix[l:expand_end + 1 : l:expand_end + 2] ==# ':p'
+      let l:expand_end += 2
+    endif
+
     if l:expand_start != -1
       while l:expand_end + 2 < len(l:prefix) &&
             \ l:prefix[l:expand_end + 1] ==# ':' &&
-            \ (l:prefix[l:expand_end + 2] ==# 'p' ||
-            \ l:prefix[l:expand_end + 2] ==# 'h' ||
+            \ (l:prefix[l:expand_end + 2] ==# 'h' ||
             \ l:prefix[l:expand_end + 2] ==# 't' ||
             \ l:prefix[l:expand_end + 2] ==# 'r' ||
             \ l:prefix[l:expand_end + 2] ==# 'e')
+        let l:is_dir = l:prefix[l:expand_end + 2] ==# 'h'
         let l:expand_end += 2
       endwhile
 
@@ -235,6 +241,11 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
       if !empty(l:expanded)
         if l:whole_path_expanded && empty(l:split_path)
           let a:res.expand_arg = l:expanded . l:prefix[l:expand_end + 1]
+
+          if l:is_dir && a:res.expand_arg[-1:] !=# l:slash
+            let a:res.expand_arg .= l:slash
+          endif
+
           let a:res.use_arg = 1
           return a:res
         endif
@@ -244,7 +255,16 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
         endif
 
         if empty(l:split_path)
-          let l:tail = l:expanded . l:prefix[l:expand_end+1 :]
+          let l:head = fnamemodify(l:expanded, ':h')
+
+          " path has no parent directory
+          if l:head ==# l:expanded
+            let l:tail = l:expanded . l:prefix[l:expand_end+1 :]
+          else
+            let l:tail = fnamemodify(l:expanded, ':t')
+            call add(l:split_path, l:head)
+            let l:tail = l:tail . l:prefix[l:expand_end+1 : ]
+          endif
         else
           let l:split_path[0] = l:expanded . l:prefix[l:expand_end+1 :]
         endif
@@ -641,7 +661,7 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-" returns [{handled}, {result}, {pos}]
+" returns [{handled}, {result}]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
     return [0, a:res]
@@ -666,10 +686,13 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     let l:result = l:Completion_func(a:res.cmdline[a:res.pos :], a:res.cmdline, len(a:res.cmdline))
 
     if get(l:user_command, 'complete', '') ==# 'custom'
+      let l:arg = l:parsed.cmdline[l:res.pos :]
+
       let l:result = split(l:result, '\n')
+      let l:result = filter(l:result, {i, x -> match(x, l:arg) != -1})
     endif
 
-    return [1, l:result, a:res.pos]
+    return [1, l:result]
   endif
 
   if has_key(l:user_command, 'complete') &&
@@ -740,19 +763,9 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
   return wilder#wait(l:Getcompletion(a:ctx, a:res),
         \ {ctx, xs -> wilder#resolve(ctx, {
         \ 'value': xs,
-        \ 'pos': a:has_file_args ?
-        \   [{ctx, x, data -> s:get_file_args_pos(ctx, x, data, a:res.pos)}] :
-        \   a:res.pos,
+        \ 'pos': a:res.pos,
         \ 'data': s:convert_result_to_data(a:res),
         \ })})
-endfunction
-
-function! s:get_file_args_pos(ctx, x, data, pos) abort
-  if a:x is v:null || !has_key(a:data, 'cmdline.expanded_pos')
-    return a:pos
-  endif
-
-  return a:data['cmdline.expanded_pos']
 endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
@@ -948,11 +961,10 @@ function! wilder#cmdline#pipeline(opts) abort
 
   call add(l:pipeline, wilder#branch(
         \ [
-        \   {ctx, res -> res[0] ? res : v:false},
-        \   {ctx, res -> wilder#result({
-        \     'pos': res[2],
+        \   {ctx, res -> res[0] ? res[1] : v:false},
+        \   wilder#result({
         \     'replace': ['wilder#cmdline#replace'],
-        \   })(ctx, res[1])},
+        \   }),
         \ ],
         \ l:getcompletion_pipeline,
         \ ))

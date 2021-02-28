@@ -290,28 +290,6 @@ The Result dictionary has the following keys:
 
             Default: None
 
-            `pos`                   *wilder-pipeline-result-pos*
-            Optional~
-            A number or a list with one element. It is used to indicate the
-            visual position of where the cmdline argument is changed. This is
-            used to determine the position of the popup menu for renderers
-            which support it. Has no effect on `replace`.
-
-            If `pos` is a number, the number is used as the position.
-
-            Otherwise, `pos` should be a singleton list which contains a
-            function which takes {ctx}, {x} and {data} and returns the
-            position to use.
-
-            {ctx} has no keys.
-
-            {x} is the currently selected candidate, or |v:null| if there is
-            none.
-
-            See |wilder-pipeline-result-data| on how {data} is gotten.
-
-            Default: None
-
             `output`                *wilder-pipeline-result-output*
             Optional~
             A list of strings or functions which takes a {ctx}, {x} and {data}
@@ -1031,6 +1009,72 @@ wilder#wildmenu_renderer([{options}])
 
             Default: same value as the `hl` option
 
+                                    *wilder#airline_theme()*
+                                    *wilder#lightline_theme()*
+wilder#airline_theme([{options}])
+wilder#lightline_theme([{options}])
+                                    Wildmenu renderer theme~
+            Returns an object which can be passed to
+            |wilder#wildmenu_renderer()| to styles the renderer to look like
+            Airline or Lightline.
+
+            The theme will use the highlight groups from Airline or Lightline
+            and consists of 3 components - the current mode and
+            |wilder#spinner()| on the left, and |wilder#index()| on the right.
+
+            {options} is identical to the argument of
+            |wilder#wildmenu_renderer()| with the following differences:
+
+            `use_powerline_symbols`
+            A new key which sets whether to use powerline symbols for the
+            separators between sections.
+
+            Default: `g:airline_powerline_fonts` for Airline
+                     has_key(g:lightline, 'separators') for Lightline
+
+            `powerline_symbols`
+            A new key which sets the symbols to use for the powerline
+            separators. Should be a 2 element list, with the first element
+            being the left separator and the second being the right separator.
+
+            Default: ['', ''] for Airline
+                     Extracted from g:lightline.separators for Lightline
+
+            The `highlight` object accepts 2 new keys:
+                `mode`
+                Optional~
+                The highlight group for the component which shows the current
+                mode and the |wilder#spinner()|.
+
+                Default: 'airline_a' for Airline
+                         'LightlineLeft_active_0' for Lightline
+
+                `index`
+                Optional~
+                The highlight group for the |wilder#index()| component.
+
+                Default: 'airline_z' for Airline
+                         'LightlineRight_active_0' for Lightline
+
+
+                If not defined, the following highlights are set:
+                `default`
+                'airline_c' for Airline
+                'LightlineMiddle_active' for Lightline
+
+                `selected`
+                'WildMenu' for both
+
+            Example:
+>
+            call wilder#set_option('renderer', wilder#wildmenu_renderer(
+                  \ wilder#airline_theme({
+                  \   'highlights': {'default': 'Statusline'},
+                  \   'separator': '  ',
+                  \ })))
+<
+
+
 COMPONENTS                          *wilder-renderer-components*
                                     *wilder-renderer-component*
 
@@ -1237,8 +1281,13 @@ wilder#spinner([{options}])         *wilder#spinner()*
 
                                     *wilder#separator()*
 wilder#separator({str}, {fg}, {bg}, [{key}])
+                                    Deprecated~
+            Deprecated: Use |wilder#powerline_separator()|.
+
+                                    *wilder#powerline_separator()*
+wilder#powerline_separator({str}, {fg}, {bg}, [{key}])
                                     Renderer component~
-            Helper function to draw an airline-like separator.
+            Helper function to draw an powerline-like separator.
             {str} should be the separator character
             {fg} is the highlight group from which the |highlight-ctermfg| and
             |highlight-guifg| should be from.
@@ -1649,44 +1698,12 @@ Pipelines (Neovim only)~
 
 Airline/Lightline Theme Renderer~
 >
-    " for vim-airline
-    let s:hl = 'airline_c'
-    let s:mode_hl = 'airline_a'
-    let s:index_hl ='airline_z'
-
-    " for lightline.vim
-    let s:hl = 'LightlineMiddle_active'
-    let s:mode_hl = 'LightlineLeft_active_0'
-    let s:index_hl = 'LightlineRight_active_0'
-
-    call wilder#set_option('renderer', wilder#wildmenu_renderer({
-          \ 'highlights': {
-          \   'default': s:hl,
-          \ },
-          \ 'apply_highlights': wilder#query_common_subsequence_spans(),
-          \ 'separator': ' · ',
-          \ 'left': [{'value': [
-          \    wilder#condition(
-          \      {-> getcmdtype() ==# ':'},
-          \      ' COMMAND ',
-          \      ' SEARCH ',
-          \    ),
-          \    wilder#condition(
-          \      {ctx, x -> has_key(ctx, 'error')},
-          \      '!',
-          \      wilder#spinner({
-          \        'frames': '-\|/',
-          \        'done': '·',
-          \      }),
-          \    ), ' ',
-          \ ], 'hl': s:mode_hl,},
-          \ wilder#separator('', s:mode_hl, s:hl, 'left'), ' ',
-          \ ],
-          \ 'right': [
-          \    ' ', wilder#separator('', s:index_hl, s:hl, 'right'),
-          \    wilder#index({'hl': s:index_hl}),
-          \ ],
-          \ }))
+    " use wilder#lightline_theme() for Lightline
+    call wilder#set_option('renderer', wilder#wildmenu_renderer(
+          \ wilder#airline_theme({
+          \   'apply_highlights': wilder#query_common_subsequence_spans(),
+          \   'separator': ' · ',
+          \ })))
 <
 
 ==============================================================================

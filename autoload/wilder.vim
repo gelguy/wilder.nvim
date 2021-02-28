@@ -166,7 +166,7 @@ function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
         let l:span[0] = l:byte_pos
       endif
 
-      let l:span[1] += l:strlen
+      let l:span[1] += l:str_len
     endif
 
     if !l:match && l:span[0] != -1
@@ -480,7 +480,16 @@ function! wilder#next_arrow(...) abort
   return wilder#render#component#arrows#make_next(l:args)
 endfunction
 
+" DEPRECATED: use wilder#separator()
 function! wilder#separator(str, from, to, ...) abort
+  if a:0
+    return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
+  else
+    return wilder#render#component#separator#make(a:str, a:from, a:to)
+  endif
+endfunction
+
+function! wilder#powerline_separator(str, from, to, ...) abort
   if a:0
     return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
   else
@@ -526,4 +535,14 @@ function! wilder#wildmenu_renderer(...)
   endif
 
     return wilder#render#renderer#wildmenu_statusline#make(l:args)
+endfunction
+
+function! wilder#airline_theme(...)
+  let l:args = get(a:000, 0, {})
+  return wilder#render#renderer#wildmenu_theme#airline_theme(l:args)
+endfunction
+
+function! wilder#lightline_theme(...)
+  let l:args = get(a:000, 0, {})
+  return wilder#render#renderer#wildmenu_theme#lightline_theme(l:args)
 endfunction

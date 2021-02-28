@@ -1,4 +1,8 @@
 function! wilder#cmdline#filter#do(ctx) abort
+  if a:ctx.pos == len(a:ctx.cmdline)
+    return
+  endif
+
   call wilder#cmdline#skip_vimgrep#do(a:ctx)
 
   if a:ctx.pos == len(a:ctx.cmdline)
