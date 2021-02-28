@@ -681,9 +681,13 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
   if has_key(l:user_command, 'complete_arg') &&
         \ l:user_command.complete_arg isnot v:null
-    let l:Completion_func = function(l:user_command.complete_arg)
-
-    let l:result = l:Completion_func(a:res.cmdline[a:res.pos :], a:res.cmdline, len(a:res.cmdline))
+    try
+      " Function might be script-local or point to script-local variables.
+      let l:Completion_func = function(l:user_command.complete_arg)
+      let l:result = l:Completion_func(a:res.cmdline[a:res.pos :], a:res.cmdline, len(a:res.cmdline))
+    catch
+      return [1, v:true]
+    endtry
 
     if get(l:user_command, 'complete', '') ==# 'custom'
       let l:arg = l:parsed.cmdline[l:res.pos :]
