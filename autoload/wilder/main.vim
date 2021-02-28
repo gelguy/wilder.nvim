@@ -194,6 +194,8 @@ function! s:pre_hook() abort
 endfunction
 
 function! s:post_hook() abort
+  call wilder#pipeline#clear_handlers()
+
   if has_key(s:opts.renderer, 'post_hook')
     call s:opts.renderer.post_hook({})
   endif

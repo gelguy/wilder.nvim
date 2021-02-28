@@ -67,12 +67,13 @@ function! wilder#cmdline#set#do(ctx) abort
 
   if len(l:completions) == 1
         \ && l:completions[0] ==# l:option_name
-        \ && get(s:bool_options, l:option_name, 0)
+        \ && has_key(s:bool_options, l:option_name)
     let a:ctx.expand = 'nothing'
     return
   endif
 
   let a:ctx.option = l:option_name
+
   let l:char = a:ctx.cmdline[l:p]
 
   if (l:char ==# '-' || l:char ==# '+' || l:char ==# '^') &&
@@ -83,15 +84,19 @@ function! wilder#cmdline#set#do(ctx) abort
   endif
 
   if l:char !=# '=' && l:char !=# ':' ||
-        \ a:ctx.expand ==# 'option_bool'
+        \ a:ctx.expand ==# 'option_bool' ||
+        \ has_key(s:bool_options, l:option_name)
     let a:ctx.expand = 'unsuccessful'
     return
   endif
 
   if l:p + 1 == len(a:ctx.cmdline)
     let a:ctx.expand = 'option_old'
-    let a:ctx.pos = l:p + 1
+  else
+    let a:ctx.expand = 'nothing'
   endif
+
+  let a:ctx.pos = l:p + 1
 endfunction
 
 let s:bool_options = {

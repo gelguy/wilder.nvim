@@ -163,44 +163,13 @@ The spinner indicates when `wilder` has async work which has not been completed 
 #### Configuration in the screenshot
 
 ```vim
-" for vim-airline
-let s:hl = 'airline_c'
-let s:mode_hl = 'airline_a'
-let s:index_hl ='airline_z'
 
-" for lightline.vim
-let s:hl = 'LightlineMiddle_active'
-let s:mode_hl = 'LightlineLeft_active_0'
-let s:index_hl = 'LightlineRight_active_0'
-
-call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'highlights': {
-      \   'default': s:hl,
-      \ },
-      \ 'apply_highlights': wilder#query_common_subsequence_spans(),
-      \ 'separator': ' · ',
-      \ 'left': [{'value': [
-      \    wilder#condition(
-      \      {-> getcmdtype() ==# ':'},
-      \      ' COMMAND ',
-      \      ' SEARCH ',
-      \    ),
-      \    wilder#condition(
-      \      {ctx, x -> has_key(ctx, 'error')},
-      \      '!',
-      \      wilder#spinner({
-      \        'frames': '-\|/',
-      \        'done': '·',
-      \      }),
-      \    ), ' ',
-      \ ], 'hl': s:mode_hl,},
-      \ wilder#separator('', s:mode_hl, s:hl, 'left'), ' ',
-      \ ],
-      \ 'right': [
-      \    ' ', wilder#separator('', s:index_hl, s:hl, 'right'),
-      \    wilder#index({'hl': s:index_hl}),
-      \ ],
-      \ }))
+call wilder#set_option('renderer', wilder#wildmenu_renderer(
+      \ wilder#airline_theme({  " use wilder#lightline_theme() for Lightline
+      \   'highlights': {},  " default highlights can be overridden, see :h wilder#wildmenu_renderer()
+      \   'apply_highlights': wilder#query_common_subsequence_spans(),
+      \   'separator': ' · ',
+      \ })))
 ```
 
 # Tips

@@ -145,12 +145,14 @@ function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
   let l:split_query = split(a:query, '\zs')
 
   let l:spans = []
-  let l:span = [-1, -1]
+  let l:span = [-1, 0]
 
   let l:byte_pos = 0
   let l:i = 0
   let l:j = 0
   while l:i < len(l:split_str) && l:j < len(l:split_query)
+    let l:str_len = strlen(l:split_str[l:i])
+
     if a:case_sensitive
       let l:match = l:split_str[l:i] ==# l:split_query[l:j]
     else
@@ -162,18 +164,17 @@ function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
 
       if l:span[0] == -1
         let l:span[0] = l:byte_pos
-        let l:span[1] = strlen(l:split_str[l:i])
-      else
-        let l:span[1] += strlen(l:split_str[l:i])
       endif
+
+      let l:span[1] += l:str_len
     endif
 
     if !l:match && l:span[0] != -1
       call add(l:spans, l:span)
-      let l:span = [-1, -1]
+      let l:span = [-1, 0]
     endif
 
-    let l:byte_pos += strlen(l:split_str[l:i])
+    let l:byte_pos += l:str_len
     let l:i += 1
   endwhile
 
@@ -232,6 +233,10 @@ endfunction
 
 function! wilder#map(...) abort
   return wilder#pipeline#component#map#make(a:000)
+endfunction
+
+function! wilder#subpipeline(f) abort
+  return wilder#pipeline#component#subpipeline#make(a:f)
 endfunction
 
 function! wilder#check(...) abort
@@ -369,15 +374,10 @@ function! wilder#search_pipeline(...) abort
         \ wilder#result_output_escape('^$*~[]/\'),
         \ ])
 
-  let l:pipeline += [
-        \ wilder#map(
-        \   l:search_pipeline,
-        \   [{ctx, x -> x}]
-        \ ),
-        \ {ctx, xs -> wilder#result({
-        \   'data': {'query': xs[1]},
-        \ })(ctx, xs[0])}
-        \ ]
+  call add(l:pipeline,
+        \ wilder#subpipeline({ctx, x -> l:search_pipeline + [
+        \   wilder#result({'data': {'query': x}}),
+        \ ]}))
 
   return l:pipeline
 endfunction
@@ -432,14 +432,9 @@ function! wilder#python_search_pipeline(...) abort
 
   call add(l:subpipeline, wilder#result_output_escape('^$*~[]/\'))
 
-  call add(l:pipeline, wilder#map(
-        \ l:subpipeline,
-        \ [{ctx, x -> x}]
-        \ ))
-
-  call add(l:pipeline, {ctx, xs -> wilder#result({
-        \ 'data': {'pcre2.pattern': xs[1]},
-        \ })(ctx, xs[0])})
+  call add(l:pipeline, wilder#subpipeline({ctx, x -> l:subpipeline + [
+        \ wilder#result({'data': {'pcre2.pattern': x}}),
+        \ ]}))
 
   return wilder#search_pipeline({
         \ 'pipeline': l:pipeline,
@@ -456,15 +451,12 @@ function! wilder#substitute_pipeline(...) abort
 endfunction
 
 function! wilder#fuzzy_filter() abort
-  return wilder#cmdline#fuzzy_filter()
+  return function('wilder#cmdline#fuzzy_filter')
 endfunction
 
 function! wilder#python_fuzzy_filter(...) abort
-  if a:0
-    return wilder#cmdline#python_fuzzy_filter(a:1)
-  else
-    return wilder#cmdline#python_fuzzy_filter()
-  endif
+  let l:engine = get(a:, 1, 're')
+  return function('wilder#cmdline#python_fuzzy_filter', [l:engine])
 endfunction
 
 " render components
@@ -488,7 +480,16 @@ function! wilder#next_arrow(...) abort
   return wilder#render#component#arrows#make_next(l:args)
 endfunction
 
+" DEPRECATED: use wilder#separator()
 function! wilder#separator(str, from, to, ...) abort
+  if a:0
+    return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
+  else
+    return wilder#render#component#separator#make(a:str, a:from, a:to)
+  endif
+endfunction
+
+function! wilder#powerline_separator(str, from, to, ...) abort
   if a:0
     return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
   else
@@ -534,4 +535,14 @@ function! wilder#wildmenu_renderer(...)
   endif
 
     return wilder#render#renderer#wildmenu_statusline#make(l:args)
+endfunction
+
+function! wilder#airline_theme(...)
+  let l:args = get(a:000, 0, {})
+  return wilder#render#renderer#wildmenu_theme#airline_theme(l:args)
+endfunction
+
+function! wilder#lightline_theme(...)
+  let l:args = get(a:000, 0, {})
+  return wilder#render#renderer#wildmenu_theme#lightline_theme(l:args)
 endfunction

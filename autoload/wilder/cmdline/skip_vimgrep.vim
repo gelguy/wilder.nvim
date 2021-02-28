@@ -1,9 +1,7 @@
 function! wilder#cmdline#skip_vimgrep#do(ctx) abort
   " isident
-  if match(a:ctx.cmdline[a:ctx.pos], '\i')
-    if !wilder#cmdline#main#skip_nonwhitespace(a:ctx)
-      return
-    endif
+  if match(a:ctx.cmdline[a:ctx.pos], '\i') != -1
+    call wilder#cmdline#main#skip_nonwhitespace(a:ctx)
   else
     let l:delimiter = a:ctx.cmdline[a:ctx.pos]
     let a:ctx.pos += 1

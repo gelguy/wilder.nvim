@@ -207,12 +207,16 @@ function! s:make_page(state, ctx, result) abort
 endfunction
 
 function! s:draw_x(state, ctx, result, i) abort
-  if has_key(a:state.draw_cache, a:i)
+  let l:use_cache = a:ctx.selected == a:i
+  if l:use_cache && has_key(a:state.draw_cache, a:i)
     return a:state.draw_cache[a:i]
   endif
 
   let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
-  let a:state.draw_cache[a:i] = l:x
+
+  if l:use_cache
+    let a:state.draw_cache[a:i] = l:x
+  endif
 
   return l:x
 endfunction

@@ -1,11 +1,3 @@
-let s:open_win_num_args = 3
-try
-  let l:win = nvim_open_win(0, 0, {})
-catch 'Not enough arguments'
-  let s:open_win_num_args = 5
-catch
-endtry
-
 function! wilder#render#renderer#wildmenu_float#make(args) abort
   let l:state = wilder#render#renderer#wildmenu#prepare_state(a:args)
   let l:state.ns_id = nvim_create_namespace('')
@@ -80,29 +72,17 @@ function! s:render_chunks(state, chunks) abort
 endfunction
 
 function! s:new_win(buf) abort
-  if s:open_win_num_args == 5
-    let l:win = nvim_open_win(a:buf, 0, &columns, 1, {
-          \ 'relative': 'editor',
-          \ 'row': &lines - s:get_cmdheight() - 1,
-          \ 'col': 0,
-          \ 'focusable': 0,
-          \ })
-  else
-    let l:win = nvim_open_win(a:buf, 0, {
-          \ 'relative': 'editor',
-          \ 'height': 1,
-          \ 'width': &columns,
-          \ 'row': &lines - s:get_cmdheight() - 1,
-          \ 'col': 0,
-          \ 'focusable': 0,
-          \ })
-  endif
+  let l:win = nvim_open_win(a:buf, 0, {
+        \ 'relative': 'editor',
+        \ 'height': 1,
+        \ 'width': &columns,
+        \ 'row': &lines - s:get_cmdheight() - 1,
+        \ 'col': 0,
+        \ 'focusable': 0,
+        \ 'style': 'minimal',
+        \ })
 
   call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
-  call nvim_win_set_option(l:win, 'list', v:false)
-  call nvim_win_set_option(l:win, 'number', v:false)
-  call nvim_win_set_option(l:win, 'relativenumber', v:false)
-  call nvim_win_set_option(l:win, 'spell', v:false)
 
   return l:win
 endfunction
