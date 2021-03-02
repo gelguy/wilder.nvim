@@ -504,8 +504,9 @@ wilder#python_search([{options}])   *wilder#python_search()*
             `engine`
             Regex engine to use. Has to be compatible with Python 3's `re`
             module.
-            For faster completions, `re2` is recommended, but needs to be
-            installed.
+            For faster speed, the `re2` module is recommended. `re2` for
+            Python3 can be installed by using `pip install pyre2` or built
+            from https://github.com/andreasvc/pyre2.
 
             Default: 're'
 
@@ -1646,7 +1647,7 @@ wilder#pcre2_capture_spans([{opts}])
 
             The Lua pcre2 package is required this option is set to 'lua'.
             The pcre2 package source can be found at
-            `https://github.com/mah0x211/lua-pcre2` and can be installed with
+            https://github.com/mah0x211/lua-pcre2 and can be installed with
             `luarocks install pcre2`.
 
             Default: 'python'

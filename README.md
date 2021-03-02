@@ -124,7 +124,7 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ },
       \ 'apply_highlights':        " Experimental: applies highlighting to candidates
       \    wilder#query_common_subsequence_spans(),
-      \ 'separator': ' ',         " string used to separate candidates
+      \ 'separator': ' ',          " string used to separate candidates
       \ 'ellipsis': '...',         " string appended to truncated candidates which are too long
       \ })
 ```
@@ -151,9 +151,9 @@ Shows the index of the current candidate out of the total number of candidates -
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ 'spinner': [wilder#spinner({
       \   'frames': '-\|/',  " characters to show, can also be a list of strings
-      \   'done': ' ',  " string to show when there is no work to do or work has finished
-      \   'delay': 50,  " delay in ms before showing the spinner
-      \   'interval': 100,  " interval in ms for each frame to be shown
+      \   'done': ' ',       " string to show when there is no work to do or work has finished
+      \   'delay': 50,       " delay in ms before showing the spinner
+      \   'interval': 100,   " interval in ms for each frame to be shown
       \ )],
       \ })
 ```
@@ -166,7 +166,7 @@ The spinner indicates when `wilder` has async work which has not been completed 
 
 call wilder#set_option('renderer', wilder#wildmenu_renderer(
       \ wilder#airline_theme({  " use wilder#lightline_theme() for Lightline
-      \   'highlights': {},  " default highlights can be overridden, see :h wilder#wildmenu_renderer()
+      \   'highlights': {},     " default highlights can be overridden, see :h wilder#wildmenu_renderer()
       \   'apply_highlights': wilder#query_common_subsequence_spans(),
       \   'separator': ' · ',
       \ })))
