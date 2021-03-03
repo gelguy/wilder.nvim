@@ -4,7 +4,7 @@ function! wilder#render#component#spinner#make(args) abort
     let l:frames = split(l:frames, '\zs')
   endif
 
-  let l:Done = get(a:args, 'done', ' ')
+  let l:Done = get(a:args, 'done', '·')
   let l:delay = get(a:args, 'delay', 50)
   let l:interval = get(a:args, 'interval', 100)
 

@@ -308,7 +308,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   return a:res
 endfunction
 
-function! wilder#cmdline#fuzzy_filter(ctx, candidates, query, ...) abort
+function! wilder#cmdline#filter_fuzzy(ctx, candidates, query, ...) abort
   if empty(a:query)
     return a:candidates
   endif
@@ -340,22 +340,6 @@ function! wilder#cmdline#fuzzy_filter(ctx, candidates, query, ...) abort
   endif
 
   return filter(copy(a:candidates), {_, x -> match(x, l:regex) != -1})
-endfunction
-
-function! wilder#cmdline#python_fuzzy_filter(engine, ctx, candidates, query, ...) abort
-  if empty(a:query)
-    return a:candidates
-  endif
-
-  let l:regex = s:make_python_fuzzy_regex(a:query)
-
-  if a:0
-    let l:transformed = map(copy(a:candidates), {_, x -> a:1(x)})
-  else
-    let l:transformed = 0
-  endif
-
-  return {ctx -> _wilder_python_filter(ctx, l:regex, a:candidates, l:transformed, a:engine)}
 endfunction
 
 function! s:make_python_fuzzy_regex(query)
@@ -395,6 +379,44 @@ function! s:make_python_fuzzy_regex(query)
   endwhile
 
   return l:regex
+endfunction
+
+function! wilder#cmdline#python_filter_fuzzy(opts, ctx, candidates, query, ...) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  let l:regex = s:make_python_fuzzy_regex(a:query)
+
+  if a:0
+    let l:transformed = map(copy(a:candidates), {_, x -> a:1(x)})
+  else
+    let l:transformed = 0
+  endif
+
+  return {ctx -> _wilder_python_filter_fuzzy(ctx, a:opts, l:regex, a:candidates, l:transformed)}
+endfunction
+
+function! wilder#cmdline#python_filter_fruzzy(opts, ctx, candidates, query, ...) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  if a:0
+    let l:transformed = map(copy(a:candidates), {_, x -> a:1(x)})
+  else
+    let l:transformed = 0
+  endif
+
+  return {ctx -> _wilder_python_filter_fruzzy(ctx, a:opts, a:query, a:candidates, l:transformed)}
+endfunction
+
+function! wilder#cmdline#python_filter_cpsm(opts, ctx, candidates, query) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  return {ctx -> _wilder_python_filter_cpsm(ctx, a:opts, a:query, a:candidates)}
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion) abort
@@ -772,6 +794,98 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, has_file_args) abort
         \ })})
 endfunction
 
+function wilder#cmdline#should_use_file_finder(path) abort
+  let l:path = simplify(a:path)
+
+  if l:path[0] ==# '%' ||
+        \ l:path[0] ==# '~' ||
+        \ l:path[0] ==# '/' ||
+        \ l:path[0] ==# '\' ||
+        \ l:path[0:1] ==# '..'
+    return 0
+  endif
+
+  if match(l:path, '\*') != -1
+    return 0
+  endif
+
+  if has('win32') || has('win64')
+    return l:path[1] !=# ':'
+  endif
+
+  return 1
+endfunction
+
+function! wilder#cmdline#python_file_finder_pipeline(opts) abort
+  let l:opts = copy(a:opts)
+
+  let l:should_debounce = get(l:opts, 'debounce', 0) > 0
+  if l:should_debounce
+    let l:debounce_interval = l:opts['debounce']
+    let l:Debounce = wilder#debounce(l:debounce_interval)
+  endif
+
+  if has_key(l:opts, 'filters')
+    let l:checked_filters = []
+
+    for l:filter in l:opts['filters']
+      if type(l:filter) isnot v:t_dict
+        let l:filter = {'name': l:filter}
+      endif
+
+      let l:filter_opts = get(l:filter, 'opts', {})
+      let l:filter['opts'] = l:filter_opts
+
+      if l:filter['name'] ==# 'filter_fruzzy' &&
+            \ !has_key(l:filter_opts, 'fruzzy_path')
+        let l:filter_opts['fruzzy_path'] = wilder#fruzzy_path()
+      endif
+
+      if l:filter['name'] ==# 'filter_cpsm' &&
+            \ !has_key(l:filter_opts, 'cpsm_path')
+        let l:filter_opts['cpsm_path'] = wilder#cpsm_path()
+      endif
+
+      call add(l:checked_filters, l:filter)
+    endfor
+
+    let l:opts['filters'] = l:checked_filters
+  endif
+
+  if has_key(l:opts, 'dir')
+    let l:Dir = l:opts['dir']
+
+    if type(l:Dir) isnot v:t_func
+      let l:Dir_func = {-> l:Dir}
+    else
+      let l:Dir_func = l:Dir
+    endif
+  else
+    let l:Dir_func = wilder#project_root()
+  endif
+
+  let l:pipeline = [
+        \ wilder#check({-> getcmdtype() ==# ':'}),
+        \ {_, x -> wilder#cmdline#parse(x)},
+        \ wilder#check({_, res -> res.expand ==# 'file'}),
+        \ wilder#subpipeline({ctx, res -> [
+        \   {ctx, _ -> wilder#cmdline#prepare_file_completion(ctx, copy(res), 0)},
+        \   wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res.expand_arg)}),
+        \   wilder#check({ctx, res -> !get(res, 'has_wildcard', 0) &&
+        \     wilder#cmdline#should_use_file_finder(res.expand_arg)}),
+        \ ] + (l:should_debounce ? [l:Debounce] : []) + [
+        \   {-> {ctx -> _wilder_python_file_finder(
+        \     ctx, l:opts, getcwd(), l:Dir_func(ctx), expand(res.cmdline[res.pos :]))}},
+        \   wilder#result({
+        \     'replace': ['wilder#cmdline#replace'],
+        \     'data': extend(s:convert_result_to_data(res), {'query': res.cmdline[res.pos :]}),
+        \   }),
+        \ ]}),
+        \ ]
+
+  return l:pipeline
+endfunction
+
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
   let l:use_python = get(a:opts, 'use_python', has('nvim'))
 
@@ -780,9 +894,9 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     if has_key(a:opts, 'fuzzy_filter')
       let l:Filter = a:opts['fuzzy_filter']
     elseif l:use_python
-      let l:Filter = function('wilder#cmdline#python_fuzzy_filter', ['re'])
+      let l:Filter = wilder#python_filter_fuzzy()
     else
-      let l:Filter = function('wilder#cmdline#fuzzy_filter')
+      let l:Filter = wilder#filter_fuzzy()
     endif
 
     let l:Fuzzy_filter = wilder#result({

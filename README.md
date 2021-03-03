@@ -36,7 +36,6 @@ Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 
 ```vim
 call wilder#enable_cmdline_enter()
-
 set wildcharm=<Tab>
 cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
 cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
@@ -56,7 +55,10 @@ By using `wilder#set_option('pipeline', <pipeline>)`, you are able to customise 
 For example, in Neovim, to use fuzzy matching instead of substring matching:
 
 ```vim
-" For Neovim
+" For Neovim only
+" For wild#python_search_pipeline():
+"   'regex'  : can be set to 'fuzzy_delimiter' for stricter fuzzy matching
+"   'engine' : can be set to 're2' for performance, requires pyre2 to be installed
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
@@ -64,9 +66,9 @@ call wilder#set_option('pipeline', [
       \       'use_python': 1,
       \     }),
       \     wilder#python_search_pipeline({
-      \       'regex': 'fuzzy',   " use 'fuzzy_delimiter' for stricter fuzzy matching
-      \       'engine': 're',     " use 're2' for performance, requires Python re2 to be installed
-      \       'sort': function('wilder#python_sort_difflib'),
+      \       'regex': 'fuzzy',
+      \       'engine': 're',
+      \       'sort': wilder#python_sorter_difflib(),
       \     }),
       \   ),
       \ ])
@@ -86,7 +88,7 @@ call wilder#set_option('pipeline', [
       \       wilder#history(),
       \     ],
       \     wilder#cmdline_pipeline(),
-      \     wilder#vim_search_pipeline(),  " or wilder#python_search_pipeline() for Neovim
+      \     wilder#search_pipeline(),
       \   ),
       \ ])
 ```
@@ -100,7 +102,7 @@ call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#substitute_pipeline(),
       \     wilder#cmdline_pipeline(),
-      \     wilder#vim_search_pipeline(),  " or wilder#python_search_pipeline() for Neovim
+      \     wilder#search_pipeline(),
       \   ),
       \ ])
 ```
@@ -109,6 +111,28 @@ Provides suggestions while in the `pattern` part of a substitute command (i.e. w
 
 Note: For Neovim 0.4+, the candidates are not redrawn correctly if `inccommand` is active.
 
+#### File finder (Experimental) (Neovim only)
+
+```vim
+" 'command' : for ripgrep : ['rg', '--files']
+"           : for fd      : ['fd', '-tf']
+" 'filters' : use ['filter_cpsm'] for performance, needs cpsm to be installed
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#python_file_finder_pipeline({
+      \       'command': ['find', '.', '-type', 'f', '-printf', '%P\n'],
+      \       'filters': ['filter_fuzzy', 'sort_difflib'],
+      \     }),
+      \     wilder#cmdline_pipeline(),
+      \     wilder#python_search_pipeline(),
+      \   ),
+      \ ]
+```
+
+When getting file completions, fuzzily search and match through all files under the current directory. Has to be placed above `wilder#cmdline_pipeline()`.
+
+To optimise for performane, the `command` and `filters` options can be customised. See `:h wilder#python_file_finder_pipeline()` for more details.
+
 ## Customising the renderer
 
 By using `wilder#set_option('renderer', <renderer>)`, you are able to change how `wilder` draws the candidates. By default, `wilder` tries its best to look like the default wildmenu.
@@ -116,18 +140,23 @@ By using `wilder#set_option('renderer', <renderer>)`, you are able to change how
 `wilder` currently provides 1 renderer `wilder#wildmenu_renderer()` by default. For Neovim 0.4+, the candidates are drawn using a floating window. Otherwise, the candidates are drawn on the statusline. Drawing on the statusline has the limitation that its width is limited to the current window.
 
 ```vim
-" default settings
+" 'highlights.default'  : the default highlight used
+" 'highlights.selected' : the highlight for the selected item
+" 'apply_highlights'    : applies highlighting to the candidates
+" 'separator'           : string used to separate candidates
+" 'ellipsis'            : string appended to truncated candidates which are too long
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ 'highlights': {
-      \   'default': 'StatusLine', " default highlight to use
-      \   'selected': 'WildMenu',  " highlight for the selected item
+      \   'default': 'StatusLine',
+      \   'selected': 'WildMenu',
       \ },
-      \ 'apply_highlights':        " Experimental: applies highlighting to candidates
+      \ 'apply_highlights':
       \    wilder#query_common_subsequence_spans(),
-      \ 'separator': ' ',          " string used to separate candidates
-      \ 'ellipsis': '...',         " string appended to truncated candidates which are too long
+      \ 'separator': ' ',
+      \ 'ellipsis': '...',
       \ })
 ```
+
 
 The renderer options include the fields `left` and `right`. Use these to add renderer components which help to provide more information on the current state of the candidates. Unlike pipeline components, render components can take the form of strings, functions, dictionaries and lists. See `:h wilder-renderer` for more details.
 
@@ -148,14 +177,22 @@ Shows the index of the current candidate out of the total number of candidates -
 #### Spinner
 
 ```vim
+" 'frames'   : characters to show, can also be a list of strings
+" 'done'     : string to show when there is no work to do or work has finished
+" 'delay'    : delay in ms before showing the spinner
+" 'interval' : interval in ms for each frame to be shown
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'spinner': [wilder#spinner({
-      \   'frames': '-\|/',  " characters to show, can also be a list of strings
-      \   'done': ' ',       " string to show when there is no work to do or work has finished
-      \   'delay': 50,       " delay in ms before showing the spinner
-      \   'interval': 100,   " interval in ms for each frame to be shown
-      \ )],
-      \ })
+      \ 'left': [
+      \   ' ',
+      \   wilder#spinner({
+      \     'frames': '-\|/',
+      \     'done': '·',
+      \     'delay': 50,
+      \     'interval': 100,
+      \   }),
+      \   ' ',
+      \ ],
+      \ }))
 ```
 
 The spinner indicates when `wilder` has async work which has not been completed yet.
@@ -163,10 +200,11 @@ The spinner indicates when `wilder` has async work which has not been completed 
 #### Configuration in the screenshot
 
 ```vim
-
+" use wilder#lightline_theme() if using Lightline
+" 'highlights' : can be overriden, see :h wilder#wildmenu_renderer()
 call wilder#set_option('renderer', wilder#wildmenu_renderer(
-      \ wilder#airline_theme({  " use wilder#lightline_theme() for Lightline
-      \   'highlights': {},     " default highlights can be overridden, see :h wilder#wildmenu_renderer()
+      \ wilder#airline_theme({
+      \   'highlights': {},
       \   'apply_highlights': wilder#query_common_subsequence_spans(),
       \   'separator': ' · ',
       \ })))

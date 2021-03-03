@@ -362,6 +362,18 @@ wilder#check({f}, ...)              *wilder#check()*
             |v:false|.
             Returns {x} otherwise.
 
+wilder#debounce({t})                *wilder#debounce()*
+                                    Pipeline component~
+            Takes a time interval {t} in milliseconds.
+            When this component is reached, the pipeline is interrupted. The
+            pipeline only continues when the same component has not been
+            reached for {t} milliseconds.
+            The pipeline then continues with the latest value passed to the
+            component.
+
+            Note that using debounce in |wilder#branch()| will stall all
+            branches since the branches are run sequentially.
+
 wilder#branch({list_of_pipelines})  *wilder#branch()*
                                     Pipeline component~
             Takes a list of pipelines. The pipelines should be a list of
@@ -632,8 +644,8 @@ wilder#python_search_pipeline([{options}])
             If no function is provided, no sorting will be done on the
             candidates.
 
-            For Neovim, |wilder#python_sort_difflib()| and
-            |wilder#python_sort_fuzzywuzzy()| can be used here.
+            For Neovim, |wilder#python_sorter_difflib()| and
+            |wilder#python_sorter_fuzzywuzzy()| can be used here.
 
             Default: Empty
 
@@ -642,6 +654,13 @@ wilder#python_search_pipeline([{options}])
             If true, skips checking that |getcmdtype()| is '/' or '?'.  This
             is useful when using the pipeline as the `pipeline` option for
             |wilder#substitute_pipeline()|.
+
+            Default: 0
+
+            `debounce`
+            Optional~
+            An interval in milliseconds. If greater than 0, debounces the
+            pipeline using |wilder#debounce()|.
 
             Default: 0
 
@@ -699,8 +718,8 @@ wilder#cmdline_pipeline([{options}])
             Can return a |wilder-pipeline-thunk|.  Only used if `fuzzy` is
             true.
 
-            Default: |wilder#python_fuzzy_filter()| if `use_python` is true
-                     |wilder#fuzzy_filter()| otherwise
+            Default: |wilder#python_filter_fuzzy()| if `use_python` is true
+                     |wilder#filter_fuzzy()| otherwise
 
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
@@ -735,6 +754,141 @@ wilder#cmdline_pipeline([{options}])
             PCRE2.
 
             Default: 1
+
+wilder#python_file_finder_pipeline([{options}])
+                                    *wilder#python_file_finder_pipeline()*
+                                    Neovim only~
+                                    Async~
+                                    Pipeline~
+                                    Experimental~
+            Returns a pipeline which matches files fuzzily. This pipeline is
+            used when the cmdline is expanding `file` completions, which for
+            example occurs when in the |:edit| command.
+
+            If the path for the argument is not relative to the current
+            directory, or cannot be resolved as a descendant of the current
+            path, the pipeline will return |v:false|.
+
+            Note |wilder#python_file_finder_pipeline()| should be placed in
+            front of |wilder#cmdline_pipeline()| when using |wilder#branch()|.
+
+            {options} is a dictionary with keys:
+            `command`
+            Optional~
+            A list of strings representing the command to be used to retrieve
+            the list of files.
+
+            Examples:
+            `ripgrep`: ['rg', '--files']
+            `fd`: ['fd', '-tf']
+
+            Default: ['find', '.', '-type', 'f', '-printf', '%P\n']
+
+            `timeout`
+            Optional~
+            A timeout in milliseconds. If the process to gather the list of
+            files does not end before the timeout, the process is killed. Any
+            subsequent call to the pipeline will result in |v:false|.
+
+            Default: 5000
+
+            `debounce`
+            Optional~
+            An interval in milliseconds. If greater than 0, debounces the
+            pipeline using |wilder#debounce()|.
+
+            Default: 0
+
+            `dir`
+            Optional~
+            A function or a string representing the path to the directory to
+            gather the files from. If it is a string, it will be converted to
+            a function which returns the string.
+
+            The function should take an argument {ctx} and return the
+            directory. The directory path should be absolute and not relative.
+            Returning an empty string will search in the current directory.
+
+            Default: |wilder#project_root()|
+
+            `filters`
+            Optional~
+            A list of filters to be used on the list of files. The list of
+            files is passed through the filters sequentially and the final
+            result is returned to the pipeline.
+
+            Each element can either be a string representing the filter or an
+            object in the form {'name': {string}, ['opts': {dictonary}]},
+            where the optional `opts` key represents the options are passed to
+            the filter. If a string is used, it is implicitly converted into a
+            dictionary with no options.
+
+            Can be set to an empty list to return the entire list of files.
+
+            For performance, using `cpsm` with ['filter_cpsm'] is recommended.
+
+            The available filters are:
+            `filter_fuzzy`
+            Filters the list with |wilder#python_filter_fuzzy()|.
+
+            Options:
+                `engine`
+                Optional~
+                The regex engine to use.
+
+                Default: 're'
+
+                `case_sensitive`
+                Optional~
+                0, 1 or 2 representing how to handle case sensitivity. 0
+                indicates the filter is not case sensitive and 1 otherwise.
+                Setting to 2 makes the filter use "smartcase" where 'a'
+                matches with 'a|A' and 'A' matches with 'A' ony.
+
+                Default: 2
+
+            `filter_fruzzy`
+            Filters and sorts the list with |wilder#python_filter_fruzzy()|.
+            The `fruzzy.vim` Vim plugin is needed.
+
+            Options:
+                `limit`
+                Optional~
+                Maximum number of candidates to return.
+
+                Default: 1000
+
+                `fruzzy_path`
+                Optional~
+                The parent directory of the `fruzzy.py` file.
+
+                Default: Inferred by Neovim.
+
+            `filter_cpsm`
+            Filters and sorts the list with |wilder#python_filter_cpsm()|.
+            The `cpsm` Vim plugin is required.
+
+            Options:
+                `cpsm_path`
+                Optional~
+                The parent directory of the `cpsm_py.so` file.
+
+                Default: Inferred by Neovim.
+
+            `sort_difflib`
+            Sorts the list with |wilder#python_sort_difflib()|.
+
+                `case_sensitive`
+                Optional~
+                0 or 1 representing whether the sorting is case sensitive.
+
+                Default: 1
+
+            `sort_fuzzywuzzy`
+            Sorts the list with |wilder#python_sort_fuzzywuzzy()|. The Python3
+            `fuzzywuzzy` module is needed.
+
+            Default: ['fuzzy', 'difflib']
 
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{options}])
@@ -939,7 +1093,6 @@ wilder#wildmenu_renderer([{options}])
 
             `apply_highlights`
             Optional~
-            Experimental~
             A list of functions used to apply the `accent` and
             `selected_accent` highlights to a candidate. For convenience, also
             accepts a single function, which will be converted to a singleton
@@ -1266,7 +1419,7 @@ wilder#spinner([{options}])         *wilder#spinner()*
             is no pipeline running, or when the `delay` timeout has not been
             reached.
 
-            Default: ' '
+            Default: '·'
 
             `delay`
             Optional~
@@ -1534,7 +1687,7 @@ wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
 
             Returns the name of the new highlight group.
 
-wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
+wilder#filter_fuzzy()               *wilder#filter_fuzzy()*
             Returns a fuzzy filter to use for `fuzzy_filter` in
             |wilder#cmdline_pipeline()|.
             The filter matches a {candidate} if it contains all the characters
@@ -1543,8 +1696,12 @@ wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
             e.g. `foobar` will match `fbr`
                  `foobar` will not match `frb`
 
-                                    *wilder#python_fuzzy_filter()*
-wilder#python_fuzzy_filter([{engine}])
+wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
+                                    Deprecated~
+            Deprecated: Use |wilder#filter_fuzzy()|.
+
+                                    *wilder#python_filter_fuzzy()*
+wilder#python_filter_fuzzy([{engine}])
                                     Neovim only~
                                     Async~
             Returns a fuzzy filter to use for `fuzzy_filter` in
@@ -1555,9 +1712,48 @@ wilder#python_fuzzy_filter([{engine}])
             to be compatible with Python 3's `re` module. Defaults to 're' if
             not set.
 
-
             e.g. `foobar` will match `fbr`
                  `foobar` will not match `frb`
+
+wilder#python_fuzzy_filter()        *wilder#python_fuzzy_filter()*
+                                    Deprecated~
+            Deprecated: Use |wilder#python_filter_fuzzy()|.
+
+                                    *wilder#python_filter_fruzzy()*
+wilder#python_filter_fruzzy([{limit}, [{fruzzy_path}]])
+                                    Neovim only~
+                                    Async~
+                                    fruzzy plugin required~
+            Returns a fuzzy filter to use for `fuzzy_filter` in
+            |wilder#cmdline_pipeline()|.
+            The filter filters and sorts the candidates using `fruzzy`.
+            {limit} is the maximum number of candidates to return. Defaults to
+            1000.
+
+            {fruzzy_path} can be provided to set the path for `fruzzy.py`. It
+            is inferred by Neovim otherwise.
+
+            The `fruzzy` plugin can be found at
+            https://github.com/raghur/fruzzy.
+
+            Note that the native module is not supported due to the use of
+            multiple threads.
+
+                                    *wilder#python_filter_cpsm()*
+wilder#python_filter_cpsm([{cpsm_path}])
+                                    Neovim only~
+                                    Async~
+                                    cpsm plugin required~
+            Returns a fuzzy filter that filters and sorts the candidates using
+            `cpsm`. The `cpsm` Vim plugin is required and can be found at
+            https://github.com/nixprime/cpsm.
+
+            Note this filter does not support the {transformed} argument and
+            cannot be used as a `fuzzy_filter` for
+            |wilder#cmdline_pipeline()|.
+
+            {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
+            is inferred by Neovim otherwise.
 
                                     *wilder#python_sort_difflib()*
 wilder#python_sort_difflib({ctx}, {candidates}, {query})
@@ -1573,6 +1769,12 @@ wilder#python_sort_difflib({ctx}, {candidates}, {query})
                wilder#python_sort_difflib(ctx, xs, ctx.input)}}})
 <
 
+
+wilder#python_sorter_difflib()      *wilder#python_sorter_difflib()*
+                                    Neovim only~
+            Returns a |Funcref| to |wilder#python_sort_difflib()| which can be
+            used as the `sorter` option in |wilder#cmdline_pipeline()|.
+
                                     *wilder#python_sort_fuzzywuzzy()*
 wilder#python_sort_fuzzywuzzy({ctx}, {candidates}, {query})
                                     Neovim only~
@@ -1582,11 +1784,19 @@ wilder#python_sort_fuzzywuzzy({ctx}, {candidates}, {query})
             |wilder-pipeline-thunk| which sorts the candidates using
             `fuzzywuzzy`.
 
+            `fuzzywuzzy` can be installed using `pip install fuzzywuzzy`.
+
             Example:
 >
              wilder#result({'value': {ctx, xs ->
                wilder#python_sort_fuzzywuzzy(ctx, xs, ctx.input)}}})
 <
+
+wilder#python_sorter_fuzzywuzzy()   *wilder#python_sorter_fuzzywuzzy()*
+                                    Neovim only~
+                                    Python 3 fuzzywuzzy module required~
+            Returns a |Funcref| to |wilder#python_sort_fuzzywuzzy()| which can
+            be used as the `sorter` option in |wilder#cmdline_pipeline()|.
 
                                     *wilder#python_fuzzywuzzy()*
 wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
@@ -1661,6 +1871,15 @@ wilder#pcre2_capture_spans([{opts}])
             Note: This function is slow and should be avoided by users who are
             concerned about performance. Using 'lua' is slightly faster, but
             will still have performance issues.
+
+                                    *wilder#project_root()*
+wilder#project_root([{root_markers}])
+            Takes an optional list of paths and returns a function which tries
+            to locate the root directory of the project from the current
+            directory.
+
+            {root_markers} is a list of file or directory names and defaults
+            to ['.hg', '.git'].
 
 ==============================================================================
 7. Configurations                   *wilder-configurations*

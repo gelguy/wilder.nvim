@@ -243,6 +243,10 @@ function! wilder#check(...) abort
   return wilder#pipeline#component#check#make(a:000)
 endfunction
 
+function! wilder#debounce(t) abort
+  return wilder#pipeline#component#debounce#make(a:t)
+endfunction
+
 function! wilder#result(...) abort
   if !a:0
     return wilder#pipeline#component#result#make()
@@ -334,12 +338,20 @@ function! wilder#_python_sleep(t) abort
   return {_, x -> {ctx -> _wilder_python_sleep(ctx, a:t, x)}}
 endfunction
 
+function! wilder#python_sorter_difflib() abort
+  return function('wilder#python_sort_difflib')
+endfunction
+
 function! wilder#python_sort_difflib(ctx, xs, query) abort
-  return {ctx -> _wilder_python_sort_difflib(ctx, a:xs, a:query)}
+  return {ctx -> _wilder_python_sort_difflib(ctx, {}, a:xs, a:query)}
+endfunction
+
+function! wilder#python_sorter_fuzzywuzzy() abort
+  return function('wilder#python_sort_fuzzywuzzy')
 endfunction
 
 function! wilder#python_sort_fuzzywuzzy(ctx, xs, query) abort
-  return {ctx -> _wilder_python_sort_fuzzywuzzy(ctx, a:xs, a:query)}
+  return {ctx -> _wilder_python_sort_fuzzywuzzy(ctx, {}, a:xs, a:query)}
 endfunction
 
 " DEPRECATED: use wilder#python_sort_fuzzywuzzy()
@@ -366,6 +378,10 @@ function! wilder#search_pipeline(...) abort
   if !get(l:opts, 'skip_cmdtype_check', 0)
     call add(l:pipeline,
           \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}))
+  endif
+
+  if get(l:opts, 'debounce', 0) > 0
+    call add(l:pipeline, wilder#debounce(l:opts['debounce']))
   endif
 
   let l:search_pipeline = get(l:opts, 'pipeline', [
@@ -437,6 +453,7 @@ function! wilder#python_search_pipeline(...) abort
         \ ]}))
 
   return wilder#search_pipeline({
+        \ 'debounce': get(l:opts, 'debounce', 0),
         \ 'pipeline': l:pipeline,
         \ 'skip_cmdtype_check': get(l:opts, 'skip_cmdtype_check', 0),
         \ })
@@ -450,13 +467,47 @@ function! wilder#substitute_pipeline(...) abort
   return wilder#cmdline#substitute_pipeline(get(a:, 1, {}))
 endfunction
 
-function! wilder#fuzzy_filter() abort
-  return function('wilder#cmdline#fuzzy_filter')
+function! wilder#python_file_finder_pipeline(...) abort
+  return wilder#cmdline#python_file_finder_pipeline(get(a:, 1, {}))
 endfunction
 
+" DEPRECATED: use wilder#filter_fuzzy()
+function! wilder#fuzzy_filter() abort
+  return function('wilder#cmdline#filter_fuzzy')
+endfunction
+
+function! wilder#filter_fuzzy() abort
+  return function('wilder#cmdline#filter_fuzzy')
+endfunction
+
+" DEPRECATED: use wilder#python_filter_fuzzy()
 function! wilder#python_fuzzy_filter(...) abort
-  let l:engine = get(a:, 1, 're')
-  return function('wilder#cmdline#python_fuzzy_filter', [l:engine])
+  let l:opts = {
+        \ 'engine': get(a:, 1, 're'),
+        \ }
+  return function('wilder#cmdline#python_filter_fuzzy', [l:opts])
+endfunction
+
+function! wilder#python_filter_fuzzy(...) abort
+  let l:opts = {
+        \ 'engine': get(a:, 1, 're'),
+        \ }
+  return function('wilder#cmdline#python_filter_fuzzy', [l:opts])
+endfunction
+
+function! wilder#python_filter_fruzzy(...) abort
+  let l:opts = {
+        \ 'limit': get(a:, 1, 1000),
+        \ 'fruzzy_path': get(a:, 2, wilder#fruzzy_path()),
+        \ }
+  return function('wilder#cmdline#python_filter_fruzzy', [l:opts])
+endfunction
+
+function! wilder#python_filter_cpsm(...) abort
+  let l:opts = {
+        \ 'cpsm_path': get(a:, 1, wilder#cpsm_path()),
+        \ }
+  return function('wilder#cmdline#python_filter_cpsm', [l:opts])
 endfunction
 
 " render components
@@ -545,4 +596,127 @@ endfunction
 function! wilder#lightline_theme(...)
   let l:args = get(a:000, 0, {})
   return wilder#render#renderer#wildmenu_theme#lightline_theme(l:args)
+endfunction
+
+let s:fruzzy_path = 0
+function! wilder#fruzzy_path(...) abort
+  let l:use_cached = get(a:, 1, 1)
+
+  if l:use_cached && s:fruzzy_path isnot 0
+    return s:fruzzy_path
+  endif
+
+  let s:fruzzy_path = s:get_fruzzy_path()
+  return s:fruzzy_path
+endfunction
+
+function! s:get_fruzzy_path() abort
+  try
+    " ensure function is autoloaded
+    silent call fruzzy#version()
+  catch
+    return ''
+  endtry
+
+  let l:output = execute('verbose function fruzzy#version')
+  let l:lines = split(l:output, '\n')
+  if len(l:lines) < 2
+    return ''
+  endif
+
+  let l:matches = matchlist(l:lines[1], 'Last set from \(.*\) line \d\+')
+  if len(l:matches) < 2
+    return ''
+  endif
+
+  let l:path = l:matches[1]
+  return simplify(l:path . '/../../rplugin/python3')
+endfunction
+
+let s:cpsm_path = 0
+function! wilder#cpsm_path() abort
+  let l:use_cached = get(a:, 1, 1)
+
+  if l:use_cached && s:cpsm_path isnot 0
+    return s:cpsm_path
+  endif
+
+  let s:cpsm_path = s:get_cpsm_path()
+  return s:cpsm_path
+endfunction
+
+function! s:get_cpsm_path() abort
+  try
+    " ensure function is autoloaded
+    silent call cpsm#CtrlPMatch()
+  catch /E119/
+    " success
+  catch
+    return ''
+  endtry
+
+  let l:output = execute('verbose function cpsm#CtrlPMatch')
+  let l:lines = split(l:output, '\n')
+  if len(l:lines) < 2
+    return ''
+  endif
+
+  let l:matches = matchlist(l:lines[1], 'Last set from \(.*\) line \d\+')
+  if len(l:matches) < 2
+    return ''
+  endif
+
+  let l:path = l:matches[1]
+  return simplify(l:path . '/..')
+endfunction
+
+let s:project_root_cache = {}
+
+function! wilder#project_root(...) abort
+  if a:0
+    let l:root_markers = a:1
+  else
+    let l:root_markers = ['.hg', '.git']
+  endif
+
+  return {-> s:project_root(l:root_markers)}
+endfunction
+
+function! wilder#clear_project_root_cache() abort
+  let s:project_root_cache = {}
+endfunction
+
+function! s:project_root(root_markers) abort
+  if a:0
+    let l:path = a:1
+  else
+    let l:path = getcwd()
+  endif
+
+  if !has_key(s:project_root_cache, l:path)
+    let l:project_root = s:get_project_root(l:path, a:root_markers)
+    let s:project_root_cache[l:path] = l:project_root
+  endif
+
+  return s:project_root_cache[l:path]
+endfunction
+
+function! s:get_project_root(path, root_markers) abort
+  let l:home_directory = expand('~')
+  let l:find_path = a:path . ';' . l:home_directory
+
+  for l:root_marker in a:root_markers
+    let l:result = findfile(l:root_marker, l:find_path)
+    if empty(l:result)
+      let l:result = finddir(l:root_marker, l:find_path)
+    endif
+
+    if empty(l:result)
+      continue
+    endif
+
+    return fnamemodify(l:result, ':~:h')
+  endfor
+
+  return ''
 endfunction

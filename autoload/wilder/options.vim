@@ -9,8 +9,12 @@ call extend(s:opts, {
       \ 'num_workers': 2,
       \ })
 
-function! wilder#options#get() abort
-  return s:opts
+function! wilder#options#get(...) abort
+  if !a:0
+    return s:opts
+  endif
+
+  return s:opts[a:1]
 endfunction
 
 function! wilder#options#set(x, ...) abort

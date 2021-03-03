@@ -88,14 +88,11 @@ function! s:theme(opts, namespace, hls) abort
         \     wilder#condition(
         \       {ctx, x -> has_key(ctx, 'error')},
         \       '!',
-        \       wilder#spinner({
-        \         'frames': '-\|/',
-        \         'done': '·',
-        \       }),
+        \       wilder#spinner()
         \     ), ' '],
         \   'hl': l:highlights['mode']
         \   },
-        \   l:use_powerline_symbols ? 
+        \   l:use_powerline_symbols ?
         \     wilder#powerline_separator(
         \       l:powerline_symbols[0], l:highlights['mode'],
         \       l:highlights['default'], 'left') : '',
@@ -103,7 +100,7 @@ function! s:theme(opts, namespace, hls) abort
         \ ],
         \ 'right': [
         \    ' ',
-        \   l:use_powerline_symbols ? 
+        \   l:use_powerline_symbols ?
         \     wilder#powerline_separator(
         \       l:powerline_symbols[1], l:highlights['index'],
         \       l:highlights['default'], 'right') : '',
