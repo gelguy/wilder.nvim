@@ -13,7 +13,9 @@ import multiprocessing
 import os
 from pathlib import Path
 import pwd
+import re
 import shutil
+import stat
 import subprocess
 import sys
 from tempfile import TemporaryFile
@@ -125,6 +127,10 @@ class Wilder(object):
             with self.find_files_lock:
                 if ctx['session_id'] > self.find_files_session_id:
                     self.find_files_session_id = ctx['session_id']
+
+                    for result in self.path_files_dict.values():
+                        result['kill'].set()
+
                     self.path_files_dict = dict()
 
                 if path_str in self.path_files_dict:
@@ -162,15 +168,15 @@ class Wilder(object):
 
                     if filter_name == 'filter_cpsm':
                         filter_opts['ispath'] = True
-                        candidates = self.filter_cpsm(event, filter_opts, query, candidates)
+                        candidates = self.filter_cpsm(event, filter_opts, candidates, query)
 
                     elif filter_name == 'filter_fruzzy':
-                        candidates = self.filter_fruzzy(event, filter_opts, query, candidates, False)
+                        candidates = self.filter_fruzzy(event, filter_opts, candidates, query, False)
 
                     elif filter_name == 'filter_fuzzy':
                         case_sensitive = filter_opts['case_sensitive'] if 'case_sensitive' in filter_opts else 2
                         pattern = self.make_fuzzy_pattern(query, case_sensitive)
-                        candidates = self.filter_fuzzy(event, filter_opts, pattern, candidates, False)
+                        candidates = self.filter_fuzzy(event, filter_opts, candidates, pattern, False)
 
                     elif filter_name == 'sort_difflib':
                         candidates = self.sort_difflib(event, filter_opts, candidates, query)
@@ -316,21 +322,51 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_sort: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_get_file_completion', sync=False)
+    # sync=True as it needs to query nvim for some data
+    @neovim.function('_wilder_python_get_file_completion', sync=True)
     def _get_file_completion(self, args):
-        if args[2] == 'file_in_path':
-            path_opt = self.nvim.eval('&path')
-            directories = path_opt.split(',')
-            directories += [self.nvim.eval('expand("%:h")')]
-        elif args[2] == 'shellcmd':
-            path = os.environ['PATH']
-            directories = path.split(':')
-        else:
-            directories = [self.nvim.eval('getcwd()')]
+        expand_arg = args[1]
+        expand_type = args[2]
 
+        cwd = self.nvim.eval('getcwd()')
         wildignore_opt = self.nvim.eval('&wildignore')
 
-        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories])
+        add_dot = False
+
+        if expand_type == 'file_in_path':
+            directories = []
+            if expand_arg:
+                if expand_arg[0:2] == './':
+                    directories = [cwd]
+                else:
+                    relpath = os.path.relpath(expand_arg, cwd)
+                    if relpath[0:2] == '..':
+                        add_dot = True
+                        directories = [cwd]
+
+            if not directories:
+                path_opt = self.nvim.eval('&path')
+                directories = path_opt.split(',')
+                directories += [self.nvim.eval('expand("%:h")')]
+        elif expand_type == 'shellcmd':
+            directories = []
+            if expand_arg:
+                if expand_arg[0:2] == './':
+                    directories = [cwd]
+                else:
+                    relpath = os.path.relpath(expand_arg, cwd)
+                    if relpath[0:2] == '..':
+                        add_dot = True
+                        directories = [cwd]
+
+            if not directories:
+                path = os.environ['PATH']
+                directories = path.split(':')
+                directories += [cwd]
+        else:
+            directories = [cwd]
+
+        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories, add_dot])
 
     def get_file_completion_handler(self,
                                     event,
@@ -340,12 +376,13 @@ class Wilder(object):
                                     has_wildcard,
                                     path_prefix,
                                     wildignore_opt,
-                                    directories):
+                                    directories,
+                                    add_dot):
         if event.is_set():
             return
 
         try:
-            res = []
+            res = set()
             wildignore_list = wildignore_opt.split(',')
 
             for directory in directories:
@@ -363,14 +400,19 @@ class Wilder(object):
 
                     it = glob.iglob(wildcard, recursive=True)
                 else:
-                    path = os.path.join(directory, expand_arg)
-                    (head, tail) = os.path.split(path)
+                    if add_dot:
+                        path = os.path.join('.', directory, expand_arg)
+                    else:
+                        path = os.path.join(directory, expand_arg)
+                    head, tail = os.path.split(path)
                     show_hidden = tail.startswith('.')
                     pattern = tail + '*'
 
                     try:
                         it = os.scandir(head)
                     except FileNotFoundError:
+                        continue
+                    except NotADirectoryError:
                         continue
 
                 for entry in it:
@@ -381,6 +423,7 @@ class Wilder(object):
                             entry = Path(entry)
                             try:
                                 entry = entry.relative_to(directory)
+                                old_entry = Path(entry)
                             except ValueError:
                                 pass
                         if entry.name.startswith('.') and not show_hidden:
@@ -396,16 +439,18 @@ class Wilder(object):
                             continue
                         if not has_wildcard and pattern and not fnmatch.fnmatch(entry.name, pattern):
                             continue
-                        if expand_type == 'shellcmd' and (
-                                not entry.is_file() or not os.access(os.path.join(directory, entry.name), os.X_OK)):
-                            continue
+                        if expand_type == 'shellcmd' and entry.is_file():
+                            if has_wildcard and not entry.stat().st_mode & stat.S_IXUSR:
+                                continue
+                            elif not has_wildcard and not os.access(entry, os.X_OK):
+                                continue
                         if has_wildcard and Path(entry) == Path(path_prefix):
                             continue
 
                         if entry.is_dir():
-                            res.append((str(entry) if has_wildcard else entry.name) + os.sep)
+                            res.add((str(entry) if has_wildcard else entry.name) + os.sep)
                         else:
-                            res.append(str(entry) if has_wildcard else entry.name)
+                            res.add(str(entry) if has_wildcard else entry.name)
                     except OSError:
                         pass
             res = sorted(res)
@@ -423,6 +468,10 @@ class Wilder(object):
             self.queue.put((ctx, res,))
         except Exception as e:
             self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'reject',))
+
+    # Returns True if p2 is a descendant of p1
+    def is_descendant_path(self, p1, p2):
+        return os.path.relpath(p2, p1)[0:2] != '..'
 
     def get_basename(self, f):
         if f.endswith(os.sep) or f.endswith('/'):
@@ -504,7 +553,7 @@ class Wilder(object):
 
         return pattern
 
-    def filter_fuzzy(self, event, opts, pattern, candidates, transformed):
+    def filter_fuzzy(self, event, opts, candidates, pattern, transformed):
         if not transformed:
             transformed = candidates
 
@@ -543,13 +592,12 @@ class Wilder(object):
             self.add_sys_path(opts['fruzzy_path'])
 
         use_native = opts['use_native'] if 'use_native' in opts else False
-
-        if should_use_native or use_native:
+        if use_native:
             return self.filter_fruzzy_native(*args)
 
         return self.filter_fruzzy_py(*args)
 
-    def filter_fruzzy_native(self, event, opts, query, candidates, transformed):
+    def filter_fruzzy_native(self, event, opts, candidates, query, transformed):
         fruzzy_mod = importlib.import_module('fruzzy_mod')
         limit = opts['limit'] if 'limit' in opts else 1000
 
@@ -565,7 +613,7 @@ class Wilder(object):
 
         return sorted_matches
 
-    def filter_fruzzy_py(self, event, opts, query, candidates, transformed):
+    def filter_fruzzy_py(self, event, opts, candidates, query, transformed):
         fruzzy = importlib.import_module('fruzzy')
         limit = opts['limit'] if 'limit' in opts else 1000
 
@@ -605,7 +653,7 @@ class Wilder(object):
             self.queue.put((ctx, 'python_filter_cpsm: ' + str(e), 'reject',))
 
     # cpsm does not support `transformed`
-    def filter_cpsm(self, event, opts, query, candidates):
+    def filter_cpsm(self, event, opts, candidates, query):
         if 'cpsm_path' in opts:
             self.add_sys_path(opts['cpsm_path'])
 

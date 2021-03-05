@@ -126,7 +126,7 @@ call wilder#set_option('pipeline', [
       \     wilder#cmdline_pipeline(),
       \     wilder#python_search_pipeline(),
       \   ),
-      \ ]
+      \ ])
 ```
 
 When getting file completions, fuzzily search and match through all files under the current directory. Has to be placed above `wilder#cmdline_pipeline()`.

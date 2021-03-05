@@ -672,7 +672,7 @@ function! wilder#cmdline#main#do(ctx) abort
   endif
 
   let a:ctx.pos = l:arg_start
-endfunc
+endfunction
 
 function! wilder#cmdline#main#has_file_args(cmd) abort
   let l:flags = get(s:command_flags, a:cmd, 0)
@@ -682,7 +682,7 @@ endfunction
 function! wilder#cmdline#main#is_whitespace(char) abort
   let l:nr = char2nr(a:char)
   return a:char ==# ' ' || l:nr >= 9 && l:nr <= 13
-endfunc
+endfunction
 
 function! wilder#cmdline#main#skip_whitespace(ctx) abort
   if empty(a:ctx.cmdline[a:ctx.pos])
