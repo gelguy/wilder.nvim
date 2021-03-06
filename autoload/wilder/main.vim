@@ -4,6 +4,7 @@ let s:enabled = 1
 let s:init = 0
 let s:active = 0
 let s:hidden = 0
+let s:session_id = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
@@ -111,6 +112,8 @@ function! s:start() abort
           \ ),
           \ ]
   endif
+
+  let s:session_id += 1
 
   call s:pre_hook()
 
@@ -254,6 +257,7 @@ function! s:run_pipeline(input, ...) abort
   let l:ctx = {
         \ 'input': a:input,
         \ 'run_id': s:run_id,
+        \ 'session_id': s:session_id,
         \ }
 
   if a:0 > 0

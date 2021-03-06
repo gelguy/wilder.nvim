@@ -44,12 +44,12 @@ endfunction
 
 " DEPRECATED: use wilder#resolve()
 function! wilder#on_finish(ctx, x)
-  return wilder#pipeline#resolve(a:ctx, a:x)
+  return call('wilder#resolve', [a:ctx, a:x])
 endfunction
 
 " DEPRECATED: use wilder#reject()
 function! wilder#on_error(ctx, x)
-  return wilder#pipeline#reject(a:ctx, a:x)
+  return call('wilder#reject', [a:ctx, a:x])
 endfunction
 
 function! wilder#wait(f, ...)
@@ -243,6 +243,10 @@ function! wilder#check(...) abort
   return wilder#pipeline#component#check#make(a:000)
 endfunction
 
+function! wilder#debounce(t) abort
+  return wilder#pipeline#component#debounce#make(a:t)
+endfunction
+
 function! wilder#result(...) abort
   if !a:0
     return wilder#pipeline#component#result#make()
@@ -326,25 +330,8 @@ function! wilder#python_uniq() abort
   return {_, x -> {ctx -> _wilder_python_uniq(ctx, x)}}
 endfunction
 
-function! wilder#python_sort() abort
-  return {_, x -> {ctx -> _wilder_python_sort(ctx, x)}}
-endfunction
-
 function! wilder#_python_sleep(t) abort
   return {_, x -> {ctx -> _wilder_python_sleep(ctx, a:t, x)}}
-endfunction
-
-function! wilder#python_sort_difflib(ctx, xs, query) abort
-  return {ctx -> _wilder_python_sort_difflib(ctx, a:xs, a:query)}
-endfunction
-
-function! wilder#python_sort_fuzzywuzzy(ctx, xs, query) abort
-  return {ctx -> _wilder_python_sort_fuzzywuzzy(ctx, a:xs, a:query)}
-endfunction
-
-" DEPRECATED: use wilder#python_sort_fuzzywuzzy()
-function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
-  return wilder#python_sort_fuzzywuzzy(a:ctx, a:xs, a:query)
 endfunction
 
 function! wilder#history(...) abort
@@ -357,15 +344,123 @@ function! wilder#history(...) abort
   endif
 endfunction
 
+function! wilder#python_sort() abort
+  return {_, x -> {ctx -> _wilder_python_sort(ctx, x)}}
+endfunction
+
+" sorters
+
+function! wilder#python_sorter_difflib(...) abort
+  let l:opts = {
+        \ 'quick': get(a:, 1, 1),
+        \ 'case_sensitive': get(a:, 2, 1),
+        \ }
+  return {ctx, xs, query -> wilder#python_sort_difflib(ctx, l:opts, xs, query)}
+endfunction
+
+function! wilder#python_sort_difflib(ctx, opts, xs, query) abort
+  return {ctx -> _wilder_python_sort_difflib(ctx, a:opts, a:xs, a:query)}
+endfunction
+
+function! wilder#python_sorter_fuzzywuzzy(...) abort
+  let l:opts = {
+        \ 'partial': get(a:, 1, 1),
+        \ }
+  return {ctx, xs, query -> wilder#python_sort_fuzzywuzzy(ctx, l:opts, xs, query)}
+endfunction
+
+" DEPRECATED: use wilder#python_sort_fuzzywuzzy()
+function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
+  return call('wilder#python_sort_fuzzywuzzy', [a:ctx, {}, a:xs, a:query])
+endfunction
+
+function! wilder#python_sort_fuzzywuzzy(ctx, opts, xs, query) abort
+  return {ctx -> _wilder_python_sort_fuzzywuzzy(ctx, a:opts, a:xs, a:query)}
+endfunction
+
+" filters
+
+function! s:variadic(f, t)
+  return funcref('s:variadic_call', [a:f, a:t])
+endfunction
+
+function! s:variadic_call(f, t, ...)
+  return call(a:f, a:t(a:000))
+endfunction
+
+" DEPRECATED: use wilder#filter_fuzzy()
+function! wilder#fuzzy_filter() abort
+  return call('wilder#filter_fuzzy', [])
+endfunction
+
+function! wilder#filter_fuzzy() abort
+  return s:variadic('wilder#filt_fuzzy', {args -> [args[0], {}] + args[1:]})
+endfunction
+
+function! wilder#filt_fuzzy(ctx, opts, candidates, query, ...) abort
+  return wilder#cmdline#filter_fuzzy(a:ctx, a:candidates, a:query, get(a:, 1, 0))
+endfunction
+
+" DEPRECATED: use wilder#python_filter_fuzzy()
+function! wilder#python_fuzzy_filter(...) abort
+  return call('wilder#python_filter_fuzzy', a:000)
+endfunction
+
+function! wilder#python_filter_fuzzy(...) abort
+  let l:opts = {
+        \ 'engine': get(a:, 1, 're'),
+        \ }
+  return s:variadic('wilder#python_filt_fuzzy', {args -> [args[0], l:opts] + args[1:]})
+endfunction
+
+function! wilder#python_filt_fuzzy(ctx, opts, candidates, query, ...) abort
+  return wilder#cmdline#python_filter_fuzzy(a:ctx, a:opts, a:candidates, a:query, get(a:, 1, 0))
+endfunction
+
+function! wilder#python_filter_fruzzy(...) abort
+  let l:opts = {
+        \ 'limit': get(a:, 1, 1000),
+        \ 'fruzzy_path': get(a:, 2, wilder#fruzzy_path()),
+        \ }
+  return s:variadic('wilder#python_filt_fruzzy', {args -> [args[0], l:opts] + args[1:]})
+endfunction
+
+function! wilder#python_filt_fruzzy(ctx, opts, candidates, query, ...) abort
+  return wilder#cmdline#python_filter_fruzzy(a:ctx, a:opts, a:candidates, a:query, get(a:, 1, 0))
+endfunction
+
+function! wilder#python_filter_cpsm(...) abort
+  let l:opts = {
+        \ 'cpsm_path': get(a:, 1, wilder#cpsm_path()),
+        \ }
+  return s:variadic('wilder#python_filt_cpsm', {args -> [args[0], l:opts] + args[1:]})
+endfunction
+
+function! wilder#python_filt_cpsm(ctx, opts, candidates, query) abort
+  return wilder#cmdline#python_filter_cpsm(a:ctx, a:opts, a:candidates, a:query)
+endfunction
+
 " pipelines
 
 function! wilder#search_pipeline(...) abort
+  let l:opts = get(a:, 1, {})
+
+  return has('nvim') ?
+        \ wilder#python_search_pipeline(l:opts) :
+        \ wilder#vim_search_pipeline(l:opts)
+endfunction
+
+function! s:search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
   let l:pipeline = [wilder#check({_, x -> !empty(x)})]
   if !get(l:opts, 'skip_cmdtype_check', 0)
     call add(l:pipeline,
           \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}))
+  endif
+
+  if get(l:opts, 'debounce', 0) > 0
+    call add(l:pipeline, wilder#debounce(l:opts['debounce']))
   endif
 
   let l:search_pipeline = get(l:opts, 'pipeline', [
@@ -383,7 +478,7 @@ function! wilder#search_pipeline(...) abort
 endfunction
 
 function! wilder#vim_search_pipeline(...) abort
-  return wilder#search_pipeline(get(a:, 1, {}))
+  return s:search_pipeline(get(a:, 1, {}))
 endfunction
 
 function! s:extract_keys(obj, ...)
@@ -419,15 +514,15 @@ function! wilder#python_search_pipeline(...) abort
   call add(l:subpipeline, wilder#python_search(
         \ s:extract_keys(l:opts, 'max_candidates', 'engine')))
 
-  let l:Sort = get(l:opts, 'sort', 0)
-  if l:Sort isnot 0
-    if l:Sort is 'python_sort_fuzzywuzzy'
-      let l:Sort = function('wilder#python_sort_fuzzywuzzy')
-    elseif l:Sort is 'python_sort_difflib'
-      let l:Sort = function('wilder#python_sort_difflib')
+  let l:Sorter = get(l:opts, 'sorter', get(l:opts, 'sort', 0))
+  if l:Sorter isnot 0
+    if l:Sorter is 'python_sort_fuzzywuzzy'
+      let l:Sorter = wilder#python_sorter_fuzzywuzzy()
+    elseif l:Sorter is 'python_sort_difflib'
+      let l:Sorter = wilder#python_sorter_difflib()
     endif
 
-    call add(l:subpipeline, {ctx, xs -> l:Sort(ctx, xs, ctx.input)})
+    call add(l:subpipeline, {ctx, xs -> l:Sorter(ctx, xs, ctx.input)})
   endif
 
   call add(l:subpipeline, wilder#result_output_escape('^$*~[]/\'))
@@ -436,7 +531,8 @@ function! wilder#python_search_pipeline(...) abort
         \ wilder#result({'data': {'pcre2.pattern': x}}),
         \ ]}))
 
-  return wilder#search_pipeline({
+  return s:search_pipeline({
+        \ 'debounce': get(l:opts, 'debounce', 0),
         \ 'pipeline': l:pipeline,
         \ 'skip_cmdtype_check': get(l:opts, 'skip_cmdtype_check', 0),
         \ })
@@ -450,13 +546,8 @@ function! wilder#substitute_pipeline(...) abort
   return wilder#cmdline#substitute_pipeline(get(a:, 1, {}))
 endfunction
 
-function! wilder#fuzzy_filter() abort
-  return function('wilder#cmdline#fuzzy_filter')
-endfunction
-
-function! wilder#python_fuzzy_filter(...) abort
-  let l:engine = get(a:, 1, 're')
-  return function('wilder#cmdline#python_fuzzy_filter', [l:engine])
+function! wilder#python_file_finder_pipeline(...) abort
+  return wilder#cmdline#python_file_finder_pipeline(get(a:, 1, {}))
 endfunction
 
 " render components
@@ -482,11 +573,7 @@ endfunction
 
 " DEPRECATED: use wilder#separator()
 function! wilder#separator(str, from, to, ...) abort
-  if a:0
-    return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
-  else
-    return wilder#render#component#separator#make(a:str, a:from, a:to)
-  endif
+  return call('wilder#separator', [a:str, a:from, a:to] + a:000)
 endfunction
 
 function! wilder#powerline_separator(str, from, to, ...) abort
@@ -545,4 +632,100 @@ endfunction
 function! wilder#lightline_theme(...)
   let l:args = get(a:000, 0, {})
   return wilder#render#renderer#wildmenu_theme#lightline_theme(l:args)
+endfunction
+
+function! s:find_function_script_file(f)
+  try
+    " ensure function is autoloaded
+    silent call eval(a:f . '()')
+  catch /E119/
+    " success
+  catch
+    return ''
+  endtry
+
+  let l:output = execute('verbose function ' . a:f)
+  let l:lines = split(l:output, '\n')
+  if len(l:lines) < 2
+    return ''
+  endif
+
+  let l:matches = matchlist(l:lines[1], 'Last set from \(\S\+\)')
+  if len(l:matches) < 2
+    return ''
+  endif
+
+  return l:matches[1]
+endfunction
+
+let s:module_path_cache = {}
+
+function! s:get_module_path(f, modify_path, use_cached)
+  if !a:use_cached || !has_key(s:module_path_cache, a:f)
+    let l:file = s:find_function_script_file(a:f)
+    let s:module_path_cache[a:f] = empty(l:file) ?
+          \ '' :
+          \ simplify(l:file . a:modify_path)
+  endif
+
+  return s:module_path_cache[a:f]
+endfunction
+
+function! wilder#fruzzy_path(...) abort
+  return s:get_module_path('fruzzy#version', '/../../rplugin/python3', get(a:, 1, 1))
+endfunction
+
+function! wilder#cpsm_path(...) abort
+  return s:get_module_path('cpsm#CtrlPMatch', '/..', get(a:, 1, 1))
+endfunction
+
+let s:project_root_cache = {}
+
+function! wilder#project_root(...) abort
+  if a:0
+    let l:root_markers = a:1
+  else
+    let l:root_markers = ['.hg', '.git']
+  endif
+
+  return {-> s:project_root(l:root_markers)}
+endfunction
+
+function! wilder#clear_project_root_cache() abort
+  let s:project_root_cache = {}
+endfunction
+
+function! s:project_root(root_markers, ...) abort
+  if a:0
+    let l:path = a:1
+  else
+    let l:path = getcwd()
+  endif
+
+  if !has_key(s:project_root_cache, l:path)
+    let l:project_root = s:get_project_root(l:path, a:root_markers)
+    let s:project_root_cache[l:path] = l:project_root
+  endif
+
+  return s:project_root_cache[l:path]
+endfunction
+
+function! s:get_project_root(path, root_markers) abort
+  let l:home_directory = expand('~')
+  let l:find_path = a:path . ';' . l:home_directory
+
+  for l:root_marker in a:root_markers
+    let l:result = findfile(l:root_marker, l:find_path)
+    if empty(l:result)
+      let l:result = finddir(l:root_marker, l:find_path)
+    endif
+
+    if empty(l:result)
+      continue
+    endif
+
+    return fnamemodify(l:result, ':~:h')
+  endfor
+
+  return ''
 endfunction

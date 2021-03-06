@@ -1,10 +1,12 @@
 let s:handler_registry = {}
+let s:partial_results = {}
 let s:id_index = 0
 let s:last_cleared_id = -1
 
 function! wilder#pipeline#clear_handlers() abort
   let s:last_cleared_id = s:id_index
   let s:handler_registry = {}
+  let s:partial_results = {}
 endfunction
 
 function! wilder#pipeline#resolve(ctx, x) abort
@@ -15,37 +17,68 @@ function! wilder#pipeline#reject(ctx, x) abort
   call s:handle(a:ctx, a:x, 'reject')
 endfunction
 
+function! s:partial_error_message(key, x)
+  let l:message = 'wilder#' . a:key . '()'
+  let l:message .= ' ''partial'' only supported for lists: ' . string(a:x)
+
+  return l:message
+endfunction
+
 function! s:handle(ctx, x, key) abort
   let l:handler_id = get(a:ctx, 'handler_id', 0)
 
   if !has_key(s:handler_registry, l:handler_id)
     " only show error if handler has not been cleared
     if l:handler_id > s:last_cleared_id
-      let l:message = 'wilder: ' . a:key
+      let l:message = 'wilder#' . a:key . '()'
       let l:message .= ' handler not found - id: ' . l:handler_id
       let l:message .= ': ' . string(a:x)
 
-      " avoid echoerr since this in a try-catch block
-      " see try-echoerr
-      echohl ErrorMsg
-      echomsg l:message
-      echohl Normal
+      call s:echoerr(l:message)
     endif
 
     return
   endif
 
+  let l:X = a:x
   let l:handler = s:handler_registry[l:handler_id]
+
+  if get(a:ctx, 'partial', 0)
+    if type(l:X) isnot v:t_list
+      call l:handler.on_error(a:ctx,
+            \ 'pipeline: ' . s:partial_error_message(a:key, l:X))
+      return
+    endif
+
+    if !has_key(s:partial_results, l:handler_id)
+      let s:partial_results[l:handler_id] = l:X
+    else
+      let s:partial_results[l:handler_id] += l:X
+    endif
+
+    return
+  endif
 
   unlet s:handler_registry[l:handler_id]
 
+  if has_key(s:partial_results, l:handler_id)
+    if type(l:X) isnot v:t_list
+      call l:handler.on_error(a:ctx,
+            \ 'pipeline: ' . s:partial_error_message(a:key, l:X))
+      return
+    endif
+
+    let l:X = s:partial_results[l:handler_id] + l:X
+    unlet s:partial_results[l:handler_id]
+  endif
+
   if a:key ==# 'reject'
-    call l:handler.on_error(a:ctx, a:x)
+    call l:handler.on_error(a:ctx, l:X)
     return
   endif
 
   try
-    call l:handler.on_finish(a:ctx, a:x)
+    call l:handler.on_finish(a:ctx, l:X)
   catch
     call l:handler.on_error(a:ctx, 'pipeline: ' . v:exception)
   endtry
@@ -204,4 +237,12 @@ function! s:wait_on_error(state, ctx, x)
   else
     call wilder#reject(l:ctx, a:x)
   endif
+endfunction
+
+function! s:echoerr(message)
+  " avoid echoerr since this in a try-catch block
+  " see try-echoerr
+  echohl ErrorMsg
+  echomsg a:message
+  echohl Normal
 endfunction
