@@ -573,7 +573,7 @@ endfunction
 
 " DEPRECATED: use wilder#separator()
 function! wilder#separator(str, from, to, ...) abort
-  return call('wilder#separator', [a:str, a:from, a:to] + a:000)
+  return call('wilder#powerline_separator', [a:str, a:from, a:to] + a:000)
 endfunction
 
 function! wilder#powerline_separator(str, from, to, ...) abort
