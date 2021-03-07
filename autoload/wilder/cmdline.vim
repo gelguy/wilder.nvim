@@ -685,12 +685,17 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, is_file_expansion) abort
         \ })})
 endfunction
 
-function wilder#cmdline#should_use_file_finder(path) abort
-  let l:path = simplify(a:path)
+function wilder#cmdline#should_use_file_finder(res) abort
+  let l:arg = a:res.arg
+  if l:arg[0] ==# '%' ||
+        \ l:arg[0] ==# '#' ||
+        \ l:arg[0] ==# '<'
+    return 0
+  endif
 
-  if l:path[0] ==# '%' ||
-        \ l:path[0] ==# '#' ||
-        \ l:path[0] ==# '~' ||
+  let l:path = simplify(a:res.expand_arg)
+
+  if l:path[0] ==# '~' ||
         \ l:path[0] ==# '/' ||
         \ l:path[0] ==# '\' ||
         \ l:path[0:1] ==# '..' ||
@@ -766,7 +771,7 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \ wilder#check({_, res -> res.expand ==# 'file'}),
         \ wilder#subpipeline({ctx, res -> [
         \   {ctx, _ -> wilder#cmdline#prepare_file_completion(ctx, copy(res), 0)},
-        \   wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res.expand_arg)}),
+        \   wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
         \ ] + (l:should_debounce ? [l:Debounce] : []) + [
         \   {-> {ctx -> _wilder_python_file_finder(
         \     ctx, l:opts, getcwd(), l:Dir_func(ctx, res), expand(res.arg))}},
