@@ -69,6 +69,8 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     return l:res
   endif
 
+  let l:original_len = len(l:arg)
+
   " Expand the fnamemodify()-able part, if any.
   " ^(%|#|<cword>|<cWORD>|<client>)(:[phtre])*
   let l:matches = matchlist(l:arg,
@@ -154,12 +156,22 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     let l:res.fuzzy_char = ''
     let l:res.completions = getcompletion(l:env_var, 'environment')
 
+    " Get position of the $ in tail.
+    let l:dollar_pos = len(l:tail) - len(l:env_var) - 1
+
+    " Show cursor after the $.
+    let l:res.pos += l:original_len - len(l:tail) + l:dollar_pos
+
     return l:res
   endif
 
   " Append / back to l:head.
   if !empty(l:head) && l:head !=# l:slash
+    let l:old_len = len(l:head)
+
     let l:head = expand(l:head) . l:slash
+
+    let l:res.pos += len(l:head) - l:old_len
   endif
 
   let l:res.match_arg = l:tail
@@ -181,6 +193,11 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   else
     let l:res.expand_arg = l:head . l:tail
     let l:res.fuzzy_char = ''
+  endif
+
+  if !empty(l:head)
+    " Show cursor at the start of tail.
+    let l:res.pos += l:original_len - len(l:tail) - 1
   endif
 
   return l:res
@@ -779,6 +796,7 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   {-> {ctx -> _wilder_python_file_finder(
         \     ctx, l:opts, getcwd(), l:Dir_func(ctx, res), expand(res.arg))}},
         \   wilder#result({
+        \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
         \     'data': extend(s:convert_result_to_data(res), {'query': res.arg}),
         \   }),
