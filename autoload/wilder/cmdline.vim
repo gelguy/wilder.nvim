@@ -1,14 +1,15 @@
+let s:cmdline_cache = wilder#cache#mru_cache(30)
+
 function! wilder#cmdline#parse(cmdline) abort
-  if !exists('s:cache_cmdline') || a:cmdline !=# s:cache_cmdline
+  if !s:cmdline_cache.has_key(a:cmdline)
     let l:ctx = {'cmdline': a:cmdline, 'pos': 0, 'cmd': '', 'expand': ''}
     call wilder#cmdline#main#do(l:ctx)
 
     let l:ctx['arg'] = l:ctx['cmdline'][l:ctx.pos :]
-    let s:cache_cmdline_result = l:ctx
-    let s:cache_cmdline = a:cmdline
+    call s:cmdline_cache.set(a:cmdline, l:ctx)
   endif
 
-  return copy(s:cache_cmdline_result)
+  return copy(s:cmdline_cache.get(a:cmdline))
 endfunction
 
 function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
