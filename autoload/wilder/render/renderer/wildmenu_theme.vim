@@ -95,7 +95,7 @@ function! s:theme(opts, namespace, hls) abort
         \   l:use_powerline_symbols ?
         \     wilder#powerline_separator(
         \       l:powerline_symbols[0], l:highlights['mode'],
-        \       l:highlights['default'], 'left') : '',
+        \       l:highlights['default'], a:namespace . 'Left') : '',
         \   ' ',
         \ ],
         \ 'right': [
@@ -103,7 +103,7 @@ function! s:theme(opts, namespace, hls) abort
         \   l:use_powerline_symbols ?
         \     wilder#powerline_separator(
         \       l:powerline_symbols[1], l:highlights['index'],
-        \       l:highlights['default'], 'right') : '',
+        \       l:highlights['default'], a:namespace . 'Right') : '',
         \    wilder#index({'hl': l:highlights['index']}),
         \ ],
         \ }
