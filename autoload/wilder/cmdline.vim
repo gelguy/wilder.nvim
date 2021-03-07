@@ -6,6 +6,7 @@ function! wilder#cmdline#parse(cmdline) abort
     call wilder#cmdline#main#do(l:ctx)
 
     let l:ctx['arg'] = l:ctx['cmdline'][l:ctx.pos :]
+    let l:ctx['pos'] = l:ctx.pos
     call s:cmdline_cache.set(a:cmdline, l:ctx)
   endif
 
@@ -576,7 +577,7 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-" returns [{handled}, {result}]
+" returns [{handled}, {result}, [{pos}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
     return [0, a:res]
@@ -601,7 +602,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:Completion_func = function(l:user_command.complete_arg)
       let l:result = l:Completion_func(a:res.arg, a:res.cmdline, len(a:res.cmdline))
     catch
-      return [1, v:true]
+      return [1, v:true, 0]
     endtry
 
     if get(l:user_command, 'complete', '') ==# 'custom'
@@ -609,7 +610,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:result = filter(l:result, {i, x -> match(x, l:res.arg) != -1})
     endif
 
-    return [1, l:result]
+    return [1, l:result, a:res.pos]
   endif
 
   if has_key(l:user_command, 'complete') &&
@@ -622,7 +623,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     return [0, l:res]
   endif
 
-  return [1, v:false]
+  return [1, v:false, a:res.pos]
 endfunction
 
 function! wilder#cmdline#replace(ctx, x, data) abort
@@ -642,6 +643,7 @@ endfunction
 
 function! s:convert_result_to_data(res)
   let l:data = {
+        \ 'pos': a:res.pos,
         \ 'cmdline.command': a:res.cmd,
         \ 'cmdline.expand': a:res.expand,
         \ 'cmdline.arg': a:res.arg,
@@ -979,10 +981,14 @@ function! wilder#cmdline#pipeline(opts) abort
 
   call add(l:pipeline, wilder#branch(
         \ [
-        \   {ctx, res -> res[0] ? res[1] : v:false},
-        \   wilder#result({
-        \     'replace': ['wilder#cmdline#replace'],
-        \   }),
+        \   {ctx, res -> res[0] ? res : v:false},
+        \   wilder#subpipeline({ctx, res -> [
+        \     {_, res -> res[1]},
+        \     wilder#result({
+        \       'pos': res[2],
+        \       'replace': ['wilder#cmdline#replace'],
+        \     }),
+        \   ]}),
         \ ],
         \ l:getcompletion_pipeline,
         \ ))
