@@ -453,7 +453,8 @@ wilder#python_fuzzy_match([{options}])
             {options} is a dictionary with keys:
             `word`
             Optional~
-            Word character for the Python regex.
+            Python regex for word characters. If using a regex group, use a
+            non-capturing group `(?:)`.
 
             Default: '\w'
 
@@ -481,13 +482,15 @@ wilder#python_fuzzy_delimiter([{options}])
             {options} is a dictionary with keys:
             `word`
             Optional~
-            Python regex for word characters
+            Python regex for word characters. If using a regex group, use a
+            non-capturing group `(?:)`.
 
             Default: '\w'
 
             `delimiter`
             Optional~
-            Python regex for delimiter characters
+            Python regex for delimiter characters. If using a regex group, use
+            a non-capturing group `(?:)`.
 
             Default: '(?:[^\w\s]|_)' non-word non-space character or '_'
 
