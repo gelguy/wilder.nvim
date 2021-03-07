@@ -13,8 +13,8 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
         \ 'win': -1,
         \ 'columns': -1,
         \ 'cmdheight': -1,
-        \ 'draw_cache': {},
-        \ 'apply_highlights_cache': {},
+        \ 'draw_cache': wilder#cache#cache(),
+        \ 'apply_highlights_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ }
 
@@ -33,14 +33,18 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
-          \ wilder#hl_with_attr('WilderAccent',
-          \   l:state.highlights['default'], 'underline', 'bold')
+          \ wilder#hl_with_attr(
+          \ 'WilderWildmenuAccent',
+          \ l:state.highlights['default'],
+          \'underline', 'bold')
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
     let l:state.highlights.selected_accent =
-          \ wilder#hl_with_attr('WilderSelectedAccent', l:state.highlights['selected'],
-          \   'underline', 'bold')
+          \ wilder#hl_with_attr(
+          \ 'WilderWildmenuSelectedAccent',
+          \ l:state.highlights['selected'],
+          \ 'underline', 'bold')
   endif
 
   if has_key(a:args, 'apply_highlights')
@@ -59,8 +63,8 @@ endfunction
 
 function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
   if a:state.run_id != a:ctx.run_id
-    let a:state.draw_cache = {}
-    let a:state.apply_highlights_cache = {}
+    call a:state.draw_cache.clear()
+    call a:state.apply_highlights_cache.clear()
   endif
 
   let a:state.run_id = a:ctx.run_id
@@ -208,14 +212,14 @@ endfunction
 
 function! s:draw_x(state, ctx, result, i) abort
   let l:use_cache = a:ctx.selected == a:i
-  if l:use_cache && has_key(a:state.draw_cache, a:i)
-    return a:state.draw_cache[a:i]
+  if l:use_cache && a:state.draw_cache.has_key(a:i)
+    return a:state.draw_cache.get(a:i)
   endif
 
   let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
 
   if l:use_cache
-    let a:state.draw_cache[a:i] = l:x
+    call a:state.draw_cache.set(a:i, l:x)
   endif
 
   return l:x
@@ -385,12 +389,12 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
     let l:current = l:i + l:start
     let l:x = s:draw_x(a:state, a:ctx, a:result, l:current)
 
-    if !has_key(a:state.apply_highlights_cache, l:x) &&
+    if !a:state.apply_highlights_cache.has_key(l:x) &&
           \ !empty(a:apply_highlights)
       let l:x_highlight = s:apply_highlights(a:apply_highlights, l:data, l:x)
 
       if l:x_highlight isnot 0
-        let a:state.apply_highlights_cache[l:x] = l:x_highlight
+        call a:state.apply_highlights_cache.set(l:x, l:x_highlight)
       endif
     endif
 
@@ -409,10 +413,10 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      if has_key(a:state.apply_highlights_cache, l:x)
+      if a:state.apply_highlights_cache.has_key(l:x)
         let l:chunks = wilder#render#spans_to_chunks(
               \ l:x,
-              \ a:state.apply_highlights_cache[l:x],
+              \ a:state.apply_highlights_cache.get(l:x),
               \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
               \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
         let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
@@ -442,10 +446,10 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
     let l:x = l:xs[l:i]
     let l:is_selected = l:selected == l:i + l:start
 
-    if has_key(a:state.apply_highlights_cache, l:x)
+    if a:state.apply_highlights_cache.has_key(l:x)
       let l:chunks = wilder#render#spans_to_chunks(
             \ l:x,
-            \ a:state.apply_highlights_cache[l:x],
+            \ a:state.apply_highlights_cache.get(l:x),
             \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
             \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
       let l:res += chunks

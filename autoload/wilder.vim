@@ -658,17 +658,18 @@ function! s:find_function_script_file(f)
   return l:matches[1]
 endfunction
 
-let s:module_path_cache = {}
+let s:module_path_cache = wilder#cache#cache()
 
 function! s:get_module_path(f, modify_path, use_cached)
-  if !a:use_cached || !has_key(s:module_path_cache, a:f)
+  if !a:use_cached || !s:module_path_cache.has_key(a:f)
     let l:file = s:find_function_script_file(a:f)
-    let s:module_path_cache[a:f] = empty(l:file) ?
+    let l:path = empty(l:file) ?
           \ '' :
           \ simplify(l:file . a:modify_path)
+    call s:module_path_cache.set(a:f, l:path)
   endif
 
-  return s:module_path_cache[a:f]
+  return s:module_path_cache.get(a:f)
 endfunction
 
 function! wilder#fruzzy_path(...) abort
@@ -679,7 +680,7 @@ function! wilder#cpsm_path(...) abort
   return s:get_module_path('cpsm#CtrlPMatch', '/..', get(a:, 1, 1))
 endfunction
 
-let s:project_root_cache = {}
+let s:project_root_cache = wilder#cache#cache()
 
 function! wilder#project_root(...) abort
   if a:0
@@ -692,7 +693,7 @@ function! wilder#project_root(...) abort
 endfunction
 
 function! wilder#clear_project_root_cache() abort
-  let s:project_root_cache = {}
+  call s:project_root_cache.clear()
 endfunction
 
 function! s:project_root(root_markers, ...) abort
@@ -702,12 +703,12 @@ function! s:project_root(root_markers, ...) abort
     let l:path = getcwd()
   endif
 
-  if !has_key(s:project_root_cache, l:path)
+  if !s:project_root_cache.has_key(l:path)
     let l:project_root = s:get_project_root(l:path, a:root_markers)
-    let s:project_root_cache[l:path] = l:project_root
+    call s:project_root_cache.set(l:path, l:project_root)
   endif
 
-  return s:project_root_cache[l:path]
+  return s:project_root_cache.get(l:path)
 endfunction
 
 function! s:get_project_root(path, root_markers) abort
