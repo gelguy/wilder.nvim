@@ -604,6 +604,11 @@ function! wilder#popupmenu_scrollbar(...) abort
   return wilder#render#component#scrollbar#make(l:args)
 endfunction
 
+function! wilder#popupmenu_spinner(...) abort
+  let l:args = get(a:, 1, {})
+  return wilder#render#component#popupmenu_spinner#make(l:args)
+endfunction
+
 " renderers
 
 " DEPRECATED: use wilder#wildmenu_renderer()
