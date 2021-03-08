@@ -670,9 +670,13 @@ function! s:find_function_script_file(f)
     return ''
   endif
 
-  let l:matches = matchlist(l:lines[1], 'Last set from \(\S\+\)')
+  let l:matches = matchlist(l:lines[1], 'Last set from \(.\+\) line \d\+$')
   if len(l:matches) < 2
-    return ''
+    " verbose function output is different for older versions.
+    let l:matches = matchlist(l:lines[1], 'Last set from \(.\+\)$')
+    if len(l:matches) < 2
+      return ''
+    endif
   endif
 
   return l:matches[1]
