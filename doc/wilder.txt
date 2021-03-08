@@ -2194,6 +2194,26 @@ wilder#project_root([{root_markers}])
             {root_markers} is a list of file or directory names and defaults
             to ['.hg', '.git'].
 
+wilder#renderer_mux({args})         *wilder#renderer_mux()*
+            Creates a renderer multiplexer which chooses the renderer to use
+            based on |getcmdchar()|.
+
+            The keys of {args} should be a cmdtype e.g. '/', ':' or '?'.
+
+            If the '?' key is omitted and the '/' key is present, '?' will use
+            the renderer for '/'.
+
+            The special key 'substitute' sets the renderer when the cmdline is
+            in a |:substitute| command. If omitted, the '/' renderer is used.
+
+            Example:
+>
+            wilder#set_option('renderer, wilder#renderer_mux({
+                  \ ':': wilder#popupmenu_renderer(),
+                  \ '/': wilder#wildmenu_renderer(),
+                  \ })
+<
+
 ==============================================================================
 7. Configurations                   *wilder-configurations*
 

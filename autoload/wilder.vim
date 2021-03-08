@@ -603,6 +603,10 @@ endfunction
 
 " renderers
 
+function! wilder#renderer_mux(args)
+  return wilder#render#renderer#mux#make(a:args)
+endfunction
+
 " DEPRECATED: use wilder#wildmenu_renderer()
 function! wilder#statusline_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
