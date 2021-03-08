@@ -599,6 +599,11 @@ function! wilder#condition(predicate, if_true, ...) abort
   return wilder#render#component#condition#make(a:predicate, a:if_true, l:if_false)
 endfunction
 
+function! wilder#popupmenu_scrollbar(...) abort
+  let l:args = get(a:, 1, {})
+  return wilder#render#component#scrollbar#make(l:args)
+endfunction
+
 " renderers
 
 " DEPRECATED: use wilder#wildmenu_renderer()
