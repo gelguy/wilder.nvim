@@ -722,25 +722,19 @@ wilder#cmdline_pipeline([{options}])
 
             `fuzzy_filter`
             The function to use when matching candidates in fuzzy completion.
-            Takes a {ctx}, {candidates}, {query} and optional {transform} and
-            returns the list of filtered candidates. 
-            If {transform} is provided, it can either be a function or 0. If
-            0, it should be ignored. Otherwise, it is a function that takes a
-            {candidate} and returns the transformed {candidate}.
-            The filtering should be done on the transformed candidates, but
-            the returned list should contain the untransformed candidates.
+            Takes a {ctx}, {candidates} and {query} and returns the list of
+            filtered candidates. 
 
-            For example:
->
-            function! MyFilter(ctx, candidates, query, ...) abort
-              let l:Transform = get(a:, 1, {x -> x})
-              return filter(copy(a:candidates), {_, x ->
-                  \ SomeCondition(l:Transform(x))})
-            endfunction
-<
             Can return a |wilder-pipeline-thunk|.  Only used if `fuzzy` is
             true.
 
+            For example:
+>
+            function! MyFilter(ctx, candidates, query) abort
+              return filter(copy(a:candidates), {_, x ->
+                  \ SomeCondition(x)})
+            endfunction
+<
             Default: |wilder#python_filter_fuzzy()| if `use_python` is true
                      |wilder#filter_fuzzy()| otherwise
 
@@ -1713,7 +1707,7 @@ wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
             Deprecated: Use |wilder#filter_fuzzy()|.
 
                                     *wilder#python_filt_fuzzy()*
-wilder#python_filt_fuzzy({ctx}, {opts}, {candidates}, {query}, {transformed})
+wilder#python_filt_fuzzy({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
                                     Async~
             Takes a list of candidates and fuzzily filters and sorts the
@@ -1740,7 +1734,7 @@ wilder#python_fuzzy_filter()        *wilder#python_fuzzy_filter()*
             Deprecated: Use |wilder#python_filter_fuzzy()|.
 
                                     *wilder#python_filt_fruzzy()*
-wilder#python_filt_fruzzy({ctx}, {opts}, {candidates}, {query}, {transformed})
+wilder#python_filt_fruzzy({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
                                     Async~
                                     fruzzy plugin required~
@@ -1775,10 +1769,6 @@ wilder#python_filter_fruzzy([{limit}, [{fruzzy_path}]])
             |wilder#python_filt_cpsm()|. Can be used as the `fuzzy_filter`
             option in |wilder#cmdline_pipeline()|.
 
-            Note this filter does not support the {transformed} argument and
-            cannot be used as a `fuzzy_filter` for
-            |wilder#cmdline_pipeline()|.
-
             The {limit} and {fruzzy_path} arguments are passed to
             |wilder#python_filt_cpsm()| as options.
 
@@ -1809,10 +1799,6 @@ wilder#python_filter_cpsm([{cpsm_path}])
                                     cpsm plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
             |wilder#python_filt_cpsm()|.
-
-            Note this filter does not support the {transformed} argument and
-            cannot be used as a `fuzzy_filter` for
-            |wilder#cmdline_pipeline()|.
 
             The {cpsm_path} argument is passed to |wilder#python_filt_cpsm()|
             as an option.

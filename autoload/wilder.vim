@@ -380,25 +380,17 @@ endfunction
 
 " filters
 
-function! s:variadic(f, t)
-  return funcref('s:variadic_call', [a:f, a:t])
-endfunction
-
-function! s:variadic_call(f, t, ...)
-  return call(a:f, a:t(a:000))
-endfunction
-
 " DEPRECATED: use wilder#filter_fuzzy()
 function! wilder#fuzzy_filter() abort
   return call('wilder#filter_fuzzy', [])
 endfunction
 
 function! wilder#filter_fuzzy() abort
-  return s:variadic('wilder#filt_fuzzy', {args -> [args[0], {}] + args[1:]})
+  return {ctx, xs, q -> wilder#filt_fuzzy(ctx, {}, xs, q)}
 endfunction
 
-function! wilder#filt_fuzzy(ctx, opts, candidates, query, ...) abort
-  return wilder#cmdline#filter_fuzzy(a:ctx, a:candidates, a:query, get(a:, 1, 0))
+function! wilder#filt_fuzzy(ctx, opts, candidates, query) abort
+  return wilder#cmdline#filter_fuzzy(a:ctx, a:candidates, a:query)
 endfunction
 
 " DEPRECATED: use wilder#python_filter_fuzzy()
@@ -410,11 +402,11 @@ function! wilder#python_filter_fuzzy(...) abort
   let l:opts = {
         \ 'engine': get(a:, 1, 're'),
         \ }
-  return s:variadic('wilder#python_filt_fuzzy', {args -> [args[0], l:opts] + args[1:]})
+  return {ctx, xs, q -> wilder#python_filt_fuzzy(ctx, l:opts, xs, q)}
 endfunction
 
-function! wilder#python_filt_fuzzy(ctx, opts, candidates, query, ...) abort
-  return wilder#cmdline#python_filter_fuzzy(a:ctx, a:opts, a:candidates, a:query, get(a:, 1, 0))
+function! wilder#python_filt_fuzzy(ctx, opts, candidates, query) abort
+  return wilder#cmdline#python_filter_fuzzy(a:ctx, a:opts, a:candidates, a:query)
 endfunction
 
 function! wilder#python_filter_fruzzy(...) abort
@@ -422,18 +414,18 @@ function! wilder#python_filter_fruzzy(...) abort
         \ 'limit': get(a:, 1, 1000),
         \ 'fruzzy_path': get(a:, 2, wilder#fruzzy_path()),
         \ }
-  return s:variadic('wilder#python_filt_fruzzy', {args -> [args[0], l:opts] + args[1:]})
+  return {ctx, xs, q -> wilder#python_filt_fruzzy(ctx, l:opts, xs, q)}
 endfunction
 
-function! wilder#python_filt_fruzzy(ctx, opts, candidates, query, ...) abort
-  return wilder#cmdline#python_filter_fruzzy(a:ctx, a:opts, a:candidates, a:query, get(a:, 1, 0))
+function! wilder#python_filt_fruzzy(ctx, opts, candidates, query) abort
+  return wilder#cmdline#python_filter_fruzzy(a:ctx, a:opts, a:candidates, a:query)
 endfunction
 
 function! wilder#python_filter_cpsm(...) abort
   let l:opts = {
         \ 'cpsm_path': get(a:, 1, wilder#cpsm_path()),
         \ }
-  return s:variadic('wilder#python_filt_cpsm', {args -> [args[0], l:opts] + args[1:]})
+  return {ctx, xs, q -> wilder#python_filt_cpsm(ctx, l:opts, xs, q)}
 endfunction
 
 function! wilder#python_filt_cpsm(ctx, opts, candidates, query) abort

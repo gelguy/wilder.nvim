@@ -203,7 +203,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   return l:res
 endfunction
 
-function! wilder#cmdline#filter_fuzzy(ctx, candidates, query, transform) abort
+function! wilder#cmdline#filter_fuzzy(ctx, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
@@ -229,10 +229,6 @@ function! wilder#cmdline#filter_fuzzy(ctx, candidates, query, transform) abort
 
     let l:i += 1
   endwhile
-
-  if a:transform isnot 0
-    return filter(copy(a:candidates), {_, x -> match(a:transform(x), l:regex) != -1})
-  endif
 
   return filter(copy(a:candidates), {_, x -> match(x, l:regex) != -1})
 endfunction
@@ -276,34 +272,22 @@ function! s:make_python_fuzzy_regex(query)
   return l:regex
 endfunction
 
-function! wilder#cmdline#python_filter_fuzzy(ctx, opts, candidates, query, transform) abort
+function! wilder#cmdline#python_filter_fuzzy(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
   let l:regex = s:make_python_fuzzy_regex(a:query)
 
-  if a:transform isnot 0
-    let l:transformed = map(copy(a:candidates), {_, x -> a:transform(x)})
-  else
-    let l:transformed = 0
-  endif
-
-  return {ctx -> _wilder_python_filter_fuzzy(ctx, a:opts, a:candidates, l:regex, l:transformed)}
+  return {ctx -> _wilder_python_filter_fuzzy(ctx, a:opts, a:candidates, l:regex)}
 endfunction
 
-function! wilder#cmdline#python_filter_fruzzy(ctx, opts, candidates, query, transform) abort
+function! wilder#cmdline#python_filter_fruzzy(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
-  if a:transform isnot 0
-    let l:transformed = map(copy(a:candidates), {_, x -> a:transform(x)})
-  else
-    let l:transformed = 0
-  endif
-
-  return {ctx -> _wilder_python_filter_fruzzy(ctx, a:opts, a:candidates, a:query, l:transformed)}
+  return {ctx -> _wilder_python_filter_fruzzy(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
 function! wilder#cmdline#python_filter_cpsm(ctx, opts, candidates, query) abort
@@ -826,8 +810,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
 
     let l:File_fuzzy_filter = wilder#result({
           \ 'value': {ctx, xs, data -> l:Filter(
-          \   ctx, xs, get(data, 'cmdline.match_arg', ''),
-          \   {x -> x[len(get(data, 'path_prefix', '')) :]}
+          \   ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', '')
           \ )}})
   endif
 

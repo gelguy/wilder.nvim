@@ -171,12 +171,12 @@ class Wilder(object):
                         candidates = self.filter_cpsm(event, filter_opts, candidates, query)
 
                     elif filter_name == 'filter_fruzzy':
-                        candidates = self.filter_fruzzy(event, filter_opts, candidates, query, False)
+                        candidates = self.filter_fruzzy(event, filter_opts, candidates, query)
 
                     elif filter_name == 'filter_fuzzy':
                         case_sensitive = filter_opts['case_sensitive'] if 'case_sensitive' in filter_opts else 2
                         pattern = self.make_fuzzy_pattern(query, case_sensitive)
-                        candidates = self.filter_fuzzy(event, filter_opts, candidates, pattern, False)
+                        candidates = self.filter_fuzzy(event, filter_opts, candidates, pattern)
 
                     elif filter_name == 'sort_difflib':
                         candidates = self.sort_difflib(event, filter_opts, candidates, query)
@@ -553,21 +553,18 @@ class Wilder(object):
 
         return pattern
 
-    def filter_fuzzy(self, event, opts, candidates, pattern, transformed):
-        if not transformed:
-            transformed = candidates
-
+    def filter_fuzzy(self, event, opts, candidates, pattern):
         engine = opts['engine'] if 'engine' in opts else 're'
         re = importlib.import_module(engine)
         # re2 does not use re.UNICODE by default
         pattern = re.compile(pattern, re.UNICODE)
 
         checker = EventChecker(event)
-        for index, candidate in enumerate(candidates):
+        for candidate in candidates:
             if checker.check():
                 return
 
-            if pattern.search(transformed[index]):
+            if pattern.search(candidate):
                 yield candidate
 
     @neovim.function('_wilder_python_filter_fruzzy', sync=False)
@@ -597,15 +594,11 @@ class Wilder(object):
 
         return self.filter_fruzzy_py(*args)
 
-    def filter_fruzzy_native(self, event, opts, candidates, query, transformed):
+    def filter_fruzzy_native(self, event, opts, candidates, query):
         fruzzy_mod = importlib.import_module('fruzzy_mod')
         limit = opts['limit'] if 'limit' in opts else 1000
 
-        if transformed:
-            zipped = zip(candidates, transformed)
-            indexes = fruzzy_mod.scoreMatchesStr(query, zipped, '', limit, key=lambda x: x[1])
-        else:
-            indexes = fruzzy_mod.scoreMatchesStr(query, candidates, '', limit)
+        indexes = fruzzy_mod.scoreMatchesStr(query, candidates, '', limit)
 
         sorted_matches = []
         for index, score in indexes:
@@ -613,15 +606,11 @@ class Wilder(object):
 
         return sorted_matches
 
-    def filter_fruzzy_py(self, event, opts, candidates, query, transformed):
+    def filter_fruzzy_py(self, event, opts, candidates, query):
         fruzzy = importlib.import_module('fruzzy')
         limit = opts['limit'] if 'limit' in opts else 1000
 
-        if transformed:
-            zipped = zip(candidates, transformed)
-            matches = fruzzy.fuzzyMatches(query, zipped, '', limit, key=lambda x: x[1])
-        else:
-            matches = fruzzy.fuzzyMatches(query, candidates, '', limit)
+        matches = fruzzy.fuzzyMatches(query, candidates, '', limit)
 
         checker = EventChecker(event)
         arr = []
@@ -631,9 +620,6 @@ class Wilder(object):
             arr.append(match)
 
         sorted_matches = heapq.nlargest(limit, arr, key=lambda i: i[5])
-
-        if transformed:
-            return [match[0][0] for match in sorted_matches]
 
         return [match[0] for match in sorted_matches]
 
@@ -652,7 +638,6 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_filter_cpsm: ' + str(e), 'reject',))
 
-    # cpsm does not support `transformed`
     def filter_cpsm(self, event, opts, candidates, query):
         if 'cpsm_path' in opts:
             self.add_sys_path(opts['cpsm_path'])
