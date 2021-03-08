@@ -445,7 +445,7 @@ endfunction
 function! s:search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
-  let l:pipeline = [wilder#check({_, x -> !empty(x)})]
+  let l:pipeline = []
   if !get(l:opts, 'skip_cmdtype_check', 0)
     call add(l:pipeline,
           \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}))
