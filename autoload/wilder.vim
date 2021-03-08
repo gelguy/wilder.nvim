@@ -584,9 +584,14 @@ function! wilder#powerline_separator(str, from, to, ...) abort
   endif
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_spinner()
 function! wilder#spinner(...) abort
+  return call('wilder#wildmenu_spinner', a:000)
+endfunction
+
+function! wilder#wildmenu_spinner(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#component#spinner#make(l:args)
+  return wilder#render#component#wildmenu_spinner#make(l:args)
 endfunction
 
 function! wilder#condition(predicate, if_true, ...) abort

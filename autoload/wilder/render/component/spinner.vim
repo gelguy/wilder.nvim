@@ -1,64 +1,33 @@
-function! wilder#render#component#spinner#make(args) abort
-  let l:frames = get(a:args, 'frames', ['-', '\', '|', '/'])
-  if type(l:frames) is v:t_string
-    let l:frames = split(l:frames, '\zs')
-  endif
-
-  let l:Done = get(a:args, 'done', '·')
-  let l:delay = get(a:args, 'delay', 50)
-  let l:interval = get(a:args, 'interval', 100)
-
+function! wilder#render#component#spinner#make(opts) abort
   let l:state = {
-        \ 'frames': l:frames,
-        \ 'done': l:Done,
-        \ 'frame': l:Done,
-        \ 'delay': l:delay,
-        \ 'interval': l:interval,
-        \ 'index': 0,
+        \ 'num_frames': a:opts.num_frames,
+        \ 'delay': a:opts.delay,
+        \ 'interval': a:opts.interval,
+        \ 'index': -1,
         \ 'was_done': 1,
         \ 'timer': 0,
         \ 'start_time': reltime(),
-        \ 'frame_done': 0,
         \ }
 
   return {
-        \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
-        \ 'len': {ctx, result -> wilder#render#renderer#wildmenu#component_len(
-        \   s:get_char(l:state, ctx, result), ctx, result)},
-        \ 'hl': get(a:args, 'hl', ''),
-        \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
-        \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
+        \ 'spin': {ctx, result -> s:spin(l:state, ctx, result)},
         \ }
 endfunction
 
-function! s:pre_hook(state, ctx) abort
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.frames, a:ctx)
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.done, a:ctx)
-endfunction
-
-function! s:post_hook(state, ctx) abort
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.frames, a:ctx)
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.done, a:ctx)
-endfunction
-
-" set current_char in here so it is consistent with the actual rendered
-" char. Due to reltime(), the char might be changed since len is called
-" earlier
-function! s:get_char(state, ctx, result) abort
-  let a:state.frame_done = 1
-
+function! s:spin(state, ctx, result) abort
   if a:state.timer
     call timer_stop(a:state.timer)
     let a:state.timer = 0
   endif
 
+  " Result has finished.
   if a:ctx.done
     let a:state.was_done = 1
     let a:state.index = -1
-    let a:state.frame = a:state.done
-    return a:state.frame
+    return a:state.index
   endif
 
+  " Previous result was finished. Start spinner again.
   if a:state.was_done
     let a:state.was_done = 0
     let a:state.index = 0
@@ -67,6 +36,8 @@ function! s:get_char(state, ctx, result) abort
 
   let l:elapsed = reltimefloat(reltime(a:state.start_time)) * 1000
 
+  " Calculate time to next frame. Either wait for delay to be over or wait for
+  " next frame.
   if l:elapsed < a:state.delay
     let l:wait_time = a:state.delay - l:elapsed + 1
   else
@@ -78,24 +49,12 @@ function! s:get_char(state, ctx, result) abort
 
   if a:state.delay > 0 && l:elapsed < a:state.delay
     let a:state.index = -1
-    let a:state.frame = a:state.done
-    return a:state.frame
+    return a:state.index
   endif
 
   let l:elapsed_minus_delay = l:elapsed - a:state.delay
   let a:state.index = l:elapsed_minus_delay / a:state.interval
 
-  let a:state.index = float2nr(fmod(a:state.index, len(a:state.frames)))
-  let a:state.frame = a:state.frames[a:state.index]
-  return a:state.frame
-endfunction
-
-function! s:spinner(state, ctx, result) abort
-  if !a:state.frame_done
-    call s:get_char(a:state, a:ctx, a:result)
-  endif
-
-  let a:state.frame_done = 0
-
-  return a:state.frame
+  let a:state.index = float2nr(fmod(a:state.index, a:state.num_frames))
+  return a:state.index
 endfunction
