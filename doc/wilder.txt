@@ -1102,14 +1102,14 @@ wilder#wildmenu_renderer([{options}])
             `left`
             Optional~
             The component rendered on the left of the candidates.
-            See |wilder-renderer-components|.
+            See |wilder#wildmenu_renderer()-components|.
 
             Default: [wilder#previous_arrow()]
 
             `right`
             Optional~
             The component rendered on the right of the candidates.
-            See |wilder-renderer-components|.
+            See |wilder#wildmenu_renderer()-components|.
 
             Default: [wilder#next_arrow()]
 
@@ -1235,10 +1235,9 @@ wilder#lightline_theme([{options}])
 <
 
 
-COMPONENTS                          *wilder-renderer-components*
-                                    *wilder-renderer-component*
+WILDMENU RENDERER COMPONENTS        *wilder#wildmenu_renderer()-component*
 
-Components can be of the following types:
+For |wilder#wildmenu_renderer()|, components can be of the following types:
 
             String:
             The value of the string will be drawn. To change its highlight
@@ -1343,10 +1342,10 @@ The default highlight group used for the result is the `hl` option passed to
 the renderer. To change the highlight group, use a Dictionary component
 together with |wilder#make_hl()|.
 
-Here is the list of in-built components:
+The following components are provided:
 
 wilder#previous_arrow([{options}])  *wilder#previous_arrow()*
-                                    Renderer component~
+                                    wilder#wildmenu_renderer() component~
             Returns a component which shows a previous arrow when there are
             previous candidates which do not fit in the current view.
             Note Has to be used with |wilder#next_arrow()|, otherwise the
@@ -1366,7 +1365,7 @@ wilder#previous_arrow([{options}])  *wilder#previous_arrow()*
             Default: None
 
 wilder#next_arrow([{options}])      *wilder#next_arrow()*
-                                    Renderer component~
+                                    wilder#wildmenu_renderer() component~
             Returns a component which shows a next arrow when there are
             additional candidates which do not fit in the current view.
             Note Has to be used with |wilder#previous_arrow()|, otherwise the
@@ -1392,7 +1391,7 @@ wilder#next_arrow([{options}])      *wilder#next_arrow()*
             Default: None
 
 wilder#index([{options}])           *wilder#index()*
-                                    Renderer component~
+                                    wilder#wildmenu_renderer() component~
             Returns a component which shows the index of the currently
             selected candidate and the total number of candidates.
             For example, if there are 10 candidates and the 5th one is
@@ -1406,7 +1405,12 @@ wilder#index([{options}])           *wilder#index()*
             Default: None
 
 wilder#spinner([{options}])         *wilder#spinner()*
-                                    Renderer component~
+                                    Deprecated~
+            Deprecated: Use |wilder#wildmenu_spinner()|.
+
+                                    *wilder#wildmenu_spinner()*
+wilder#wildmenu_spinner([{options}])
+                                    wilder#wildmenu_renderer() component~
             Returns a component which indicates whether the current pipeline
             is still running.
 
@@ -1446,7 +1450,7 @@ wilder#separator({str}, {fg}, {bg}, [{key}])
 
                                     *wilder#powerline_separator()*
 wilder#powerline_separator({str}, {fg}, {bg}, [{key}])
-                                    Renderer component~
+                                    wilder#wildmenu_renderer() component~
             Helper function to draw an powerline-like separator.
             {str} should be the separator character
             {fg} is the highlight group from which the |highlight-ctermfg| and
@@ -1458,7 +1462,7 @@ wilder#powerline_separator({str}, {fg}, {bg}, [{key}])
 
                                     *wilder#condition()*
 wilder#condition({predicate}, {if_true}, [{if_false}])
-                                    Renderer component~
+                                    wilder#wildmenu_renderer() component~
             Returns a component which renders the given components based on
             the {predicate}.
             {predicate} is a function which takes a {ctx} and the pipeline
@@ -1468,6 +1472,232 @@ wilder#condition({predicate}, {if_true}, [{if_false}])
             If the result is true, {if_true} is used the component. Otherwise
             {if_false} is used. If {if_false} is not given, no component is
             drawn.
+
+
+                                    *wilder#popupmenu_renderer()*
+wilder#popupmenu_renderer([{options}])
+                                    Renderer~
+                                    Neovim only~
+            Returns a renderer which draws the results as a popupmenu.
+
+            {options} is a dictionary with keys:
+            `highlights`
+            Optional~
+            A dictionary whose values are |highlight-groups|. See
+            |wilder-pipeline-result-draw| on how this dictionary is used.
+
+            The default keys of the dictionary are:
+                `default`
+                Optional~
+                The default highlight group used.
+
+                Default: 'Pmenu'
+
+                `selected`
+                Optional~
+                The highlight group used for a selected candidate.
+
+                Default: 'PmenuSel'
+
+                `error`
+                Optional~
+                The highlight group used for the error message.
+
+                Default: 'Pmenu'
+
+                `accent`
+                Optional~
+                The highlight group used for accents. See the
+                `apply_highlights` option.
+
+                Default: The `default` highlight with |underline| and |bold|
+
+                `selected_accent`
+                Optional~
+                The highlight group used for accents for a selected candidate.
+                See the `apply_highlights` option.
+
+                Default: The `selected` highlight with |underline| and |bold|
+
+            `ellipsis`
+            Optional~
+            The string to appended to a candidate if it is too long. The
+            candidate is first truncated.
+
+            Default: '...'
+
+            `left`
+            Optional~
+            A list of columns to show on the left side of the popupmenu.
+            See |wilder#popupmenu_renderer()-columns|.
+
+            Default: []
+
+            `right`
+            Optional~
+            A list of columns to show on the right side of the popupmenu.
+            See |wilder#popupmenu_renderer()-columns|.
+
+            Default: [' ', wilder#popupmenu_scrollbar()]
+
+            `apply_highlights`
+            Optional~
+
+            See the `apply_highlights` key of |wilder#wildmenu_renderer()|.
+
+            Default: []
+
+            `winblend`
+            Optional~
+            'winblend' to apply to the popupmenu.
+
+            Default: 0
+
+            `max_height`
+            Optional~
+            The maximum height of the popupmenu. Can be a number or a string.
+            If it is a String, it should be in the form of '{percent}%', where
+            the value used is the height of the editor * {percent} / 100.
+
+            Setting to 0 indicates no maximum height.
+
+            Default: '50%'
+
+            `max_width`
+            Optional~
+            The maximum width of the popupmenu. Can be a number or a string.
+            If it is a String, it should be in the form of '{percent}%', where
+            the value used is the width of the editor * {percent} / 100.
+
+            Setting to 0 indicates no maximum width.
+
+            Default: '50%'
+
+            `min_width`
+            Optional~
+            The minimum width of the popupmenu. Can be a number or a string.
+            If it is a String, it should be in the form of '{percent}%', where
+            the value used is the width of the editor * {percent} / 100.
+
+            Setting to 0 indicates no minimum width.
+
+            Default: 0
+
+
+POPUPMENU RENDERER COLUMNS          *wilder#wildmenu_renderer()-columns*
+
+For |wilder#popupmenu_renderer()|, columns can be of the following types:
+
+            String:
+            The value of the string will be drawn. The `default` or `selected`
+            highlight will be used.
+
+            The empty string ' ' can be used to give padding to the left or
+            right of the popupmenu.
+
+            Function:
+            A function which takes a {ctx}, the pipeline result {result} and
+            the index of the current row {i} and returns a string or a list of
+            highlight chunks [[{text}, {hl}], ...].
+
+            The keys of {ctx} are the same as the ones in the `render`
+            key of |wilder-renderer|, with an additional `page` key which is a
+            2 element array [{start}, {end}] indicating the start and end of
+            the candidates currently being drawn. If no candidates are drawn,
+            the page is [-1, -1].
+
+            Dictionary:
+            A dictionary with the following keys:
+                `value`
+                Mandatory~
+                A string or a function. See above String and Function types
+                for more details.
+
+                `pre_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder starts, or when wilder becomes unhidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `post_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder stops, or when wilder becomes hidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                                    *wilder#popupmenu_scrollbar()*
+wilder#popupmenu_scrollbar([{options}]
+                                    wilder#popupmenu_renderer() component~
+            Returns a component which adds a scrollbar to the popupmenu.
+
+            {options} is a dictionary with keys:
+            `thumb_char`
+            Optional~
+            The character to use for the scrollbar thumb.
+
+            Default: '█'
+
+            `scrollbar_char`
+            Optional~
+            The character to use for the scrollbar.
+
+            Default: ' '
+
+            `thumb_hl`
+            Optional~
+            The highlight to use for the scrollbar thumb.
+
+            Default: 'PmenuThumb'
+
+            `scrollbar_hl`
+            Optional~
+            The highlight to use for the scrollbar.
+
+            Default: 'PmenuSbar'
+
+                                    *wilder#popupmenu_spinner()*
+wilder#popupmenu_spinner([{options}])
+                                    wilder#popupmenu_renderer() component~
+            Returns a component which indicates whether the current pipeline
+            is still running.
+
+            {options} is a dictionary with keys:
+            `frames`
+            Optional~
+            The frames to use for the spinner. Can be either a string or a
+            list of strings. If it is a string, the string is split into
+            characters and each character is a frame.
+
+            Default: ['-', '\', '|', '/'']
+
+            `done`
+            Optional~
+            The string to display when the pipeline is done, or when there
+            is no pipeline running, or when the `delay` timeout has not been
+            reached.
+
+            Default: '·'
+
+            `delay`
+            Optional~
+            The time in milliseconds before the spinner should show.
+
+            Default: 100
+
+            `interval`
+            Optional~
+            The time in milliseconds for each frame.
+
+            Default: 100
+
 
 ==============================================================================
 6. API                              *wilder-API*

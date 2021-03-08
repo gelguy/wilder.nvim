@@ -8,7 +8,7 @@ function! wilder#render#component#wildmenu_spinner#make(args) abort
 
   let l:spinner = wilder#render#component#spinner#make({
         \ 'num_frames': len(l:frames),
-        \ 'delay': get(a:args, 'delay', 50),
+        \ 'delay': get(a:args, 'delay', 100),
         \ 'interval': get(a:args, 'interval', 100),
         \ })
 

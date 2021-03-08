@@ -65,10 +65,9 @@ function! s:prepare_state(opts) abort
     endif
   endif
 
-
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:state.left = []
-    let l:state.right = [' ']
+    let l:state.right = [' ', wilder#popupmenu_scrollbar()]
   else
     let l:state.left = get(a:opts, 'left', [])
     let l:state.right = get(a:opts, 'right', [])
