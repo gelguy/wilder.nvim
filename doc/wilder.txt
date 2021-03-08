@@ -1017,8 +1017,8 @@ A renderer is a dictionary containing the following keys:
 
             {ctx} contains no keys.
 
-There is one in-built renderer, which can be set to be drawn using the
-statusline or drawn using a floating window for Neovim 0.4+.
+There is are 2 in-built renderers, |wilder#wildmenu_renderer()| and
+|wilder#popupmenu_renderer()|.
 
                                     *wilder#wildmenu_renderer()*
 wilder#wildmenu_renderer([{options}])
@@ -1064,7 +1064,7 @@ wilder#wildmenu_renderer([{options}])
                 Optional~
                 The highlight group used for the error message.
 
-                Default: 'WildMenu'
+                Default: 'ErrorMsg'
 
                 `separator`
                 Optional~
@@ -1495,7 +1495,7 @@ wilder#popupmenu_renderer([{options}])
 
                 `selected`
                 Optional~
-                The highlight group used for a selected candidate.
+                The highlight group used for a selected line.
 
                 Default: 'PmenuSel'
 
@@ -1503,7 +1503,7 @@ wilder#popupmenu_renderer([{options}])
                 Optional~
                 The highlight group used for the error message.
 
-                Default: 'Pmenu'
+                Default: 'ErrorMsg'
 
                 `accent`
                 Optional~

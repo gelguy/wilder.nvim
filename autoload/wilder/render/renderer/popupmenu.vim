@@ -4,7 +4,7 @@ function! s:prepare_state(opts) abort
         \ 'highlights': extend(l:highlights, {
         \   'default': get(a:opts, 'hl', 'Pmenu'),
         \   'selected': get(a:opts, 'selected_hl', 'PmenuSel'),
-        \   'error': get(a:opts, 'error_hl', 'Error'),
+        \   'error': get(a:opts, 'error_hl', 'ErrorMsg'),
         \ }, 'keep'),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
         \ 'winblend': get(a:opts, 'winblend', 0),
@@ -130,12 +130,31 @@ function! s:render(state, ctx, result) abort
   let a:ctx.page = l:page
   let a:state.page = l:page
 
+  call nvim_buf_clear_namespace(a:state.buf, a:state.ns_id, 0, -1)
+
+  let a:ctx.highlights = a:state.highlights
+
+  let l:in_sandbox = 0
+  try
+    call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [])
+  catch /E523/
+    " might be in sandbox due to expr mapping
+    let l:in_sandbox = 1
+  endtry
+
+  if has_key(a:ctx, 'error')
+    if l:in_sandbox
+      call timer_start(0, {-> s:draw_error(a:state, a:ctx)})
+    else
+      call s:draw_error(a:state, a:ctx)
+    endif
+    return
+  endif
+
   if l:page == [-1, -1]
     call s:close_win(a:state)
     return
   endif
-
-  let a:ctx.highlights = a:state.highlights
 
   let l:apply_highlights = get(a:state, 'apply_highlights', [])
 
@@ -218,14 +237,6 @@ function! s:render(state, ctx, result) abort
   " -1 to shift left by 1 column for the added padding.
   let l:pos = get(a:result, 'pos', 0)
 
-  let l:in_sandbox = 0
-  try
-    call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [])
-  catch /E523/
-    " might be in sandbox due to expr mapping
-    let l:in_sandbox = 1
-  endtry
-
   if l:in_sandbox
     call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos)})
   else
@@ -245,18 +256,7 @@ function! s:render_lines(state, lines, width, pos) abort
   let l:col = a:pos % &columns
 
   " Always show the pum above the cmdline.
-  let l:cmdheight = (strdisplaywidth(getcmdline()) + 1) / &columns + 1
-  if l:cmdheight < &cmdheight
-    let l:cmdheight = &cmdheight
-  elseif l:cmdheight > 1
-    " Show the pum above the msgsep.
-    let l:has_msgsep = stridx(&display, 'msgsep') >= 0
-
-    if l:has_msgsep
-      let l:cmdheight += 1
-    endif
-  endif
-
+  let l:cmdheight = s:get_cmdheight()
   let l:row = &lines - l:cmdheight - l:height
 
   call nvim_win_set_config(a:state.win, {
@@ -267,7 +267,7 @@ function! s:render_lines(state, lines, width, pos) abort
         \ 'width': a:width,
         \ })
 
-  call nvim_buf_clear_namespace(a:state.buf, a:state.ns_id, 0, -1)
+  call nvim_win_set_option(a:state.win, 'wrap', v:false)
 
   let l:i = 0
   while l:i < len(a:lines)
@@ -392,6 +392,48 @@ function! s:make_page(state, ctx, result) abort
   return [l:end - l:height, l:end]
 endfunction
 
+function! s:draw_error(state, ctx) abort
+  if a:state.win == -1
+    call s:open_win(a:state)
+  endif
+
+  let l:error = wilder#render#to_printable(a:ctx.error)
+  let l:width = strdisplaywidth(l:error)
+  let l:height = 1
+
+  let l:max_width = a:state.get_max_width()
+  if l:width > l:max_width
+    let l:height = float2nr(ceil(1.0 * l:width / l:max_width))
+    let l:width = l:max_width
+  endif
+
+  let l:max_height = a:state.get_max_height()
+  if l:height > l:max_height
+    let l:height = l:max_height
+  endif
+
+  " Always show the pum above the cmdline.
+  let l:cmdheight = s:get_cmdheight()
+  let l:row = &lines - l:cmdheight - l:height
+
+  call nvim_win_set_config(a:state.win, {
+        \ 'relative': 'editor',
+        \ 'row': l:row,
+        \ 'col': 0,
+        \ 'height': l:height,
+        \ 'width': l:width,
+        \ })
+
+  call nvim_win_set_option(a:state.win, 'wrap', v:true)
+
+  let l:hl = a:ctx.highlights['error']
+
+  call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [l:error])
+  call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, 0, 0, -1)
+
+  redraw
+endfunction
+
 function! s:draw_x(state, ctx, result, i) abort
   let l:use_cache = a:ctx.selected == a:i
   if l:use_cache && a:state.draw_cache.has_key(a:i)
@@ -510,4 +552,21 @@ function! s:open_win(state) abort
   call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
 
   let a:state.win = l:win
+endfunction
+
+function! s:get_cmdheight() abort
+  " Always show the pum above the cmdline.
+  let l:cmdheight = (strdisplaywidth(getcmdline()) + 1) / &columns + 1
+  if l:cmdheight < &cmdheight
+    let l:cmdheight = &cmdheight
+  elseif l:cmdheight > 1
+    " Show the pum above the msgsep.
+    let l:has_msgsep = stridx(&display, 'msgsep') >= 0
+
+    if l:has_msgsep
+      let l:cmdheight += 1
+    endif
+  endif
+
+  return l:cmdheight
 endfunction

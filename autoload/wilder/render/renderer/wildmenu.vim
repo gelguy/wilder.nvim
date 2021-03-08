@@ -4,7 +4,7 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
         \ 'highlights': extend(l:highlights, {
         \   'default': get(a:args, 'hl', 'StatusLine'),
         \   'selected': get(a:args, 'selected_hl', 'WildMenu'),
-        \   'error': get(a:args, 'error_hl', 'WildMenu'),
+        \   'error': get(a:args, 'error_hl', 'ErrorMsg'),
         \ }, 'keep'),
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
