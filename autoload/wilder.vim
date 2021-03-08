@@ -629,6 +629,11 @@ function! wilder#wildmenu_renderer(...)
     return wilder#render#renderer#wildmenu_statusline#make(l:args)
 endfunction
 
+function! wilder#popupmenu_renderer(...)
+  let l:args = get(a:, 1, {})
+  return wilder#render#renderer#popupmenu#make(l:args)
+endfunction
+
 function! wilder#airline_theme(...)
   let l:args = get(a:000, 0, {})
   return wilder#render#renderer#wildmenu_theme#airline_theme(l:args)

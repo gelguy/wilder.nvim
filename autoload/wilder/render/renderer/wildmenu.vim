@@ -9,8 +9,6 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
-        \ 'buf': -1,
-        \ 'win': -1,
         \ 'columns': -1,
         \ 'cmdheight': -1,
         \ 'draw_cache': wilder#cache#cache(),
@@ -380,9 +378,7 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
 
   let l:xs = []
   let l:len = l:end - l:start + 1
-  let l:data = type(a:result) is v:t_dict ?
-        \ get(a:result, 'data', {}) :
-        \ {}
+  let l:data = get(a:result, 'data', {})
 
   let l:i = 0
   while l:i < l:len
@@ -391,7 +387,7 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
 
     if !a:state.apply_highlights_cache.has_key(l:x) &&
           \ !empty(a:apply_highlights)
-      let l:x_highlight = s:apply_highlights(a:apply_highlights, l:data, l:x)
+      let l:x_highlight = wilder#render#apply_highlights(a:apply_highlights, l:data, l:x)
 
       if l:x_highlight isnot 0
         call a:state.apply_highlights_cache.set(l:x, l:x_highlight)
@@ -463,15 +459,4 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
 
   call add(l:res, [repeat(' ', l:space - l:width)])
   return l:res
-endfunction
-
-function! s:apply_highlights(apply_highlights, data, x)
-  for l:Apply_highlights in a:apply_highlights
-    let l:spans = l:Apply_highlights({}, a:data, a:x)
-    if l:spans isnot 0
-      return l:spans
-    endif
-  endfor
-
-  return 0
 endfunction

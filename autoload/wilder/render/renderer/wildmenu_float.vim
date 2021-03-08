@@ -1,5 +1,7 @@
 function! wilder#render#renderer#wildmenu_float#make(args) abort
   let l:state = wilder#render#renderer#wildmenu#prepare_state(a:args)
+  let l:state.buf = -1
+  let l:state.win = -1
   let l:state.ns_id = nvim_create_namespace('')
 
   return {

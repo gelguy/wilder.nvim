@@ -395,6 +395,10 @@ function! wilder#render#to_printable(x) abort
 endfunction
 
 function! wilder#render#truncate(len, x) abort
+  if a:len <= 0
+    return ''
+  endif
+
   let l:width = strdisplaywidth(a:x)
   let l:chars = split(a:x, '\zs')
   let l:index = len(l:chars) - 1
@@ -409,6 +413,10 @@ function! wilder#render#truncate(len, x) abort
 endfunction
 
 function! wilder#render#truncate_chunks(len, xs) abort
+  if a:len <= 0
+    return []
+  endif
+
   let l:width = 0
   let l:res = []
   let l:i = 0
@@ -428,6 +436,27 @@ function! wilder#render#truncate_chunks(len, xs) abort
   endwhile
 
   return l:res
+endfunction
+
+function! wilder#render#chunks_displaywidth(chunks) abort
+  let l:width = 0
+
+  for l:chunk in a:chunks
+    let l:width += strdisplaywidth(l:chunk[0])
+  endfor
+
+  return l:width
+endfunction
+
+function! wilder#render#apply_highlights(apply_highlights, data, x)
+  for l:Apply_highlights in a:apply_highlights
+    let l:spans = l:Apply_highlights({}, a:data, a:x)
+    if l:spans isnot 0
+      return l:spans
+    endif
+  endfor
+
+  return 0
 endfunction
 
 let s:high_control_characters = {
