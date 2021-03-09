@@ -776,11 +776,11 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
         \ ] + (l:should_debounce ? [l:Debounce] : []) + [
         \   {-> {ctx -> _wilder_python_file_finder(
-        \     ctx, l:opts, getcwd(), l:Dir_func(ctx, res), expand(res.arg))}},
+        \     ctx, l:opts, getcwd(), l:Dir_func(ctx, res), expand(simplify(res.arg)))}},
         \   wilder#result({
         \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
-        \     'data': extend(s:convert_result_to_data(res), {'query': res.arg}),
+        \     'data': extend(s:convert_result_to_data(res), {'query': simplify(res.arg)}),
         \   }),
         \ ]}),
         \ ]
