@@ -170,8 +170,6 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     let l:old_len = len(l:head)
 
     let l:head = expand(l:head) . l:slash
-
-    let l:res.pos += len(l:head) - l:old_len
   endif
 
   let l:res.match_arg = l:tail
@@ -180,9 +178,9 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:path_prefix = l:head ==# l:slash ? '' : l:head
 
   " If arg starts with ~/, show paths relative to ~.
-  if l:arg[0] ==# '~' && match(l:arg[1], l:dir_sep) >= 0
+  if l:arg[0] ==# '~' && match(l:arg[1], l:dir_sep) == 0
     let l:res.relative_to_home_dir = 1
-    let a:res.path_prefix = fnamemodify(l:path_prefix, ':~')
+    let l:res.path_prefix = fnamemodify(l:path_prefix, ':~')
   else
     let l:res.path_prefix = l:path_prefix
   endif
@@ -197,7 +195,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
 
   if !empty(l:head)
     " Show cursor at the start of tail.
-    let l:res.pos += l:original_len - len(l:tail) - 1
+    let l:res.pos += l:original_len - len(l:tail)
   endif
 
   return l:res
@@ -966,15 +964,15 @@ function! wilder#cmdline#pipeline(opts) abort
   if get(a:opts, 'set_pcre2_pattern', 1)
     if get(a:opts, 'fuzzy', 0)
       call add(l:getcompletion_pipeline, wilder#result({
-            \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-            \     'pcre2.pattern': s:make_python_fuzzy_regex(get(data, 'cmdline.match_arg', ''))
+            \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+            \     'pcre2.pattern': s:make_python_fuzzy_regex(get(data is v:null ? {} : data, 'cmdline.match_arg', ''))
             \   })},
             \ }))
     else
       call add(l:getcompletion_pipeline, wilder#result({
-            \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
+            \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
             \     'pcre2.pattern': '(' .
-            \         escape(get(data, 'cmdline.match_arg', ''), '\.^$*+?|(){}[]') . ')'
+            \         escape(get(data is v:null ? {} : data, 'cmdline.match_arg', ''), '\.^$*+?|(){}[]') . ')'
             \   })},
             \ }))
     endif
@@ -995,8 +993,8 @@ function! wilder#cmdline#pipeline(opts) abort
         \ ))
 
   call add(l:pipeline, wilder#result({
-        \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-        \     'query': get(data, 'cmdline.match_arg', ''),
+        \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+        \     'query': get(data is v:null ? {} : data, 'cmdline.match_arg', ''),
         \   })},
         \ }))
 
