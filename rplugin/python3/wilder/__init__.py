@@ -385,8 +385,9 @@ class Wilder(object):
             res = set()
             wildignore_list = wildignore_opt.split(',')
 
+            checker = EventChecker(event)
             for directory in directories:
-                if event.is_set():
+                if checker.check():
                     return
                 if not directory:
                     continue
