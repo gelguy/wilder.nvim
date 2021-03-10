@@ -56,7 +56,7 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
   return a:res
 endfunction
 
-function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy, keep_pos)
+function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:res = copy(a:res)
   let l:arg = l:res.arg
 
@@ -149,18 +149,20 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy, keep_pos)
   let l:matches = matchlist(l:tail, '\$\(\f*\)$')
   if len(l:matches) >= 2
     let l:env_var = l:matches[1]
+    let l:path_prefix = l:arg[:-len(l:env_var)-1]
 
+    let l:res.path_prefix = l:path_prefix
+    let l:res.expand = 'environment'
     let l:res.expand_arg = ''
     let l:res.fuzzy_char = ''
-    let l:res.completions = getcompletion(l:env_var, 'environment')
+    let l:res.completions = map(getcompletion(l:env_var, 'environment'),
+          \ {_, x -> l:path_prefix . x})
 
     " Get position of the $ in tail.
-    let l:dollar_pos = len(l:tail) - len(l:env_var) - 1
+    let l:dollar_pos = len(l:tail) - len(l:env_var)
 
-    if !a:keep_pos
-      " Show cursor after the $.
-      let l:res.pos += l:original_len - len(l:tail) + l:dollar_pos
-    endif
+    " Show cursor after the $.
+    let l:res.pos += l:original_len - len(l:tail) + l:dollar_pos
 
     return l:res
   endif
@@ -193,7 +195,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy, keep_pos)
     let l:res.fuzzy_char = ''
   endif
 
-  if !empty(l:head) && !a:keep_pos
+  if !empty(l:head)
     " Show cursor at the start of tail.
     let l:res.pos += l:original_len - len(l:tail)
   endif
@@ -776,7 +778,10 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#check({_, res -> res.expand ==# 'file' || res.expand ==# 'dir'}),
-        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, 0, 1)},
+        \ wilder#subpipeline({ctx, res1 -> [
+        \   {ctx, res1 -> wilder#cmdline#prepare_file_completion(ctx, copy(res1), 0)},
+        \   {ctx, res2 -> extend(res2, {'pos': res1.pos})},
+        \ ]}),
         \ wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
         \ ] + (l:should_debounce ? [l:Debounce] : []) + [
         \ wilder#subpipeline({ctx, res -> [
@@ -821,7 +826,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
 
   let l:file_completion_subpipeline = [
         \ wilder#check({_, res -> wilder#cmdline#is_file_expansion(res.expand)}),
-        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy, 0)},
+        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
         \ wilder#subpipeline({ctx, res -> [
         \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 1)},
         \ ] + (get(res, 'relative_to_home_dir', 0) ?
