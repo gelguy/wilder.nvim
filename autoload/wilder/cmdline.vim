@@ -56,7 +56,7 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
   return a:res
 endfunction
 
-function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
+function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy, keep_pos)
   let l:res = copy(a:res)
   let l:arg = l:res.arg
 
@@ -140,11 +140,9 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   if match(l:arg, l:dir_sep) >= 0
     let l:head = fnamemodify(l:arg, ':h')
     let l:tail = fnamemodify(l:arg, ':t')
-    let l:pos = len(l:head)
   else
     let l:head = ''
     let l:tail = l:arg
-    let l:pos = 0
   endif
 
   " Check if tail is trying to complete an env var.
@@ -159,8 +157,10 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     " Get position of the $ in tail.
     let l:dollar_pos = len(l:tail) - len(l:env_var) - 1
 
-    " Show cursor after the $.
-    let l:res.pos += l:original_len - len(l:tail) + l:dollar_pos
+    if !a:keep_pos
+      " Show cursor after the $.
+      let l:res.pos += l:original_len - len(l:tail) + l:dollar_pos
+    endif
 
     return l:res
   endif
@@ -193,7 +193,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     let l:res.fuzzy_char = ''
   endif
 
-  if !empty(l:head)
+  if !empty(l:head) && !a:keep_pos
     " Show cursor at the start of tail.
     let l:res.pos += l:original_len - len(l:tail)
   endif
@@ -688,7 +688,16 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, is_file_expansion) abort
 endfunction
 
 function wilder#cmdline#should_use_file_finder(res) abort
+  if has_key(a:res, 'completions')
+    return v:false
+  endif
+
   let l:arg = a:res.arg
+
+  if match(l:arg, '\*') != -1
+    return 0
+  endif
+
   if l:arg[0] ==# '%' ||
         \ l:arg[0] ==# '#' ||
         \ l:arg[0] ==# '<'
@@ -703,10 +712,6 @@ function wilder#cmdline#should_use_file_finder(res) abort
         \ l:path[0:1] ==# '..' ||
         \ l:path[0:1] ==# './' ||
         \ l:path[0:1] ==# '.\'
-    return 0
-  endif
-
-  if match(l:path, '\*') != -1
     return 0
   endif
 
@@ -753,16 +758,16 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
     let l:opts['filters'] = l:checked_filters
   endif
 
-  if has_key(l:opts, 'dir')
-    let l:Dir = l:opts['dir']
+  if has_key(l:opts, 'path')
+    let l:Path = l:opts['path']
 
-    if type(l:Dir) isnot v:t_func
-      let l:Dir_func = {-> l:Dir}
+    if type(l:Path) isnot v:t_func
+      let l:Path_func = {-> l:Path}
     else
-      let l:Dir_func = l:Dir
+      let l:Path_func = l:Path
     endif
   else
-    let l:Dir_func = wilder#project_root()
+    let l:Path_func = wilder#project_root()
   endif
 
   let l:Cpsm = wilder#python_filter_fruzzy()
@@ -770,17 +775,19 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
   let l:pipeline = [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
-        \ wilder#check({_, res -> res.expand ==# 'file'}),
-        \ wilder#subpipeline({ctx, res -> [
-        \   {ctx, _ -> wilder#cmdline#prepare_file_completion(ctx, copy(res), 0)},
-        \   wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
+        \ wilder#check({_, res -> res.expand ==# 'file' || res.expand ==# 'dir'}),
+        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, 0, 1)},
+        \ wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
         \ ] + (l:should_debounce ? [l:Debounce] : []) + [
+        \ wilder#subpipeline({ctx, res -> [
         \   {-> {ctx -> _wilder_python_file_finder(
-        \     ctx, l:opts, getcwd(), l:Dir_func(ctx, res), expand(simplify(res.arg)))}},
+        \     ctx, l:opts, getcwd(), l:Path_func(ctx, res),
+        \     expand(simplify(res.arg)), res.expand ==# 'dir')
+        \   }},
         \   wilder#result({
         \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
-        \     'data': extend(s:convert_result_to_data(res), {'query': simplify(res.arg)}),
+        \     'data': extend(s:convert_result_to_data(res), {'query': expand(simplify(res.arg))}),
         \   }),
         \ ]}),
         \ ]
@@ -814,7 +821,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
 
   let l:file_completion_subpipeline = [
         \ wilder#check({_, res -> wilder#cmdline#is_file_expansion(res.expand)}),
-        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
+        \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy, 0)},
         \ wilder#subpipeline({ctx, res -> [
         \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 1)},
         \ ] + (get(res, 'relative_to_home_dir', 0) ?

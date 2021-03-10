@@ -110,7 +110,7 @@ class Wilder(object):
     def _file_finder(self, args):
         self.run_in_background(self.file_finder_handler, args)
 
-    def file_finder_handler(self, event, ctx, opts, cwd, path, query):
+    def file_finder_handler(self, event, ctx, opts, cwd, path, query, find_dir):
         try:
             if not path:
                 path = cwd
@@ -118,7 +118,13 @@ class Wilder(object):
             path = Path(os.path.expanduser(path)).resolve()
             path_str = str(path)
 
-            command = opts['command'] if 'command' in opts else ['find', '.', '-type', 'f', '-printf', '%P\\n']
+            if find_dir:
+                command = opts['dir_command'] if 'dir_command' in opts else \
+                        ['find', '.', '-type', 'd', '-printf', '%P\\n']
+            else:
+                command = opts['file_command'] if 'file_command' in opts else \
+                        ['find', '.', '-type', 'f', '-printf', '%P\\n']
+
             timeout_ms = opts['timeout'] if 'timeout' in opts else 5000
             filters = opts['filters'] if 'filters' in opts else \
                     [{'name': 'filter_fuzzy', 'opts': {}}, {'name': 'sort_difflib', 'opts': {}}]
@@ -197,6 +203,9 @@ class Wilder(object):
             relpath = os.path.relpath(path, cwd)
             if relpath != '.':
                 candidates = [os.path.join(relpath, c) for c in candidates]
+
+            if find_dir:
+                candidates = [c + os.sep if c and c[-1] != os.sep else c  for c in candidates]
 
             self.queue.put((ctx, candidates,))
         except Exception as e:
@@ -417,7 +426,7 @@ class Wilder(object):
                         continue
 
                 for entry in it:
-                    if event.is_set():
+                    if checker.check():
                         return
                     try:
                         if has_wildcard:

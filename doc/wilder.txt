@@ -782,8 +782,8 @@ wilder#python_file_finder_pipeline([{options}])
                                     Pipeline~
                                     Experimental~
             Returns a pipeline which matches files fuzzily. This pipeline is
-            used when the cmdline is expanding `file` completions, which for
-            example occurs when in the |:edit| command.
+            used when the cmdline is expanding `file` or `dir` completions,
+            which for example occurs when in the |:edit| or |:cd| commands.
 
             If the path for the argument is not relative to the current
             directory, or cannot be resolved as a descendant of the current
@@ -793,15 +793,24 @@ wilder#python_file_finder_pipeline([{options}])
             front of |wilder#cmdline_pipeline()| when using |wilder#branch()|.
 
             {options} is a dictionary with keys:
-            `command`
+            `file_command`
             Optional~
-            A list of strings representing the command to be used to retrieve
-            the list of files.
+            A list of strings representing the command used to search for
+            files.
 
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
 
             Default: ['find', '.', '-type', 'f', '-printf', '%P\n']
+
+            `dir_command`
+            Optional~
+            A list of strings representing the command used to search for
+            directories.
+
+            To use `fd`, set to this option to ['fd', '-td'].
+
+            Default: ['find', '.', '-type', 'd', '-printf', '%P\n']
 
             `timeout`
             Optional~
@@ -819,7 +828,7 @@ wilder#python_file_finder_pipeline([{options}])
 
             Default: 0
 
-            `dir`
+            `path`
             Optional~
             A function or a string representing the path to the directory to
             gather the files from. If it is a string, it will be converted to
