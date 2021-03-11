@@ -707,7 +707,15 @@ function wilder#cmdline#should_use_file_finder(res) abort
     return 0
   endif
 
-  let l:path = simplify(a:res.expand_arg)
+  let l:path = a:res.expand_arg
+
+  " ./. simplifies to .
+  if l:path ==# './.' ||
+        \ l:path ==# '.\.'
+    return 0
+  endif
+
+  let l:path = simplify(l:path)
 
   if l:path[0] ==# '~' ||
         \ l:path[0] ==# '/' ||
