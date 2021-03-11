@@ -17,7 +17,6 @@ function! wilder#render#component#wildmenu_spinner#make(args) abort
         \ 'current_frame': l:Done,
         \ 'done': l:Done,
         \ 'spinner': l:spinner,
-        \ 'frame_done': 0,
         \ }
 
   return {
@@ -44,25 +43,17 @@ endfunction
 " char. Due to reltime(), the char might be changed since len is called
 " earlier
 function! s:get_char(state, ctx, result) abort
-  let a:state.frame_done = 1
-
   let l:frame_index = a:state.spinner.spin(a:ctx, a:result)
 
   if l:frame_index == -1
-    let a:state.curent_frame = a:state.done
-    return a:state.done
+    let a:state.current_frame = a:state.done
+  else
+    let a:state.current_frame = a:state.frames[l:frame_index]
   endif
 
-  let a:state.current_frame = a:state.frames[l:frame_index]
   return a:state.current_frame
 endfunction
 
 function! s:spinner(state, ctx, result) abort
-  if !a:state.frame_done
-    call a:state.spinner.spin(a:ctx, a:result)
-  endif
-
-  let a:state.frame_done = 0
-
   return a:state.current_frame
 endfunction
