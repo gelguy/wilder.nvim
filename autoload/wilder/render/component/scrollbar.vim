@@ -1,6 +1,7 @@
 function! wilder#render#component#scrollbar#make(opts) abort
   let l:state = {
-        \ 'cache': wilder#cache#mru_cache(10),
+        \ 'cache': wilder#cache#cache(),
+        \ 'run_id': -1,
         \ }
 
   let l:thumb_char = get(a:opts, 'thumb_char', '█')
@@ -15,6 +16,10 @@ function! wilder#render#component#scrollbar#make(opts) abort
 endfunction
 
 function! s:scrollbar(state, ctx, result, i) abort
+  if a:state.run_id != a:ctx.run_id
+    call a:state.cache.clear()
+  endif
+
   let l:page = a:ctx.page
 
   if l:page == [-1, -1]
@@ -31,7 +36,7 @@ function! s:scrollbar(state, ctx, result, i) abort
 
   let l:cache = a:state['cache']
 
-  let l:key = string([l:start, l:end, l:num_candidates, l:pum_height])
+  let l:key = l:start . ' ' . l:end . ' ' . l:num_candidates . ' ' . l:pum_height
 
   if !l:cache.has_key(l:key)
     let l:thumb_start = floor(1.0 * l:start * l:pum_height / l:num_candidates)
