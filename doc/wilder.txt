@@ -2005,11 +2005,11 @@ wilder#python_filter_fruzzy([{limit}, [{fruzzy_path}]])
                                     Neovim only~
                                     fruzzy plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#python_filt_cpsm()|. Can be used as the `fuzzy_filter`
+            |wilder#python_filt_fruzzy()|. Can be used as the `fuzzy_filter`
             option in |wilder#cmdline_pipeline()|.
 
             The {limit} and {fruzzy_path} arguments are passed to
-            |wilder#python_filt_cpsm()| as options.
+            |wilder#python_filt_fruzzy()| as options.
 
             {fruzzy_path} can be provided to set the path for `fruzzy.py`.
             It is inferred by Neovim otherwise.
