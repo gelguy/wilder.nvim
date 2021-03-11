@@ -60,11 +60,17 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:res = copy(a:res)
   let l:arg = l:res.arg
 
+  let l:slash = !has('win32') && !has('win64')
+        \ ? '/'
+        \ : &shellslash
+        \ ? '/'
+        \ : '\'
+
   " Special handling for ~. Return the home directory.
   if l:arg ==# '~'
     let l:res.fuzzy_char = ''
     let l:res.expand_arg = ''
-    let l:res.completions = [expand('~')]
+    let l:res.completions = [expand('~') . l:slash]
 
     return l:res
   endif
@@ -96,11 +102,6 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     endif
   endif
 
-  let l:slash = !has('win32') && !has('win64')
-        \ ? '/'
-        \ : &shellslash
-        \ ? '/'
-        \ : '\'
   let l:allow_backslash = has('win32') || has('win64')
 
   " Pattern for matching directory separator.
