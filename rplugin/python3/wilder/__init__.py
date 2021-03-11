@@ -125,6 +125,8 @@ class Wilder(object):
                 command = opts['file_command'] if 'file_command' in opts else \
                         ['find', '.', '-type', 'f', '-printf', '%P\\n']
 
+            key = str(path) + ':' + str(command)
+
             timeout_ms = opts['timeout'] if 'timeout' in opts else 5000
             filters = opts['filters'] if 'filters' in opts else \
                     [{'name': 'filter_fuzzy', 'opts': {}}, {'name': 'sort_difflib', 'opts': {}}]
@@ -139,13 +141,13 @@ class Wilder(object):
 
                     self.path_files_dict = dict()
 
-                if path_str in self.path_files_dict:
-                    result = self.path_files_dict[path_str]
+                if key in self.path_files_dict:
+                    result = self.path_files_dict[key]
                 else:
                     kill_event = threading.Event()
                     done_event = threading.Event()
                     result = {'kill': kill_event, 'done': done_event}
-                    self.path_files_dict[path_str] = result
+                    self.path_files_dict[key] = result
                     self.executor.submit(functools.partial( self.find_files_subprocess, *([command, path, timeout_ms, result]), ))
 
             while True:
