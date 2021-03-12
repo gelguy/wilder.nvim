@@ -12,7 +12,7 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
         \ 'columns': -1,
         \ 'cmdheight': -1,
         \ 'draw_cache': wilder#cache#cache(),
-        \ 'apply_highlights_cache': wilder#cache#cache(),
+        \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ }
 
@@ -45,16 +45,19 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
           \ 'underline', 'bold')
   endif
 
-  if has_key(a:args, 'apply_highlights')
-    let l:Apply_highlights = a:args['apply_highlights']
-    if type(l:Apply_highlights) isnot v:t_list
-      let l:state.apply_highlights = [l:Apply_highlights]
-    else
-      let l:state.apply_highlights = l:Apply_highlights
-    endif
+  if has_key(a:args, 'highlighter')
+    let l:Highlighter = a:args['highlighter']
+  elseif has_key(a:args, 'apply_highlights')
+    let l:Highlighter = a:args['apply_highlights']
   else
-      let l:state.apply_highlights = []
+    let l:Highlighter = 0
   endif
+
+  if type(l:Highlighter) is v:t_list
+    let l:Highlighter = wilder#highlight#merge_highlighters(l:Highlighter)
+  endif
+
+  let l:state.highlighter = l:Highlighter
 
   return l:state
 endfunction
@@ -62,7 +65,7 @@ endfunction
 function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
   if a:state.run_id != a:ctx.run_id
     call a:state.draw_cache.clear()
-    call a:state.apply_highlights_cache.clear()
+    call a:state.highlight_cache.clear()
   endif
 
   let a:state.run_id = a:ctx.run_id
@@ -92,8 +95,7 @@ function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, resu
 
   let a:ctx.highlights = a:state.highlights
 
-  return s:make_hl_chunks(a:state, a:ctx, a:result,
-        \ get(a:state, 'apply_highlights', []))
+  return s:make_hl_chunks(a:state, a:ctx, a:result,)
 endfunction
 
 function! wilder#render#renderer#wildmenu#component_len(component, ctx, result) abort
@@ -295,14 +297,14 @@ function! s:make_page_from_end(state, ctx, result, end) abort
   return [l:start, l:end]
 endfunction
 
-function! s:make_hl_chunks(state, ctx, result, apply_highlights) abort
+function! s:make_hl_chunks(state, ctx, result) abort
   let l:chunks = []
   let l:chunks += s:draw_component(a:state.left, a:ctx.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
     let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
   else
-    let l:chunks += s:draw_xs(a:state, a:ctx, a:result, a:apply_highlights)
+    let l:chunks += s:draw_xs(a:state, a:ctx, a:result)
   endif
 
   let l:chunks += s:draw_component(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
@@ -363,7 +365,7 @@ function! s:draw_error(hl, ctx, error) abort
   return [[l:error, a:hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
-function! s:draw_xs(state, ctx, result, apply_highlights) abort
+function! s:draw_xs(state, ctx, result) abort
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
@@ -379,18 +381,19 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
   let l:xs = []
   let l:len = l:end - l:start + 1
   let l:data = get(a:result, 'data', {})
+  let l:Highlighter = a:state.highlighter
 
   let l:i = 0
   while l:i < l:len
     let l:current = l:i + l:start
     let l:x = s:draw_x(a:state, a:ctx, a:result, l:current)
 
-    if !a:state.apply_highlights_cache.has_key(l:x) &&
-          \ !empty(a:apply_highlights)
-      let l:x_highlight = wilder#render#apply_highlights(a:apply_highlights, l:data, l:x)
+    if !a:state.highlight_cache.has_key(l:x) &&
+          \ l:Highlighter isnot 0
+      let l:highlight = l:Highlighter(a:ctx, l:x, l:data)
 
-      if l:x_highlight isnot 0
-        call a:state.apply_highlights_cache.set(l:x, l:x_highlight)
+      if l:highlight isnot 0
+        call a:state.highlight_cache.set(l:x, l:highlight)
       endif
     endif
 
@@ -409,10 +412,10 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      if a:state.apply_highlights_cache.has_key(l:x)
+      if a:state.highlight_cache.has_key(l:x)
         let l:chunks = wilder#render#spans_to_chunks(
               \ l:x,
-              \ a:state.apply_highlights_cache.get(l:x),
+              \ a:state.highlight_cache.get(l:x),
               \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
               \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
         let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
@@ -442,10 +445,10 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
     let l:x = l:xs[l:i]
     let l:is_selected = l:selected == l:i + l:start
 
-    if a:state.apply_highlights_cache.has_key(l:x)
+    if a:state.highlight_cache.has_key(l:x)
       let l:chunks = wilder#render#spans_to_chunks(
             \ l:x,
-            \ a:state.apply_highlights_cache.get(l:x),
+            \ a:state.highlight_cache.get(l:x),
             \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
             \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
       let l:res += chunks

@@ -124,98 +124,24 @@ function! wilder#uniq(xs, ...) abort
   return l:res
 endfunction
 
+function! wilder#query_highlighter(...)
+  let l:opts = get(a:, 1, {})
+  return wilder#highlight#query_highlighter(l:opts)
+endfunction
+
+" DEPRECATED: use wilder#query_highlighter()
 function! wilder#query_common_subsequence_spans(...)
+  return call('wilder#query_highlighter', a:000)
+endfunction
+
+function! wilder#pcre2_highlighter(...)
   let l:opts = get(a:, 1, {})
-  let l:language = get(l:opts, 'language', 'vim')
-  let l:case_sensitive = get(l:opts, 'case_sensitive', 0)
-
-  if l:language ==# 'python'
-    return {ctx, data, str -> has_key(data, 'query') ?
-          \ wilder#python_common_subsequence_spans(
-          \   str, data['query'], l:case_sensitive) : 0}
-  endif
-
-  return {ctx, data, str -> has_key(data, 'query') ?
-        \ wilder#vim_common_subsequence_spans(
-        \   str, data['query'], l:case_sensitive) : 0}
+  return wilder#highlight#pcre2_highlighter(l:opts)
 endfunction
 
-function! wilder#vim_common_subsequence_spans(str, query, case_sensitive)
-  let l:split_str = split(a:str, '\zs')
-  let l:split_query = split(a:query, '\zs')
-
-  let l:spans = []
-  let l:span = [-1, 0]
-
-  let l:byte_pos = 0
-  let l:i = 0
-  let l:j = 0
-  while l:i < len(l:split_str) && l:j < len(l:split_query)
-    let l:str_len = strlen(l:split_str[l:i])
-
-    if a:case_sensitive
-      let l:match = l:split_str[l:i] ==# l:split_query[l:j]
-    else
-      let l:match = l:split_str[l:i] ==? l:split_query[l:j]
-    endif
-
-    if l:match
-      let l:j += 1
-
-      if l:span[0] == -1
-        let l:span[0] = l:byte_pos
-      endif
-
-      let l:span[1] += l:str_len
-    endif
-
-    if !l:match && l:span[0] != -1
-      call add(l:spans, l:span)
-      let l:span = [-1, 0]
-    endif
-
-    let l:byte_pos += l:str_len
-    let l:i += 1
-  endwhile
-
-  if l:span[0] != -1
-    call add(l:spans, l:span)
-  endif
-
-  return l:spans
-endfunction
-
-function! wilder#python_common_subsequence_spans(str, query, case_sensitive)
-  return _wilder_python_common_subsequence_spans(a:str, a:query, a:case_sensitive)
-endfunction
-
+" DEPRECATED: use wilder#pcre2_highlighter()
 function! wilder#pcre2_capture_spans(...)
-  let l:opts = get(a:, 1, {})
-  let l:language = get(l:opts, 'language', 'python')
-
-  if l:language ==# 'lua'
-    return {ctx, data, str -> has_key(data, 'pcre2.pattern') ?
-          \ wilder#lua_pcre2_capture_spans(data['pcre2.pattern'], str) : 0}
-  endif
-
-  let l:engine = get(l:opts, 'engine', 're')
-  return {ctx, data, str -> has_key(data, 'pcre2.pattern') ?
-        \ wilder#python_pcre2_capture_spans(data['pcre2.pattern'], str, l:engine) : 0}
-endfunction
-
-function! wilder#python_pcre2_capture_spans(pattern, str, ...)
-  let l:engine = get(a:, 1, 're')
-  return _wilder_python_pcre2_capture_spans(a:pattern, a:str, l:engine)
-endfunction
-
-function! wilder#lua_pcre2_capture_spans(pattern, str)
-  let l:spans = luaeval(
-        \ 'require("wilder").pcre2_capture_spans(_A[1], _A[2])',
-        \ [a:pattern, a:str])
-
-  " remove first element which is the matched string
-  " convert from [{start+1}, {end+1}] to [{start}, {len}]
-  return map(l:spans[1:], {i, s -> [s[0] - 1, s[1] - s[0] + 1]})
+  return call('wilder#pcre2_highlighter', a:000)
 endfunction
 
 " pipeline components

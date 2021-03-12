@@ -12,7 +12,7 @@ function! s:prepare_state(opts) abort
         \ 'buf': -1,
         \ 'win': -1,
         \ 'draw_cache': wilder#cache#cache(),
-        \ 'apply_highlights_cache': wilder#cache#cache(),
+        \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ 'longest_line_width': 0,
         \ 'ns_id': nvim_create_namespace(''),
@@ -89,16 +89,19 @@ function! s:prepare_state(opts) abort
           \ 'underline', 'bold')
   endif
 
-  if has_key(a:opts, 'apply_highlights')
-    let l:Apply_highlights = a:opts['apply_highlights']
-    if type(l:Apply_highlights) isnot v:t_list
-      let l:state.apply_highlights = [l:Apply_highlights]
-    else
-      let l:state.apply_highlights = l:Apply_highlights
-    endif
+  if has_key(a:opts, 'highlighter')
+    let l:Highlighter = a:opts['highlighter']
+  elseif has_key(a:opts, 'apply_highlights')
+    let l:Highlighter = a:opts['apply_highlights']
   else
-      let l:state.apply_highlights = []
+    let l:Highlighter = 0
   endif
+
+  if type(l:Highlighter) is v:t_list
+    let l:Highlighter = wilder#highlight#merge_highlighters(l:Highlighter)
+  endif
+
+  let l:state.highlighter = l:Highlighter
 
   return l:state
 endfunction
@@ -117,7 +120,7 @@ function! s:render(state, ctx, result) abort
   if a:state.run_id != a:ctx.run_id
     let a:state.longest_line_width = 0
     call a:state.draw_cache.clear()
-    call a:state.apply_highlights_cache.clear()
+    call a:state.highlight_cache.clear()
   endif
 
   let a:state.run_id = a:ctx.run_id
@@ -156,7 +159,7 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  let l:apply_highlights = get(a:state, 'apply_highlights', [])
+  let l:Highlighter = get(a:state, 'highlighter', [])
 
   let [l:start, l:end] = l:page
 
@@ -168,7 +171,7 @@ function! s:render(state, ctx, result) abort
   " Draw each line and calculate the width taken by the chunks.
   let l:i = l:start
   while l:i <= l:end
-    let l:line = s:draw_line(a:state, a:ctx, a:result, l:i, l:apply_highlights)
+    let l:line = s:draw_line(a:state, a:ctx, a:result, l:i)
 
     let l:left_width = wilder#render#chunks_displaywidth(l:line[0])
     let l:chunks_width = wilder#render#chunks_displaywidth(l:line[1])
@@ -471,7 +474,7 @@ function! s:draw_column(column, ctx, result, i) abort
 endfunction
 
 " Returns [left_column, chunks, right_column]
-function! s:draw_line(state, ctx, result, i, apply_highlights) abort
+function! s:draw_line(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
   " Add 1 column of padding.
@@ -486,25 +489,26 @@ function! s:draw_line(state, ctx, result, i, apply_highlights) abort
   endfor
 
   let l:chunks = s:draw_line_chunks(
-        \ a:state, a:ctx, a:result, a:i, a:apply_highlights)
+        \ a:state, a:ctx, a:result, a:i)
 
   return [l:left_chunks, l:chunks, l:right_chunks]
 endfunction
 
-function! s:draw_line_chunks(state, ctx, result, i, apply_highlights) abort
+function! s:draw_line_chunks(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
   let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)
 
-  if !empty(a:apply_highlights)
-    if a:state.apply_highlights_cache.has_key(l:str)
-      let l:spans = a:state.apply_highlights_cache.get(l:str)
+  let l:Highlighter = a:state.highlighter
+  if l:Highlighter isnot 0
+    if a:state.highlight_cache.has_key(l:str)
+      let l:highlights = a:state.highlight_cache.get(l:str)
     else
       let l:data = get(a:result, 'data', {})
-      let l:spans = wilder#render#apply_highlights(a:apply_highlights, l:data, l:str)
+      let l:highlights = l:Highlighter(a:ctx, l:str, l:data)
 
-      if l:spans isnot 0
-        call a:state.apply_highlights_cache.set(l:str, l:spans)
+      if l:highlights isnot 0
+        call a:state.highlight_cache.set(l:str, l:highlights)
       else
         return [[l:str, a:ctx.highlights[l:is_selected ? 'selected' : 'default']]]
       endif
@@ -512,7 +516,7 @@ function! s:draw_line_chunks(state, ctx, result, i, apply_highlights) abort
 
     return wilder#render#spans_to_chunks(
           \ l:str,
-          \ l:spans,
+          \ l:highlights,
           \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
           \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
   endif

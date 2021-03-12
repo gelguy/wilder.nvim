@@ -764,8 +764,7 @@ wilder#cmdline_pipeline([{options}])
             Optional~
             When true, sets the `pcre2.pattern` key in
             |wilder-pipeline-result-data| to the pattern used in the default
-            fuzzy filtering. This key is used by
-            |wilder#pcre2_apply_highlights()|.
+            fuzzy filtering. This key is used by |wilder#pcre2_highlighter()|.
 
             Should be set to false when using a fuzzy filter not based on
             PCRE2.
@@ -1046,8 +1045,7 @@ wilder#wildmenu_renderer([{options}])
 
             Note: The statusline might be truncated or not update correctly
             when there are too many separate highlight chunks. See |E541|.
-            This can be mitigated by turning off the `apply_highlights`
-            option.
+            This can be mitigated by turning off the `highlighter` option.
 
             Default: has('nvim-0.4') ? 'float' : 'statusline'
 
@@ -1083,15 +1081,15 @@ wilder#wildmenu_renderer([{options}])
 
                 `accent`
                 Optional~
-                The highlight group used for accents. See the
-                `apply_highlights` option.
+                The highlight group used for accents. See the `highlighter`
+                option.
 
                 Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
                 The highlight group used for accents for a selected candidate.
-                See the `apply_highlights` option.
+                See the `highlighter` option.
 
                 Default: The `selected` highlight with |underline| and |bold|
 
@@ -1122,14 +1120,14 @@ wilder#wildmenu_renderer([{options}])
 
             Default: [wilder#next_arrow()]
 
-            `apply_highlights`
+            `highlighter`
             Optional~
-            A list of functions used to apply the `accent` and
+            A function or a list of functions used to apply the `accent` and
             `selected_accent` highlights to a candidate. For convenience, also
             accepts a single function, which will be converted to a singleton
             list.
 
-            Each function should take a {ctx}, {data} and {candidate} and
+            The function should take a {ctx}, {candidate} and {data} and
             return 0 when accents cannot be applied and return a list
             otherwise.
             The returned list should consist of [{start}, {len}] spans, where
@@ -1144,23 +1142,23 @@ wilder#wildmenu_renderer([{options}])
 
             Returning an empty list will result in no accent highlights.
 
-            Each function of the list is applied in order, and the first
-            non-0 result will be used to apply the higlights. If all functions
-            return 0, no highlights will be applied.
+            If it is a list of functions, the list is applied in order, and
+            the first non-0 result will be used to apply the higlights. If all
+            functions return 0, no highlights will be applied.
 
             {ctx} contains no keys.
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#query_common_subsequence_spans()| and
-            |wilder#pcre2_capture_spans()| are helper functions which can be
-            used to apply accents to the candidates from
-            |wilder#cmdline_pipeline()| and |wilder#python_search_pipeline()|.
+            |wilder#query_highlighter()| and |wilder#pcre2_highlighter()| are
+            helper functions which can be used to apply accents to the
+            candidates from |wilder#cmdline_pipeline()| and
+            |wilder#python_search_pipeline()|.
 
             Example:
 >
             call wilder#set_option('renderer', wilder#wildmenu_renderer({
-                  \ 'apply_highlights': wilder#pcre2_capture_spans(),
+                  \ 'highlighter': wilder#pcre2_highlighter(),
                   \ }))
 <
 
@@ -1177,6 +1175,9 @@ wilder#wildmenu_renderer([{options}])
 
             `separator_hl`
             Deprecated: Use `highlights`.
+
+            `apply_highlights`
+            Deprecated: Use `highlighter`.
 
                                     *wilder#airline_theme()*
                                     *wilder#lightline_theme()*
@@ -2127,11 +2128,16 @@ wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
 
                                     *wilder#query_common_subsequence_spans()*
 wilder#query_common_subsequence_spans([{opts}])
+                                    Deprecated~
+            Deprecated: Use |wilder#query_highlighter()|.
+
+wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
                                     python option only for Neovim~
             Helper function which returns a function for the
-            `apply_highlights` option for |wilder#wildmenu_renderer()|.
+            `highlighter` option for |wilder#wildmenu_renderer()| or
+            |wilder#popupmenu_renderer()|.
 
-            Returns a function which takes {ctx}, {data} and {candidate} as
+            Returns a function which takes {ctx}, {candidate} and {data} as
             arguments.
             If {data} does not contain the key `query`, returns 0.  Otherwise,
             calculates the common subsequence between {candidate} and
@@ -2143,8 +2149,8 @@ wilder#query_common_subsequence_spans([{opts}])
             `language`
             Optional~
             One of 'vim' or 'python'. If 'python', uses a Python
-            |remote-plugin| function to retrieve the results.
-            Otherwise, uses a Vim function.
+            |remote-plugin| function to retrieve the results.  Otherwise, uses
+            a Vim function.
 
             Default: 'vim'
 
@@ -2157,12 +2163,18 @@ wilder#query_common_subsequence_spans([{opts}])
 
                                     *wilder#pcre2_capture_spans()*
 wilder#pcre2_capture_spans([{opts}])
+                                    Deprecated~
+            Deprecated: Use |wilder#pcre2_highlighter()|.
+
+
+wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
                                     Neovim only~
                                     pcre2 package required for lua option~
-            Helper function which returns a function for the
-            `apply_highlights` option for |wilder#wildmenu_renderer()|.
+            Helper function which returns a function for the `highlighter`
+            option for |wilder#wildmenu_renderer()| or
+            |wilder#popupmenu_renderer()|.
 
-            Returns a function which takes {ctx}, {data} and {candidate} as
+            Returns a function which takes {ctx}, {candidate} and {data} as
             arguments.
             If {data} does not contain the key `pcre2.pattern`, returns 0.
             Otherwise, returns a list of [{start}, {len}] spans, where each
