@@ -15,7 +15,7 @@
 # Requirements
 
 - Vim 8.1+ or Neovim 0.3+
-- Certain features (e.g. Python 3 and async search) are only enabled in Neovim
+- Certain features are only enabled in Neovim
 
 # Install
 
@@ -24,7 +24,7 @@
 call dein#add('gelguy/wilder.nvim')
 
 " with vim-plug
-" UpdateRemotePlugins needed
+" :UpdateRemotePlugins needed
 Plug 'gelguy/wilder.nvim'
 ```
 
@@ -44,7 +44,7 @@ cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 call wilder#set_option('modes', ['/', '?', ':'])
 ```
 
-When searching using `/`, you will find that suggestions are provided on the statusline. The default search pipeline uses substring matching.
+When searching using `/`, suggestions will be provided. The default search pipeline uses substring matching.
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
 
 Use `<Tab>` to cycle through the list forwards, and `<S-Tab>` to move backwards.
@@ -137,65 +137,38 @@ To optimise for performane, the `command` and `filters` options can be customise
 
 By using `wilder#set_option('renderer', <renderer>)`, you are able to change how `wilder` draws the candidates. By default, `wilder` tries its best to look like the default wildmenu.
 
-`wilder` currently provides 1 renderer `wilder#wildmenu_renderer()` by default. For Neovim 0.4+, the candidates are drawn using a floating window. Otherwise, the candidates are drawn on the statusline. Drawing on the statusline has the limitation that its width is limited to the current window.
+### Wildmenu renderer
+
+`wilder#wildmenu_renderer()` draws the candidates above the cmdline. For Neovim 0.4+, a floating window is used. Otherwise the statusline is used.
+Due to statusline limitations, the wildmenu only fills up the width of the current window.
 
 ```vim
-" 'highlights.default'  : the default highlight used
-" 'highlights.selected' : the highlight for the selected item
-" 'apply_highlights'    : applies highlighting to the candidates
-" 'separator'           : string used to separate candidates
-" 'ellipsis'            : string appended to truncated candidates which are too long
+" 'highlighter'    : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'highlights': {
-      \   'default': 'StatusLine',
-      \   'selected': 'WildMenu',
-      \ },
-      \ 'apply_highlights':
-      \    wilder#query_common_subsequence_spans(),
-      \ 'separator': ' ',
-      \ 'ellipsis': '...',
+      \ 'highlighter': wilder#query_highlighter(),
       \ })
 ```
 
+### Popupmenu renderer (Experimental) (Neovim only)
 
-The renderer options include the fields `left` and `right`. Use these to add renderer components which help to provide more information on the current state of the candidates. Unlike pipeline components, render components can take the form of strings, functions, dictionaries and lists. See `:h wilder-renderer` for more details.
-
-Note: the more components in the renderer, the more computation is needed to draw it. This may result in noticeable input lag as the wildmenu has to be redrawn on every keystroke.
-
-Here are some examples of the built-in components:
-
-#### Index n/m
+For Neovim 0.4+, `wilder#popupmenu_renderer()` can be used.
 
 ```vim
-call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'right': [wilder#index()],
+" 'highlighter'    : applies highlighting to the candidates
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlighter': wilder#query_highlighter(),
       \ })
 ```
 
-Shows the index of the current candidate out of the total number of candidates - e.g. ` 12/50`.
-
-#### Spinner
+Use `wilder#renderer_mux()` to choose which renderer to use for different cmdline modes.
+This is helpful since the popupmenu will block the current window when searching with `/`.
 
 ```vim
-" 'frames'   : characters to show, can also be a list of strings
-" 'done'     : string to show when there is no work to do or work has finished
-" 'delay'    : delay in ms before showing the spinner
-" 'interval' : interval in ms for each frame to be shown
-call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'left': [
-      \   ' ',
-      \   wilder#spinner({
-      \     'frames': '-\|/',
-      \     'done': '·',
-      \     'delay': 50,
-      \     'interval': 100,
-      \   }),
-      \   ' ',
-      \ ],
-      \ }))
+call wilder#set_option('renderer', wilder#renderer_mux({
+      \ ':': wilder#popupmenu_renderer(),
+      \ '/': wilder#wildmenu_renderer(),
+      \ })
 ```
-
-The spinner indicates when `wilder` has async work which has not been completed yet.
 
 #### Configuration in the screenshot
 
@@ -205,7 +178,7 @@ The spinner indicates when `wilder` has async work which has not been completed 
 call wilder#set_option('renderer', wilder#wildmenu_renderer(
       \ wilder#airline_theme({
       \   'highlights': {},
-      \   'apply_highlights': wilder#query_common_subsequence_spans(),
+      \   'highlighter': wilder#query_highlighter(),
       \   'separator': ' · ',
       \ })))
 ```
