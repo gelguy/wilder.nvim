@@ -1,17 +1,18 @@
-function! wilder#pipeline#component#branch#make(args) abort
+function! wilder#pipe#map#make(args) abort
   if len(a:args) == 0
-    return {_, x -> v:false}
+    return {_, x -> []}
   endif
 
-  return {_, x -> {ctx -> s:branch(a:args, ctx, x)}}
+  return {_, x -> {ctx -> s:map(a:args, ctx, x)}}
 endfunction
 
-function! s:branch(pipelines, ctx, x) abort
+function! s:map(pipelines, ctx, x) abort
   let l:state = {
         \ 'index': 0,
         \ 'pipelines': a:pipelines,
         \ 'original_ctx': copy(a:ctx),
         \ 'original_x': copy(a:x),
+        \ 'result': [],
         \ }
 
   call wilder#pipeline#run(
@@ -24,15 +25,12 @@ function! s:branch(pipelines, ctx, x) abort
 endfunction
 
 function! s:on_finish(state, ctx, x) abort
-  if a:x isnot v:false
-    call s:resolve(a:state, a:ctx, a:x)
-    return
-  endif
+  call add(a:state.result, a:x)
 
   let a:state.index += 1
 
   if a:state.index >= len(a:state.pipelines)
-    call s:resolve(a:state, a:ctx, v:false)
+    call s:resolve(a:state, a:ctx, a:state.result)
     return
   endif
 

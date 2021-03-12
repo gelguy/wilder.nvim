@@ -159,30 +159,30 @@ function! wilder#_sleep(t) abort
 endfunction
 
 function! wilder#branch(...) abort
-  return wilder#pipeline#component#branch#make(a:000)
+  return wilder#pipe#branch#make(a:000)
 endfunction
 
 function! wilder#map(...) abort
-  return wilder#pipeline#component#map#make(a:000)
+  return wilder#pipe#map#make(a:000)
 endfunction
 
 function! wilder#subpipeline(f) abort
-  return wilder#pipeline#component#subpipeline#make(a:f)
+  return wilder#pipe#subpipeline#make(a:f)
 endfunction
 
 function! wilder#check(...) abort
-  return wilder#pipeline#component#check#make(a:000)
+  return wilder#pipe#check#make(a:000)
 endfunction
 
 function! wilder#debounce(t) abort
-  return wilder#pipeline#component#debounce#make(a:t)
+  return wilder#pipe#debounce#make(a:t)
 endfunction
 
 function! wilder#result(...) abort
   if !a:0
-    return wilder#pipeline#component#result#make()
+    return wilder#pipe#result#make()
   else
-    return wilder#pipeline#component#result#make(a:1)
+    return wilder#pipe#result#make(a:1)
   endif
 endfunction
 
@@ -193,7 +193,7 @@ function! wilder#result_output_escape(chars) abort
 endfunction
 
 function! wilder#sequence(...) abort
-  return wilder#pipeline#component#sequence#make(a:000)
+  return wilder#pipe#sequence#make(a:000)
 endfunction
 
 function! wilder#vim_substring() abort
@@ -202,7 +202,7 @@ endfunction
 
 function! wilder#vim_search(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipeline#component#vim_search#make(l:args)
+  return wilder#pipe#vim_search#make(l:args)
 endfunction
 
 function! wilder#vim_sort() abort
@@ -244,12 +244,12 @@ endfunction
 
 function! wilder#python_fuzzy_match(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipeline#component#python_fuzzy_match#make(l:args)
+  return wilder#pipe#python_fuzzy_match#make(l:args)
 endfunction
 
 function! wilder#python_fuzzy_delimiter(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipeline#component#python_fuzzy_delimiter#make(l:args)
+  return wilder#pipe#python_fuzzy_delimiter#make(l:args)
 endfunction
 
 function! wilder#python_search(...) abort
@@ -267,11 +267,11 @@ endfunction
 
 function! wilder#history(...) abort
   if !a:0
-    return wilder#pipeline#component#history#make()
+    return wilder#pipe#history#make()
   elseif a:0 == 1
-    return wilder#pipeline#component#history#make(a:1)
+    return wilder#pipe#history#make(a:1)
   else
-    return wilder#pipeline#component#history#make(a:1, a:2)
+    return wilder#pipe#history#make(a:1, a:2)
   endif
 endfunction
 

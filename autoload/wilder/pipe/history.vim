@@ -1,4 +1,4 @@
-function! wilder#pipeline#component#history#make(...) abort
+function! wilder#pipe#history#make(...) abort
   let l:num_history = a:0 > 0 ? a:1 : 50
   let l:cmdtype = a:0 > 1 ? a:2 : ''
   return {ctx, x -> s:history(l:num_history, l:cmdtype)}
