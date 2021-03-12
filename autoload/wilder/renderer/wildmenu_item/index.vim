@@ -1,4 +1,4 @@
-function! wilder#renderer#item#index#make(args) abort
+function! wilder#renderer#wildmenu_item#index#make(args) abort
   return {
         \ 'value': {ctx, result -> s:value(a:args, ctx, result)},
         \ 'len': {ctx, result -> len(len(result.value)) * 2 + 1 + 2},

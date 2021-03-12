@@ -482,7 +482,7 @@ endfunction
 
 function! wilder#wildmenu_index(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#item#index#make(l:args)
+  return wilder#renderer#wildmenu_item#index#make(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_string()
@@ -501,17 +501,17 @@ endfunction
 
 function! wilder#wildmenu_previous_arrow(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#item#arrows#make_previous(l:args)
+  return wilder#renderer#wildmenu_item#arrows#make_previous(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_next_arrow()
 function! wilder#next_arrow(...) abort
-  return call('wilder#wildmenu_previous_arrow', a:000)
+  return call('wilder#wildmenu_next_arrow', a:000)
 endfunction
 
 function! wilder#wildmenu_next_arrow(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#item#arrows#make_next(l:args)
+  return wilder#renderer#wildmenu_item#arrows#make_next(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_powerline_separator()
@@ -526,9 +526,9 @@ endfunction
 
 function! wilder#wildmenu_powerline_separator(str, from, to, ...) abort
   if a:0
-    return wilder#renderer#item#separator#make(a:str, a:from, a:to, a:1)
+    return wilder#renderer#wildmenu_item#separator#make(a:str, a:from, a:to, a:1)
   else
-    return wilder#renderer#item#separator#make(a:str, a:from, a:to)
+    return wilder#renderer#wildmenu_item#separator#make(a:str, a:from, a:to)
   endif
 endfunction
 
@@ -539,7 +539,7 @@ endfunction
 
 function! wilder#wildmenu_spinner(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#item#wildmenu_spinner#make(l:args)
+  return wilder#renderer#wildmenu_item#spinner#make(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_condition()
@@ -549,17 +549,17 @@ endfunction
 
 function! wilder#wildmenu_condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
-  return wilder#renderer#item#condition#make(a:predicate, a:if_true, l:if_false)
+  return wilder#renderer#wildmenu_item#condition#make(a:predicate, a:if_true, l:if_false)
 endfunction
 
 function! wilder#popupmenu_scrollbar(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#column#scrollbar#make(l:args)
+  return wilder#renderer#popupmenu_column#scrollbar#make(l:args)
 endfunction
 
 function! wilder#popupmenu_spinner(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#column#popupmenu_spinner#make(l:args)
+  return wilder#renderer#popupmenu_column#spinner#make(l:args)
 endfunction
 
 " renderers

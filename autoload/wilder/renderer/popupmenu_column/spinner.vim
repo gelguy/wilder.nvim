@@ -1,4 +1,4 @@
-function! wilder#renderer#column#popupmenu_spinner#make(opts) abort
+function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
   let l:frames = get(a:opts, 'frames', ['-', '\', '|', '/'])
   if type(l:frames) is v:t_string
     let l:frames = split(l:frames, '\zs')
