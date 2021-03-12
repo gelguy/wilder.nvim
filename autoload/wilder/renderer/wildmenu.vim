@@ -1,4 +1,4 @@
-function! wilder#render#renderer#wildmenu#prepare_state(args) abort
+function! wilder#renderer#wildmenu#prepare_state(args) abort
   let l:highlights = copy(get(a:args, 'highlights', {}))
   let l:state = {
         \ 'highlights': extend(l:highlights, {
@@ -62,7 +62,7 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
   return l:state
 endfunction
 
-function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
+function! wilder#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
   if a:state.run_id != a:ctx.run_id
     call a:state.draw_cache.clear()
     call a:state.highlight_cache.clear()
@@ -74,12 +74,12 @@ function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, resu
     let a:state.page = [-1, -1]
   endif
 
-  let l:space_used = wilder#render#renderer#wildmenu#component_len(
+  let l:space_used = wilder#renderer#wildmenu#component_len(
         \ a:state.left,
         \ a:ctx,
         \ a:result)
 
-  let l:space_used += wilder#render#renderer#wildmenu#component_len(
+  let l:space_used += wilder#renderer#wildmenu#component_len(
         \ a:state.right,
         \ a:ctx,
         \ a:result)
@@ -98,7 +98,7 @@ function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, resu
   return s:make_hl_chunks(a:state, a:ctx, a:result,)
 endfunction
 
-function! wilder#render#renderer#wildmenu#component_len(component, ctx, result) abort
+function! wilder#renderer#wildmenu#component_len(component, ctx, result) abort
   if type(a:component) is v:t_string
     return strdisplaywidth(wilder#render#to_printable(a:component))
   endif
@@ -118,30 +118,30 @@ function! wilder#render#renderer#wildmenu#component_len(component, ctx, result) 
       let l:Value = a:component.value
     endif
 
-    return wilder#render#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
+    return wilder#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
   endif
 
   if type(a:component) is v:t_func
     let l:Value = a:component(a:ctx, a:result)
 
-    return wilder#render#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
+    return wilder#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
   endif
 
   " v:t_list
   let l:len = 0
 
   for l:Elem in a:component
-    let l:len += wilder#render#renderer#wildmenu#component_len(l:Elem, a:ctx, a:result)
+    let l:len += wilder#renderer#wildmenu#component_len(l:Elem, a:ctx, a:result)
   endfor
 
   return l:len
 endfunction
 
-function! wilder#render#renderer#wildmenu#component_pre_hook(component, ctx) abort
+function! wilder#renderer#wildmenu#component_pre_hook(component, ctx) abort
   call s:component_hook(a:component, a:ctx, 'pre')
 endfunction
 
-function! wilder#render#renderer#wildmenu#component_post_hook(component, ctx) abort
+function! wilder#renderer#wildmenu#component_post_hook(component, ctx) abort
   call s:component_hook(a:component, a:ctx, 'post')
 endfunction
 

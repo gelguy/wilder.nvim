@@ -1,4 +1,4 @@
-function! wilder#render#renderer#mux#make(opts) abort
+function! wilder#renderer#mux#make(opts) abort
   let l:state = {
         \ ':': a:opts[':'],
         \ '/': a:opts['/'],

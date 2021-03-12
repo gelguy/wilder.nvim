@@ -106,7 +106,7 @@ function! s:prepare_state(opts) abort
   return l:state
 endfunction
 
-function! wilder#render#renderer#popupmenu#make(args) abort
+function! wilder#renderer#popupmenu#make(args) abort
   let l:state = s:prepare_state(a:args)
 
   return {

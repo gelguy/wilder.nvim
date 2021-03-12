@@ -535,7 +535,7 @@ endfunction
 " renderers
 
 function! wilder#renderer_mux(args)
-  return wilder#render#renderer#mux#make(a:args)
+  return wilder#renderer#mux#make(a:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_renderer()
@@ -560,25 +560,25 @@ function! wilder#wildmenu_renderer(...)
   endif
 
   if l:args.mode ==# 'float'
-    return wilder#render#renderer#wildmenu_float#make(l:args)
+    return wilder#renderer#wildmenu_float#make(l:args)
   endif
 
-    return wilder#render#renderer#wildmenu_statusline#make(l:args)
+    return wilder#renderer#wildmenu_statusline#make(l:args)
 endfunction
 
 function! wilder#popupmenu_renderer(...)
   let l:args = get(a:, 1, {})
-  return wilder#render#renderer#popupmenu#make(l:args)
+  return wilder#renderer#popupmenu#make(l:args)
 endfunction
 
 function! wilder#airline_theme(...)
   let l:args = get(a:000, 0, {})
-  return wilder#render#renderer#wildmenu_theme#airline_theme(l:args)
+  return wilder#renderer#wildmenu_theme#airline_theme(l:args)
 endfunction
 
 function! wilder#lightline_theme(...)
   let l:args = get(a:000, 0, {})
-  return wilder#render#renderer#wildmenu_theme#lightline_theme(l:args)
+  return wilder#renderer#wildmenu_theme#lightline_theme(l:args)
 endfunction
 
 function! s:find_function_script_file(f)

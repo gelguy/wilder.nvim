@@ -1,4 +1,4 @@
-function! wilder#render#renderer#wildmenu_theme#airline_theme(opts) abort
+function! wilder#renderer#wildmenu_theme#airline_theme(opts) abort
   let l:hls = [
         \ 'airline_c',
         \ 'WildMenu',
@@ -8,7 +8,7 @@ function! wilder#render#renderer#wildmenu_theme#airline_theme(opts) abort
   return s:theme(a:opts, 'Airline', l:hls)
 endfunction
 
-function! wilder#render#renderer#wildmenu_theme#lightline_theme(opts) abort
+function! wilder#renderer#wildmenu_theme#lightline_theme(opts) abort
   let l:hls = [
         \ 'LightlineMiddle_active',
         \ 'WildMenu',
