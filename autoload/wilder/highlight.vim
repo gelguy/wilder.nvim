@@ -85,7 +85,7 @@ function! wilder#highlight#python_highlight_query(ctx, opts, x, data)
   let l:query = a:data['query']
   let l:case_sensitive = get(a:opts, 'case_sensitive', 0)
 
-  return _wilder_python_common_subsequence_spans(a:str, a:query, a:case_sensitive)
+  return _wilder_python_highlight_query(a:str, a:query, a:case_sensitive)
 endfunction
 
 function! wilder#highlight#pcre2_highlighter(...)
@@ -107,7 +107,7 @@ function! wilder#highlight#python_highlight_pcre2(ctx, opts, x, data)
   let l:pattern = a:data['pcre2.pattern']
   let l:engine = get(a:opts, 'engine', 're')
 
-  return _wilder_python_pcre2_capture_spans(l:pattern, a:x, l:engine)
+  return _wilder_python_highlight_pcre2(l:pattern, a:x, l:engine)
 endfunction
 
 function! wilder#highlight#lua_highlight_pcre2(ctx, opts, x, data)
@@ -118,10 +118,38 @@ function! wilder#highlight#lua_highlight_pcre2(ctx, opts, x, data)
   let l:pattern = a:data['pcre2.pattern']
 
   let l:spans = luaeval(
-        \ 'require("wilder").pcre2_capture_spans(_A[1], _A[2])',
+        \ 'require("wilder").highlight_pcre2(_A[1], _A[2])',
         \ [l:pattern, a:x])
 
   " remove first element which is the matched string
   " convert from [{start+1}, {end+1}] to [{start}, {len}]
   return map(l:spans[1:], {i, s -> [s[0] - 1, s[1] - s[0] + 1]})
+endfunction
+
+function! wilder#highlight#cpsm_highlighter(...)
+  let l:opts = get(a:, 1, {})
+  return {ctx, x, data -> wilder#highlight#python_highlight_cpsm(ctx, l:opts, x, data)}
+endfunction
+
+function! wilder#highlight#python_highlight_cpsm(ctx, opts, x, data)
+  if !has_key(a:data, 'query')
+    return 0
+  endif
+
+  let l:query = a:data['query']
+
+  let l:expand = get(a:data, 'cmdline.expand', '')
+  let l:is_path = l:expand ==# 'file' ||
+        \ l:expand ==# 'file_in_path' ||
+        \ l:expand ==# 'dir' ||
+        \ l:expand ==# 'shellcmd' ||
+        \ l:expand ==# 'buffer'
+
+  let l:opts = {
+        \ 'ispath': l:is_path,
+        \ 'cpsm_path': get(a:opts, 'cpsm_path', wilder#cpsm_path()),
+        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'basic'),
+        \ }
+
+  return _wilder_python_highlight_cpsm(l:opts, a:x, l:query)
 endfunction

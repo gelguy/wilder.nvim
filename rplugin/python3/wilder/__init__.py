@@ -726,8 +726,8 @@ class Wilder(object):
 
         return [x[0] for x in sorted(xs, key=lambda x: x[1])]
 
-    @neovim.function('_wilder_python_common_subsequence_spans', sync=True)
-    def _common_subsequence_spans(self, args):
+    @neovim.function('_wilder_python_highlight_query', sync=True)
+    def _highlight_query(self, args):
         string = args[0]
         query = args[1]
         case_sensitive = args[2]
@@ -764,8 +764,8 @@ class Wilder(object):
 
         return spans
 
-    @neovim.function('_wilder_python_pcre2_capture_spans', sync=True)
-    def _capture_spans(self, args):
+    @neovim.function('_wilder_python_highlight_pcre2', sync=True)
+    def _highlight_pcre2(self, args):
         pattern = args[0]
         string = args[1]
         module_name = args[2]
@@ -788,6 +788,36 @@ class Wilder(object):
             captures.append([byte_start, byte_len])
 
         return captures
+
+    @neovim.function('_wilder_python_highlight_cpsm', sync=True)
+    def _highlight_cpsm(self, args):
+
+        opts = args[0]
+        x = args[1]
+        query = args[2]
+
+        if 'cpsm_path' in opts:
+            self.add_sys_path(opts['cpsm_path'])
+
+        ispath = opts['ispath'] if 'ispath' in opts else False
+        highlight_mode = opts['highlight_mode'] if 'highlight_mode' in opts else 'basic'
+
+        cpsm = importlib.import_module('cpsm_py')
+        match = cpsm.ctrlp_match([x], query, ispath=ispath, highlight_mode=highlight_mode)
+
+        if not match[0]:
+            return 0
+
+        vim_highlights = match[1]
+
+        spans = []
+        for vim_highlight in vim_highlights:
+            match = re.search('\\\\zs(.*)\\\\ze', vim_highlight)
+            if match:
+                start, end = match.span()
+                spans.append((start - 6, end - start - 6))
+
+        return spans
 
 class EventChecker:
     def __init__(self, event, interval_s=0.1):

@@ -144,6 +144,11 @@ function! wilder#pcre2_capture_spans(...)
   return call('wilder#pcre2_highlighter', a:000)
 endfunction
 
+function! wilder#cpsm_highlighter(...)
+  let l:opts = get(a:, 1, {})
+  return wilder#highlight#cpsm_highlighter(l:opts)
+endfunction
+
 " pipeline components
 
 function! wilder#_sleep(t) abort
