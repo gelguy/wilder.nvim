@@ -475,35 +475,60 @@ endfunction
 
 " render components
 
+" DEPRECATED: use wilder#wildmenu_index()
 function! wilder#index(...) abort
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#component#index#make(l:args)
+  return call('wilder#wildmenu_index', a:000)
 endfunction
 
+function! wilder#wildmenu_index(...) abort
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wilder#renderer#item#index#make(l:args)
+endfunction
+
+" DEPRECATED: use wilder#wildmenu_string()
 function! wilder#string(str, ...) abort
+  return call('wilder#wildmenu_string', [str] + a:000)
+endfunction
+
+function! wilder#wildmenu_string(str, ...) abort
   return {'value': a:str, 'hl': get(a:000, 0, '')}
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_previous_arrow()
 function! wilder#previous_arrow(...) abort
-  let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#component#arrows#make_previous(l:args)
+  return call('wilder#wildmenu_previous_arrow', a:000)
 endfunction
 
+function! wilder#wildmenu_previous_arrow(...) abort
+  let l:args = a:0 > 0 ? a:1 : {}
+  return wilder#renderer#item#arrows#make_previous(l:args)
+endfunction
+
+" DEPRECATED: use wilder#wildmenu_next_arrow()
 function! wilder#next_arrow(...) abort
+  return call('wilder#wildmenu_previous_arrow', a:000)
+endfunction
+
+function! wilder#wildmenu_next_arrow(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#component#arrows#make_next(l:args)
+  return wilder#renderer#item#arrows#make_next(l:args)
 endfunction
 
-" DEPRECATED: use wilder#separator()
+" DEPRECATED: use wilder#wildmenu_powerline_separator()
 function! wilder#separator(str, from, to, ...) abort
-  return call('wilder#powerline_separator', [a:str, a:from, a:to] + a:000)
+  return call('wilder#wildmenu_powerline_separator', [a:str, a:from, a:to] + a:000)
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_powerline_separator()
 function! wilder#powerline_separator(str, from, to, ...) abort
+  return call('wilder#wildmenu_powerline_separator', [a:str, a:from, a:to] + a:000)
+endfunction
+
+function! wilder#wildmenu_powerline_separator(str, from, to, ...) abort
   if a:0
-    return wilder#render#component#separator#make(a:str, a:from, a:to, a:1)
+    return wilder#renderer#item#separator#make(a:str, a:from, a:to, a:1)
   else
-    return wilder#render#component#separator#make(a:str, a:from, a:to)
+    return wilder#renderer#item#separator#make(a:str, a:from, a:to)
   endif
 endfunction
 
@@ -514,22 +539,27 @@ endfunction
 
 function! wilder#wildmenu_spinner(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#render#component#wildmenu_spinner#make(l:args)
+  return wilder#renderer#item#wildmenu_spinner#make(l:args)
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_condition()
 function! wilder#condition(predicate, if_true, ...) abort
+  return call('wilder#wildmenu_condition', [a:predicate, a:if_true] + a:000)
+endfunction
+
+function! wilder#wildmenu_condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
-  return wilder#render#component#condition#make(a:predicate, a:if_true, l:if_false)
+  return wilder#renderer#item#condition#make(a:predicate, a:if_true, l:if_false)
 endfunction
 
 function! wilder#popupmenu_scrollbar(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#render#component#scrollbar#make(l:args)
+  return wilder#renderer#column#scrollbar#make(l:args)
 endfunction
 
 function! wilder#popupmenu_spinner(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#render#component#popupmenu_spinner#make(l:args)
+  return wilder#renderer#column#popupmenu_spinner#make(l:args)
 endfunction
 
 " renderers

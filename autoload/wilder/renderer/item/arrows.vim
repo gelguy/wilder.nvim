@@ -1,4 +1,4 @@
-function! wilder#render#component#arrows#make_previous(args) abort
+function! wilder#renderer#item#arrows#make_previous(args) abort
   let l:previous = get(a:args, 'previous', '< ')
 
   return {
@@ -8,7 +8,7 @@ function! wilder#render#component#arrows#make_previous(args) abort
         \ }
 endfunction
 
-function! wilder#render#component#arrows#make_next(args) abort
+function! wilder#renderer#item#arrows#make_next(args) abort
   let l:previous = get(a:args, 'previous', '< ')
   let l:next = get(a:args, 'next', ' >')
 

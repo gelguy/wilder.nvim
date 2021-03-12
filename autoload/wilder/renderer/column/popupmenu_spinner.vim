@@ -1,10 +1,10 @@
-function! wilder#render#component#popupmenu_spinner#make(opts) abort
+function! wilder#renderer#column#popupmenu_spinner#make(opts) abort
   let l:frames = get(a:opts, 'frames', ['-', '\', '|', '/'])
   if type(l:frames) is v:t_string
     let l:frames = split(l:frames, '\zs')
   endif
 
-  let l:spinner = wilder#render#component#spinner#make({
+  let l:spinner = wilder#renderer#spinner#make({
         \ 'num_frames': len(l:frames),
         \ 'delay': get(a:opts, 'delay', 50),
         \ 'interval': get(a:opts, 'interval', 100),

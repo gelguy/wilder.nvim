@@ -1,4 +1,4 @@
-function! wilder#render#component#spinner#make(opts) abort
+function! wilder#renderer#spinner#make(opts) abort
   let l:state = {
         \ 'num_frames': a:opts.num_frames,
         \ 'delay': a:opts.delay,

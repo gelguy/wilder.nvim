@@ -1,6 +1,6 @@
 let s:index = 0
 
-function! wilder#render#component#separator#make(str, fg, bg, ...) abort
+function! wilder#renderer#item#separator#make(str, fg, bg, ...) abort
   if a:0 == 0
     let l:key = s:index
     let s:index += 1

@@ -1,4 +1,4 @@
-function! wilder#render#component#scrollbar#make(opts) abort
+function! wilder#renderer#column#scrollbar#make(opts) abort
   let l:state = {
         \ 'cache': wilder#cache#cache(),
         \ 'run_id': -1,
