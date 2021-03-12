@@ -136,7 +136,8 @@ The pipeline is used to get completions from a given query. Use
 |wilder-option-pipeline| to set the pipeline.
 
 A pipeline is a function or  list of functions. When it is a function, it is
-implicitly converted to a list with its only element being the function.
+implicitly converted to a list with its only element being the function. The
+functions are known as pipes.
 
 Each function in the list should take a {ctx} context object and a {x} value
 and return a new {x} value. The resulting {x} is then passed to the next
@@ -165,19 +166,19 @@ functions. See |wilder-pipeline-v:false|, |wilder-pipeline-v:true| and
 |wilder-pipeline-thunk| for more details on what these special values mean,
 and how theye are handled.
 
-A component can throw an exception which will also cause the pipeline to stop.
+A pipe can throw an exception which will also cause the pipeline to stop.
 
-wilder provides some built-in pipeline functions, known as pipeline
-components. Combine these components with your own functions to create a
-custom pipeline. In particular, use |wilder#branch| to add control flow to
-your pipeline. See |wilder-pipeline-components| for the list of components.
+wilder provides some built-in pipes Combine these pipes with your own
+functions to create a custom pipeline. In particular, use |wilder#branch| to
+add control flow to your pipeline. See |wilder-pipeline-pipe|s for the list of
+pipes.
 
 wilder also provides built-in pipelines. These pipelines can be combined with
 |wilder#branch|. See |wilder-pipelines| for the list of pipelines.
 
                                     *wilder-pipeline-context*
-The first argument to a pipeline component is a {ctx} context object. The
-context is a |Dictionary| containing the following keys:
+The first argument to a pipe is a {ctx} context object. The context is a
+|Dictionary| containing the following keys:
 
                 `input`
                 The input to the first element of the pipeline.
@@ -185,14 +186,14 @@ context is a |Dictionary| containing the following keys:
                 `run_id`
                 A number to indicate the current pipeline running.
 
-Although it is not recommended, components can use the {ctx} to pass
-information to subsequent components.
+Although it is not recommended, pipes can use the {ctx} to pass information to
+subsequent pipes.
 
                                     *wilder-pipeline-v:false*
-Returning the |v:false| in a pipeline component will cause the pipeline to
-stop and return |v:false|. |v:false| indicates to wilder to not continue on
-with the pipeline, and treat it as though there are no completions. use this
-to return early from a pipeline based on certain conditions.
+Returning the |v:false| in a pipe will cause the pipeline to stop and return
+|v:false|. |v:false| indicates to wilder to not continue on with the pipeline,
+and treat it as though there are no completions. use this to return early from
+a pipeline based on certain conditions.
 
 Example:
 >
@@ -203,26 +204,26 @@ Example:
 <
 This pipeline will terminate early if the cmdline is empty.
 Since this is a common pattern, it is provided as the |wilder#check()|
-component.
+pipe.
 
                                     *wilder-pipeline-v:true*
                                     *wilder-hidden*
-Returning the |v:true| in a pipeline component is the same as returning
-|v:true|, except that it has the added behaviour of causing wilder to be
-hidden. When wilder is hidden, |wilder#in_context()| will return false, and
-wilder will not be rendered. Note that wilder is still enabled, and will still
-be handle completions and be shown again when the next pipeline returns a
-non-|v:true| value.
+Returning the |v:true| in a pipe is the same as returning |v:false|, except
+that it has the added behaviour of causing wilder to be hidden. When wilder is
+hidden, |wilder#in_context()| will return false, and wilder will not be
+rendered. Note that wilder is still enabled, and will still be handle
+completions and be shown again when the next pipeline returns a non-|v:true|
+value.
 
                                     *wilder-pipeline-thunk*
-Returning a function {f} in a pipeline component will cause the pipeline to be
-suspended. The function is called a thunk. The thunk will then be called with
-a new {ctx}. Use the thunk to call async code.
+Returning a function {f} in a pipe will cause the pipeline to be suspended.
+The function is called a thunk. The thunk will then be called with a new
+{ctx}. Thunks can be used to call async code.
 
 After the async code has finished running, |wilder#resolve()| should be caled
 with {ctx} and the result {x} as arguments. The original {ctx} from the parent
 function can be ignored. The pipeline will then be resumed, and the {x} value
-will be passed on to the next component.
+will be passed on to the next pipe.
 
 If there is an error, |wilder#reject()| should be called instead, with {ctx}
 and {error} as arguments.
@@ -244,7 +245,7 @@ Example:
 <
 This will call `MyCompletionFunction` after a 100 millisecond delay.
 
-Use this behaviour to create async pipeline components.
+Use this behaviour to create async pipes.
 
                                     *wilder-pipeline-result*
 The result of the pipeline should be a list of strings or a dictionary. For
@@ -350,44 +351,43 @@ The Result dictionary has the following keys:
    Otherwise, |wilder-pipeline-result-output| is applied. The result is then
    used to replace the cmdline.
 
-The |wilder#result()| pipeline component is a helper component which allows
-easy modification of the result dictionary.
+The |wilder#result()| pipe is a helper which allows easy modification of the
+result dictionary.
 
-COMPONENTS                          *wilder-pipeline-components*
+                                    *wilder-pipeline-pipe*
 
 wilder#check({f}, ...)              *wilder#check()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a variadic list of functions. The functions should take
             {ctx} and {x} as arguments and return true or false.
-            If any of the functions return false, this component will return
+            If any of the functions return false, this pipe will return
             |v:false|.
             Returns {x} otherwise.
 
 wilder#debounce({t})                *wilder#debounce()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a time interval {t} in milliseconds.
-            When this component is reached, the pipeline is interrupted. The
-            pipeline only continues when the same component has not been
-            reached for {t} milliseconds.
+            When this pipe is reached, the pipeline is interrupted. The
+            pipeline only continues when the same pipe has not been reached
+            for {t} milliseconds.
             The pipeline then continues with the latest value passed to the
-            component.
+            pipe.
 
             Note that using debounce in |wilder#branch()| will stall all
             branches since the branches are run sequentially.
 
 wilder#branch({list_of_pipelines})  *wilder#branch()*
-                                    Pipeline component~
-            Takes a list of pipelines. The pipelines should be a list of
-            components.
+                                    Pipe~
+            Takes a list of pipelines.
             Sequentially runs each of the pipelines, using the {ctx} and {x}
-            passed to the branch component.
+            passed to the original pipe.
             {ctx} is copied, and will not be shared between the pipelines.
             If the result of a pipeline is |v:false|, the next pipeline will
             be run.
             If the result of a pipeline is a non-|v:false| value {x}, this
-            component will return {x}.
-            If the result of all  the pipelines are |v:false|, this component
-            will return |v:false|.
+            pipe will return {x}.
+            If the result of all  the pipelines are |v:false|, this pipe will
+            return |v:false|.
             Use this to add control flow to pipelines.
 
             Example:
@@ -407,21 +407,21 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
 
                                     *wilder#history()*
 wilder#history([{max_num}, [{cmdtype}]])
-                                    Pipeline component~
-            A component which returns up to {max_num} values from the
-            |history| of {cmdtype}.
-            By default, {max_num} is treated as 50.
+                                    Pipe~
+            A pipe which returns up to {max_num} values from the |history| of
+            {cmdtype}.
+            {max_num} defaults to 50.
             Passing zero or a negative value of {max_num} will result in no
             limit.
             By default, {cmdtype} is the value of |getcmdtype()|.
             See |hist-names| for the possible values of {cmdtype}
 
 wilder#vim_substring()              *wilder#vim_substring()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a string and appends it with a substring regex.
 
 wilder#vim_search([{options}])      *wilder#vim_search()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a regex and searches the current buffer for completions
             matching the regex. Returns a list of unique strings.
 
@@ -433,19 +433,19 @@ wilder#vim_search([{options}])      *wilder#vim_search()*
             Default: 300
 
 wilder#vim_sort()                   *wilder#vim_sort()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a list and returns a sorted copy of the list.
 
 wilder#vim_uniq()                   *wilder#vim_uniq()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a list and returns a uniq-ed copy of the list.
 
 wilder#python_substring()           *wilder#python_substring()*
-                                    Pipeline component~
+                                    Pipe~
             Takes a string and appends it with a Python substring regex.
 
                                     *wilder#python_fuzzy_match()*
-                                    Pipeline component~
+                                    Pipe~
 wilder#python_fuzzy_match([{options}])
             Takes a string and converts it into a Python fuzzy regex.
             The string is split into characters and the fuzzy regex for `word`
@@ -468,7 +468,7 @@ wilder#python_fuzzy_match([{options}])
 
                                     *wilder#python_fuzzy_delimiter()*
 wilder#python_fuzzy_delimiter([{options}])
-                                    Pipeline component~
+                                    Pipe~
             Takes a string and converts it to a Python regex by splitting the
             string into characters. Each character either follows directly
             from the previous one, or is the start of a delimited region.
@@ -505,7 +505,7 @@ wilder#python_fuzzy_delimiter([{options}])
 wilder#python_search([{options}])   *wilder#python_search()*
                                     Neovim only~
                                     Async~
-                                    Pipeline component~
+                                    Pipe~
             Takes a regex and searches the current buffer for completions
             matching the regex using Python 3.
             Returns a list of unique strings.
@@ -529,19 +529,19 @@ wilder#python_search([{options}])   *wilder#python_search()*
 wilder#python_sort()                *wilder#python_sort()*
                                     Neovim only~
                                     Async~
-                                    Pipeline component~
+                                    Pipe~
             Takes a list and returns a sorted copy of the list.
 
 wilder#python_uniq()                *wilder#python_uniq()*
                                     Neovim only~
                                     Async~
-                                    Pipeline component~
+                                    Pipe~
             Takes a list and returns a uniq-ed copy of the list.
 
 wilder#result([{dictionary}])       *wilder#result()*
-                                    Pipeline component~
-            Takes a dictionary and returns a component which will transform
-            the {input} into a result dictionary and modifies its keys. See
+                                    Pipe~
+            Takes a dictionary and returns a pipe which will transform the
+            {input} into a result dictionary and modifies its keys. See
             |wilder-pipeline-result| for more information on how the keys of
             the dictionary is used.
 
@@ -581,7 +581,7 @@ wilder#result([{dictionary}])       *wilder#result()*
 
                                     *wilder#result_output_escape()*
 wilder#result_output_escape({chars})
-                                    Pipeline component~
+                                    Pipe~
             Helper function which returns a |wilder#result()| which escapes
             {chars} in the `output` when selecting a candidate. See
             |wilder-pipeline-flow| on how `output` is used.
@@ -1109,14 +1109,14 @@ wilder#wildmenu_renderer([{options}])
 
             `left`
             Optional~
-            The component rendered on the left of the candidates.
+            The items rendered on the left of the candidates.
             See |wilder#wildmenu_renderer()-item|s.
 
             Default: [wilder#wildmenu_previous_arrow()]
 
             `right`
             Optional~
-            The component rendered on the right of the candidates.
+            The items rendered on the right of the candidates.
             See |wilder#wildmenu_renderer()-item|s.
 
             Default: [wilder#wildmenu_next_arrow()]
@@ -1764,12 +1764,11 @@ wilder#reject_completion()          *wilder#reject_completion()*
 <
 
 wilder#resolve({ctx}, {x})          *wilder#resolve()*
-            Called to continue from an async component in the
-            |wilder-pipeline|.
+            Called to continue from an async pipe in the |wilder-pipeline|.
             See |wilder-pipeline-thunk|.
 
 wilder#reject({ctx}, {err})         *wilder#reject()*
-            Called to throw an error from an async component in the
+            Called to throw an error from an async pipe in the
             |wilder-pipeline|.
             See |wilder-pipeline-thunk|.
 
