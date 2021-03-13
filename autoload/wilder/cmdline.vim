@@ -781,8 +781,6 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
     let l:Path_func = wilder#project_root()
   endif
 
-  let l:Cpsm = wilder#python_filter_fruzzy()
-
   let l:pipeline = [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
