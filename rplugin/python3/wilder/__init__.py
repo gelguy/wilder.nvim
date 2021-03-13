@@ -106,7 +106,7 @@ class Wilder(object):
             self.added_sys_path.add(path)
             sys.path.insert(0, path)
 
-    @neovim.function('_wilder_python_file_finder', sync=False)
+    @neovim.function('_wilder_python_file_finder', sync=False, allow_nested=True)
     def _file_finder(self, args):
         self.run_in_background(self.file_finder_handler, args)
 
@@ -243,7 +243,7 @@ class Wilder(object):
         finally:
             result['done'].set()
 
-    @neovim.function('_wilder_python_sleep', sync=False)
+    @neovim.function('_wilder_python_sleep', sync=False, allow_nested=True)
     def _sleep(self, args):
         self.run_in_background(self.sleep_handler, args)
 
@@ -254,7 +254,7 @@ class Wilder(object):
         time.sleep(t)
         self.queue.put((ctx, x,))
 
-    @neovim.function('_wilder_python_search', sync=False)
+    @neovim.function('_wilder_python_search', sync=False, allow_nested=True)
     def _search(self, args):
         bufnr = self.nvim.current.buffer.number
         undotree_seq_cur = self.nvim.eval('undotree().seq_cur')
@@ -302,7 +302,7 @@ class Wilder(object):
                     if max_candidates > 0 and len(seen) >= max_candidates:
                         return
 
-    @neovim.function('_wilder_python_uniq', sync=False)
+    @neovim.function('_wilder_python_uniq', sync=False, allow_nested=True)
     def _uniq(self, args):
         self.run_in_background(self.uniq_handler, args)
 
@@ -318,7 +318,7 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_uniq: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_sort', sync=False)
+    @neovim.function('_wilder_python_sort', sync=False, allow_nested=True)
     def _sort(self, args):
         self.run_in_background(self.sort_handler, args)
 
@@ -334,7 +334,7 @@ class Wilder(object):
             self.queue.put((ctx, 'python_sort: ' + str(e), 'reject',))
 
     # sync=True as it needs to query nvim for some data
-    @neovim.function('_wilder_python_get_file_completion', sync=True)
+    @neovim.function('_wilder_python_get_file_completion', sync=True, allow_nested=True)
     def _get_file_completion(self, args):
         expand_arg = args[1]
         expand_type = args[2]
@@ -490,7 +490,7 @@ class Wilder(object):
             return os.path.basename(f[:-1])
         return os.path.basename(f)
 
-    @neovim.function('_wilder_python_get_users', sync=False)
+    @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
     def _get_users(self, args):
         self.run_in_background(self.get_users_handler, args)
 
@@ -510,7 +510,7 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_get_users: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_filter_fuzzy', sync=False)
+    @neovim.function('_wilder_python_filter_fuzzy', sync=False, allow_nested=True)
     def _filter_fuzzy(self, args):
         self.run_in_background(self.filter_fuzzy_handler, args)
 
@@ -579,7 +579,7 @@ class Wilder(object):
             if pattern.search(candidate):
                 yield candidate
 
-    @neovim.function('_wilder_python_filter_fruzzy', sync=False)
+    @neovim.function('_wilder_python_filter_fruzzy', sync=False, allow_nested=True)
     def _filter_fruzzy(self, args):
         self.run_in_background(self.filter_fruzzy_handler, args)
 
@@ -635,7 +635,7 @@ class Wilder(object):
 
         return [match[0] for match in sorted_matches]
 
-    @neovim.function('_wilder_python_filter_cpsm', sync=False)
+    @neovim.function('_wilder_python_filter_cpsm', sync=False, allow_nested=True)
     def _filter_cpsm(self, args):
         self.run_in_background(self.filter_cpsm_handler, args)
 
@@ -659,7 +659,7 @@ class Wilder(object):
         cpsm = importlib.import_module('cpsm_py')
         return cpsm.ctrlp_match(candidates, query, ispath=ispath)[0]
 
-    @neovim.function('_wilder_python_sort_difflib', sync=False)
+    @neovim.function('_wilder_python_sort_difflib', sync=False, allow_nested=True)
     def _sort_difflib(self, args):
         self.run_in_background(self.sort_difflib_handler, args)
 
@@ -696,7 +696,7 @@ class Wilder(object):
 
         return [x[0] for x in sorted(xs, key=lambda x: x[1])]
 
-    @neovim.function('_wilder_python_sort_fuzzywuzzy', sync=False)
+    @neovim.function('_wilder_python_sort_fuzzywuzzy', sync=False, allow_nested=True)
     def _sort_fuzzywuzzy(self, args):
         self.run_in_background(self.sort_fuzzywuzzy_handler, args)
 
