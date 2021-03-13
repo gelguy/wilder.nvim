@@ -1,8 +1,8 @@
-function! wilder#highlighter#merge_highlighters(highlighters)
-  return {ctx, x, data -> s:merge_highlighters(a:highlighters, ctx, x, data)}
+function! wilder#highlighter#apply_first(highlighters)
+  return {ctx, x, data -> s:apply_first(a:highlighters, ctx, x, data)}
 endfunction
 
-function! s:merge_highlighters(highlighters, ctx, x, data)
+function! s:apply_first(highlighters, ctx, x, data)
   for l:Highlighter in a:highlighters
     let l:highlight = l:Highlighter(a:ctx, a:x, a:data)
 

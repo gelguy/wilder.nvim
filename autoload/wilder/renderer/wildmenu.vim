@@ -54,7 +54,7 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
   endif
 
   if type(l:Highlighter) is v:t_list
-    let l:Highlighter = wilder#highlighter#merge_highlighters(l:Highlighter)
+    let l:Highlighter = wilder#highlighter#apply_first(l:Highlighter)
   endif
 
   let l:state.highlighter = l:Highlighter
