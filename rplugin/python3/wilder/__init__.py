@@ -809,13 +809,16 @@ class Wilder(object):
             return 0
 
         vim_highlights = match[1]
+        pattern = re.compile('\\\\zs(.*)\\\\ze', re.UNICODE)
 
         spans = []
         for vim_highlight in vim_highlights:
-            match = re.search('\\\\zs(.*)\\\\ze', vim_highlight)
+            match = pattern.search(vim_highlight)
             if match:
-                start, end = match.span()
-                spans.append((start - 6, end - start - 6))
+                start, end = match.span(1)
+                byte_start = len(x[: start - 9].encode('utf-8'))
+                byte_len = len(x[start - 9 : end - 9].encode('utf-8'))
+                spans.append((byte_start, byte_len))
 
         return spans
 
