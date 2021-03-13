@@ -74,7 +74,7 @@ call wilder#set_option('pipeline', [
       \ ])
 ```
 
-The pipeline is essentially a list of functions (referred to as pipeline components) which are executed in order, passing the result of the previous function to the next one. `wilder#branch()` is a higher-order component which is able to provide control flow given its own lists of components.
+The pipeline is essentially a list of functions (referred to as pipes) which are executed in order, passing the result of the previous function to the next one. `wilder#branch()` is a higher-order component which is able to provide control flow given its own lists of pipelines.
 
 See the docs at `:h wilder-pipeline` for a more details. In the meantime, here are some suggestions for pipelines to use:
 

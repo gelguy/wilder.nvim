@@ -54,7 +54,7 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
   endif
 
   if type(l:Highlighter) is v:t_list
-    let l:Highlighter = wilder#highlight#merge_highlighters(l:Highlighter)
+    let l:Highlighter = wilder#highlighter#merge_highlighters(l:Highlighter)
   endif
 
   let l:state.highlighter = l:Highlighter
@@ -74,12 +74,12 @@ function! wilder#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abo
     let a:state.page = [-1, -1]
   endif
 
-  let l:space_used = wilder#renderer#wildmenu#component_len(
+  let l:space_used = wilder#renderer#wildmenu#item_len(
         \ a:state.left,
         \ a:ctx,
         \ a:result)
 
-  let l:space_used += wilder#renderer#wildmenu#component_len(
+  let l:space_used += wilder#renderer#wildmenu#item_len(
         \ a:state.right,
         \ a:ctx,
         \ a:result)
@@ -98,63 +98,63 @@ function! wilder#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abo
   return s:make_hl_chunks(a:state, a:ctx, a:result,)
 endfunction
 
-function! wilder#renderer#wildmenu#component_len(component, ctx, result) abort
-  if type(a:component) is v:t_string
-    return strdisplaywidth(wilder#render#to_printable(a:component))
+function! wilder#renderer#wildmenu#item_len(item, ctx, result) abort
+  if type(a:item) is v:t_string
+    return strdisplaywidth(wilder#render#to_printable(a:item))
   endif
 
-  if type(a:component) is v:t_dict
-    if has_key(a:component, 'len')
-      if type(a:component.len) is v:t_func
-        return a:component.len(a:ctx, a:result)
+  if type(a:item) is v:t_dict
+    if has_key(a:item, 'len')
+      if type(a:item.len) is v:t_func
+        return a:item.len(a:ctx, a:result)
       else
-        return a:component.len
+        return a:item.len
       endif
     endif
 
-    if type(a:component.value) is v:t_func
-      let l:Value = a:component.value(a:ctx, a:result)
+    if type(a:item.value) is v:t_func
+      let l:Value = a:item.value(a:ctx, a:result)
     else
-      let l:Value = a:component.value
+      let l:Value = a:item.value
     endif
 
-    return wilder#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
+    return wilder#renderer#wildmenu#item_len(l:Value, a:ctx, a:result)
   endif
 
-  if type(a:component) is v:t_func
-    let l:Value = a:component(a:ctx, a:result)
+  if type(a:item) is v:t_func
+    let l:Value = a:item(a:ctx, a:result)
 
-    return wilder#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
+    return wilder#renderer#wildmenu#item_len(l:Value, a:ctx, a:result)
   endif
 
   " v:t_list
   let l:len = 0
 
-  for l:Elem in a:component
-    let l:len += wilder#renderer#wildmenu#component_len(l:Elem, a:ctx, a:result)
+  for l:Elem in a:item
+    let l:len += wilder#renderer#wildmenu#item_len(l:Elem, a:ctx, a:result)
   endfor
 
   return l:len
 endfunction
 
-function! wilder#renderer#wildmenu#component_pre_hook(component, ctx) abort
-  call s:component_hook(a:component, a:ctx, 'pre')
+function! wilder#renderer#wildmenu#item_pre_hook(item, ctx) abort
+  call s:item_hook(a:item, a:ctx, 'pre')
 endfunction
 
-function! wilder#renderer#wildmenu#component_post_hook(component, ctx) abort
-  call s:component_hook(a:component, a:ctx, 'post')
+function! wilder#renderer#wildmenu#item_post_hook(item, ctx) abort
+  call s:item_hook(a:item, a:ctx, 'post')
 endfunction
 
-function! s:component_hook(component, ctx, key) abort
-  if type(a:component) is v:t_dict
-    if has_key(a:component, a:key . '_hook')
-      call a:component[a:key . '_hook'](a:ctx)
+function! s:item_hook(item, ctx, key) abort
+  if type(a:item) is v:t_dict
+    if has_key(a:item, a:key . '_hook')
+      call a:item[a:key . '_hook'](a:ctx)
     endif
 
-    call s:component_hook(a:component.value, a:ctx, a:key)
-  elseif type(a:component) is v:t_list
-    for l:Elem in a:component
-      call s:component_hook(l:Elem, a:ctx, a:key)
+    call s:item_hook(a:item.value, a:ctx, a:key)
+  elseif type(a:item) is v:t_list
+    for l:Elem in a:item
+      call s:item_hook(l:Elem, a:ctx, a:key)
     endfor
   endif
 endfunction
@@ -299,7 +299,7 @@ endfunction
 
 function! s:make_hl_chunks(state, ctx, result) abort
   let l:chunks = []
-  let l:chunks += s:draw_component(a:state.left, a:ctx.highlights['default'], a:ctx, a:result)
+  let l:chunks += s:draw_item(a:state.left, a:ctx.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
     let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
@@ -307,12 +307,12 @@ function! s:make_hl_chunks(state, ctx, result) abort
     let l:chunks += s:draw_xs(a:state, a:ctx, a:result)
   endif
 
-  let l:chunks += s:draw_component(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
+  let l:chunks += s:draw_item(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
 
   return wilder#render#normalise_chunks(a:ctx.highlights['default'], l:chunks)
 endfunction
 
-function! s:draw_component(Component, hl, ctx, result) abort
+function! s:draw_item(Component, hl, ctx, result) abort
   if type(a:Component) is v:t_string
     return [[wilder#render#to_printable(a:Component), a:hl]]
   endif
@@ -330,20 +330,20 @@ function! s:draw_component(Component, hl, ctx, result) abort
       let l:Value = a:Component.value
     endif
 
-    return s:draw_component(l:Value, l:hl, a:ctx, a:result)
+    return s:draw_item(l:Value, l:hl, a:ctx, a:result)
   endif
 
   if type(a:Component) is v:t_func
     let l:Value = a:Component(a:ctx, a:result)
 
-    return s:draw_component(l:Value, a:hl, a:ctx, a:result)
+    return s:draw_item(l:Value, a:hl, a:ctx, a:result)
   endif
 
   " v:t_list
   let l:res = []
 
   for l:Elem in a:Component
-    let l:res += s:draw_component(l:Elem, a:hl, a:ctx, a:result)
+    let l:res += s:draw_item(l:Elem, a:hl, a:ctx, a:result)
   endfor
 
   return l:res

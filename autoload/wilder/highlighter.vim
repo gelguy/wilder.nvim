@@ -1,4 +1,4 @@
-function! wilder#highlight#merge_highlighters(highlighters)
+function! wilder#highlighter#merge_highlighters(highlighters)
   return {ctx, x, data -> s:merge_highlighters(a:highlighters, ctx, x, data)}
 endfunction
 
@@ -14,18 +14,18 @@ function! s:merge_highlighters(highlighters, ctx, x, data)
   return 0
 endfunction
 
-function! wilder#highlight#query_highlighter(...)
+function! wilder#highlighter#query_highlighter(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'vim')
 
   if l:language ==# 'python'
-    return {ctx, x, data -> wilder#highlight#python_highlight_query(ctx, l:opts, x, data)}
+    return {ctx, x, data -> wilder#highlighter#python_highlight_query(ctx, l:opts, x, data)}
   endif
 
-  return {ctx, x, data -> wilder#highlight#vim_highlight_query(ctx, l:opts, x, data)}
+  return {ctx, x, data -> wilder#highlighter#vim_highlight_query(ctx, l:opts, x, data)}
 endfunction
 
-function! wilder#highlight#vim_highlight_query(ctx, opts, x, data)
+function! wilder#highlighter#vim_highlight_query(ctx, opts, x, data)
   if !has_key(a:data, 'query')
     return 0
   endif
@@ -77,7 +77,7 @@ function! wilder#highlight#vim_highlight_query(ctx, opts, x, data)
   return l:spans
 endfunction
 
-function! wilder#highlight#python_highlight_query(ctx, opts, x, data)
+function! wilder#highlighter#python_highlight_query(ctx, opts, x, data)
   if !has_key(a:data, 'query')
     return 0
   endif
@@ -88,18 +88,18 @@ function! wilder#highlight#python_highlight_query(ctx, opts, x, data)
   return _wilder_python_highlight_query(a:str, a:query, a:case_sensitive)
 endfunction
 
-function! wilder#highlight#pcre2_highlighter(...)
+function! wilder#highlighter#pcre2_highlighter(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'python')
 
   if l:language ==# 'lua'
-    return {ctx, x, data -> wilder#highlight#lua_highlight_pcre2(ctx, l:opts, x, data)}
+    return {ctx, x, data -> wilder#highlighter#lua_highlight_pcre2(ctx, l:opts, x, data)}
   endif
 
-  return {ctx, x, data -> wilder#highlight#python_highlight_pcre2(ctx, l:opts, x, data)}
+  return {ctx, x, data -> wilder#highlighter#python_highlight_pcre2(ctx, l:opts, x, data)}
 endfunction
 
-function! wilder#highlight#python_highlight_pcre2(ctx, opts, x, data)
+function! wilder#highlighter#python_highlight_pcre2(ctx, opts, x, data)
   if !has_key(a:data, 'pcre2.pattern')
     return 0
   endif
@@ -110,7 +110,7 @@ function! wilder#highlight#python_highlight_pcre2(ctx, opts, x, data)
   return _wilder_python_highlight_pcre2(l:pattern, a:x, l:engine)
 endfunction
 
-function! wilder#highlight#lua_highlight_pcre2(ctx, opts, x, data)
+function! wilder#highlighter#lua_highlight_pcre2(ctx, opts, x, data)
   if !has_key(a:data, 'pcre2.pattern')
     return 0
   endif
@@ -126,12 +126,12 @@ function! wilder#highlight#lua_highlight_pcre2(ctx, opts, x, data)
   return map(l:spans[1:], {i, s -> [s[0] - 1, s[1] - s[0] + 1]})
 endfunction
 
-function! wilder#highlight#cpsm_highlighter(...)
+function! wilder#highlighter#cpsm_highlighter(...)
   let l:opts = get(a:, 1, {})
-  return {ctx, x, data -> wilder#highlight#python_highlight_cpsm(ctx, l:opts, x, data)}
+  return {ctx, x, data -> wilder#highlighter#python_highlight_cpsm(ctx, l:opts, x, data)}
 endfunction
 
-function! wilder#highlight#python_highlight_cpsm(ctx, opts, x, data)
+function! wilder#highlighter#python_highlight_cpsm(ctx, opts, x, data)
   if !has_key(a:data, 'query')
     return 0
   endif

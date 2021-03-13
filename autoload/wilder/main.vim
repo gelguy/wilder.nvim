@@ -191,8 +191,8 @@ function! s:pre_hook() abort
     call s:opts.renderer.pre_hook({})
   endif
 
-  " create highlight before and after components since there might be
-  " components which depend on existing highlights
+  " create highlight before and after since there might be renderer-defined
+  " highlights which depend on existing highlights
   call wilder#render#init_hl()
 endfunction
 

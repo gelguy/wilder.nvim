@@ -126,7 +126,7 @@ endfunction
 
 function! wilder#query_highlighter(...)
   let l:opts = get(a:, 1, {})
-  return wilder#highlight#query_highlighter(l:opts)
+  return wilder#highlighter#query_highlighter(l:opts)
 endfunction
 
 " DEPRECATED: use wilder#query_highlighter()
@@ -136,7 +136,7 @@ endfunction
 
 function! wilder#pcre2_highlighter(...)
   let l:opts = get(a:, 1, {})
-  return wilder#highlight#pcre2_highlighter(l:opts)
+  return wilder#highlighter#pcre2_highlighter(l:opts)
 endfunction
 
 " DEPRECATED: use wilder#pcre2_highlighter()
@@ -146,10 +146,10 @@ endfunction
 
 function! wilder#cpsm_highlighter(...)
   let l:opts = get(a:, 1, {})
-  return wilder#highlight#cpsm_highlighter(l:opts)
+  return wilder#highlighter#cpsm_highlighter(l:opts)
 endfunction
 
-" pipeline components
+" pipes
 
 function! wilder#_sleep(t) abort
   " lambda functions do not have func-abort
@@ -473,7 +473,7 @@ function! wilder#python_file_finder_pipeline(...) abort
   return wilder#cmdline#python_file_finder_pipeline(get(a:, 1, {}))
 endfunction
 
-" render components
+" renderer items
 
 " DEPRECATED: use wilder#wildmenu_index()
 function! wilder#index(...) abort

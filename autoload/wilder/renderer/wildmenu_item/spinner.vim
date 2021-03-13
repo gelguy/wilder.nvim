@@ -21,7 +21,7 @@ function! wilder#renderer#wildmenu_item#spinner#make(args) abort
 
   return {
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
-        \ 'len': {ctx, result -> wilder#renderer#wildmenu#component_len(
+        \ 'len': {ctx, result -> wilder#renderer#wildmenu#item_len(
         \   s:get_char(l:state, ctx, result), ctx, result)},
         \ 'hl': get(a:args, 'hl', ''),
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
@@ -30,13 +30,13 @@ function! wilder#renderer#wildmenu_item#spinner#make(args) abort
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  call wilder#renderer#wildmenu#component_pre_hook(a:state.frames, a:ctx)
-  call wilder#renderer#wildmenu#component_pre_hook(a:state.done, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.frames, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.done, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  call wilder#renderer#wildmenu#component_post_hook(a:state.frames, a:ctx)
-  call wilder#renderer#wildmenu#component_post_hook(a:state.done, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.frames, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.done, a:ctx)
 endfunction
 
 " Set current_char in here so it is consistent with the actual rendered
