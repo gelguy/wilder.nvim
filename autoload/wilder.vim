@@ -711,3 +711,31 @@ function! s:get_project_root(path, root_markers) abort
 
   return ''
 endfunction
+
+function! wilder#result_draw_devicons()
+  return wilder#result({
+        \ 'draw': ['wilder#draw_devicons'],
+        \ })
+endfunction
+
+function! wilder#draw_devicons(ctx, x, data) abort
+  let l:expand = get(a:data, 'cmdline.expand', '')
+
+  if l:expand !=# 'file' &&
+        \ l:expand !=# 'file_in_path' &&
+        \ l:expand !=# 'dir' &&
+        \ l:expand !=# 'shellcmd' &&
+        \ l:expand !=# 'buffer'
+    return a:x
+  endif
+
+  let l:slash = !has('win32') && !has('win64')
+        \ ? '/'
+        \ : &shellslash
+        \ ? '/'
+        \ : '\'
+
+  let l:is_dir = a:x[-1:] ==# l:slash
+
+  return WebDevIconsGetFileTypeSymbol(a:x, l:is_dir) . ' ' . a:x
+endfunction

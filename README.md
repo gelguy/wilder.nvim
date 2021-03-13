@@ -133,6 +133,20 @@ When getting file completions, fuzzily search and match through all files under 
 
 To optimise for performane, the `command` and `filters` options can be customised. See `:h wilder#python_file_finder_pipeline()` for more details.
 
+#### Devicons (Experimental)
+
+```vim
+" Add wilder#result_draw_devicons() to the end of the pipeline
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \      ...
+      \   ),
+      \   wilder#result_draw_devicons(),
+      \ ])
+```
+
+`ryanoasis/vim-devicons` is required. Note: the API is experimental and subject to change.
+
 ## Customising the renderer
 
 By using `wilder#set_option('renderer', <renderer>)`, you are able to change how `wilder` draws the candidates. By default, `wilder` tries its best to look like the default wildmenu.
