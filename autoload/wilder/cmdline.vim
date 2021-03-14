@@ -579,20 +579,20 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-" returns [{handled}, {result}, [{pos}]]
+" returns [{handled}, {result}, [{res}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
     return [0, a:res]
   endif
 
   if !has('nvim')
-    return [1, v:true]
+    return [1, v:true, a:res]
   endif
 
   let l:user_commands = nvim_get_commands({})
 
   if !has_key(l:user_commands, a:res.cmd)
-    return [1, v:false]
+    return [1, v:false, a:res]
   endif
 
   let l:user_command = l:user_commands[a:res.cmd]
@@ -604,7 +604,9 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:Completion_func = function(l:user_command.complete_arg)
       let l:result = l:Completion_func(a:res.arg, a:res.cmdline, len(a:res.cmdline))
     catch
-      return [1, v:true, 0]
+      let l:res = copy(a:res)
+      let l:res.pos = 0
+      return [1, v:true, l:res]
     endtry
 
     if get(l:user_command, 'complete', '') ==# 'custom'
@@ -612,7 +614,9 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:result = filter(l:result, {i, x -> match(x, l:res.arg) != -1})
     endif
 
-    return [1, l:result, a:res.pos]
+    let l:res = copy(a:res)
+    let l:res.match_arg = l:res.cmdline[l:res.pos :]
+    return [1, l:result, l:res]
   endif
 
   if has_key(l:user_command, 'complete') &&
@@ -625,7 +629,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     return [0, l:res]
   endif
 
-  return [1, v:false, a:res.pos]
+  return [1, v:false, a:res]
 endfunction
 
 function! wilder#cmdline#replace(ctx, x, data) abort
@@ -661,10 +665,6 @@ function! s:convert_result_to_data(res)
 
   if has_key(a:res, 'has_wildcard')
     let l:data['cmdline.has_wildcard'] = a:res.has_wildcard
-  endif
-
-  if has_key(a:res, 'expanded_pos')
-    let l:data['cmdline.expanded_pos'] = a:res.expanded_pos
   endif
 
   return l:data
@@ -1003,8 +1003,9 @@ function! wilder#cmdline#pipeline(opts) abort
         \   wilder#subpipeline({ctx, res -> [
         \     {_, res -> res[1]},
         \     wilder#result({
-        \       'pos': res[2],
+        \       'pos': res[2].pos,
         \       'replace': ['wilder#cmdline#replace'],
+        \       'data': s:convert_result_to_data(res[2]),
         \     }),
         \   ]}),
         \ ],
