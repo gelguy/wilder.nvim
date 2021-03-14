@@ -270,6 +270,9 @@ The Result dictionary has the following keys:
             `draw`, `output` and `replace` functions when they are called. If
             not set, will default to an empty dictionary.
 
+            By default, {data} will be an empty dictionary. If the `query` key
+            is not set, `query` will be set to the input to the cmdline.
+
             `draw`                  *wilder-pipeline-result-draw*
             Optional~
             A list of strings or functions which takes a {ctx}, {x} and {data}
@@ -602,9 +605,6 @@ wilder#vim_search_pipeline([{options}])
                                     Pipeline~
             Returns a pipeline which does Vim substring search.
 
-            Sets the `query` key in
-            |wilder-pipeline-result-data| to the input of the pipeline.
-
             {options} is a dictionary with keys:
             `skip_cmdtype_check`
             Optional~
@@ -622,9 +622,6 @@ wilder#python_search_pipeline([{options}])
             Returns a pipeline which does Python search.
 
             Forwards the respective options to |wilder#python_search()|.
-
-            Sets the `query` key in
-            |wilder-pipeline-result-data| to the input of the pipeline.
 
             {options} is a dictionary with keys:
             `regex`
@@ -689,9 +686,6 @@ wilder#cmdline_pipeline([{options}])
             completions.
             For completions during |:substitute|, use
             |wilder#substitute_pipeline()|.
-
-            Sets the `query` key in
-            |wilder-pipeline-result-data| to the completion argument.
 
             Note: Custom completions for user commands are only available in
             Neovim. Wilder will be hidden when attempting to complete user

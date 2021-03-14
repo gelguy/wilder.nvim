@@ -293,6 +293,14 @@ function! wilder#main#on_finish(ctx, x) abort
     let s:result = l:result
   endif
 
+  if !has_key(s:result, 'data')
+    let s:result.data = {}
+  endif
+
+  if !has_key(s:result.data, 'query')
+    let s:result.data.query = a:ctx.input
+  endif
+
   if s:selected >= 0
     let s:replaced_cmdline = getcmdline()
   endif
@@ -483,7 +491,7 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:output = l:F({}, l:output, get(s:result, 'data', {}))
+          let l:output = l:F({}, l:output, s:result.data)
         endfor
       endif
 
@@ -496,7 +504,7 @@ function! wilder#main#step(num_steps) abort
 
           let l:new_cmdline = l:F({
                 \ 'cmdline': s:replaced_cmdline,
-                \ }, l:new_cmdline, get(s:result, 'data', {}))
+                \ }, l:new_cmdline, s:result.data)
         endfor
       endif
     else

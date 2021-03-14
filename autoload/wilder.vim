@@ -386,16 +386,11 @@ function! s:search_pipeline(...) abort
     call add(l:pipeline, wilder#debounce(l:opts['debounce']))
   endif
 
-  let l:search_pipeline = get(l:opts, 'pipeline', [
+  let l:pipeline += get(l:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
         \ wilder#result_output_escape('^$*~[]/\'),
         \ ])
-
-  call add(l:pipeline,
-        \ wilder#subpipeline({ctx, x -> l:search_pipeline + [
-        \   wilder#result({'data': {'query': x}}),
-        \ ]}))
 
   return l:pipeline
 endfunction
