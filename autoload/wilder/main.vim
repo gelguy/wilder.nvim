@@ -8,6 +8,7 @@ let s:session_id = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
+let s:select_next = 0
 
 let s:result = {'value': []}
 let s:selected = -1
@@ -121,6 +122,8 @@ function! s:start() abort
 endfunction
 
 function! wilder#main#stop() abort
+  let s:select_next = 0
+
   if !s:active
     return
   endif
@@ -329,6 +332,13 @@ function! wilder#main#on_finish(ctx, x) abort
     call s:pre_hook()
   endif
 
+  if s:select_next
+    call wilder#main#next()
+
+    let s:select_next = 0
+    return
+  endif
+
   if len(s:completion_stack) > 0 && get(a:ctx, 'auto_select', 0)
     if exists('s:previous_cmdline')
       unlet s:previous_cmdline
@@ -416,6 +426,11 @@ endfunction
 
 function! wilder#main#next() abort
   return wilder#main#step(1)
+endfunction
+
+function! wilder#main#next_when_available() abort
+  let s:select_next = 1
+  return ''
 endfunction
 
 function! wilder#main#previous() abort
