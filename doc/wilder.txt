@@ -1194,6 +1194,12 @@ wilder#lightline_theme([{options}])
             A new key which sets whether to use powerline symbols for the
             separators between sections.
 
+            When set to 0, no symbols will be drawn.
+            When set to 1, 2 arrows will be drawn each on the left and right
+            sections.
+            Otherwise, only 1 arrow will be drawn each on the left and right
+            sections.
+
             Default: `g:airline_powerline_fonts` for Airline
                      has_key(g:lightline, 'separators') for Lightline
 
@@ -1211,15 +1217,31 @@ wilder#lightline_theme([{options}])
                 The highlight group for the item which shows the current
                 mode and the |wilder#spinner()|.
 
-                Default: 'airline_a' for Airline
+                Default: 'airline_a_bold' for Airline
                          'LightlineLeft_active_0' for Lightline
 
                 `index`
                 Optional~
                 The highlight group for the |wilder#index()| item.
 
-                Default: 'airline_z' for Airline
+                Default: 'airline_z_bold' for Airline
                          'LightlineRight_active_0' for Lightline
+
+                `left_arrow2`
+                Optional~
+                The highlight group for the left powerline symbol after the
+                mode item.
+
+                Default: 'airline_b' for Airline
+                         'LightlineLeft_active_1' for Lightline
+
+                `right_arrow2`
+                Optional~
+                The highlight group for the right powerline symbol before the
+                |wilder#index()| section.
+
+                Default: 'airline_y' for Airline
+                         'LightlineRight_active_1' for Lightline
 
 
                 If not defined, the following highlights are set:
