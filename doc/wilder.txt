@@ -1905,7 +1905,7 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                     \ ])
 
                 call wilder#make_hl('MyHighlight2',
-                    \ 'MyHighlight'
+                    \ 'MyHighlight',
                     \ [{}, {}, {'underline': 1}])
 <
 

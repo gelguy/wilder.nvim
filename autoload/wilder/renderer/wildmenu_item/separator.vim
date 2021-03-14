@@ -18,10 +18,10 @@ function! wilder#renderer#wildmenu_item#separator#make(str, fg, bg, ...) abort
 endfunction
 
 function! s:hl(name, from, to) abort
-  let l:from_hl = wilder#render#get_colors(a:from)
-  let l:to_hl = wilder#render#get_colors(a:to)
+  let l:from_hl = wilder#highlight#get_hl(a:from)
+  let l:to_hl = wilder#highlight#get_hl(a:to)
 
-  let l:normal_hl = wilder#render#get_colors('Normal')
+  let l:normal_hl = wilder#highlight#get_hl('Normal')
 
   let l:cterm_hl = {}
   let l:gui_hl = {}

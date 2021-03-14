@@ -83,7 +83,7 @@ function! wilder#start_from_normal_mode()
 endfunction
 
 function! wilder#make_hl(name, args, ...) abort
-  return wilder#render#make_hl(a:name, a:args, a:000)
+  return wilder#highlight#make_hl(a:name, a:args, a:000)
 endfunction
 
 function! wilder#hl_with_attr(name, hl_group, ...) abort

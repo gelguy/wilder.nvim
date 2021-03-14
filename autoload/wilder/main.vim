@@ -181,7 +181,7 @@ function! wilder#main#stop() abort
 endfunction
 
 function! s:pre_hook() abort
-  call wilder#render#init_hl()
+  call wilder#highlight#init_hl()
 
   if has_key(s:opts, 'pre_hook')
     call s:opts.pre_hook({})
@@ -193,7 +193,7 @@ function! s:pre_hook() abort
 
   " create highlight before and after since there might be renderer-defined
   " highlights which depend on existing highlights
-  call wilder#render#init_hl()
+  call wilder#highlight#init_hl()
 endfunction
 
 function! s:post_hook() abort
