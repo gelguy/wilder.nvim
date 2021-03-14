@@ -1,3 +1,5 @@
+let s:index = 0
+
 function! s:prepare_state(opts) abort
   let l:highlights = copy(get(a:opts, 'highlights', {}))
   let l:state = {
@@ -301,8 +303,10 @@ function! s:render_lines(state, lines, width, pos) abort
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  if a:state.buf == -1
+  if a:state.buf == -1 || !bufexists(a:state.buf)
     let a:state.buf = nvim_create_buf(v:false, v:true)
+    call nvim_buf_set_name(a:state.buf, '[Wilder Popupmenu ' . s:index . ']')
+    let s:index += 1
   endif
 
   for l:Column in a:state.left + a:state.right

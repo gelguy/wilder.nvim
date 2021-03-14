@@ -1,3 +1,5 @@
+let s:index = 0
+
 function! wilder#renderer#wildmenu_float#make(args) abort
   let l:state = wilder#renderer#wildmenu#prepare_state(a:args)
   let l:state.buf = -1
@@ -96,8 +98,10 @@ function! s:pre_hook(state, ctx) abort
     let &cursorline = 0
   endif
 
-  if a:state.buf == -1
+  if a:state.buf == -1 || !bufexists(a:state.buf)
     let a:state.buf = nvim_create_buf(v:false, v:true)
+    call nvim_buf_set_name(a:state.buf, '[Wilder Wildmenu ' . s:index . ']')
+    let s:index += 1
   endif
 
   if a:state.win == -1
