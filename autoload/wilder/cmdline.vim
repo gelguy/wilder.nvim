@@ -323,7 +323,7 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mod
 
   return wilder#wait(a:getcompletion(a:ctx, l:upper_res),
         \ {ctx, upper_xs -> wilder#resolve(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
-        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#filt_uniq(ctx, 0, lower_xs + upper_xs))}))})
+        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#filt_uniq(0, 0, lower_xs + upper_xs))}))})
 endfunction
 
 function! wilder#cmdline#python_get_file_completion(ctx, res) abort
@@ -486,7 +486,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
       endfor
     endif
 
-    return wilder#filt_uniq(ctx, 0, l:result)
+    return wilder#filt_uniq(0, 0, l:result)
   elseif a:res.expand ==# 'mapclear'
     return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
   elseif a:res.expand ==# 'menu'

@@ -245,7 +245,7 @@ function! wilder#cmdline#main#do(ctx) abort
   if a:ctx.cmdline[a:ctx.pos] ==# '+' &&
         \ ((and(l:flags, s:EDITCMD) && !l:use_filter) ||
         \ and(l:flags, s:ARGOPT))
-    let l:allow_cmd = and(l:flags, s:EDITCMD) && !l:user_filter
+    let l:allow_cmd = and(l:flags, s:EDITCMD) && !l:use_filter
     let a:ctx.pos += 1
 
     if a:ctx.cmdline[a:ctx.pos] ==# '+'

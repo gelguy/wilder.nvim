@@ -85,7 +85,7 @@ function! wilder#highlighter#python_highlight_query(ctx, opts, x, data)
   let l:query = a:data['query']
   let l:case_sensitive = get(a:opts, 'case_sensitive', 0)
 
-  return _wilder_python_highlight_query(a:str, a:query, a:case_sensitive)
+  return _wilder_python_highlight_query(a:x, l:query, l:case_sensitive)
 endfunction
 
 function! wilder#highlighter#pcre2_highlighter(...)

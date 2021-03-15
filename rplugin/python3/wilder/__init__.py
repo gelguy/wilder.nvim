@@ -9,10 +9,10 @@ import importlib
 from importlib.util import find_spec
 import io
 import itertools
-import multiprocessing
 import os
 from pathlib import Path
 import pwd
+import queue
 import re
 import shutil
 import stat
@@ -32,7 +32,7 @@ class Wilder(object):
     def __init__(self, nvim):
         self.nvim = nvim
         self.has_init = False
-        self.queue = multiprocessing.Queue()
+        self.queue = queue.Queue()
         self.events = []
         self.events_lock = threading.Lock()
         self.executor = None
@@ -791,7 +791,6 @@ class Wilder(object):
 
     @neovim.function('_wilder_python_highlight_cpsm', sync=True)
     def _highlight_cpsm(self, args):
-
         opts = args[0]
         x = args[1]
         query = args[2]
