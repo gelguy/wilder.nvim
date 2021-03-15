@@ -419,7 +419,7 @@ wilder#history([{max_num}, [{cmdtype}]])
             By default, {cmdtype} is the value of |getcmdtype()|.
             See |hist-names| for the possible values of {cmdtype}
 
-wilder#vim_substring()              *wilder#vim_substring()*
+wilder#vim_substring_pattern()      *wilder#vim_substring_pattern()*
                                     Pipe~
             Takes a string and appends it with a substring regex.
 
@@ -435,13 +435,14 @@ wilder#vim_search([{options}])      *wilder#vim_search()*
 
             Default: 300
 
-wilder#python_substring()           *wilder#python_substring()*
+wilder#python_substring_pattern()   *wilder#python_substring_pattern()*
                                     Pipe~
-            Takes a string and appends it with a Python substring regex.
+            Takes a string and converts it into a Python regex which matches
+            substrings.
 
-                                    *wilder#python_fuzzy_match()*
+                                    *wilder#python_fuzzy_pattern()*
+wilder#python_fuzzy_pattern([{options}])
                                     Pipe~
-wilder#python_fuzzy_match([{options}])
             Takes a string and converts it into a Python fuzzy regex.
             The string is split into characters and the fuzzy regex for `word`
             is added in between each character.
@@ -461,8 +462,8 @@ wilder#python_fuzzy_match([{options}])
 
             Default: 1
 
-                                    *wilder#python_fuzzy_delimiter()*
-wilder#python_fuzzy_delimiter([{options}])
+                                    *wilder#python_fuzzy_delimiter_pattern()*
+wilder#python_fuzzy_delimiter_pattern([{options}])
                                     Pipe~
             Takes a string and converts it to a Python regex by splitting the
             string into characters. Each character either follows directly
@@ -604,13 +605,13 @@ wilder#python_search_pipeline([{options}])
             Forwards the respective options to |wilder#python_search()|.
 
             {options} is a dictionary with keys:
-            `regex`
+            `pattern`
             Optional~
             One of 'fuzzy', 'fuzzy_delimiter', 'substring' or a function.
-            Generates the Python regex to pass to |wilder#python_search()|.
+            Generates the Python pattern to pass to |wilder#python_search()|.
 
             The function should take a {ctx} and the input {x} and return a
-            Python regex.
+            Python pattern.
 
             The special values 'fuzzy', 'fuzzy_delimiter' and 'substring' uses
             |wilder#python_fuzzy_match()|, |wilder#python_fuzzy_delimiter()|
@@ -656,6 +657,9 @@ wilder#python_search_pipeline([{options}])
 
             `sort`
             Deprecated: Use `sorter`.
+
+            `regex`
+            Deprecated: Use `pattern`.
 
                                     *wilder#cmdline_pipeline()*
 wilder#cmdline_pipeline([{options}])
@@ -2260,6 +2264,24 @@ wilder#renderer_mux({args})         *wilder#renderer_mux()*
 
 ==============================================================================
 7. Depcrecated                      *wilder-deprecated*
+
+wilder#vim_substring()              *wilder#vim_substring()*
+                                    Deprecated~
+            Deprecated: Use |wilder#vim_substring_pattern()|.
+
+wilder#python_substring()           *wilder#python_substring()*
+                                    Deprecated~
+            Deprecated: Use |wilder#python_substring_pattern()|.
+
+                                    *wilder#python_fuzzy_match()*
+wilder#python_fuzzy_match([{options}])
+                                    Deprecated~
+            Deprecated: Use |wilder#python_fuzzy_pattern()|.
+
+                                    *wilder#python_fuzzy_delimiter()*
+wilder#python_fuzzy_delimiter([{options}])
+                                    Deprecated~
+            Deprecated: Use |wilder#python_fuzzy_delimiter_pattern()|.
 
 wilder#vim_sort()                   *wilder#vim_sort()*
                                     Deprecated~

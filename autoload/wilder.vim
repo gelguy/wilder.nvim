@@ -162,7 +162,12 @@ function! wilder#result_output_escape(chars) abort
         \ })
 endfunction
 
+" DEPRECATED: Use wilder#vim_substring()
 function! wilder#vim_substring() abort
+  return call('wilder#vim_substring_pattern', [])
+endfunction
+
+function! wilder#vim_substring_pattern() abort
   return {_, x -> x . (x[-1:] ==# '\' ? '\' : '') . '\k*'}
 endfunction
 
@@ -200,16 +205,31 @@ function! wilder#escape_python(str, ...) abort
   return l:res
 endfunction
 
+" DEPRECATED: Use wilder#python_substring_pattern()
 function! wilder#python_substring() abort
+  return call('wilder#python_substring_pattern', [])
+endfunction
+
+function! wilder#python_substring_pattern() abort
   return {_, x -> '(' . wilder#escape_python(x) . ')\w*'}
 endfunction
 
+" DEPRECATED: Use wilder#python_fuzzy_pattern()
 function! wilder#python_fuzzy_match(...) abort
+  return call('wilder#python_fuzzy_pattern', a:000)
+endfunction
+
+function! wilder#python_fuzzy_pattern(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
   return wilder#pipe#python_fuzzy_match#make(l:args)
 endfunction
 
+" DEPRECATED: Use wilder#python_fuzzy_delimiter_pattern()
 function! wilder#python_fuzzy_delimiter(...) abort
+  return call('wilder#python_fuzzy_delimiter_pattern', a:000)
+endfunction
+
+function! wilder#python_fuzzy_delimiter_pattern(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
   return wilder#pipe#python_fuzzy_delimiter#make(l:args)
 endfunction
@@ -434,15 +454,15 @@ function! wilder#python_search_pipeline(...) abort
 
   let l:pipeline = []
 
-  let l:Regex = get(l:opts, 'regex', 'substring')
-  if type(l:Regex) is v:t_func
-    call add(l:pipeline, l:Regex)
-  elseif l:Regex ==# 'fuzzy'
-    call add(l:pipeline, wilder#python_fuzzy_match())
-  elseif l:Regex ==# 'fuzzy_delimiter'
-    call add(l:pipeline, wilder#python_fuzzy_delimiter())
+  let l:Pattern = get(l:opts, 'pattern', get(l:opts, 'regex', 'substring'))
+  if type(l:Pattern) is v:t_func
+    call add(l:pipeline, l:Pattern)
+  elseif l:Pattern ==# 'fuzzy'
+    call add(l:pipeline, wilder#python_fuzzy_pattern())
+  elseif l:Pattern ==# 'fuzzy_delimiter'
+    call add(l:pipeline, wilder#python_fuzzy_delimiter_pattern())
   else
-    call add(l:pipeline, wilder#python_substring())
+    call add(l:pipeline, wilder#python_substring_pattern())
   endif
 
   let l:subpipeline = []
