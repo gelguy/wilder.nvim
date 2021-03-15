@@ -94,36 +94,6 @@ function! wilder#hl_with_attr(name, hl_group, ...) abort
   return wilder#make_hl(a:name, a:hl_group, [{}, l:attrs, l:attrs])
 endfunction
 
-function! wilder#flatten(xss) abort
-  if empty(a:xss)
-    return []
-  endif
-
-  let l:result = a:xss[0]
-
-  for l:xs in a:xss[1 :]
-    let l:result += l:xs
-  endfor
-
-  return l:result
-endfunction
-
-function! wilder#uniq(xs, ...) abort
-  let l:seen = {}
-  let l:res = []
-
-  for l:element in a:xs
-    let l:key = a:0 ? a:1(l:element) : l:element
-
-    if !has_key(l:seen, l:key)
-      let l:seen[l:key] = 1
-      call add(l:res, l:key)
-    endif
-  endfor
-
-  return l:res
-endfunction
-
 function! wilder#query_highlighter(...)
   let l:opts = get(a:, 1, {})
   return wilder#highlighter#query_highlighter(l:opts)
@@ -192,10 +162,6 @@ function! wilder#result_output_escape(chars) abort
         \ })
 endfunction
 
-function! wilder#sequence(...) abort
-  return wilder#pipe#sequence#make(a:000)
-endfunction
-
 function! wilder#vim_substring() abort
   return {_, x -> x . (x[-1:] ==# '\' ? '\' : '') . '\k*'}
 endfunction
@@ -203,10 +169,6 @@ endfunction
 function! wilder#vim_search(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
   return wilder#pipe#vim_search#make(l:args)
-endfunction
-
-function! wilder#vim_sort() abort
-  return {_, x -> sort(copy(x))}
 endfunction
 
 function! wilder#escape_python(str, ...) abort
@@ -257,10 +219,6 @@ function! wilder#python_search(...) abort
   return {_, x -> {ctx -> _wilder_python_search(ctx, l:opts, x)}}
 endfunction
 
-function! wilder#python_uniq() abort
-  return {_, x -> {ctx -> _wilder_python_uniq(ctx, x)}}
-endfunction
-
 function! wilder#_python_sleep(t) abort
   return {_, x -> {ctx -> _wilder_python_sleep(ctx, a:t, x)}}
 endfunction
@@ -275,11 +233,35 @@ function! wilder#history(...) abort
   endif
 endfunction
 
-function! wilder#python_sort() abort
-  return {_, x -> {ctx -> _wilder_python_sort(ctx, x)}}
+" sorters
+
+" DEPRECATED: Use wilder#sorter_lexical()
+function! wilder#vim_sort() abort
+  return call('wilder#sorter_lexical', [])
 endfunction
 
-" sorters
+function! wilder#sorter_lexical() abort
+  return {ctx, xs -> wilder#sort_lexical(ctx, 0, xs)}
+endfunction
+
+" opts and query are ignored
+function! wilder#sort_lexical(ctx, opts, xs, ...) abort
+  return sort(copy(a:xs))
+endfunction
+
+" DEPRECATED: Use wilder#python_sorter_lexical()
+function! wilder#python_sort() abort
+  return call('wilder#python_sorter_lexical', [])
+endfunction
+
+function! wilder#python_sorter_lexical() abort
+  return {ctx, xs -> wilder#python_sort_lexical(ctx, 0, xs)}
+endfunction
+
+" opts and query are ignored
+function! wilder#python_sort_lexical(ctx, opts, xs, ...) abort
+  return {ctx -> _wilder_python_sort(ctx, a:xs)}
+endfunction
 
 function! wilder#python_sorter_difflib(...) abort
   let l:opts = {
@@ -310,6 +292,42 @@ function! wilder#python_sort_fuzzywuzzy(ctx, opts, xs, query) abort
 endfunction
 
 " filters
+
+" DEPRECATED: use wilder#filter_uniq()
+function! wilder#uniq() abort
+  return call('wilder#filter_uniq', [])
+endfunction
+
+function! wilder#filter_uniq() abort
+  return {ctx, xs -> wilder#filt_uniq(ctx, 0, xs)}
+endfunction
+
+function! wilder#filt_uniq(ctx, opts, xs, ...) abort
+  let l:seen = {}
+  let l:res = []
+
+  for l:x in a:xs
+    if !has_key(l:seen, l:x)
+      let l:seen[l:x] = 1
+      call add(l:res, l:x)
+    endif
+  endfor
+
+  return l:res
+endfunction
+
+" DEPRECATED: use wilder#python_filter_uniq()
+function! wilder#python_uniq() abort
+  return call('wilder#python_filter_uniq', [])
+endfunction
+
+function! wilder#python_filter_uniq() abort
+  return {ctx, xs, -> wilder#python_filt_uniq(ctx, 0, xs)}
+endfunction
+
+function! wilder#python_filt_uniq(ctx, opts, xs, ...) abort
+  return {ctx -> _wilder_python_uniq(ctx, a:xs)}
+endfunction
 
 " DEPRECATED: use wilder#filter_fuzzy()
 function! wilder#fuzzy_filter() abort
@@ -654,6 +672,10 @@ endfunction
 
 function! wilder#cpsm_path(...) abort
   return s:get_module_path('cpsm#CtrlPMatch', '/..', get(a:, 1, 1))
+endfunction
+
+function! wilder#clear_module_path_cache()
+  call s:module_path_cache.clear()
 endfunction
 
 let s:project_root_cache = wilder#cache#cache()
