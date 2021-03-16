@@ -499,6 +499,7 @@ function! wilder#main#step(num_steps) abort
       let l:candidate = s:result.value[s:selected]
 
       let l:output = l:candidate
+      let l:x = l:output
 
       if has_key(s:result, 'output')
         for l:F in s:result.output
@@ -506,7 +507,7 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:output = l:F({}, l:output, s:result.data)
+          let l:output = l:F({'x': l:x}, l:output, s:result.data)
         endfor
       endif
 
@@ -519,6 +520,7 @@ function! wilder#main#step(num_steps) abort
 
           let l:new_cmdline = l:F({
                 \ 'cmdline': s:replaced_cmdline,
+                \ 'x': l:x,
                 \ }, l:new_cmdline, s:result.data)
         endfor
       endif

@@ -8,6 +8,7 @@ function! wilder#render#draw_x(ctx, result, i)
   if has_key(a:result, 'draw')
     let l:ctx = {
           \ 'i': a:i,
+          \ 'x': l:x,
           \ 'selected': a:ctx.selected == a:i,
           \ }
 
