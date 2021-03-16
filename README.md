@@ -8,7 +8,7 @@
 - High level of customisation
   - build your own custom pipeline to suit your needs
   - customisable look and appearance
-- Async query support - use Python 3 for faster and non-blocking queries
+- Async query support - uses Python 3 remote plugin for faster and non-blocking queries
 
 ![wilder](https://i.imgur.com/5kkjB7X.gif)
 
@@ -56,9 +56,12 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 
 ```vim
 " For Neovim only
+" For wild#cmdline_pipeline():
+"   'fuzzy'      : set fuzzy searching
+"   'use_python' : use python for fuzzy searching
 " For wild#python_search_pipeline():
-"   'pattern' : can be set to 'fuzzy_delimiter' for stricter fuzzy matching
-"   'engine'  : can be set to 're2' for performance, requires pyre2 to be installed
+"   'pattern'    : can be set to 'fuzzy_delimiter' for stricter fuzzy matching
+"   'engine'     : can be set to 're2' for performance, requires pyre2 to be installed
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
@@ -73,6 +76,8 @@ call wilder#set_option('pipeline', [
       \   ),
       \ ])
 ```
+
+![Fuzzy](https://i.imgur.com/rFgEVJ2.png)
 
 The pipeline is essentially a list of functions (referred to as pipes) which are executed in order, passing the result of the previous function to the next one. `wilder#branch()` is a higher-order component which is able to provide control flow given its own lists of pipelines.
 
@@ -95,16 +100,38 @@ call wilder#set_option('pipeline', [
 
 When the cmdline is empty, provide suggestions based on the cmdline history (`:h cmdline-history`).
 
+With a Devicons font:
+
+```vim
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     [
+      \       wilder#check({_, x -> empty(x)}),
+      \       wilder#history(),
+      \       wilder#result({
+      \         'draw': [{_, x -> ' ' . x}],
+      \       }),
+      \     ],
+      \     wilder#cmdline_pipeline(),
+      \     wilder#search_pipeline(),
+      \   ),
+      \ ])
+```
+
+![History](https://i.imgur.com/BuDPosq.png)
+
 #### File finder (Experimental) (Neovim only)
 
 ```vim
-" 'command' : for ripgrep : ['rg', '--files']
-"           : for fd      : ['fd', '-tf']
-" 'filters' : use ['cpsm_filter'] for performance, needs cpsm to be installed
+" 'file_command' : for ripgrep : ['rg', '--files']
+"                : for fd      : ['fd', '-tf']
+" 'dir_command'  : for fd      : ['fd', '-td']
+" 'filters'      : use ['cpsm_filter'] for performance, needs cpsm to be installed
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#python_file_finder_pipeline({
-      \       'command': ['find', '.', '-type', 'f', '-printf', '%P\n'],
+      \       'file_command': ['find', '.', '-type', 'f', '-printf', '%P\n'],
+      \       'dir_command': ['find', '.', '-type', 'd', '-printf', '%P\n'],
       \       'filters': ['fuzzy_filter', 'difflib_sorter'],
       \     }),
       \     wilder#cmdline_pipeline(),
@@ -115,13 +142,11 @@ call wilder#set_option('pipeline', [
 
 When getting file completions, fuzzily search and match through all files under the current directory. Has to be placed above `wilder#cmdline_pipeline()`.
 
-To optimise for performane, the `command` and `filters` options can be customised. See `:h wilder#python_file_finder_pipeline()` for more details.
+To optimise for performane, the `file_command`, `dir_command` and `filters` options can be customised. See `:h wilder#python_file_finder_pipeline()` for more details.
 
 #### Devicons (Experimental)
 
 `ryanoasis/vim-devicons` is required. Note: the API is experimental and subject to change.
-
-![Devicons](https://i.imgur.com/twcyhtv.png)
 
 ```vim
 " Add wilder#result_draw_devicons() to the end of the pipeline
@@ -133,16 +158,16 @@ call wilder#set_option('pipeline', [
       \ ])
 ```
 
+![Devicons](https://i.imgur.com/twcyhtv.png)
+
 ## Customising the renderer
 
-By using `wilder#set_option('renderer', <renderer>)`, you are able to change how `wilder` draws the candidates. By default, `wilder` tries its best to look like the default wildmenu.
+Use `wilder#set_option('renderer', <renderer>)` to change how `wilder` draws the results. By default, `wilder` tries its best to look like the default wildmenu.
 
 ### Wildmenu renderer
 
 `wilder#wildmenu_renderer()` draws the candidates above the cmdline. For Neovim 0.4+, a floating window is used. Otherwise the statusline is used.
 Due to statusline limitations, the wildmenu only fills up the width of the current window.
-
-![Default](https://i.imgur.com/vIgIt4v.png)
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
@@ -151,9 +176,9 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ })
 ```
 
-For Airline and Lightline users, use `wilder#airline_theme()` and `wilder#lightline_theme()` to configure the renderer to look like the statusline.
+![Default](https://i.imgur.com/vIgIt4v.png)
 
-![Airline](https://i.imgur.com/kG5RTtq.png)
+For Airline and Lightline users, use `wilder#airline_theme()` and `wilder#lightline_theme()` to configure the renderer to look like the statusline.
 
 ```vim
 " use wilder#lightline_theme() if using Lightline
@@ -166,11 +191,11 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer(
       \ })))
 ```
 
+![Airline](https://i.imgur.com/1HemK0l.png)
+
 ### Popupmenu renderer (Experimental) (Neovim only)
 
-For Neovim 0.4+, `wilder#popupmenu_renderer()` can be used.
-
-![Popupmenu](https://i.imgur.com/YcVk7le.png)
+For Neovim 0.4+, `wilder#popupmenu_renderer()` can be used to draw the results on a popupmenu, similar to `wildoptions+=pum`.
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
@@ -178,6 +203,8 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ 'highlighter': wilder#query_highlighter(),
       \ })
 ```
+
+![Popupmenu](https://i.imgur.com/YcVk7le.png)
 
 Use `wilder#renderer_mux()` to choose which renderer to use for different cmdline modes.
 This is helpful since the popupmenu might block the current window when searching with `/`.
@@ -204,3 +231,28 @@ Alternatively, define a mapping in your `init.vim` or `.vimrc`
 ```
 nnoremap <expr> <Leader>w wilder#toggle()
 ```
+
+# Acknowledgements
+
+Many thanks to the following codebases for providing ideas and reference:
+> [denite.nvim](https://github.com/Shougo/denite.nvim)
+
+> [fzf.vim](https://github.com/junegunn/fzf.vim)
+
+> [vim-airline](https://github.com/vim-airline/vim-airline)
+
+> [lightline.vim](https://github.com/itchyny/lightline.vim)
+
+> [cpsm](https://github.com/nixprime/cpsm)
+
+> [fruzzy](https://github.com/raghur/fruzzy)
+
+> [LeaderF](https://github.com/Yggdroot/LeaderF)
+
+> [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+
+> [vim-devicons](https://github.com/ryanoasis/vim-devicons)
+
+> [scrollbar.nvim](https://github.com/Xuyuanp/scrollbar.nvim)
+
+> and many more!
