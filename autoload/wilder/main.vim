@@ -433,6 +433,19 @@ function! wilder#main#next_when_available() abort
   return ''
 endfunction
 
+function! wilder#main#trigger_cmdlinechange() abort
+  if exists('s:previous_cmdline')
+    unlet s:previous_cmdline
+  endif
+
+  if exists('s:completion')
+    unlet s:completion
+  endif
+
+  call s:do(1)
+  return "\<Insert>\<Insert>"
+endfunction
+
 function! wilder#main#previous() abort
   return wilder#main#step(-1)
 endfunction
