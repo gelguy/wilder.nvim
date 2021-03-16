@@ -714,8 +714,8 @@ wilder#cmdline_pipeline([{options}])
                   \ SomeCondition(x)})
             endfunction
 <
-            Default: |wilder#python_filter_fuzzy()| if `use_python` is true
-                     |wilder#filter_fuzzy()| otherwise
+            Default: |wilder#python_fuzzy_filter()| if `use_python` is true
+                     |wilder#fuzzy_filter()| otherwise
 
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
@@ -833,11 +833,11 @@ wilder#python_file_finder_pipeline([{options}])
 
             Can be set to an empty list to return the entire list of files.
 
-            For performance, using `cpsm` with ['filter_cpsm'] is recommended.
+            For performance, using `cpsm` with ['cpsm_filter'] is recommended.
 
             The available filters are:
-            `filter_fuzzy`
-            Filters the list with |wilder#python_filter_fuzzy()|.
+            `fuzzy_filter`
+            Filters the list with |wilder#python_fuzzy_filter()|.
 
             Options:
                 `engine`
@@ -855,8 +855,8 @@ wilder#python_file_finder_pipeline([{options}])
 
                 Default: 2
 
-            `filter_fruzzy`
-            Filters and sorts the list with |wilder#python_filter_fruzzy()|.
+            `fruzzy_filter`
+            Filters and sorts the list with |wilder#python_fruzzy_filter()|.
             The `fruzzy.vim` Vim plugin is needed.
 
             Options:
@@ -872,8 +872,8 @@ wilder#python_file_finder_pipeline([{options}])
 
                 Default: Inferred by Neovim.
 
-            `filter_cpsm`
-            Filters and sorts the list with |wilder#python_filter_cpsm()|.
+            `cpsm_filter`
+            Filters and sorts the list with |wilder#python_cpsm_filter()|.
             The `cpsm` Vim plugin is required.
 
             Options:
@@ -883,8 +883,8 @@ wilder#python_file_finder_pipeline([{options}])
 
                 Default: Inferred by Neovim.
 
-            `sort_difflib`
-            Sorts the list with |wilder#python_sort_difflib()|.
+            `difflib_sorter`
+            Sorts the list with |wilder#python_difflib_sorter()|.
 
             Options:
                 `case_sensitive`
@@ -893,11 +893,11 @@ wilder#python_file_finder_pipeline([{options}])
 
                 Default: 1
 
-            `sort_fuzzywuzzy`
-            Sorts the list with |wilder#python_sort_fuzzywuzzy()|. The Python3
+            `fuzzywuzzy_sorter`
+            Sorts the list with |wilder#python_fuzzywuzzy_sorter()|. The Python3
             `fuzzywuzzy` module is needed.
 
-            Default: ['fuzzy', 'difflib']
+            Default: ['fuzzy_filter', 'difflib_sorter']
 
                                     *wilder#substitute_pipeline()*
 wilder#substitute_pipeline([{options}])
@@ -1922,34 +1922,32 @@ wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
 
             Returns the name of the new highlight group.
 
-                                    *wilder#filt_uniq()*
-wilder#filt_uniq({ctx}, {opts}, {candidates}[, {query}])
+                                    *wilder#uniq_filt()*
+wilder#uniq_filt({ctx}, {opts}, {candidates}[, {query}])
             Takes a list and returns a copy of the list with duplicates
             removed. {opts} and {query} are ignored.
 
-wilder#filter_uniq()                *wilder#filter_uniq()*
+wilder#uniq_filter()                *wilder#uniq_filter()*
                                     Pipe~
             Returns a filter that filters and sorts the candidates using
-            |wilder#filt_uniq()|.  |wilder#cmdline_pipeline()|. Can be used as
-            a |wilder-pipeline-pipe|.
+            |wilder#uniq_filt()|.  Can be used as a |wilder-pipeline-pipe|.
 
-                                    *wilder#python_filt_uniq()*
-wilder#python_filt_uniq({ctx}, {opts}, {candidates}[, {query}])
+                                    *wilder#python_uniq_filt()*
+wilder#python_uniq_filt({ctx}, {opts}, {candidates}[, {query}])
                                     Neovim only~
                                     Async~
             Takes a list and returns a copy of the list with duplicates
             removed. {opts} and {query} are ignored.
 
-wilder#python_filter_uniq()         *wilder#python_filter_uniq()*
+wilder#python_uniq_filter()         *wilder#python_uniq_filter()*
                                     Pipe~
                                     Neovim only~
             Returns a filter that filters and sorts the candidates using
-            |wilder#python_filt_uniq()|.  |wilder#cmdline_pipeline()|. Can be
-            used as a |wilder-pipeline-pipe|.
+            |wilder#python_uniq_filt()|.  Can be used as a
+            |wilder-pipeline-pipe|.
 
-
-                                    *wilder#filt_fuzzy()*
-wilder#filt_fuzzy({ctx}, {opts}, {candidates}, {query})
+                                    *wilder#fuzzy_filt()*
+wilder#fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             Takes a list of candidates and fuzzily filters and sorts the
             candidates.
 
@@ -1961,13 +1959,13 @@ wilder#filt_fuzzy({ctx}, {opts}, {candidates}, {query})
 
             Options contains no keys.
 
-wilder#filter_fuzzy()               *wilder#filter_fuzzy()*
+wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#filt_fuzzy()|. Can be used as the `fuzzy_filter` option in
+            |wilder#fuzzy_filt()|. Can be used as the `fuzzy_filter` option in
             |wilder#cmdline_pipeline()|.
 
-                                    *wilder#python_filt_fuzzy()*
-wilder#python_filt_fuzzy({ctx}, {opts}, {candidates}, {query})
+                                    *wilder#python_fuzzy_filt()*
+wilder#python_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
                                     Async~
             Takes a list of candidates and fuzzily filters and sorts the
@@ -1981,15 +1979,15 @@ wilder#python_filt_fuzzy({ctx}, {opts}, {candidates}, {query})
 
             Options contains no keys.
 
-wilder#python_filter_fuzzy()        *wilder#python_filter_fuzzy()*
+wilder#python_fuzzy_filter()        *wilder#python_fuzzy_filter()*
                                     Neovim only~
                                     Async~
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#python_filt_fuzzy()|. Can be used as the `fuzzy_filter`
+            |wilder#python_fuzzy_filt()|. Can be used as the `fuzzy_filter`
             option in |wilder#cmdline_pipeline()|.
 
-                                    *wilder#python_filt_fruzzy()*
-wilder#python_filt_fruzzy({ctx}, {opts}, {candidates}, {query})
+                                    *wilder#python_fruzzy_filt()*
+wilder#python_fruzzy_filt({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
                                     Async~
                                     fruzzy plugin required~
@@ -2016,23 +2014,23 @@ wilder#python_filt_fruzzy({ctx}, {opts}, {candidates}, {query})
 
             Default: None
 
-                                    *wilder#python_filter_fruzzy()*
-wilder#python_filter_fruzzy([{limit}, [{fruzzy_path}]])
+                                    *wilder#python_fruzzy_filter()*
+wilder#python_fruzzy_filter([{limit}, [{fruzzy_path}]])
                                     Neovim only~
                                     fruzzy plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#python_filt_fruzzy()|. Can be used as the `fuzzy_filter`
+            |wilder#python_fruzzy_filt()|. Can be used as the `fuzzy_filter`
             option in |wilder#cmdline_pipeline()|.
 
             The {limit} and {fruzzy_path} arguments are passed to
-            |wilder#python_filt_fruzzy()| as options.
+            |wilder#python_fruzzy_filt()| as options.
 
             {fruzzy_path} can be provided to set the path for `fruzzy.py`.
             It is inferred by Neovim otherwise.
 
 
-                                    *wilder#python_filt_cpsm()*
-wilder#python_filt_cpsm({ctx}, {opts}, {candidates}, {query})
+                                    *wilder#python_cpsm_filt()*
+wilder#python_cpsm_filt({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
                                     Async~
                                     cpsm plugin required~
@@ -2048,49 +2046,49 @@ wilder#python_filt_cpsm({ctx}, {opts}, {candidates}, {query})
 
             Default: None
 
-                                    *wilder#python_filter_cpsm()*
-wilder#python_filter_cpsm([{cpsm_path}])
+                                    *wilder#python_cpsm_filter()*
+wilder#python_cpsm_filter([{cpsm_path}])
                                     Neovim only~
                                     cpsm plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#python_filt_cpsm()|.
+            |wilder#python_cpsm_filt()|.
 
-            The {cpsm_path} argument is passed to |wilder#python_filt_cpsm()|
+            The {cpsm_path} argument is passed to |wilder#python_cpsm_filt()|
             as an option.
 
             {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
             is inferred by Neovim otherwise.
 
-                                    *wilder#sort_lexical()*
-wilder#sort_lexical({ctx}, {opts}, {candidates}[, {query}])
+                                    *wilder#lexical_sort()*
+wilder#lexical_sort({ctx}, {opts}, {candidates}[, {query}])
             Takes a list and returns a copy of the list sorted by lexical
             order. {opts} and {query} are ignored.
 
-wilder#sorter_lexical()             *wilder#sorter_lexical()*
+wilder#lexical_sorter()             *wilder#lexical_sorter()*
                                     Pipe~
-            Returns a sorter which uses |wilder#sort_lexical()| to sort the
+            Returns a sorter which uses |wilder#lexical_sort()| to sort the
             candidates. Can be used as the `sorter` option in
             |wilder#cmdline_pipeline()|. Can also be used as a
             |wilder-pipeline-pipe|.
 
-                                    *wilder#python_sort_lexical()*
-wilder#python_sort_lexical({ctx}, {opts}, {candidates}[, {query}])
+                                    *wilder#python_lexical_sort()*
+wilder#python_lexical_sort({ctx}, {opts}, {candidates}[, {query}])
                                     Neovim only~
                                     Async~
             Takes a list and returns a copy of the list sorted by lexical
             order. {opts} and {query} are ignored.
 
-wilder#python_sorter_lexical()      *wilder#python_sorter_lexical()*
+wilder#python_lexical_sorter()      *wilder#python_lexical_sorter()*
                                     Pipe~
                                     Neovim only~
                                     Async~
-            Returns a sorter which uses |wilder#python_sort_lexical()| to sort
+            Returns a sorter which uses |wilder#python_lexical_sort()| to sort
             the candidates. Can be used as the `sorter` option in
             |wilder#cmdline_pipeline()|. Can also be used as a
             |wilder-pipeline-pipe|.
 
-                                    *wilder#python_sort_difflib()*
-wilder#python_sort_difflib({ctx}, {opts}, {candidates}, {query})
+                                    *wilder#python_difflib_sort()*
+wilder#python_difflib_sort({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
             Takes a list of candidates and a query and returns a
             |wilder-pipeline-thunk| which sorts the candidates using
@@ -2117,18 +2115,18 @@ wilder#python_sort_difflib({ctx}, {opts}, {candidates}, {query})
 <
 
 
-                                    *wilder#python_sorter_difflib()*
-wilder#python_sorter_difflib([{quick}, [{case_sensitive}]])
+                                    *wilder#python_difflib_sorter()*
+wilder#python_difflib_sorter([{quick}, [{case_sensitive}]])
                                     Neovim only~
-            Returns a sorter which uses |wilder#python_sort_difflib()| to sort
+            Returns a sorter which uses |wilder#python_difflib_sort()| to sort
             the candidates. Can be used as the `sorter` option in
             |wilder#cmdline_pipeline()|.
 
             The {quick} and {case_sensitive} arguments are passed to
-            |wilder#python_sort_difflib()| as options.
+            |wilder#python_difflib_sort()| as options.
 
-                                    *wilder#python_sort_fuzzywuzzy()*
-wilder#python_sort_fuzzywuzzy({ctx}, {opts}, {candidates}, {query})
+                                    *wilder#python_fuzzywuzzy_sort()*
+wilder#python_fuzzywuzzy_sort({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~
                                     Async~
                                     Python 3 fuzzywuzzy module required~
@@ -2152,16 +2150,16 @@ wilder#python_sort_fuzzywuzzy({ctx}, {opts}, {candidates}, {query})
                   \ wilder#python_sort_fuzzywuzzy(ctx, {}, xs, ctx.input)}}})
 <
 
-                                    *wilder#python_sorter_fuzzywuzzy()*
-wilder#python_sorter_fuzzywuzzy([{partial}])
+                                    *wilder#python_fuzzywuzzy_sorter()*
+wilder#python_fuzzywuzzy_sorter([{partial}])
                                     Neovim only~
                                     Python 3 fuzzywuzzy module required~
-            Returns a sorter which uses |wilder#python_sort_fuzzywuzzy()| to
+            Returns a sorter which uses |wilder#python_fuzzywuzzy_sort()| to
             sort the candidates. Can be used as the `sorter` option in
             |wilder#cmdline_pipeline()|.
 
             The {partial} argument is passed to
-            |wilder#python_sort_fuzzywuzzy()| as an option.
+            |wilder#python_fuzzywuzzy_sort()| as an option.
 
 wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
                                     python option only for Neovim~
@@ -2177,7 +2175,7 @@ wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
             where each span corresponds to the byte start and byte length of a
             subsequence block.
 
-            {options} is a dictionary with keys:
+            {opts} is a dictionary with keys:
             `language`
             Optional~
             One of 'vim' or 'python'. If 'python', uses a Python
@@ -2207,7 +2205,7 @@ wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
             span corresponds to the byte start and byte length of a capture
             group matched by {data}['pcre2.pattern'].
 
-            {options} is a dictionary with keys:
+            {opts} is a dictionary with keys:
             `language`
             Optional~
             One of 'python' or 'lua'. If 'lua', uses a lua script to retrieve
@@ -2230,7 +2228,38 @@ wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
 
             Note: This function is slow and should be avoided by users who are
             concerned about performance. Using 'lua' is slightly faster, but
-            will still have performance issues.
+            will still increase the rendering time.
+
+wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
+                                    Neovim only~
+                                    Async~
+                                    cpsm plugin required~
+            Helper function which returns a function for the `highlighter`
+            option for |wilder#wildmenu_renderer()| or
+            |wilder#popupmenu_renderer()|.
+
+            Returns a function which takes {ctx}, {candidate} and {data} as
+            arguments.
+            If {data} does not contain the key `query`, returns 0.
+            Otherwise, returns a list of highlight spans as determined by
+            `cpsm`.
+
+            {opts} is a dictionary with keys:
+            `cpsm_path`
+            Optional~
+            The parent directory of the `cpsm_py.so` file.
+
+            Default: Inferred by Neovim.
+
+            `highlight_mode`
+            Optional~
+            The highlight mode option passed to `cpsm`. Can be either 'basic'
+            or 'detailed'.
+
+            Default: 'basic'
+
+            Note: This function is slow and should be avoided by users who are
+            concerned about performance.
 
                                     *wilder#project_root()*
 wilder#project_root([{root_markers}])
@@ -2285,11 +2314,11 @@ wilder#python_fuzzy_delimiter([{options}])
 
 wilder#vim_sort()                   *wilder#vim_sort()*
                                     Deprecated~
-            Deprecated: Use |wilder#sorter_lexical()|.
+            Deprecated: Use |wilder#lexical_sorter()|.
 
 wilder#python_sort()                *wilder#python_sort()*
                                     Deprecated~
-            Deprecated: Use |wilder#python_sorter_lexical()|.
+            Deprecated: Use |wilder#python_lexical_sorter()|.
 
 wilder#vim_uniq()                   *wilder#vim_uniq()*
                                     Deprecated~
@@ -2303,14 +2332,27 @@ wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
                                     Deprecated~
             Deprecated: Use |wilder#filter_fuzzy()|.
 
-wilder#python_fuzzy_filter()        *wilder#python_fuzzy_filter()*
+wilder#python_filter_fuzzy()        *wilder#python_filter_fuzzy()*
                                     Deprecated~
-            Deprecated: Use |wilder#python_filter_fuzzy()|.
+            Deprecated: Use |wilder#python_fuzzy_filter()|.
+
+                                    *wilder#python_filter_fruzzy()*
+wilder#python_filter_fruzzy([{limit}, [{fruzzy_path}]])
+            Deprecated: Use |wilder#python_fruzzy_filter()|.
+
+                                    *wilder#python_filter_cpsm()*
+wilder#python_filter_cpsm([{cpsm_path}])
+            Deprecated: Use |wilder#python_cpsm_filter()|.
 
                                     *wilder#python_fuzzywuzzy()*
 wilder#python_fuzzywuzzy({ctx}, {candidates}, {query})
                                     Deprecated~
-            Deprecated: Use |wilder#python_sort_fuzzywuzzy()|.
+            Deprecated: Use |wilder#python_fuzzywuzzy_sort()|.
+
+                                    *wilder#python_sort_fuzzywuzzy()*
+wilder#python_sort_fuzzywuzzy({ctx}, {opts}, {candidates}, {query})
+                                    Deprecated~
+            Deprecated: Use |wilder#python_fuzzywuzzy_sort()|.
 
                                     *wilder#query_common_subsequence_spans()*
 wilder#query_common_subsequence_spans([{opts}])

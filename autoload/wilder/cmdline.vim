@@ -204,7 +204,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   return l:res
 endfunction
 
-function! wilder#cmdline#filter_fuzzy(ctx, candidates, query) abort
+function! wilder#cmdline#fuzzy_filt(ctx, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
@@ -273,30 +273,30 @@ function! s:make_python_fuzzy_regex(query)
   return l:regex
 endfunction
 
-function! wilder#cmdline#python_filter_fuzzy(ctx, opts, candidates, query) abort
+function! wilder#cmdline#python_fuzzy_filt(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
   let l:regex = s:make_python_fuzzy_regex(a:query)
 
-  return {ctx -> _wilder_python_filter_fuzzy(ctx, a:opts, a:candidates, l:regex)}
+  return {ctx -> _wilder_python_fuzzy_filt(ctx, a:opts, a:candidates, l:regex)}
 endfunction
 
-function! wilder#cmdline#python_filter_fruzzy(ctx, opts, candidates, query) abort
+function! wilder#cmdline#python_fruzzy_filt(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
-  return {ctx -> _wilder_python_filter_fruzzy(ctx, a:opts, a:candidates, a:query)}
+  return {ctx -> _wilder_python_fruzzy_filt(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
-function! wilder#cmdline#python_filter_cpsm(ctx, opts, candidates, query) abort
+function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
-  return {ctx -> _wilder_python_filter_cpsm(ctx, a:opts, a:candidates, a:query)}
+  return {ctx -> _wilder_python_cpsm_filt(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode) abort
@@ -323,7 +323,7 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mod
 
   return wilder#wait(a:getcompletion(a:ctx, l:upper_res),
         \ {ctx, upper_xs -> wilder#resolve(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
-        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#filt_uniq(0, 0, lower_xs + upper_xs))}))})
+        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#uniq_filt(0, 0, lower_xs + upper_xs))}))})
 endfunction
 
 function! wilder#cmdline#python_get_file_completion(ctx, res) abort
@@ -486,7 +486,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
       endfor
     endif
 
-    return wilder#filt_uniq(0, 0, l:result)
+    return wilder#uniq_filt(0, 0, l:result)
   elseif a:res.expand ==# 'mapclear'
     return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
   elseif a:res.expand ==# 'menu'
@@ -753,12 +753,12 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
       let l:filter_opts = get(l:filter, 'opts', {})
       let l:filter['opts'] = l:filter_opts
 
-      if l:filter['name'] ==# 'filter_fruzzy' &&
+      if l:filter['name'] ==# 'fruzzy_filter' &&
             \ !has_key(l:filter_opts, 'fruzzy_path')
         let l:filter_opts['fruzzy_path'] = wilder#fruzzy_path()
       endif
 
-      if l:filter['name'] ==# 'filter_cpsm' &&
+      if l:filter['name'] ==# 'cpsm_filter' &&
             \ !has_key(l:filter_opts, 'cpsm_path')
         let l:filter_opts['cpsm_path'] = wilder#cpsm_path()
       endif
@@ -870,21 +870,6 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \   'replace': ['wilder#cmdline#replace'],
         \ }),
         \ ]
-endfunction
-
-function! wilder#cmdline#hide_in_substitute(ctx, cmdline)
-  let l:res = wilder#cmdline#parse(a:cmdline)
-  if !wilder#cmdline#is_substitute_command(l:res.cmd)
-    return a:cmdline
-  endif
-
-  let l:res = wilder#cmdline#substitute#parse({'cmdline': l:res.cmdline[l:res.pos :], 'pos': 0})
-
-  if len(l:res) >= 2
-    return v:true
-  endif
-
-  return a:cmdline
 endfunction
 
 let s:substitute_commands = {

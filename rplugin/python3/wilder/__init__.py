@@ -129,7 +129,7 @@ class Wilder(object):
 
             timeout_ms = opts['timeout'] if 'timeout' in opts else 5000
             filters = opts['filters'] if 'filters' in opts else \
-                    [{'name': 'filter_fuzzy', 'opts': {}}, {'name': 'sort_difflib', 'opts': {}}]
+                    [{'name': 'fuzzy_filter', 'opts': {}}, {'name': 'difflib_sorter', 'opts': {}}]
 
             result = None
             with self.find_files_lock:
@@ -174,23 +174,23 @@ class Wilder(object):
                     filter_name = filter['name']
                     filter_opts = filter['opts']
 
-                    if filter_name == 'filter_cpsm':
+                    if filter_name == 'cpsm_filter':
                         filter_opts['ispath'] = True
-                        candidates = self.filter_cpsm(event, filter_opts, candidates, query)
+                        candidates = self.cpsm_filt(event, filter_opts, candidates, query)
 
-                    elif filter_name == 'filter_fruzzy':
-                        candidates = self.filter_fruzzy(event, filter_opts, candidates, query)
+                    elif filter_name == 'fruzzy_filter':
+                        candidates = self.fruzzy_filt(event, filter_opts, candidates, query)
 
-                    elif filter_name == 'filter_fuzzy':
+                    elif filter_name == 'fuzzy_filter':
                         case_sensitive = filter_opts['case_sensitive'] if 'case_sensitive' in filter_opts else 2
                         pattern = self.make_fuzzy_pattern(query, case_sensitive)
-                        candidates = self.filter_fuzzy(event, filter_opts, candidates, pattern)
+                        candidates = self.fuzzy_filt(event, filter_opts, candidates, pattern)
 
-                    elif filter_name == 'sort_difflib':
-                        candidates = self.sort_difflib(event, filter_opts, candidates, query)
+                    elif filter_name == 'difflib_sorter':
+                        candidates = self.difflib_sort(event, filter_opts, candidates, query)
 
-                    elif filter_name == 'sort_fuzzywuzzy':
-                        candidates = self.sort_fuzzywuzzy(event, filter_opts, candidates, query)
+                    elif filter_name == 'fuzzywuzzy_sorter':
+                        candidates = self.fuzzywuzzy_sort(event, filter_opts, candidates, query)
 
                     else:
                         raise Exception('Unsupported filter: ' + filter_name)
@@ -302,11 +302,11 @@ class Wilder(object):
                     if max_candidates > 0 and len(seen) >= max_candidates:
                         return
 
-    @neovim.function('_wilder_python_uniq', sync=False, allow_nested=True)
-    def _uniq(self, args):
-        self.run_in_background(self.uniq_handler, args)
+    @neovim.function('_wilder_python_uniq_filt', sync=False, allow_nested=True)
+    def _uniq_filt(self, args):
+        self.run_in_background(self.uniq_filt_handler, args)
 
-    def uniq_handler(self, event, ctx, candidates):
+    def uniq_filt_handler(self, event, ctx, candidates):
         if event.is_set():
             return
 
@@ -316,13 +316,13 @@ class Wilder(object):
             res = [x for x in candidates if not (x in seen or seen.add(x))]
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, 'python_uniq: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_uniq_filt: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_sort', sync=False, allow_nested=True)
+    @neovim.function('_wilder_python_lexical_sort', sync=False, allow_nested=True)
     def _sort(self, args):
-        self.run_in_background(self.sort_handler, args)
+        self.run_in_background(self.lexical_sort_handler, args)
 
-    def sort_handler(self, event, ctx, candidates):
+    def lexical_sort_handler(self, event, ctx, candidates):
         if event.is_set():
             return
 
@@ -331,7 +331,7 @@ class Wilder(object):
 
             self.queue.put((ctx, res,))
         except Exception as e:
-            self.queue.put((ctx, 'python_sort: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_lexical_sort: ' + str(e), 'reject',))
 
     # sync=True as it needs to query nvim for some data
     @neovim.function('_wilder_python_get_file_completion', sync=True, allow_nested=True)
@@ -510,20 +510,20 @@ class Wilder(object):
         except Exception as e:
             self.queue.put((ctx, 'python_get_users: ' + str(e), 'reject',))
 
-    @neovim.function('_wilder_python_filter_fuzzy', sync=False, allow_nested=True)
-    def _filter_fuzzy(self, args):
-        self.run_in_background(self.filter_fuzzy_handler, args)
+    @neovim.function('_wilder_python_fuzzy_filt', sync=False, allow_nested=True)
+    def _fuzzy_filt(self, args):
+        self.run_in_background(self.fuzzy_filt_handler, args)
 
-    def filter_fuzzy_handler(self, event, ctx, *args):
+    def fuzzy_filt_handler(self, event, ctx, *args):
         try:
-            candidates = list(self.filter_fuzzy(event, *args))
+            candidates = list(self.fuzzy_filt(event, *args))
 
             if event.is_set():
                 return
 
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, 'python_filter_fuzzy: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_fuzzy_filt: ' + str(e), 'reject',))
 
     # case_sensitive: 0 - case insensitive
     #                 1 - case sensitive
@@ -565,7 +565,7 @@ class Wilder(object):
 
         return pattern
 
-    def filter_fuzzy(self, event, opts, candidates, pattern):
+    def fuzzy_filt(self, event, opts, candidates, pattern):
         engine = opts['engine'] if 'engine' in opts else 're'
         re = importlib.import_module(engine)
         # re2 does not use re.UNICODE by default
@@ -579,22 +579,22 @@ class Wilder(object):
             if pattern.search(candidate):
                 yield candidate
 
-    @neovim.function('_wilder_python_filter_fruzzy', sync=False, allow_nested=True)
-    def _filter_fruzzy(self, args):
-        self.run_in_background(self.filter_fruzzy_handler, args)
+    @neovim.function('_wilder_python_fruzzy_filt', sync=False, allow_nested=True)
+    def _fruzzy_filt(self, args):
+        self.run_in_background(self.fruzzy_filt_handler, args)
 
-    def filter_fruzzy_handler(self, event, ctx, *args):
+    def fruzzy_filt_handler(self, event, ctx, *args):
         try:
-            candidates = list(self.filter_fruzzy(event, *args))
+            candidates = list(self.fruzzy_filt(event, *args))
 
             if event.is_set():
                 return
 
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, 'python_filter_fruzzy: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_fruzzy_filt: ' + str(e), 'reject',))
 
-    def filter_fruzzy(self, *args):
+    def fruzzy_filt(self, *args):
         opts = args[1]
 
         if 'fruzzy_path' in opts:
@@ -602,11 +602,11 @@ class Wilder(object):
 
         use_native = opts['use_native'] if 'use_native' in opts else False
         if use_native:
-            return self.filter_fruzzy_native(*args)
+            return self.fruzzy_filt_native(*args)
 
-        return self.filter_fruzzy_py(*args)
+        return self.fruzzy_filt_py(*args)
 
-    def filter_fruzzy_native(self, event, opts, candidates, query):
+    def fruzzy_filt_native(self, event, opts, candidates, query):
         fruzzy_mod = importlib.import_module('fruzzy_mod')
         limit = opts['limit'] if 'limit' in opts else 1000
 
@@ -618,7 +618,7 @@ class Wilder(object):
 
         return sorted_matches
 
-    def filter_fruzzy_py(self, event, opts, candidates, query):
+    def fruzzy_filt_py(self, event, opts, candidates, query):
         fruzzy = importlib.import_module('fruzzy')
         limit = opts['limit'] if 'limit' in opts else 1000
 
@@ -635,22 +635,22 @@ class Wilder(object):
 
         return [match[0] for match in sorted_matches]
 
-    @neovim.function('_wilder_python_filter_cpsm', sync=False, allow_nested=True)
-    def _filter_cpsm(self, args):
-        self.run_in_background(self.filter_cpsm_handler, args)
+    @neovim.function('_wilder_python_cpsm_filt', sync=False, allow_nested=True)
+    def _cpsm_filt(self, args):
+        self.run_in_background(self.cpsm_filt_handler, args)
 
-    def filter_cpsm_handler(self, event, ctx, *args):
+    def cpsm_filt_handler(self, event, ctx, *args):
         try:
-            candidates = list(self.filter_cpsm(event, *args))
+            candidates = list(self.cpsm_filt(event, *args))
 
             if event.is_set():
                 return
 
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, 'python_filter_cpsm: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_cpsm_filt: ' + str(e), 'reject',))
 
-    def filter_cpsm(self, event, opts, candidates, query):
+    def cpsm_filt(self, event, opts, candidates, query):
         if 'cpsm_path' in opts:
             self.add_sys_path(opts['cpsm_path'])
 
@@ -659,25 +659,25 @@ class Wilder(object):
         cpsm = importlib.import_module('cpsm_py')
         return cpsm.ctrlp_match(candidates, query, ispath=ispath)[0]
 
-    @neovim.function('_wilder_python_sort_difflib', sync=False, allow_nested=True)
-    def _sort_difflib(self, args):
-        self.run_in_background(self.sort_difflib_handler, args)
+    @neovim.function('_wilder_python_difflib_sort', sync=False, allow_nested=True)
+    def _difflib_sort(self, args):
+        self.run_in_background(self.difflib_sort_handler, args)
 
-    def sort_difflib_handler(self, event, ctx, *args):
+    def difflib_sort_handler(self, event, ctx, *args):
         if event.is_set():
             return
 
         try:
-            candidates = list(self.sort_difflib(event, *args))
+            candidates = list(self.difflib_sort(event, *args))
 
             if event.is_set():
                 return
 
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, 'python_sort_difflib: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_difflib_sort: ' + str(e), 'reject',))
 
-    def sort_difflib(self, event, opts, candidates, query):
+    def difflib_sort(self, event, opts, candidates, query):
         quick = opts['quick'] if 'quick' in opts else True
         case_sensitive = opts['case_sensitive'] if 'case_sensitive' in opts else True
 
@@ -696,22 +696,22 @@ class Wilder(object):
 
         return [x[0] for x in sorted(xs, key=lambda x: x[1])]
 
-    @neovim.function('_wilder_python_sort_fuzzywuzzy', sync=False, allow_nested=True)
-    def _sort_fuzzywuzzy(self, args):
-        self.run_in_background(self.sort_fuzzywuzzy_handler, args)
+    @neovim.function('_wilder_python_fuzzywuzzy_sort', sync=False, allow_nested=True)
+    def _fuzzywuzzy_sort(self, args):
+        self.run_in_background(self.fuzzywuzzy_sort_handler, args)
 
-    def sort_fuzzywuzzy_handler(self, event, ctx, *args):
+    def fuzzywuzzy_sort_handler(self, event, ctx, *args):
         try:
-            candidates = list(self.sort_fuzzywuzzy(event, *args))
+            candidates = list(self.fuzzywuzzy_sort(event, *args))
 
             if event.is_set():
                 return
 
             self.queue.put((ctx, candidates,))
         except Exception as e:
-            self.queue.put((ctx, 'python_sort_fuzzywuzzy: ' + str(e), 'reject',))
+            self.queue.put((ctx, 'python_fuzzywuzzy_sort: ' + str(e), 'reject',))
 
-    def sort_fuzzywuzzy(self, event, opts, candidates, query):
+    def fuzzywuzzy_sort(self, event, opts, candidates, query):
         fuzzy = importlib.import_module('fuzzywuzzy.fuzz')
         partial = opts['partial'] if 'partial' in opts else True
         ratio = fuzzy.partial_ratio if partial else fuzzy.ratio
