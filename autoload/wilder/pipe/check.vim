@@ -1,4 +1,4 @@
-function! wilder#pipeline#component#check#make(args) abort
+function! wilder#pipe#check#make(args) abort
   return {ctx, x -> s:check(a:args, ctx, x)}
 endfunction
 

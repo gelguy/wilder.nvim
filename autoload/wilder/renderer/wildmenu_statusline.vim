@@ -1,5 +1,5 @@
-function! wilder#render#renderer#wildmenu_statusline#make(args) abort
-  let l:state = wilder#render#renderer#wildmenu#prepare_state(a:args)
+function! wilder#renderer#wildmenu_statusline#make(args) abort
+  let l:state = wilder#renderer#wildmenu#prepare_state(a:args)
 
   return {
         \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
@@ -9,7 +9,7 @@ function! wilder#render#renderer#wildmenu_statusline#make(args) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
-  let l:chunks = wilder#render#renderer#wildmenu#make_hl_chunks(
+  let l:chunks = wilder#renderer#wildmenu#make_hl_chunks(
         \ a:state, winwidth(0), a:ctx, a:result)
 
   call s:render_chunks(l:chunks, a:state.highlights['default'])
@@ -48,8 +48,8 @@ function! s:pre_hook(state, ctx) abort
   let &laststatus = 2
   let s:old_statusline = &statusline
 
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.left, a:ctx)
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.right, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -57,6 +57,6 @@ function! s:post_hook(state, ctx) abort
   let &statusline = s:old_statusline
   redrawstatus
 
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.left, a:ctx)
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.right, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
 endfunction

@@ -1,4 +1,4 @@
-function! wilder#render#component#condition#make(predicate, if_true, if_false) abort
+function! wilder#renderer#wildmenu_item#condition#make(predicate, if_true, if_false) abort
   let l:state = {
         \ 'predicate': a:predicate,
         \ 'if_true': a:if_true,
@@ -14,13 +14,13 @@ function! wilder#render#component#condition#make(predicate, if_true, if_false) a
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.if_true, a:ctx)
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.if_false, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.if_true, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.if_false, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.if_true, a:ctx)
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.if_false, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.if_true, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.if_false, a:ctx)
 endfunction
 
 function! s:value(state, ctx, result) abort

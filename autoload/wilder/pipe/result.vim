@@ -1,4 +1,4 @@
-function! wilder#pipeline#component#result#make(...) abort
+function! wilder#pipe#result#make(...) abort
   let l:args = a:0 ? a:1 : {}
   return {ctx, x -> s:result_start(l:args, ctx, x)}
 endfunction

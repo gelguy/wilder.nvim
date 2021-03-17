@@ -1,3 +1,38 @@
+let s:command_modifiers = {
+      \ 'aboveleft': 1,
+      \ 'argdo': 1,
+      \ 'belowright': 1,
+      \ 'botright': 1,
+      \ 'browse': 1,
+      \ 'bufdo': 1,
+      \ 'cdo': 1,
+      \ 'cfdo': 1,
+      \ 'confirm': 1,
+      \ 'debug': 1,
+      \ 'folddoclosed': 1,
+      \ 'folddoopen': 1,
+      \ 'hide': 1,
+      \ 'keepalt': 1,
+      \ 'keepjumps': 1,
+      \ 'keepmarks': 1,
+      \ 'keeppatterns': 1,
+      \ 'ldo': 1,
+      \ 'leftabove': 1,
+      \ 'lfdo': 1,
+      \ 'lockmarks': 1,
+      \ 'noautocmd': 1,
+      \ 'noswapfile': 1,
+      \ 'rightbelow': 1,
+      \ 'sandbox': 1,
+      \ 'silent': 1,
+      \ 'tab': 1,
+      \ 'tabdo': 1,
+      \ 'topleft': 1,
+      \ 'verbose': 1,
+      \ 'vertical': 1,
+      \ 'windo': 1,
+      \ }
+
 function! wilder#cmdline#main#do(ctx) abort
   " default
   let a:ctx.expand = 'command'
@@ -163,6 +198,15 @@ function! wilder#cmdline#main#do(ctx) abort
     let a:ctx.force = 1
   endif
 
+  if has_key(s:command_modifiers, a:ctx.cmd)
+    let a:ctx.cmd = ''
+    let a:ctx.expand = ''
+
+    call wilder#cmdline#main#do(a:ctx)
+
+    return
+  endif
+
   call wilder#cmdline#main#skip_whitespace(a:ctx)
 
   let l:flags = get(s:command_flags, a:ctx.cmd, 0)
@@ -201,7 +245,7 @@ function! wilder#cmdline#main#do(ctx) abort
   if a:ctx.cmdline[a:ctx.pos] ==# '+' &&
         \ ((and(l:flags, s:EDITCMD) && !l:use_filter) ||
         \ and(l:flags, s:ARGOPT))
-    let l:allow_cmd = and(l:flags, s:EDITCMD) && !l:user_filter
+    let l:allow_cmd = and(l:flags, s:EDITCMD) && !l:use_filter
     let a:ctx.pos += 1
 
     if a:ctx.cmdline[a:ctx.pos] ==# '+'
@@ -454,38 +498,8 @@ function! wilder#cmdline#main#do(ctx) abort
     let a:ctx.expand = 'help'
     return
   " command modifiers
-  elseif a:ctx.cmd ==# 'aboveleft' ||
-        \ a:ctx.cmd ==# 'argdo' ||
-        \ a:ctx.cmd ==# 'belowright' ||
-        \ a:ctx.cmd ==# 'botright' ||
-        \ a:ctx.cmd ==# 'browse' ||
-        \ a:ctx.cmd ==# 'bufdo' ||
-        \ a:ctx.cmd ==# 'cdo' ||
-        \ a:ctx.cmd ==# 'cfdo' ||
-        \ a:ctx.cmd ==# 'confirm' ||
-        \ a:ctx.cmd ==# 'debug' ||
-        \ a:ctx.cmd ==# 'folddoclosed' ||
-        \ a:ctx.cmd ==# 'folddoopen' ||
-        \ a:ctx.cmd ==# 'hide' ||
-        \ a:ctx.cmd ==# 'keepalt' ||
-        \ a:ctx.cmd ==# 'keepjumps' ||
-        \ a:ctx.cmd ==# 'keepmarks' ||
-        \ a:ctx.cmd ==# 'keeppatterns' ||
-        \ a:ctx.cmd ==# 'ldo' ||
-        \ a:ctx.cmd ==# 'leftabove' ||
-        \ a:ctx.cmd ==# 'lfdo' ||
-        \ a:ctx.cmd ==# 'lockmarks' ||
-        \ a:ctx.cmd ==# 'noautocmd' ||
-        \ a:ctx.cmd ==# 'noswapfile' ||
-        \ a:ctx.cmd ==# 'rightbelow' ||
-        \ a:ctx.cmd ==# 'sandbox' ||
-        \ a:ctx.cmd ==# 'silent' ||
-        \ a:ctx.cmd ==# 'tab' ||
-        \ a:ctx.cmd ==# 'tabdo' ||
-        \ a:ctx.cmd ==# 'topleft' ||
-        \ a:ctx.cmd ==# 'verbose' ||
-        \ a:ctx.cmd ==# 'vertical' ||
-        \ a:ctx.cmd ==# 'windo'
+  elseif has_key(s:command_modifiers, a:ctx.cmd)
+    let a:ctx.pos = l:before_args
     let a:ctx.cmd = ''
     let a:ctx.expand = ''
 
@@ -576,8 +590,11 @@ function! wilder#cmdline#main#do(ctx) abort
     return
   elseif a:ctx.cmd ==# 'unlet'
     call wilder#cmdline#unlet#do(a:ctx)
-  elseif a:ctx.cmd ==# 'function' ||
-        \ a:ctx.cmd ==# 'delfunction'
+    return
+  elseif a:ctx.cmd ==# 'function'
+    let a:ctx.expand = 'function'
+    return
+  elseif a:ctx.cmd ==# 'delfunction'
     let a:ctx.expand = 'user_func'
     return
   elseif a:ctx.cmd ==# 'echohl'

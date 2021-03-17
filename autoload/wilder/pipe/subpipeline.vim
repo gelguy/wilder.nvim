@@ -1,4 +1,4 @@
-function! wilder#pipeline#component#subpipeline#make(f) abort
+function! wilder#pipe#subpipeline#make(f) abort
   return {_, x -> {ctx -> s:subpipeline(a:f, ctx, x)}}
 endfunction
 

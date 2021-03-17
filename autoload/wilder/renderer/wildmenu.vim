@@ -1,20 +1,18 @@
-function! wilder#render#renderer#wildmenu#prepare_state(args) abort
+function! wilder#renderer#wildmenu#prepare_state(args) abort
   let l:highlights = copy(get(a:args, 'highlights', {}))
   let l:state = {
         \ 'highlights': extend(l:highlights, {
         \   'default': get(a:args, 'hl', 'StatusLine'),
         \   'selected': get(a:args, 'selected_hl', 'WildMenu'),
-        \   'error': get(a:args, 'error_hl', 'WildMenu'),
+        \   'error': get(a:args, 'error_hl', 'ErrorMsg'),
         \ }, 'keep'),
         \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
         \ 'page': [-1, -1],
-        \ 'buf': -1,
-        \ 'win': -1,
         \ 'columns': -1,
         \ 'cmdheight': -1,
-        \ 'draw_cache': {},
-        \ 'apply_highlights_cache': {},
+        \ 'draw_cache': wilder#cache#cache(),
+        \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ }
 
@@ -33,34 +31,41 @@ function! wilder#render#renderer#wildmenu#prepare_state(args) abort
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
-          \ wilder#hl_with_attr('WilderAccent',
-          \   l:state.highlights['default'], 'underline', 'bold')
+          \ wilder#hl_with_attr(
+          \ 'WilderWildmenuAccent',
+          \ l:state.highlights['default'],
+          \'underline', 'bold')
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
     let l:state.highlights.selected_accent =
-          \ wilder#hl_with_attr('WilderSelectedAccent', l:state.highlights['selected'],
-          \   'underline', 'bold')
+          \ wilder#hl_with_attr(
+          \ 'WilderWildmenuSelectedAccent',
+          \ l:state.highlights['selected'],
+          \ 'underline', 'bold')
   endif
 
-  if has_key(a:args, 'apply_highlights')
-    let l:Apply_highlights = a:args['apply_highlights']
-    if type(l:Apply_highlights) isnot v:t_list
-      let l:state.apply_highlights = [l:Apply_highlights]
-    else
-      let l:state.apply_highlights = l:Apply_highlights
-    endif
+  if has_key(a:args, 'highlighter')
+    let l:Highlighter = a:args['highlighter']
+  elseif has_key(a:args, 'apply_highlights')
+    let l:Highlighter = a:args['apply_highlights']
   else
-      let l:state.apply_highlights = []
+    let l:Highlighter = 0
   endif
+
+  if type(l:Highlighter) is v:t_list
+    let l:Highlighter = wilder#highlighter#apply_first(l:Highlighter)
+  endif
+
+  let l:state.highlighter = l:Highlighter
 
   return l:state
 endfunction
 
-function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
+function! wilder#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
   if a:state.run_id != a:ctx.run_id
-    let a:state.draw_cache = {}
-    let a:state.apply_highlights_cache = {}
+    call a:state.draw_cache.clear()
+    call a:state.highlight_cache.clear()
   endif
 
   let a:state.run_id = a:ctx.run_id
@@ -69,12 +74,12 @@ function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, resu
     let a:state.page = [-1, -1]
   endif
 
-  let l:space_used = wilder#render#renderer#wildmenu#component_len(
+  let l:space_used = wilder#renderer#wildmenu#item_len(
         \ a:state.left,
         \ a:ctx,
         \ a:result)
 
-  let l:space_used += wilder#render#renderer#wildmenu#component_len(
+  let l:space_used += wilder#renderer#wildmenu#item_len(
         \ a:state.right,
         \ a:ctx,
         \ a:result)
@@ -90,67 +95,66 @@ function! wilder#render#renderer#wildmenu#make_hl_chunks(state, width, ctx, resu
 
   let a:ctx.highlights = a:state.highlights
 
-  return s:make_hl_chunks(a:state, a:ctx, a:result,
-        \ get(a:state, 'apply_highlights', []))
+  return s:make_hl_chunks(a:state, a:ctx, a:result,)
 endfunction
 
-function! wilder#render#renderer#wildmenu#component_len(component, ctx, result) abort
-  if type(a:component) is v:t_string
-    return strdisplaywidth(wilder#render#to_printable(a:component))
+function! wilder#renderer#wildmenu#item_len(item, ctx, result) abort
+  if type(a:item) is v:t_string
+    return strdisplaywidth(wilder#render#to_printable(a:item))
   endif
 
-  if type(a:component) is v:t_dict
-    if has_key(a:component, 'len')
-      if type(a:component.len) is v:t_func
-        return a:component.len(a:ctx, a:result)
+  if type(a:item) is v:t_dict
+    if has_key(a:item, 'len')
+      if type(a:item.len) is v:t_func
+        return a:item.len(a:ctx, a:result)
       else
-        return a:component.len
+        return a:item.len
       endif
     endif
 
-    if type(a:component.value) is v:t_func
-      let l:Value = a:component.value(a:ctx, a:result)
+    if type(a:item.value) is v:t_func
+      let l:Value = a:item.value(a:ctx, a:result)
     else
-      let l:Value = a:component.value
+      let l:Value = a:item.value
     endif
 
-    return wilder#render#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
+    return wilder#renderer#wildmenu#item_len(l:Value, a:ctx, a:result)
   endif
 
-  if type(a:component) is v:t_func
-    let l:Value = a:component(a:ctx, a:result)
+  if type(a:item) is v:t_func
+    let l:Value = a:item(a:ctx, a:result)
 
-    return wilder#render#renderer#wildmenu#component_len(l:Value, a:ctx, a:result)
+    return wilder#renderer#wildmenu#item_len(l:Value, a:ctx, a:result)
   endif
 
   " v:t_list
   let l:len = 0
 
-  for l:Elem in a:component
-    let l:len += wilder#render#renderer#wildmenu#component_len(l:Elem, a:ctx, a:result)
+  for l:Elem in a:item
+    let l:len += wilder#renderer#wildmenu#item_len(l:Elem, a:ctx, a:result)
   endfor
 
   return l:len
 endfunction
 
-function! wilder#render#renderer#wildmenu#component_pre_hook(component, ctx) abort
-  call s:component_hook(a:component, a:ctx, 'pre')
+function! wilder#renderer#wildmenu#item_pre_hook(item, ctx) abort
+  call s:item_hook(a:item, a:ctx, 'pre')
 endfunction
 
-function! wilder#render#renderer#wildmenu#component_post_hook(component, ctx) abort
-  call s:component_hook(a:component, a:ctx, 'post')
+function! wilder#renderer#wildmenu#item_post_hook(item, ctx) abort
+  call s:item_hook(a:item, a:ctx, 'post')
 endfunction
 
-function! s:component_hook(component, ctx, key) abort
-  if type(a:component) is v:t_dict
-    if has_key(a:component, a:key . '_hook')
-      call a:component[a:key . '_hook'](a:ctx)
+function! s:item_hook(item, ctx, key) abort
+  if type(a:item) is v:t_dict
+    if has_key(a:item, a:key . '_hook')
+      call a:item[a:key . '_hook'](a:ctx)
     endif
 
-    call s:component_hook(a:component.value, a:ctx, a:key)
-  elseif type(a:component) is v:t_list
-    for l:Elem in a:component
-      call s:component_hook(l:Elem, a:ctx, a:key)
+    call s:item_hook(a:item.value, a:ctx, a:key)
+  elseif type(a:item) is v:t_list
+    for l:Elem in a:item
+      call s:item_hook(l:Elem, a:ctx, a:key)
     endfor
   endif
 endfunction
@@ -208,14 +212,14 @@ endfunction
 
 function! s:draw_x(state, ctx, result, i) abort
   let l:use_cache = a:ctx.selected == a:i
-  if l:use_cache && has_key(a:state.draw_cache, a:i)
-    return a:state.draw_cache[a:i]
+  if l:use_cache && a:state.draw_cache.has_key(a:i)
+    return a:state.draw_cache.get(a:i)
   endif
 
   let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
 
   if l:use_cache
-    let a:state.draw_cache[a:i] = l:x
+    call a:state.draw_cache.set(a:i, l:x)
   endif
 
   return l:x
@@ -293,22 +297,22 @@ function! s:make_page_from_end(state, ctx, result, end) abort
   return [l:start, l:end]
 endfunction
 
-function! s:make_hl_chunks(state, ctx, result, apply_highlights) abort
+function! s:make_hl_chunks(state, ctx, result) abort
   let l:chunks = []
-  let l:chunks += s:draw_component(a:state.left, a:ctx.highlights['default'], a:ctx, a:result)
+  let l:chunks += s:draw_item(a:state.left, a:ctx.highlights['default'], a:ctx, a:result)
 
   if has_key(a:ctx, 'error')
     let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
   else
-    let l:chunks += s:draw_xs(a:state, a:ctx, a:result, a:apply_highlights)
+    let l:chunks += s:draw_xs(a:state, a:ctx, a:result)
   endif
 
-  let l:chunks += s:draw_component(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
+  let l:chunks += s:draw_item(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
 
   return wilder#render#normalise_chunks(a:ctx.highlights['default'], l:chunks)
 endfunction
 
-function! s:draw_component(Component, hl, ctx, result) abort
+function! s:draw_item(Component, hl, ctx, result) abort
   if type(a:Component) is v:t_string
     return [[wilder#render#to_printable(a:Component), a:hl]]
   endif
@@ -326,20 +330,20 @@ function! s:draw_component(Component, hl, ctx, result) abort
       let l:Value = a:Component.value
     endif
 
-    return s:draw_component(l:Value, l:hl, a:ctx, a:result)
+    return s:draw_item(l:Value, l:hl, a:ctx, a:result)
   endif
 
   if type(a:Component) is v:t_func
     let l:Value = a:Component(a:ctx, a:result)
 
-    return s:draw_component(l:Value, a:hl, a:ctx, a:result)
+    return s:draw_item(l:Value, a:hl, a:ctx, a:result)
   endif
 
   " v:t_list
   let l:res = []
 
   for l:Elem in a:Component
-    let l:res += s:draw_component(l:Elem, a:hl, a:ctx, a:result)
+    let l:res += s:draw_item(l:Elem, a:hl, a:ctx, a:result)
   endfor
 
   return l:res
@@ -361,7 +365,7 @@ function! s:draw_error(hl, ctx, error) abort
   return [[l:error, a:hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
-function! s:draw_xs(state, ctx, result, apply_highlights) abort
+function! s:draw_xs(state, ctx, result) abort
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
@@ -376,21 +380,20 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
 
   let l:xs = []
   let l:len = l:end - l:start + 1
-  let l:data = type(a:result) is v:t_dict ?
-        \ get(a:result, 'data', {}) :
-        \ {}
+  let l:data = get(a:result, 'data', {})
+  let l:Highlighter = a:state.highlighter
 
   let l:i = 0
   while l:i < l:len
     let l:current = l:i + l:start
     let l:x = s:draw_x(a:state, a:ctx, a:result, l:current)
 
-    if !has_key(a:state.apply_highlights_cache, l:x) &&
-          \ !empty(a:apply_highlights)
-      let l:x_highlight = s:apply_highlights(a:apply_highlights, l:data, l:x)
+    if !a:state.highlight_cache.has_key(l:x) &&
+          \ l:Highlighter isnot 0
+      let l:highlight = l:Highlighter(a:ctx, l:x, l:data)
 
-      if l:x_highlight isnot 0
-        let a:state.apply_highlights_cache[l:x] = l:x_highlight
+      if l:highlight isnot 0
+        call a:state.highlight_cache.set(l:x, l:highlight)
       endif
     endif
 
@@ -409,10 +412,10 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
       let l:ellipsis = a:ctx.ellipsis
       let l:space_minus_ellipsis = l:space - strdisplaywidth(l:ellipsis)
 
-      if has_key(a:state.apply_highlights_cache, l:x)
+      if a:state.highlight_cache.has_key(l:x)
         let l:chunks = wilder#render#spans_to_chunks(
               \ l:x,
-              \ a:state.apply_highlights_cache[l:x],
+              \ a:state.highlight_cache.get(l:x),
               \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
               \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
         let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
@@ -442,10 +445,10 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
     let l:x = l:xs[l:i]
     let l:is_selected = l:selected == l:i + l:start
 
-    if has_key(a:state.apply_highlights_cache, l:x)
+    if a:state.highlight_cache.has_key(l:x)
       let l:chunks = wilder#render#spans_to_chunks(
             \ l:x,
-            \ a:state.apply_highlights_cache[l:x],
+            \ a:state.highlight_cache.get(l:x),
             \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
             \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
       let l:res += chunks
@@ -459,15 +462,4 @@ function! s:draw_xs(state, ctx, result, apply_highlights) abort
 
   call add(l:res, [repeat(' ', l:space - l:width)])
   return l:res
-endfunction
-
-function! s:apply_highlights(apply_highlights, data, x)
-  for l:Apply_highlights in a:apply_highlights
-    let l:spans = l:Apply_highlights({}, a:data, a:x)
-    if l:spans isnot 0
-      return l:spans
-    endif
-  endfor
-
-  return 0
 endfunction

@@ -1,4 +1,4 @@
-function! wilder#pipeline#component#python_fuzzy_match#make(args) abort
+function! wilder#pipe#python_fuzzy_match#make(args) abort
   return {ctx, x -> s:fuzzy_match(a:args, ctx, x)}
 endfunction
 

@@ -1,5 +1,9 @@
-function! wilder#render#renderer#wildmenu_float#make(args) abort
-  let l:state = wilder#render#renderer#wildmenu#prepare_state(a:args)
+let s:index = 0
+
+function! wilder#renderer#wildmenu_float#make(args) abort
+  let l:state = wilder#renderer#wildmenu#prepare_state(a:args)
+  let l:state.buf = -1
+  let l:state.win = -1
   let l:state.ns_id = nvim_create_namespace('')
 
   return {
@@ -14,7 +18,7 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  let l:chunks = wilder#render#renderer#wildmenu#make_hl_chunks(
+  let l:chunks = wilder#renderer#wildmenu#make_hl_chunks(
         \ a:state, &columns, a:ctx, a:result)
 
   let l:in_sandbox = 0
@@ -94,8 +98,10 @@ function! s:pre_hook(state, ctx) abort
     let &cursorline = 0
   endif
 
-  if a:state.buf == -1
+  if a:state.buf == -1 || !bufexists(a:state.buf)
     let a:state.buf = nvim_create_buf(v:false, v:true)
+    call nvim_buf_set_name(a:state.buf, '[Wilder Wildmenu ' . s:index . ']')
+    let s:index += 1
   endif
 
   if a:state.win == -1
@@ -113,8 +119,8 @@ function! s:pre_hook(state, ctx) abort
     let &cursorline = l:old_cursorline
   endif
 
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.left, a:ctx)
-  call wilder#render#renderer#wildmenu#component_pre_hook(a:state.right, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
+  call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -133,8 +139,8 @@ function! s:post_hook(state, ctx) abort
     endif
   endif
 
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.left, a:ctx)
-  call wilder#render#renderer#wildmenu#component_post_hook(a:state.right, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
+  call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:get_cmdheight() abort

@@ -1,14 +1,16 @@
+let s:cmdline_cache = wilder#cache#mru_cache(30)
+
 function! wilder#cmdline#parse(cmdline) abort
-  if !exists('s:cache_cmdline') || a:cmdline !=# s:cache_cmdline
+  if !s:cmdline_cache.has_key(a:cmdline)
     let l:ctx = {'cmdline': a:cmdline, 'pos': 0, 'cmd': '', 'expand': ''}
     call wilder#cmdline#main#do(l:ctx)
 
     let l:ctx['arg'] = l:ctx['cmdline'][l:ctx.pos :]
-    let s:cache_cmdline_result = l:ctx
-    let s:cache_cmdline = a:cmdline
+    let l:ctx['pos'] = l:ctx.pos
+    call s:cmdline_cache.set(a:cmdline, l:ctx)
   endif
 
-  return copy(s:cache_cmdline_result)
+  return copy(s:cmdline_cache.get(a:cmdline))
 endfunction
 
 function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
@@ -55,261 +57,154 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
 endfunction
 
 function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
-  let a:res.expand_arg = a:res.arg
-  let l:file_arg_start = a:res.pos
+  let l:res = copy(a:res)
+  let l:arg = l:res.arg
 
   let l:slash = !has('win32') && !has('win64')
         \ ? '/'
         \ : &shellslash
         \ ? '/'
         \ : '\'
+
+  " Special handling for ~. Return the home directory.
+  if l:arg ==# '~'
+    let l:res.fuzzy_char = ''
+    let l:res.expand_arg = ''
+    let l:res.completions = [expand('~') . l:slash]
+
+    return l:res
+  endif
+
+  let l:original_len = len(l:arg)
+
+  " Expand the fnamemodify()-able part, if any.
+  " ^(%|#|<cword>|<cWORD>|<client>)(:[phtre])*
+  let l:matches = matchlist(l:arg,
+        \ '^\(%\|#\|<cword>|<cWORD>|<client>\)' .
+        \ '\(\%(:[phtre]\)*\)')
+  if len(l:matches) > 0
+    let l:part_to_fnamemodify = l:matches[0]
+    let l:rest = l:arg[len(l:part_to_fnamemodify) :]
+    let l:arg = expand(l:part_to_fnamemodify) . l:rest
+
+    " The full path was expanded, show the expanded path here.
+    if empty(l:rest)
+      let l:res.fuzzy_char = ''
+      let l:res.expand_arg = ''
+      let l:res.completions = [l:arg]
+
+      return l:res
+    endif
+
+    " Adjust current directory to empty string.
+    if l:arg ==# '.'
+      let l:arg = ''
+    endif
+  endif
+
   let l:allow_backslash = has('win32') || has('win64')
 
-  let l:split_path = []
-  let l:tail = ''
-  let l:i = 0
-  let l:no_fuzzy = 0
-  let l:current_offset = 0
-  let l:offset = 0
-
-  " split path into path segments [...head] and tail
-  " expands $env_vars in place
-  " checks for wildcard
-  while l:i < len(a:res.expand_arg)
-    let l:char = a:res.expand_arg[l:i]
-
-    if l:char ==# '\'
-      if a:res.expand_arg[l:i + 1] ==# ' '
-        let l:tail .= ' '
-        let l:i += 2
-        continue
-      endif
-
-      if l:allow_backslash
-        call add(l:split_path, l:tail)
-        let l:tail = ''
-        let l:offset += l:current_offset
-        let l:current_offset = 0
-        let l:i += 1
-        continue
-      endif
-    elseif l:char ==# '/'
-      call add(l:split_path, l:tail)
-      let l:tail = ''
-      let l:offset += l:current_offset
-      let l:current_offset = 0
-      let l:i += 1
-      continue
-    elseif l:char ==# '$'
-      let l:env_var = ''
-      let l:i += 1
-
-      while l:i < len(a:res.expand_arg)
-        let l:char = a:res.expand_arg[l:i]
-        if l:char ==# '/' ||
-              \ l:allow_backslash && l:char ==# '\' ||
-              \ match(l:char, '\f') != 0
-          break
-        endif
-
-        let l:env_var .= l:char
-        let l:i += 1
-      endwhile
-
-      if !empty(l:env_var)
-        if exists('$' . l:env_var)
-          let l:expanded_env_var = expand('$' . l:env_var)
-          let l:tail .= l:expanded_env_var
-          let l:current_offset += len(l:expanded_env_var) - len(l:env_var) - 1
-
-          if l:i == len(a:res.expand_arg)
-            let l:no_fuzzy = 1
-          endif
-        else
-          let l:current_offset += -len(l:env_var) - 1
-        endif
-      endif
-
-      continue
-    elseif l:char ==# '*'
-      if !get(a:res, 'has_wildcard', 0)
-        let a:res.has_wildcard = 1
-        let a:res.pos = l:file_arg_start
-      endif
-    endif
-
-    let l:tail .= l:char
-    let l:i += 1
-  endwhile
-
-  if !get(a:res, 'has_wildcard', 0)
-    " expanded_pos is where pos should be after the $env_vars and filename
-    " modifiers have been expanded
-    let a:res.expanded_pos = a:res.pos
-    for l:split in l:split_path
-      let a:res.expanded_pos += len(l:split) + 1
-    endfor
-
-    " l:split_path includes the expanded $env_vars
-    let a:res.pos = a:res.expanded_pos - l:offset
-  endif
-
-  if len(l:split_path) > 1
-    let l:filtered_empty = filter(l:split_path[1:], {i, x -> !empty(x)})
-
-    if !get(a:res, 'has_wildcard', 0)
-      " -1 offset for each filtered element
-      let a:res.expanded_pos -= len(l:split_path) - len(l:filtered_empty) - 1
-    endif
-
-    let l:split_path = [l:split_path[0]] + l:filtered_empty
-  endif
-
-  " get first segment of path
-  let l:prefix = !empty(l:split_path) ?
-        \ l:split_path[0] :
-        \ l:tail
-  if !empty(l:split_path)
-    let l:prefix = l:split_path[0]
-    let a:res.relative_to_home_dir = l:prefix ==# '~'
+  " Pattern for matching directory separator.
+  if !l:allow_backslash
+    let l:dir_sep = l:slash
   else
-    let l:prefix = l:tail
-  endif
-
-  " expand first segment of path if needed
-  if !empty(l:prefix)
-    let l:expand_start = -1
-    let l:expand_end = -1
-
-    if l:prefix[0] ==# '~'
-      let l:allow_backslash = has('win32') || has('win64')
-      let l:expand_start = 0
-      let l:expand_end = 0
-
-      while l:expand_end + 1 < len(l:prefix)
-        let l:char = l:prefix[l:expand_end + 1]
-
-        if l:char ==# '\'
-          if l:prefix[l:expand_end + 2] ==# ' '
-            let l:expand_end += 2
-            continue
-          endif
-
-          if l:allow_backslash
-            break
-          endif
-        elseif l:char ==# '/'
-          break
-        endif
-
-        let l:expand_end += 1
-      endwhile
-    elseif l:prefix[0] ==# '%' ||
-          \ l:prefix[0] ==# '#'
-
-      let l:expand_start = 0
-      let l:expand_end = 0
-    elseif l:prefix[0 : 6] ==# '<cfile>' ||
-          \ l:prefix[0 : 6] ==# '<cword>' ||
-          \ l:prefix[0 : 6] ==# '<cWORD>'
-        let l:expand_start = 0
-        let l:expand_end = 6
-    elseif l:prefix[0 : 7] ==# '<client>'
-        let l:expand_start = 0
-        let l:expand_end = 7
-    endif
-
-    let l:is_dir = 0
-
-    if l:prefix[l:expand_end + 1 : l:expand_end + 2] ==# ':p'
-      let l:expand_end += 2
-    endif
-
-    if l:expand_start != -1
-      while l:expand_end + 2 < len(l:prefix) &&
-            \ l:prefix[l:expand_end + 1] ==# ':' &&
-            \ (l:prefix[l:expand_end + 2] ==# 'h' ||
-            \ l:prefix[l:expand_end + 2] ==# 't' ||
-            \ l:prefix[l:expand_end + 2] ==# 'r' ||
-            \ l:prefix[l:expand_end + 2] ==# 'e')
-        let l:is_dir = l:prefix[l:expand_end + 2] ==# 'h'
-        let l:expand_end += 2
-      endwhile
-
-      let l:whole_path_expanded = l:expand_end == len(l:prefix) - 1
-      let l:expanded = expand(l:prefix[l:expand_start : l:expand_end])
-
-      if !empty(l:expanded)
-        if l:whole_path_expanded && empty(l:split_path)
-          let a:res.expand_arg = l:expanded . l:prefix[l:expand_end + 1]
-
-          if l:is_dir && a:res.expand_arg[-1:] !=# l:slash
-            let a:res.expand_arg .= l:slash
-          endif
-
-          let a:res.use_arg = 1
-          return a:res
-        endif
-
-        if !get(a:res, 'has_wildcard', 0)
-          let a:res.expanded_pos += len(l:expanded) - l:expand_end + l:expand_start - 1
-        endif
-
-        if empty(l:split_path)
-          let l:head = fnamemodify(l:expanded, ':h')
-
-          " path has no parent directory
-          if l:head ==# l:expanded
-            let l:tail = l:expanded . l:prefix[l:expand_end+1 :]
-          else
-            let l:tail = fnamemodify(l:expanded, ':t')
-            call add(l:split_path, l:head)
-            let l:tail = l:tail . l:prefix[l:expand_end+1 : ]
-          endif
-        else
-          let l:split_path[0] = l:expanded . l:prefix[l:expand_end+1 :]
-        endif
-      endif
+    if l:slash ==# '\'
+      let l:dir_sep = '\\'
+    else
+      let l:dir_sep = '/\|\\'
     endif
   endif
 
-  if empty(l:split_path)
-    let l:path_prefix = ''
+  " Handle wildcards.
+  let l:first_wildcard = match(l:arg, '\*')
+  if l:first_wildcard >= 0
+    if l:first_wildcard > 0
+      " Expand the portion before the wildcard since expand('foo/*') will glob
+      " for matches.
+      let l:before_wildcard = l:arg[: l:first_wildcard - 1]
+      let l:after_wildcard = l:arg[l:first_wildcard :]
+
+      let l:expand_arg = expand(l:before_wildcard) . l:after_wildcard
+    else
+      let l:expand_arg = l:arg
+    endif
+
+    " Don't use fuzzy matching for wildcards.
+    let l:res.has_wildcard = 1
+    let l:res.match_arg = ''
+    let l:res.expand_arg = l:expand_arg
+
+    return l:res
+  endif
+
+  " Split path into head and tail
+  if match(l:arg, l:dir_sep) >= 0
+    let l:head = fnamemodify(l:arg, ':h')
+    let l:tail = fnamemodify(l:arg, ':t')
   else
-    let l:path_prefix = join(l:split_path, l:slash)
-    if l:path_prefix[-1 :] !=# l:slash
-      let l:path_prefix .= l:slash
-    endif
+    let l:head = ''
+    let l:tail = l:arg
   endif
 
-  if get(a:res, 'has_wildcard', 0)
-    " don't use fuzzy match with wildcard
-    let a:res.match_arg = ''
-    let a:res.expand_arg = l:path_prefix . l:tail
+  " Check if tail is trying to complete an env var.
+  let l:matches = matchlist(l:tail, '\$\(\f*\)$')
+  if len(l:matches) >= 2
+    let l:env_var = l:matches[1]
+    let l:path_prefix = l:arg[:-len(l:env_var)-1]
 
-    return a:res
+    let l:res.path_prefix = l:path_prefix
+    let l:res.expand = 'environment'
+    let l:res.expand_arg = ''
+    let l:res.fuzzy_char = ''
+    let l:res.completions = map(getcompletion(l:env_var, 'environment'),
+          \ {_, x -> l:path_prefix . x})
+
+    " Get position of the $ in tail.
+    let l:dollar_pos = len(l:tail) - len(l:env_var)
+
+    " Show cursor after the $.
+    let l:res.pos += l:original_len - len(l:tail) + l:dollar_pos
+
+    return l:res
   endif
 
-  " don't trim leading / when drawing
-  let a:res.path_prefix = l:path_prefix ==# '/' ? '' : l:path_prefix
-  if get(a:res, 'relative_to_home_dir', 0)
-    let a:res.path_prefix = fnamemodify(a:res.path_prefix, ':~')
+  " Append / back to l:head.
+  if !empty(l:head) && l:head !=# l:slash
+    let l:old_len = len(l:head)
+
+    let l:head = expand(l:head) . l:slash
   endif
 
-  if !a:fuzzy || l:no_fuzzy
-    let a:res.expand_arg = l:path_prefix . l:tail
-    let a:res.fuzzy_char = ''
-    let a:res.match_arg = l:tail
-    return a:res
+  let l:res.match_arg = l:tail
+
+  " Don't trim leading / for absolute paths when drawing.
+  let l:path_prefix = l:head ==# l:slash ? '' : l:head
+
+  " If arg starts with ~/, show paths relative to ~.
+  if l:arg[0] ==# '~' && match(l:arg[1], l:dir_sep) == 0
+    let l:res.relative_to_home_dir = 1
+    let l:res.path_prefix = fnamemodify(l:path_prefix, ':~')
+  else
+    let l:res.path_prefix = l:path_prefix
   endif
 
-  let a:res.match_arg = l:tail
-  let a:res.expand_arg = l:path_prefix
-  let a:res.fuzzy_char = strcharpart(l:tail, 0, 1)
-  return a:res
+  if a:fuzzy
+    let l:res.expand_arg = l:head
+    let l:res.fuzzy_char = strcharpart(l:tail, 0, 1)
+  else
+    let l:res.expand_arg = l:head . l:tail
+    let l:res.fuzzy_char = ''
+  endif
+
+  if !empty(l:head)
+    " Show cursor at the start of tail.
+    let l:res.pos += l:original_len - len(l:tail)
+  endif
+
+  return l:res
 endfunction
 
-function! wilder#cmdline#filter_fuzzy(ctx, candidates, query, transform) abort
+function! wilder#cmdline#fuzzy_filt(ctx, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
@@ -335,10 +230,6 @@ function! wilder#cmdline#filter_fuzzy(ctx, candidates, query, transform) abort
 
     let l:i += 1
   endwhile
-
-  if a:transform isnot 0
-    return filter(copy(a:candidates), {_, x -> match(a:transform(x), l:regex) != -1})
-  endif
 
   return filter(copy(a:candidates), {_, x -> match(x, l:regex) != -1})
 endfunction
@@ -382,42 +273,30 @@ function! s:make_python_fuzzy_regex(query)
   return l:regex
 endfunction
 
-function! wilder#cmdline#python_filter_fuzzy(ctx, opts, candidates, query, transform) abort
+function! wilder#cmdline#python_fuzzy_filt(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
   let l:regex = s:make_python_fuzzy_regex(a:query)
 
-  if a:transform isnot 0
-    let l:transformed = map(copy(a:candidates), {_, x -> a:transform(x)})
-  else
-    let l:transformed = 0
-  endif
-
-  return {ctx -> _wilder_python_filter_fuzzy(ctx, a:opts, a:candidates, l:regex, l:transformed)}
+  return {ctx -> _wilder_python_fuzzy_filt(ctx, a:opts, a:candidates, l:regex)}
 endfunction
 
-function! wilder#cmdline#python_filter_fruzzy(ctx, opts, candidates, query, transform) abort
+function! wilder#cmdline#python_fruzzy_filt(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
-  if a:transform isnot 0
-    let l:transformed = map(copy(a:candidates), {_, x -> a:transform(x)})
-  else
-    let l:transformed = 0
-  endif
-
-  return {ctx -> _wilder_python_filter_fruzzy(ctx, a:opts, a:candidates, a:query, l:transformed)}
+  return {ctx -> _wilder_python_fruzzy_filt(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
-function! wilder#cmdline#python_filter_cpsm(ctx, opts, candidates, query) abort
+function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
 
-  return {ctx -> _wilder_python_filter_cpsm(ctx, a:opts, a:candidates, a:query)}
+  return {ctx -> _wilder_python_cpsm_filt(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode) abort
@@ -444,12 +323,12 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mod
 
   return wilder#wait(a:getcompletion(a:ctx, l:upper_res),
         \ {ctx, upper_xs -> wilder#resolve(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
-        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#uniq(lower_xs + upper_xs))}))})
+        \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#uniq_filt(0, 0, lower_xs + upper_xs))}))})
 endfunction
 
 function! wilder#cmdline#python_get_file_completion(ctx, res) abort
-  if get(a:res, 'use_arg', 0)
-    return [a:res.expand_arg]
+  if has_key(a:res, 'completions')
+    return a:res['completions']
   endif
 
   let l:expand_arg = a:res.expand_arg
@@ -607,7 +486,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
       endfor
     endif
 
-    return wilder#uniq(l:result)
+    return wilder#uniq_filt(0, 0, l:result)
   elseif a:res.expand ==# 'mapclear'
     return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
   elseif a:res.expand ==# 'menu'
@@ -700,20 +579,20 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
-" returns [{handled}, {result}]
+" returns [{handled}, {result}, [{res}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
     return [0, a:res]
   endif
 
   if !has('nvim')
-    return [1, v:true]
+    return [1, v:true, a:res]
   endif
 
   let l:user_commands = nvim_get_commands({})
 
   if !has_key(l:user_commands, a:res.cmd)
-    return [1, v:false]
+    return [1, v:false, a:res]
   endif
 
   let l:user_command = l:user_commands[a:res.cmd]
@@ -725,7 +604,9 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:Completion_func = function(l:user_command.complete_arg)
       let l:result = l:Completion_func(a:res.arg, a:res.cmdline, len(a:res.cmdline))
     catch
-      return [1, v:true]
+      let l:res = copy(a:res)
+      let l:res.pos = 0
+      return [1, v:true, l:res]
     endtry
 
     if get(l:user_command, 'complete', '') ==# 'custom'
@@ -733,7 +614,9 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:result = filter(l:result, {i, x -> match(x, l:res.arg) != -1})
     endif
 
-    return [1, l:result]
+    let l:res = copy(a:res)
+    let l:res.match_arg = l:res.cmdline[l:res.pos :]
+    return [1, l:result, l:res]
   endif
 
   if has_key(l:user_command, 'complete') &&
@@ -746,7 +629,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     return [0, l:res]
   endif
 
-  return [1, v:false]
+  return [1, v:false, a:res]
 endfunction
 
 function! wilder#cmdline#replace(ctx, x, data) abort
@@ -766,6 +649,7 @@ endfunction
 
 function! s:convert_result_to_data(res)
   let l:data = {
+        \ 'pos': a:res.pos,
         \ 'cmdline.command': a:res.cmd,
         \ 'cmdline.expand': a:res.expand,
         \ 'cmdline.arg': a:res.arg,
@@ -781,10 +665,6 @@ function! s:convert_result_to_data(res)
 
   if has_key(a:res, 'has_wildcard')
     let l:data['cmdline.has_wildcard'] = a:res.has_wildcard
-  endif
-
-  if has_key(a:res, 'expanded_pos')
-    let l:data['cmdline.expanded_pos'] = a:res.expanded_pos
   endif
 
   return l:data
@@ -810,21 +690,39 @@ function! s:getcompletion(ctx, res, fuzzy, use_python, is_file_expansion) abort
         \ })})
 endfunction
 
-function wilder#cmdline#should_use_file_finder(path) abort
-  let l:path = simplify(a:path)
+function wilder#cmdline#should_use_file_finder(res) abort
+  if has_key(a:res, 'completions')
+    return v:false
+  endif
 
-  if l:path[0] ==# '%' ||
-        \ l:path[0] ==# '#' ||
-        \ l:path[0] ==# '~' ||
+  let l:arg = a:res.arg
+
+  if match(l:arg, '\*') != -1
+    return 0
+  endif
+
+  if l:arg[0] ==# '%' ||
+        \ l:arg[0] ==# '#' ||
+        \ l:arg[0] ==# '<'
+    return 0
+  endif
+
+  let l:path = a:res.expand_arg
+
+  " ./. simplifies to .
+  if l:path ==# './.' ||
+        \ l:path ==# '.\.'
+    return 0
+  endif
+
+  let l:path = simplify(l:path)
+
+  if l:path[0] ==# '~' ||
         \ l:path[0] ==# '/' ||
         \ l:path[0] ==# '\' ||
         \ l:path[0:1] ==# '..' ||
         \ l:path[0:1] ==# './' ||
         \ l:path[0:1] ==# '.\'
-    return 0
-  endif
-
-  if match(l:path, '\*') != -1
     return 0
   endif
 
@@ -855,12 +753,12 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
       let l:filter_opts = get(l:filter, 'opts', {})
       let l:filter['opts'] = l:filter_opts
 
-      if l:filter['name'] ==# 'filter_fruzzy' &&
+      if l:filter['name'] ==# 'fruzzy_filter' &&
             \ !has_key(l:filter_opts, 'fruzzy_path')
         let l:filter_opts['fruzzy_path'] = wilder#fruzzy_path()
       endif
 
-      if l:filter['name'] ==# 'filter_cpsm' &&
+      if l:filter['name'] ==# 'cpsm_filter' &&
             \ !has_key(l:filter_opts, 'cpsm_path')
         let l:filter_opts['cpsm_path'] = wilder#cpsm_path()
       endif
@@ -871,33 +769,37 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
     let l:opts['filters'] = l:checked_filters
   endif
 
-  if has_key(l:opts, 'dir')
-    let l:Dir = l:opts['dir']
+  if has_key(l:opts, 'path')
+    let l:Path = l:opts['path']
 
-    if type(l:Dir) isnot v:t_func
-      let l:Dir_func = {-> l:Dir}
+    if type(l:Path) isnot v:t_func
+      let l:Path_func = {-> l:Path}
     else
-      let l:Dir_func = l:Dir
+      let l:Path_func = l:Path
     endif
   else
-    let l:Dir_func = wilder#project_root()
+    let l:Path_func = wilder#project_root()
   endif
-
-  let l:Cpsm = wilder#python_filter_fruzzy()
 
   let l:pipeline = [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
-        \ wilder#check({_, res -> res.expand ==# 'file'}),
-        \ wilder#subpipeline({ctx, res -> [
-        \   {ctx, _ -> wilder#cmdline#prepare_file_completion(ctx, copy(res), 0)},
-        \   wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res.expand_arg)}),
+        \ wilder#check({_, res -> res.expand ==# 'file' || res.expand ==# 'dir'}),
+        \ wilder#subpipeline({ctx, res1 -> [
+        \   {ctx, res1 -> wilder#cmdline#prepare_file_completion(ctx, copy(res1), 0)},
+        \   {ctx, res2 -> extend(res2, {'pos': res1.pos})},
+        \ ]}),
+        \ wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
         \ ] + (l:should_debounce ? [l:Debounce] : []) + [
+        \ wilder#subpipeline({ctx, res -> [
         \   {-> {ctx -> _wilder_python_file_finder(
-        \     ctx, l:opts, getcwd(), l:Dir_func(ctx, res), expand(res.arg))}},
+        \     ctx, l:opts, getcwd(), l:Path_func(ctx, res),
+        \     expand(simplify(res.arg)), res.expand ==# 'dir')
+        \   }},
         \   wilder#result({
+        \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
-        \     'data': extend(s:convert_result_to_data(res), {'query': res.arg}),
+        \     'data': extend(s:convert_result_to_data(res), {'query': expand(simplify(res.arg))}),
         \   }),
         \ ]}),
         \ ]
@@ -925,8 +827,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
 
     let l:File_fuzzy_filter = wilder#result({
           \ 'value': {ctx, xs, data -> l:Filter(
-          \   ctx, xs, get(data, 'cmdline.match_arg', ''),
-          \   {x -> x[len(get(data, 'path_prefix', '')) :]}
+          \   ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', '')
           \ )}})
   endif
 
@@ -969,21 +870,6 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \   'replace': ['wilder#cmdline#replace'],
         \ }),
         \ ]
-endfunction
-
-function! wilder#cmdline#hide_in_substitute(ctx, cmdline)
-  let l:res = wilder#cmdline#parse(a:cmdline)
-  if !wilder#cmdline#is_substitute_command(l:res.cmd)
-    return a:cmdline
-  endif
-
-  let l:res = wilder#cmdline#substitute#parse({'cmdline': l:res.cmdline[l:res.pos :], 'pos': 0})
-
-  if len(l:res) >= 2
-    return v:true
-  endif
-
-  return a:cmdline
 endfunction
 
 let s:substitute_commands = {
@@ -1082,15 +968,15 @@ function! wilder#cmdline#pipeline(opts) abort
   if get(a:opts, 'set_pcre2_pattern', 1)
     if get(a:opts, 'fuzzy', 0)
       call add(l:getcompletion_pipeline, wilder#result({
-            \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-            \     'pcre2.pattern': s:make_python_fuzzy_regex(get(data, 'cmdline.match_arg', ''))
+            \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+            \     'pcre2.pattern': s:make_python_fuzzy_regex(get(data is v:null ? {} : data, 'cmdline.match_arg', ''))
             \   })},
             \ }))
     else
       call add(l:getcompletion_pipeline, wilder#result({
-            \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
+            \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
             \     'pcre2.pattern': '(' .
-            \         escape(get(data, 'cmdline.match_arg', ''), '\.^$*+?|(){}[]') . ')'
+            \         escape(get(data is v:null ? {} : data, 'cmdline.match_arg', ''), '\.^$*+?|(){}[]') . ')'
             \   })},
             \ }))
     endif
@@ -1098,17 +984,22 @@ function! wilder#cmdline#pipeline(opts) abort
 
   call add(l:pipeline, wilder#branch(
         \ [
-        \   {ctx, res -> res[0] ? res[1] : v:false},
-        \   wilder#result({
-        \     'replace': ['wilder#cmdline#replace'],
-        \   }),
+        \   {ctx, res -> res[0] ? res : v:false},
+        \   wilder#subpipeline({ctx, res -> [
+        \     {_, res -> res[1]},
+        \     wilder#result({
+        \       'pos': res[2].pos,
+        \       'replace': ['wilder#cmdline#replace'],
+        \       'data': s:convert_result_to_data(res[2]),
+        \     }),
+        \   ]}),
         \ ],
         \ l:getcompletion_pipeline,
         \ ))
 
   call add(l:pipeline, wilder#result({
-        \   'data': {ctx, data -> data is v:null ? {} : extend(data, {
-        \     'query': get(data, 'cmdline.match_arg', ''),
+        \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
+        \     'query': get(data is v:null ? {} : data, 'cmdline.match_arg', ''),
         \   })},
         \ }))
 

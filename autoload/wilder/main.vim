@@ -8,6 +8,7 @@ let s:session_id = 0
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
+let s:select_next = 0
 
 let s:result = {'value': []}
 let s:selected = -1
@@ -121,6 +122,8 @@ function! s:start() abort
 endfunction
 
 function! wilder#main#stop() abort
+  let s:select_next = 0
+
   if !s:active
     return
   endif
@@ -181,7 +184,7 @@ function! wilder#main#stop() abort
 endfunction
 
 function! s:pre_hook() abort
-  call wilder#render#init_hl()
+  call wilder#highlight#init_hl()
 
   if has_key(s:opts, 'pre_hook')
     call s:opts.pre_hook({})
@@ -191,9 +194,9 @@ function! s:pre_hook() abort
     call s:opts.renderer.pre_hook({})
   endif
 
-  " create highlight before and after components since there might be
-  " components which depend on existing highlights
-  call wilder#render#init_hl()
+  " create highlight before and after since there might be renderer-defined
+  " highlights which depend on existing highlights
+  call wilder#highlight#init_hl()
 endfunction
 
 function! s:post_hook() abort
@@ -293,6 +296,14 @@ function! wilder#main#on_finish(ctx, x) abort
     let s:result = l:result
   endif
 
+  if !has_key(s:result, 'data')
+    let s:result.data = {}
+  endif
+
+  if !has_key(s:result.data, 'query')
+    let s:result.data.query = a:ctx.input
+  endif
+
   if s:selected >= 0
     let s:replaced_cmdline = getcmdline()
   endif
@@ -319,6 +330,13 @@ function! wilder#main#on_finish(ctx, x) abort
     let s:hidden = 0
 
     call s:pre_hook()
+  endif
+
+  if s:select_next
+    call wilder#main#next()
+
+    let s:select_next = 0
+    return
   endif
 
   if len(s:completion_stack) > 0 && get(a:ctx, 'auto_select', 0)
@@ -410,6 +428,24 @@ function! wilder#main#next() abort
   return wilder#main#step(1)
 endfunction
 
+function! wilder#main#next_when_available() abort
+  let s:select_next = 1
+  return ''
+endfunction
+
+function! wilder#main#trigger_cmdlinechange() abort
+  if exists('s:previous_cmdline')
+    unlet s:previous_cmdline
+  endif
+
+  if exists('s:completion')
+    unlet s:completion
+  endif
+
+  call s:do(1)
+  return "\<Insert>\<Insert>"
+endfunction
+
 function! wilder#main#previous() abort
   return wilder#main#step(-1)
 endfunction
@@ -483,7 +519,7 @@ function! wilder#main#step(num_steps) abort
             let l:F = function(l:F)
           endif
 
-          let l:output = l:F({}, l:output, get(s:result, 'data', {}))
+          let l:output = l:F({}, l:output, s:result.data)
         endfor
       endif
 
@@ -496,7 +532,7 @@ function! wilder#main#step(num_steps) abort
 
           let l:new_cmdline = l:F({
                 \ 'cmdline': s:replaced_cmdline,
-                \ }, l:new_cmdline, get(s:result, 'data', {}))
+                \ }, l:new_cmdline, s:result.data)
         endfor
       endif
     else
