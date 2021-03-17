@@ -291,9 +291,6 @@ The Result dictionary has the following keys:
                 `i`
                 The index of the {x} in the list of candidates.
 
-                `x`
-                The original {x} before any drawing.
-
             See |wilder-pipeline-result-data| on how {data} is gotten.
 
             Default: None
@@ -306,9 +303,7 @@ The Result dictionary has the following keys:
             See the |wilder-pipeline-result-draw| option for how iterating
             through the list works.
 
-            The keys of {ctx} are:
-                `x`
-                The original {x}.
+            {ctx} has no keys.
 
             See |wilder-pipeline-result-data| on how {data} is gotten.
 
@@ -328,9 +323,6 @@ The Result dictionary has the following keys:
                 The cmdline which was replaced. This value should be used
                 instead of |getcmdline()| as the current cmdline may have
                 changed.
-
-                `x`
-                The original {x}.
 
             See |wilder-pipeline-result-data| on how {data} is gotten.
 
