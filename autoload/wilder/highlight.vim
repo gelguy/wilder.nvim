@@ -1,5 +1,18 @@
 let s:hl_list = []
 
+let s:attr_list = ['bold', 'underline', 'undercurl', 'strikethrough',
+      \ 'italic', 'standout', 'reverse', 'inverse']
+
+let s:attr_map = {
+      \ 'bold': 0,
+      \ 'underline': 0,
+      \ 'undercurl': 0,
+      \ 'strikethrough': 0,
+      \ 'italic': 0,
+      \ 'standout': 0,
+      \ 'reverse': 0,
+      \ }
+
 function! wilder#highlight#init_hl() abort
   for [l:name, l:x, l:xs] in s:hl_list
     call s:make_hl(l:name, l:x, l:xs)
@@ -31,7 +44,7 @@ function! s:to_hl_list(x) abort
     let l:x = a:x
   endif
 
-  if type(l:x[0]) is v:t_list
+  if type(l:x) is v:t_list && type(l:x[0]) is v:t_list
     return l:x
   endif
 
@@ -61,19 +74,21 @@ function! s:combine_hl_list(l, m) abort
     let l:term_hl += a:m[0][2:]
   endif
 
-  if get(a:m[1], 0, 'NONE') !=# 'NONE'
+  let l:cterm_fg = get(a:m[1], 0, -1)
+  if l:cterm_fg isnot 'NONE' && l:cterm_fg isnot -1
     if empty(l:cterm_hl)
-      let l:cterm_hl = [a:m[1][0]]
+      let l:cterm_hl = [l:cterm_fg]
     else
-      let l:cterm_hl[0] = a:m[1][0]
+      let l:cterm_hl[0] = l:cterm_fg
     endif
   endif
 
-  if get(a:m[1], 1, 'NONE') !=# 'NONE'
+  let l:cterm_bg = get(a:m[1], 1, -1)
+  if l:cterm_bg isnot 'NONE' && l:cterm_bg isnot -1
     if empty(l:cterm_hl)
-      let l:cterm_hl = ['NONE', a:m[1][1]]
+      let l:cterm_hl = ['NONE', l:cterm_bg]
     else
-      let l:cterm_hl[1] = a:m[1][1]
+      let l:cterm_hl[1] = l:cterm_bg
     endif
   endif
 
@@ -85,19 +100,21 @@ function! s:combine_hl_list(l, m) abort
     endif
   endif
 
-  if get(a:m[2], 0, 'NONE') !=# 'NONE'
+  let l:gui_fg = get(a:m[2], 0, -1)
+  if l:gui_fg isnot 'NONE' && l:gui_fg isnot -1
     if empty(l:gui_hl)
-      let l:gui_hl = [a:m[2][0]]
+      let l:gui_hl = [l:gui_fg]
     else
-      let l:gui_hl[0] = a:m[2][0]
+      let l:gui_hl[0] = l:gui_fg
     endif
   endif
 
-  if get(a:m[2], 1, 'NONE') !=# 'NONE'
+  let l:gui_bg = get(a:m[2], 1, -1)
+  if l:gui_bg isnot 'NONE' && l:gui_bg isnot -1
     if empty(l:gui_hl)
-      let l:gui_hl = ['NONE', a:m[2][1]]
+      let l:gui_hl = ['NONE', l:gui_bg]
     else
-      let l:gui_hl[1] = a:m[2][1]
+      let l:gui_hl[1] = l:gui_bg
     endif
   endif
 
@@ -112,10 +129,31 @@ function! s:combine_hl_list(l, m) abort
   return [l:term_hl, l:cterm_hl, l:gui_hl]
 endfunction
 
+function! s:normalise_attrs(hl) abort
+  let l:attr_map = copy(s:attr_map)
+
+  for l:attr in a:hl[2:]
+    if has_key(l:attr_map, l:attr)
+      let l:attr_map[l:attr] = 1
+    elseif l:attr[:1] ==# 'no' && has_key(l:attr_map, l:attr[2:])
+      let l:attr_map[l:attr[2:]] = 0
+    endif
+  endfor
+
+  let l:result = []
+  for l:attr in keys(l:attr_map)
+    if l:attr_map[l:attr]
+      call add(l:result, l:attr)
+    endif
+  endfor
+
+  return a:hl[:1] + l:result
+endfunction
+
 function! s:make_hl_from_list(name, args) abort
-  let l:term_hl = a:args[0]
-  let l:cterm_hl = a:args[1]
-  let l:gui_hl = a:args[2]
+  let l:term_hl = s:normalise_attrs(a:args[0])
+  let l:cterm_hl = s:normalise_attrs(a:args[1])
+  let l:gui_hl = s:normalise_attrs(a:args[2])
 
   let l:cmd = 'hi! ' . a:name . ' '
 
@@ -167,28 +205,19 @@ endfunction
 function! s:get_attrs_as_list(attrs) abort
   let l:res = []
 
-  if get(a:attrs, 'bold', 0)
-    call add(l:res, 'bold')
-  endif
-  if get(a:attrs, 'underline', 0)
-    call add(l:res, 'underline')
-  endif
-  if get(a:attrs, 'undercurl', 0)
-    call add(l:res, 'undercurl')
-  endif
-  if get(a:attrs, 'strikethrough', 0)
-    call add(l:res, 'strikethrough')
-  endif
-  if get(a:attrs, 'reverse', 0) ||
-        \ get(a:attrs, 'inverse', 0)
-    call add(l:res, 'reverse')
-  endif
-  if get(a:attrs, 'italic', 0)
-    call add(l:res, 'italic')
-  endif
-  if get(a:attrs, 'standout', 0)
-    call add(l:res, 'standout')
-  endif
+  for l:attr in s:attr_list
+    if has_key(a:attrs, l:attr)
+      if l:attr ==# 'inverse'
+        let l:attr = 'reverse'
+      endif
+
+      if a:attrs[l:attr]
+        call add(l:res, l:attr)
+      else
+        call add(l:res, 'no' . l:attr)
+      endif
+    endif
+  endfor
 
   return l:res
 endfunction
@@ -251,12 +280,13 @@ endfunction
 
 function! s:get_hl_attrs(attrs, key, hl) abort
   let l:prefix = ' ' . a:key . '=\S*'
-  let a:attrs.bold = match(a:hl, l:prefix . 'bold') >= 0
-  let a:attrs.underline = match(a:hl, l:prefix . 'underline') >= 0
-  let a:attrs.undercurl = match(a:hl, l:prefix . 'undercurl') >= 0
-  let a:attrs.strikethrough = match(a:hl, l:prefix . 'strikethrough') >= 0
-  let a:attrs.reverse = match(a:hl, l:prefix . 'reverse') >= 0 ||
-        \ match(a:hl, l:prefix . 'inverse') >= 0
-  let a:attrs.italic = match(a:hl, l:prefix . 'italic') >= 0
-  let a:attrs.standout = match(a:hl, l:prefix . 'standout') >= 0
+
+  for l:attr in s:attr_list
+    if match(a:hl, l:prefix . l:attr) >= 0
+      if l:attr ==# 'inverse'
+        let l:attr = 'reverse'
+      endif
+      let a:attrs[l:attr] = v:true
+    endif
+  endfor
 endfunction

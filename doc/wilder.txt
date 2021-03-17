@@ -614,8 +614,9 @@ wilder#python_search_pipeline([{options}])
             Python pattern.
 
             The special values 'fuzzy', 'fuzzy_delimiter' and 'substring' uses
-            |wilder#python_fuzzy_match()|, |wilder#python_fuzzy_delimiter()|
-            and |wilder#python_substring()| respectively as the function.
+            |wilder#python_fuzzy_pattern()|,
+            |wilder#python_fuzzy_delimiter_pattern()| and
+            |wilder#python_substring_pattern()| respectively as the function.
 
             Default: 'substring'
 
@@ -915,7 +916,7 @@ wilder#substitute_pipeline([{options}])
             The pipeline to pass the {pattern} section to.
             |wilder#vim_search_pipeline()| and
             |wilder#python_search_pipeline()| can be used as the pipeline if
-            the `skip_cmdtype_check` option is set for the pipelines.
+            the `skip_cmdtype_check` option is set.
 
             Default: For vim:
                      wilder#vim_search_pipeline({'skip_cmdtype_check' : 1})
@@ -1827,6 +1828,8 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                 [{fg}, {bg}] or [{fg}, {bg}, {attr-list}]
                 where {fg} and {bg} are numbers or strings, and {attr-list} is
                 a list of strings.
+                Attributes in {attr-list} can be prefixed with 'no' to turn
+                off the attribute.
                 For {term_hl}, the first 2 elements are ignored.
 
                 Example:
@@ -1840,7 +1843,8 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
 
                 Dictionary:
                 The dictionary is similar to the one returned from
-                |nvim_get_hl_by_name|.
+                |nvim_get_hl_by_name|. Setting the value to 0 turns off the
+                attribute is present.
                 The dictionary has the following keys:
 
                 `foreground`
@@ -1859,66 +1863,66 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                 Optional~
                 Whether the highlight group has the bold attribute.
 
-                Default: v:false
+                Default: Empty
 
                 `italic`
                 Optional~
                 Whether the highlight group has the italic attribute.
 
-                Default: v:false
+                Default: Empty
 
                 `reverse`
                 Optional~
                 Whether the highlight group has the reverse attribute.
 
-                Default: v:false
+                Default: Empty
 
                 `standout`
                 Optional~
                 Whether the highlight group has the standout attribute.
 
-                Default: v:false
+                Default: Empty
 
                 `underline`
                 Optional~
                 Whether the highlight group has the underline attribute.
 
-                Default: v:false
+                Default: Empty
 
                 `undercurl`
                 Optional~
                 Whether the highlight group has the undercurl attribute.
 
-                Default: v:false
+                Default: Empty
 
             Any number of additional {args<n>} can be provided. The original
             {args} will be modified in order.
 
             For both {cterm_hl} and {gui_hl}, the `foreground` and
             `background` color is overridden if the respective color of
-            {args<n>} is not 'NONE'.
+            {args<n>} is not 'NONE' or -1.
 
-            For all three of {term_hl}, {cterm_hl} and {gui_hl}, additional
-            attributes will be added.
+            For all three of {term_hl}, {cterm_hl} and {gui_hl}, attributes
+            will be added or removed accordingly.
 
                 Example:
 >
                 call wilder#make_hl('MyHighlight', [
                     \ {},
                     \ {'foreground': 1, 'background': 2},
-                    \ {'foreground': '#000', 'background': '#fff',
-                    \   'bold': v:true},
+                    \ {'foreground': '#000', 'background': '#fff', 'bold': 1},
                     \ ])
 
                 call wilder#make_hl('MyHighlight2',
                     \ 'MyHighlight',
-                    \ [{}, {}, {'underline': 1}])
+                    \ [{}, {}, {'underline': 1, 'reverse': 0}])
 <
 
 wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
                                     *wilder#hl_with_attr()*
             Helper function to create a new |highlight-group| named {name} by
-            applying attributes to {hl_group}.
+            applying attributes to {hl_group}. Attributes can be turned off by
+            prefixing it with 'no'.
 
             Returns the name of the new highlight group.
 

@@ -89,7 +89,11 @@ endfunction
 function! wilder#hl_with_attr(name, hl_group, ...) abort
   let l:attrs = {}
   for l:attr in a:000
-    let l:attrs[l:attr] = v:true
+    if l:attr[:1] ==# 'no'
+      let l:attrs[l:attr[2:]] = v:false
+    else
+      let l:attrs[l:attr] = v:true
+    endif
   endfor
   return wilder#make_hl(a:name, a:hl_group, [{}, l:attrs, l:attrs])
 endfunction
