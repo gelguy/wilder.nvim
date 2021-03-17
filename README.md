@@ -15,7 +15,8 @@
 # Requirements
 
 - Vim 8.1+ or Neovim 0.3+
-- Certain features are only enabled in Neovim
+- Python support only in Neovim
+- Floating window support only in Neovim 0.4+
 
 # Install
 
@@ -44,14 +45,14 @@ cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 call wilder#set_option('modes', ['/', '?', ':'])
 ```
 
-When searching using `/`, suggestions will be provided. The default search pipeline uses substring matching.
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
+When searching using `/`, suggestions will be provided. The default uses substring matching.
 
 Use `<Tab>` to cycle through the list forwards, and `<S-Tab>` to move backwards.
 
 ## Customising the pipeline
 
-Customise the pipeline with `wilder#set_option('pipeline', <pipeline>)`.
+Use `wilder#set_option('pipeline', <pipeline>)` to customise the pipeline.
 For example, in Neovim, to use fuzzy matching instead of substring matching:
 
 ```vim
@@ -60,7 +61,7 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 "   'fuzzy'      : set fuzzy searching
 "   'use_python' : use python for fuzzy searching
 " For wild#python_search_pipeline():
-"   'pattern'    : can be set to 'fuzzy_delimiter' for stricter fuzzy matching
+"   'pattern'    : can be set to wilder#python_fuzzy_delimiter_pattern() for stricter fuzzy matching
 "   'engine'     : can be set to 're2' for performance, requires pyre2 to be installed
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -69,9 +70,9 @@ call wilder#set_option('pipeline', [
       \       'use_python': 1,
       \     }),
       \     wilder#python_search_pipeline({
-      \       'pattern': 'fuzzy',
-      \       'engine': 're',
+      \       'pattern': wilder#python_fuzzy_pattern(),
       \       'sorter': wilder#python_difflib_sorter(),
+      \       'engine': 're',
       \     }),
       \   ),
       \ ])
@@ -79,9 +80,10 @@ call wilder#set_option('pipeline', [
 
 ![Fuzzy](https://i.imgur.com/rFgEVJ2.png)
 
-The pipeline is essentially a list of functions (referred to as pipes) which are executed in order, passing the result of the previous function to the next one. `wilder#branch()` is a higher-order component which is able to provide control flow given its own lists of pipelines.
+The pipeline is essentially a list of functions (referred to as pipes) which are executed in order, passing the result of the previous function to the next one.
+`wilder#branch()` is a higher-order pipe which is able to provide control flow given its own lists of pipelines.
 
-See the docs at `:h wilder-pipeline` for a more details. In the meantime, here are some suggestions for pipelines to use:
+See the docs at `:h wilder-pipeline` for a more details. In the meantime, here are some pipeline examples:
 
 #### History
 
@@ -140,9 +142,13 @@ call wilder#set_option('pipeline', [
       \ ])
 ```
 
-When getting file completions, fuzzily search and match through all files under the current directory. Has to be placed above `wilder#cmdline_pipeline()`.
+![File finder](https://i.imgur.com/2gmT1vq.png)
 
-To optimise for performane, the `file_command`, `dir_command` and `filters` options can be customised. See `:h wilder#python_file_finder_pipeline()` for more details.
+When getting file completions, fuzzily search and match through all files under the current directory.
+Has to be placed above `wilder#cmdline_pipeline()`.
+
+To optimise for performane, the `file_command`, `dir_command` and `filters` options can be customised.
+See `:h wilder#python_file_finder_pipeline()` for more details.
 
 #### Devicons (Experimental)
 
@@ -152,7 +158,7 @@ To optimise for performane, the `file_command`, `dir_command` and `filters` opti
 " Add wilder#result_draw_devicons() to the end of the pipeline
 call wilder#set_option('pipeline', [
       \   wilder#branch(
-      \      ...
+      \      ... pipelines ...
       \   ),
       \   wilder#result_draw_devicons(),
       \ ])
@@ -162,23 +168,38 @@ call wilder#set_option('pipeline', [
 
 ## Customising the renderer
 
-Use `wilder#set_option('renderer', <renderer>)` to change how `wilder` draws the results. By default, `wilder` tries its best to look like the default wildmenu.
+Use `wilder#set_option('renderer', <renderer>)` to change how `wilder` draws the results.
+By default, `wilder` tries its best to look like the default wildmenu.
 
 ### Wildmenu renderer
 
-`wilder#wildmenu_renderer()` draws the candidates above the cmdline. For Neovim 0.4+, a floating window is used. Otherwise the statusline is used.
+`wilder#wildmenu_renderer()` draws the candidates above the cmdline.
+For Neovim 0.4+, a floating window is used. Otherwise the statusline is used.
 Due to statusline limitations, the wildmenu only fills up the width of the current window.
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ 'highlighter': wilder#query_highlighter(),
-      \ })
+      \ }))
 ```
 
 ![Default](https://i.imgur.com/vIgIt4v.png)
 
-For Airline and Lightline users, use `wilder#airline_theme()` and `wilder#lightline_theme()` to configure the renderer to look like the statusline.
+An alternative theme which shows a spinner and the current number of items:
+
+```vim
+call wilder#set_option('renderer', wilder#wildmenu_renderer({
+      \ 'highlighter': wilder#query_highlighter(),
+      \ 'separator': ' · ',
+      \ 'left': [' ', wilder#wildmenu_spinner(), ' '],
+      \ 'right': [' ', wilder#wildmenu_index()],
+      \ }))
+```
+
+![Minimal](https://i.imgur.com/AifaC11.png)
+
+For Airline and Lightline users, `wilder#airline_theme()` and `wilder#lightline_theme()` can be used.
 
 ```vim
 " use wilder#lightline_theme() if using Lightline
@@ -201,19 +222,23 @@ For Neovim 0.4+, `wilder#popupmenu_renderer()` can be used to draw the results o
 " 'highlighter' : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ 'highlighter': wilder#query_highlighter(),
-      \ })
+      \ }))
 ```
 
 ![Popupmenu](https://i.imgur.com/YcVk7le.png)
 
 Use `wilder#renderer_mux()` to choose which renderer to use for different cmdline modes.
-This is helpful since the popupmenu might block the current window when searching with `/`.
+This is helpful since the popupmenu might overlap the current window when searching with `/`.
 
 ```vim
 call wilder#set_option('renderer', wilder#renderer_mux({
-      \ ':': wilder#popupmenu_renderer(),
-      \ '/': wilder#wildmenu_renderer(),
-      \ })
+      \ ':': wilder#popupmenu_renderer({
+      \   ... settings ...
+      \ }),
+      \ '/': wilder#wildmenu_renderer({
+      \   ... settings ...
+      \ }),
+      \ }))
 ```
 
 # Tips
