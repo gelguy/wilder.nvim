@@ -1130,15 +1130,15 @@ wilder#wildmenu_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#query_highlighter()| and |wilder#pcre2_highlighter()| are
-            helper functions which can be used to apply accents to the
-            candidates from |wilder#cmdline_pipeline()| and
-            |wilder#python_search_pipeline()|.
+            |wilder#basic_highlighter()| is the highlighter which can be used
+            out of the box, but is slow. For best performance, use
+            |wilder#lua_fzy_highlighter()|. The Python highlighters are slow
+            in general due to RPC overhead.
 
             Example:
 >
             call wilder#set_option('renderer', wilder#wildmenu_renderer({
-                  \ 'highlighter': wilder#pcre2_highlighter(),
+                  \ 'highlighter': wilder#basic_highlighter(),
                   \ }))
 <
 
@@ -1542,10 +1542,10 @@ wilder#popupmenu_renderer([{options}])
 
             Default: [' ', wilder#popupmenu_scrollbar()]
 
-            `apply_highlights`
+            `highlighter`
             Optional~
 
-            See the `apply_highlights` key of |wilder#wildmenu_renderer()|.
+            See the `highlighter` key of |wilder#wildmenu_renderer()|.
 
             Default: []
 
@@ -2165,7 +2165,7 @@ wilder#python_fuzzywuzzy_sorter([{partial}])
             The {partial} argument is passed to
             |wilder#python_fuzzywuzzy_sort()| as an option.
 
-wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
+wilder#basic_highlighter([{opts}])  *wilder#basic_highlighter()*
                                     python option only for Neovim~
             Helper function which returns a function for the
             `highlighter` option for |wilder#wildmenu_renderer()| or
@@ -2230,13 +2230,10 @@ wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
 
             Default: 're'
 
-            Note: This function is slow and should be avoided by users who are
-            concerned about performance. Using 'lua' is slightly faster, but
-            will still increase the rendering time.
-
 wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
+                                    *wilder#python_cpsm_highlighter()*
+wilder#python_cpsm_highlighter([{opts}])
                                     Neovim only~
-                                    Async~
                                     cpsm plugin required~
             Helper function which returns a function for the `highlighter`
             option for |wilder#wildmenu_renderer()| or
@@ -2262,8 +2259,23 @@ wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
 
             Default: 'basic'
 
-            Note: This function is slow and should be avoided by users who are
-            concerned about performance.
+wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
+                                    Neovim only~
+                                    fzy-lua-native plugin required~
+            Helper function which returns a function for the `highlighter`
+            option for |wilder#wildmenu_renderer()| or
+            |wilder#popupmenu_renderer()|.
+
+            Returns a function which takes {ctx}, {candidate} and {data} as
+            arguments.
+            If {data} does not contain the key `query`, returns 0.
+            Otherwise, returns a list of highlight spans as determined by
+            `fzy-lua-native`.
+
+            The `fzy-lua-native` plugin can be found at
+            https://github.com/romgrk/fzy-lua-native.
+
+            Note: This may not handle multibyte characters properly.
 
                                     *wilder#project_root()*
 wilder#project_root([{root_markers}])
@@ -2358,10 +2370,14 @@ wilder#python_sort_fuzzywuzzy({ctx}, {opts}, {candidates}, {query})
                                     Deprecated~
             Deprecated: Use |wilder#python_fuzzywuzzy_sort()|.
 
+wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
+                                    Deprecated~
+            Deprecated: Use |wilder#basic_highlighter()|.
+
                                     *wilder#query_common_subsequence_spans()*
 wilder#query_common_subsequence_spans([{opts}])
                                     Deprecated~
-            Deprecated: Use |wilder#query_highlighter()|.
+            Deprecated: Use |wilder#basic_highlighter()|.
 
                                     *wilder#pcre2_capture_spans()*
 wilder#pcre2_capture_spans([{opts}])

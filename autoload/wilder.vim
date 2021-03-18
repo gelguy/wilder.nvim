@@ -98,14 +98,19 @@ function! wilder#hl_with_attr(name, hl_group, ...) abort
   return wilder#make_hl(a:name, a:hl_group, [{}, l:attrs, l:attrs])
 endfunction
 
+" DEPRECATED: use wilder#basic_highlighter()
 function! wilder#query_highlighter(...)
-  let l:opts = get(a:, 1, {})
-  return wilder#highlighter#query_highlighter(l:opts)
+  return call('wilder#basic_highlighter', a:000)
 endfunction
 
-" DEPRECATED: use wilder#query_highlighter()
+" DEPRECATED: use wilder#basic_highlighter()
 function! wilder#query_common_subsequence_spans(...)
-  return call('wilder#query_highlighter', a:000)
+  return call('wilder#basic_highlighter', a:000)
+endfunction
+
+function! wilder#basic_highlighter(...)
+  let l:opts = get(a:, 1, {})
+  return wilder#highlighter#basic_highlighter(l:opts)
 endfunction
 
 function! wilder#pcre2_highlighter(...)
@@ -119,8 +124,16 @@ function! wilder#pcre2_capture_spans(...)
 endfunction
 
 function! wilder#cpsm_highlighter(...)
+  return call('wilder#python_cpsm_highlighter', a:000)
+endfunction
+
+function! wilder#python_cpsm_highlighter(...)
   let l:opts = get(a:, 1, {})
-  return wilder#highlighter#cpsm_highlighter(l:opts)
+  return wilder#highlighter#python_cpsm_highlighter(l:opts)
+endfunction
+
+function! wilder#lua_fzy_highlighter(...)
+  return wilder#highlighter#lua_fzy_highlighter()
 endfunction
 
 " pipes

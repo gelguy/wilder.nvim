@@ -726,8 +726,8 @@ class Wilder(object):
 
         return [x[0] for x in sorted(xs, key=lambda x: x[1])]
 
-    @neovim.function('_wilder_python_highlight_query', sync=True)
-    def _highlight_query(self, args):
+    @neovim.function('_wilder_python_basic_highlight', sync=True)
+    def _basic_highlight(self, args):
         string = args[0]
         query = args[1]
         case_sensitive = args[2]
@@ -764,7 +764,7 @@ class Wilder(object):
 
         return spans
 
-    @neovim.function('_wilder_python_highlight_pcre2', sync=True)
+    @neovim.function('_wilder_python_pcre2_highlight', sync=True)
     def _highlight_pcre2(self, args):
         pattern = args[0]
         string = args[1]
@@ -789,7 +789,7 @@ class Wilder(object):
 
         return captures
 
-    @neovim.function('_wilder_python_highlight_cpsm', sync=True)
+    @neovim.function('_wilder_python_cpsm_highlight', sync=True)
     def _highlight_cpsm(self, args):
         opts = args[0]
         x = args[1]

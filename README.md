@@ -180,7 +180,7 @@ Due to statusline limitations, the wildmenu only fills up the width of the curre
 ```vim
 " 'highlighter' : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'highlighter': wilder#query_highlighter(),
+      \ 'highlighter': wilder#basic_highlighter(),
       \ }))
 ```
 
@@ -190,7 +190,7 @@ An alternative theme which shows a spinner and the current number of items:
 
 ```vim
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
-      \ 'highlighter': wilder#query_highlighter(),
+      \ 'highlighter': wilder#basic_highlighter(),
       \ 'separator': ' · ',
       \ 'left': [' ', wilder#wildmenu_spinner(), ' '],
       \ 'right': [' ', wilder#wildmenu_index()],
@@ -207,7 +207,7 @@ For Airline and Lightline users, `wilder#airline_theme()` and `wilder#lightline_
 call wilder#set_option('renderer', wilder#wildmenu_renderer(
       \ wilder#airline_theme({
       \   'highlights': {},
-      \   'highlighter': wilder#query_highlighter(),
+      \   'highlighter': wilder#basic_highlighter(),
       \   'separator': ' · ',
       \ })))
 ```
@@ -221,7 +221,7 @@ For Neovim 0.4+, `wilder#popupmenu_renderer()` can be used to draw the results o
 ```vim
 " 'highlighter' : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
-      \ 'highlighter': wilder#query_highlighter(),
+      \ 'highlighter': wilder#basic_highlighter(),
       \ }))
 ```
 
