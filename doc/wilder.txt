@@ -1596,10 +1596,20 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
             The empty string ' ' can be used to give padding to the left or
             right of the popupmenu.
 
+            List:
+            A list of highlight chunks.
+
+            A highlight chunk can be in the form of [{text}], [{text}, {hl}]
+            or [{text}, {default_hl}, {selected_hl}]. For [{text}], the
+            default and selected highlights of the renderer will be used. For
+            [{text}, {hl}], {hl} will be used for both default and selected
+            states.
+
             Function:
             A function which takes a {ctx}, the pipeline result {result} and
             the index of the current row {i} and returns a string or a list of
-            highlight chunks [[{text}, {hl}], ...].
+            highlight chunks. See the List section above for the structure of
+            highlight chunks.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a

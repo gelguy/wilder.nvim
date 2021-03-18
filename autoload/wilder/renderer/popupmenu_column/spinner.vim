@@ -46,11 +46,5 @@ function! s:spinner(state, ctx, result, i) abort
     let l:frame = a:state.frames[l:frame_number]
   endif
 
-  if a:ctx.selected == a:i
-    let l:hl = get(a:state, 'selected_hl', a:ctx.highlights['selected'])
-  else
-    let l:hl = get(a:state, 'hl', a:ctx.highlights['default'])
-  endif
-
-  return [[l:frame, l:hl]]
+  return [[l:frame]]
 endfunction
