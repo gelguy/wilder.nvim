@@ -131,6 +131,14 @@ function! s:render(state, ctx, result) abort
     let a:state.page = [-1, -1]
   endif
 
+  if a:state.page != [-1, -1]
+    if a:state.page[0] > len(a:result.value)
+      let a:state.page = [-1, -1]
+    elseif a:state.page[1] > len(a:result.value)
+      let a:state.page[1] = len(a:result.value) - 1
+    endif
+  endif
+
   let l:page = s:make_page(a:state, a:ctx, a:result)
   let a:ctx.page = l:page
   let a:state.page = l:page

@@ -1130,10 +1130,10 @@ wilder#wildmenu_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#basic_highlighter()| is the highlighter which can be used
-            out of the box, but is slow. For best performance, use
-            |wilder#lua_fzy_highlighter()|. The Python highlighters are slow
-            in general due to RPC overhead.
+            Note: Highlighting is slow and will result in noticeable input
+            delay. For best performance, use the Lua highlighters e.g.
+            |wilder#lua_fzy_highlighter()|. Python highlighters have high RPC
+            overhead and should be avoided.
 
             Example:
 >
@@ -2288,18 +2288,42 @@ wilder#project_root([{root_markers}])
 
 wilder#renderer_mux({args})         *wilder#renderer_mux()*
             Creates a renderer multiplexer which chooses the renderer to use
-            based on |getcmdchar()|.
+            based on {args}.
 
-            The keys of {args} should be a cmdtype e.g. '/', ':' or '?'.
+            {args} can either be a Dictionary or a List.
 
-            If the '?' key is omitted and the '/' key is present, '?' will use
-            the renderer for '/'.
+            If {args} is a Dictionary, it should be in the form {{key}:
+            {rendderer}} where the keys represent a cmdtype e.g. '/', ':' or
+            '?'. The renderer with key equal to |getcmdtype()| will be the
+            used.
+
+            '/' matches both '/' and '?'.
 
             The special key 'substitute' sets the renderer when the cmdline is
-            in a |:substitute| command. If omitted, the '/' renderer is used.
+            in a |:substitute| command. If omitted, the ':' renderer is used.
+
+            If {args} is a List, it should be a list of [{check}, {renderer}]
+            elements. {check} can either be a function or string. The list is
+            iterated in order and the {renderer} with the first passing
+            {check} is used.
+
+            If {check} is a function, it should take an empty {ctx} and return
+            true if {renderer} should be used.
+
+            If {check} is a string, the |getcmdtype()| described in the
+            Dictionary section above is used.
+
+            {renderer} can be 0 indicating no renderer is used.
 
             Example:
 >
+            " disables rendering in subsitute commands
+            wilder#set_option('renderer, wilder#renderer_mux([
+                  \ ['substitute', 0],
+                  \ [':', wilder#popupmenu_renderer()],
+                  \ ['/', wilder#wildmenu_renderer()],
+                  \ ])
+
             wilder#set_option('renderer, wilder#renderer_mux({
                   \ ':': wilder#popupmenu_renderer(),
                   \ '/': wilder#wildmenu_renderer(),
