@@ -1707,6 +1707,18 @@ wilder#popupmenu_spinner([{options}])
 
             Default: 100
 
+                                    *wilder#popupmenu_devicons()*
+wilder#popupmenu_devicons([{options}])
+                                    wilder#popupmenu_renderer() column~
+            Adds devicons for files and buffers.
+
+            {options} is a dictionary with keys:
+            `padding`
+            A list in the form of [{left_padding_width},
+            {right_padding_width}].
+
+            Default: [0, 1]
+
                                     *wilder#popupmenu_buffer_status()*
 wilder#popupmenu_buffer_status([{options}])
                                     wilder#popupmenu_renderer() column~
