@@ -173,20 +173,30 @@ function! s:render(state, ctx, result) abort
   let l:Highlighter = get(a:state, 'highlighter', [])
 
   let [l:start, l:end] = l:page
+  let l:height = l:end - l:start + 1
 
-  " [[left_columns, chunks, right_columns]]
-  let l:raw_lines = []
+  " Add 1 column of padding.
+  let l:left_column_chunks = map(repeat([0], l:height), {-> [[' ']]})
+  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result, l:height)
+
+  let l:right_column_chunks = map(repeat([0], l:height), {-> []})
+  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result, l:height)
+
+  " [[left_column, chunks, right_column]]
+  let l:raw_lines = repeat([0], l:height)
   " [[chunks_width, total_width]]
-  let l:widths = []
+  let l:widths = repeat([0], l:height)
 
   " Draw each line and calculate the width taken by the chunks.
   let l:i = l:start
   while l:i <= l:end
     let l:line = s:draw_line(a:state, a:ctx, a:result, l:i)
+    let l:left_column = l:left_column_chunks[l:i - l:start]
+    let l:right_column = l:right_column_chunks[l:i - l:start]
 
-    let l:left_width = wilder#render#chunks_displaywidth(l:line[0])
-    let l:chunks_width = wilder#render#chunks_displaywidth(l:line[1])
-    let l:right_width = wilder#render#chunks_displaywidth(l:line[2])
+    let l:left_width = wilder#render#chunks_displaywidth(l:left_column)
+    let l:chunks_width = wilder#render#chunks_displaywidth(l:line)
+    let l:right_width = wilder#render#chunks_displaywidth(l:right_column)
 
     let l:total_width = l:left_width + l:chunks_width + l:right_width
 
@@ -195,8 +205,9 @@ function! s:render(state, ctx, result) abort
       let a:state.longest_line_width = l:total_width
     endif
 
-    call add(l:raw_lines, l:line)
-    call add(l:widths, [l:chunks_width, l:total_width])
+    let l:index = l:i - l:start
+    let l:raw_lines[l:index] = [l:left_column, l:line, l:right_column]
+    let l:widths[l:index] = [l:chunks_width, l:total_width]
 
     let l:i += 1
   endwhile
@@ -216,7 +227,7 @@ function! s:render(state, ctx, result) abort
 
   " lines is the list of list of chunks which will be drawn.
   " Each element represents one line of the popupmenu.
-  let l:lines = []
+  let l:lines = repeat([0], l:height)
 
   let l:i = 0
   while l:i < len(l:raw_lines)
@@ -242,7 +253,7 @@ function! s:render(state, ctx, result) abort
       call add(l:chunks, [repeat(' ', l:to_pad)])
     endif
 
-    call add(l:lines, l:left_column + l:chunks + l:right_column)
+    let l:lines[l:i] = l:left_column + l:chunks + l:right_column
 
     let l:i += 1
   endwhile
@@ -484,7 +495,24 @@ function! s:draw_x(state, ctx, result, i) abort
   return l:x
 endfunction
 
-function! s:draw_column(column, ctx, result, i) abort
+function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
+  for l:Column in a:columns
+    let l:column = s:draw_column(l:Column, a:ctx, a:result, a:height)
+
+    if empty(l:column)
+      continue
+    endif
+
+    let l:i = 0
+    while l:i < a:height
+      let a:column_chunks[l:i] += l:column[l:i]
+
+      let l:i += 1
+    endwhile
+  endfor
+endfunction
+
+function! s:draw_column(column, ctx, result, height) abort
   let l:Column = a:column
 
   if type(l:Column) is v:t_dict
@@ -492,42 +520,23 @@ function! s:draw_column(column, ctx, result, i) abort
   endif
 
   if type(l:Column) is v:t_list
-    return l:Column
+    return repeat([[l:Column]], a:height)
   endif
 
   if type(l:Column) is v:t_string
-    return [[l:Column]]
+    return repeat([[[l:Column]]], a:height)
   endif
 
-  let l:result = l:Column(a:ctx, a:result, a:i)
+  let l:result = l:Column(a:ctx, a:result)
 
   if type(l:result) is v:t_list
     return l:result
   endif
 
-  return [[l:result]]
+  return repeat([[[l:result]]], a:height)
 endfunction
 
-" Returns [left_column, chunks, right_column]
 function! s:draw_line(state, ctx, result, i) abort
-  " Add 1 column of padding.
-  let l:left_chunks = [[' ']]
-  for l:Column in a:state.left
-    let l:left_chunks += s:draw_column(l:Column, a:ctx, a:result, a:i)
-  endfor
-
-  let l:right_chunks = []
-  for l:Column in a:state.right
-    let l:right_chunks += s:draw_column(l:Column, a:ctx, a:result, a:i)
-  endfor
-
-  let l:chunks = s:draw_line_chunks(
-        \ a:state, a:ctx, a:result, a:i)
-
-  return [l:left_chunks, l:chunks, l:right_chunks]
-endfunction
-
-function! s:draw_line_chunks(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
   let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)

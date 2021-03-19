@@ -2,7 +2,7 @@ scriptencoding utf-8
 
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
-function! wilder#render#draw_x(ctx, result, i)
+function! wilder#render#draw_x(ctx, result, i) abort
   let l:x = a:result.value[a:i]
 
   if has_key(a:result, 'draw')
@@ -180,7 +180,9 @@ function! wilder#render#chunks_displaywidth(chunks) abort
   let l:width = 0
 
   for l:chunk in a:chunks
-    let l:width += strdisplaywidth(l:chunk[0])
+    if !empty(l:chunk)
+      let l:width += strdisplaywidth(l:chunk[0])
+    endif
   endfor
 
   return l:width

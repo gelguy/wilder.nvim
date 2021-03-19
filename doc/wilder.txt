@@ -1606,16 +1606,15 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
             states.
 
             Function:
-            A function which takes a {ctx}, the pipeline result {result} and
-            the index of the current row {i} and returns a string or a list of
-            highlight chunks. See the List section above for the structure of
-            highlight chunks.
+            A function which takes a {ctx} and the pipeline result {result}
+            and returns a string or a list of highlight chunks. See the List
+            section above for the structure of highlight chunks.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a
             2 element array [{start}, {end}] indicating the start and end of
-            the candidates currently being drawn. If no candidates are drawn,
-            the page is [-1, -1].
+            the candidates currently being drawn. It can be assumed that if
+            this function is called, there is at least 1 candidate.
 
             Dictionary:
             A dictionary with the following keys:
