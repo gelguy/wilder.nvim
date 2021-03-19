@@ -626,6 +626,11 @@ function! wilder#popupmenu_spinner(...) abort
   return wilder#renderer#popupmenu_column#spinner#make(l:args)
 endfunction
 
+function! wilder#popupmenu_buffer_status(...) abort
+  let l:args = get(a:, 1, {})
+  return wilder#renderer#popupmenu_column#buffer_status#make(l:args)
+endfunction
+
 " renderers
 
 function! wilder#renderer_mux(args)
