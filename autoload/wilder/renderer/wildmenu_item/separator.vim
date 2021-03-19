@@ -30,7 +30,7 @@ function! s:hl(name, from, to) abort
   call s:get_hl(l:colors[1], l:from_hl[1], l:to_hl[1], l:normal_hl[1], 1)
   call s:get_hl(l:colors[2], l:from_hl[2], l:to_hl[2], l:normal_hl[2], 0)
 
-  call wilder#make_hl(a:name, l:colors)
+  call wilder#make_temp_hl(a:name, l:colors)
 endfunction
 
 function! s:get_hl(hl, from_hl, to_hl, default_hl, is_cterm) abort

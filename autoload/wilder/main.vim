@@ -193,10 +193,6 @@ function! s:pre_hook() abort
   if has_key(s:opts.renderer, 'pre_hook')
     call s:opts.renderer.pre_hook({})
   endif
-
-  " create highlight before and after since there might be renderer-defined
-  " highlights which depend on existing highlights
-  call wilder#highlight#init_hl()
 endfunction
 
 function! s:post_hook() abort

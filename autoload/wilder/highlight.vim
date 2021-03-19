@@ -20,10 +20,15 @@ function! wilder#highlight#init_hl() abort
 endfunction
 
 function! wilder#highlight#make_hl(name, x, xs) abort
-  let l:name = s:make_hl(a:name, a:x, a:xs)
-  call filter(s:hl_list, {i, elem -> elem[0] !=# l:name})
-  call add(s:hl_list, [l:name, deepcopy(a:x), deepcopy(a:xs)])
-  return l:name
+  call s:make_hl(a:name, a:x, a:xs)
+  call filter(s:hl_list, {i, elem -> elem[0] !=# a:name})
+  call add(s:hl_list, [a:name, deepcopy(a:x), deepcopy(a:xs)])
+  return a:name
+endfunction
+
+function! wilder#highlight#make_temp_hl(name, x, xs) abort
+  call s:make_hl(a:name, a:x, a:xs)
+  return a:name
 endfunction
 
 function! s:make_hl(name, x, xs) abort
@@ -34,7 +39,7 @@ function! s:make_hl(name, x, xs) abort
     let l:x = s:combine_hl_list(l:x, l:y)
   endfor
 
-  return s:make_hl_from_list(a:name, l:x)
+  call s:make_hl_from_list(a:name, l:x)
 endfunction
 
 function! s:to_hl_list(x) abort
@@ -199,7 +204,6 @@ function! s:make_hl_from_list(name, args) abort
   endif
 
   exe l:cmd
-  return a:name
 endfunction
 
 function! s:get_attrs_as_list(attrs) abort

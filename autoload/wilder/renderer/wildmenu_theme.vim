@@ -101,22 +101,22 @@ function! s:theme(opts, namespace, hls) abort
   elseif l:use_powerline_symbols == 1
     let l:separators = [
           \ wilder#powerline_separator(l:powerline_symbols[0],
-          \   l:highlights['mode'], l:highlights['left_arrow2'],  'Left'),
+          \   l:highlights['mode'], l:highlights['left_arrow2'],  a:namespace . 'Left'),
           \ wilder#powerline_separator(l:powerline_symbols[0],
-          \   l:highlights['left_arrow2'], l:highlights['default'],  'Left2'),
+          \   l:highlights['left_arrow2'], l:highlights['default'],  a:namespace . 'Left2'),
           \ wilder#powerline_separator(l:powerline_symbols[1],
-          \   l:highlights['right_arrow2'], l:highlights['default'],  'Right'),
+          \   l:highlights['right_arrow2'], l:highlights['default'],  a:namespace . 'Right'),
           \ wilder#powerline_separator(l:powerline_symbols[1],
-          \   l:highlights['index'], l:highlights['right_arrow2'],  'Right2'),
+          \   l:highlights['index'], l:highlights['right_arrow2'],  a:namespace . 'Right2'),
           \ ]
   else
     let l:separators = [
           \ wilder#powerline_separator(l:powerline_symbols[0],
-          \   l:highlights['mode'], l:highlights['default'],  'Left'),
+          \   l:highlights['mode'], l:highlights['default'],  a:namespace . 'Left'),
           \ '',
           \ '',
           \ wilder#powerline_separator(l:powerline_symbols[1],
-          \   l:highlights['index'], l:highlights['default'],  'Right2'),
+          \   l:highlights['index'], l:highlights['default'],  a:namespace . 'Right2'),
           \ ]
   endif
 

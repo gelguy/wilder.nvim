@@ -86,6 +86,10 @@ function! wilder#make_hl(name, args, ...) abort
   return wilder#highlight#make_hl(a:name, a:args, a:000)
 endfunction
 
+function! wilder#make_temp_hl(name, args, ...) abort
+  return wilder#highlight#make_temp_hl(a:name, a:args, a:000)
+endfunction
+
 function! wilder#hl_with_attr(name, hl_group, ...) abort
   let l:attrs = {}
   for l:attr in a:000

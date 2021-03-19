@@ -1860,8 +1860,8 @@ wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
             nnoremap <expr> : wilder#start_from_normal_mode() . ':'
 <
 
-wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                                     *wilder#make_hl()*
+wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
             Helper function to create a highlight group. Creates a highlight
             group with the given {name} based on {args}.
 
@@ -1974,8 +1974,16 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                     \ [{}, {}, {'underline': 1, 'reverse': 0}])
 <
 
-wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
+                                    *wilder#make_temp__hl()*
+wilder#make_temp_hl({name}, {args}, [, {args1}, ..., {argsN}])
+            Same as |wilder#make_hl()|, except the highlight groups are not
+            recreated each time wilder is started.
+
+            This should be used for highlights which are dynamically created
+            e.g. in a pre-hook.
+
                                     *wilder#hl_with_attr()*
+wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
             Helper function to create a new |highlight-group| named {name} by
             applying attributes to {hl_group}. Attributes can be turned off by
             prefixing it with 'no'.
