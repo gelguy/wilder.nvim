@@ -494,7 +494,7 @@ wilder#python_fuzzy_delimiter_pattern([{options}])
             `start_at_boundary`
             Optional~
             If true, the regex will only match at the beginning of a word
-            boundary.
+            boundary or delimiter.
 
             Default: 1
 
