@@ -1796,13 +1796,22 @@ wilder#popupmenu_buffer_flags([{options}])
               `+`
               Shows '+' if the buffer has been 'modified' and ' ' otherwise.
 
-              Default: '1 %a-+ '
+              `u`
+              Shows ' ' if the buffer is 'buflisted' and 'u' otherwise.
+
+            Default: '1u%a-+ '
 
             `hl`
+            Optional~
             The highlight group to use.
 
+            Default: The `default` highlight of the renderer
+
             `selected_hl`
+            Optional~
             The highlight group to use when the line is selected.
+
+            Default: The `selected` highlight of the renderer
 
 
 ==============================================================================

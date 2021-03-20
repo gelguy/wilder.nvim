@@ -1,5 +1,5 @@
 function! wilder#renderer#popupmenu_column#buffer_flags#make(opts) abort
-  let l:flags = get(a:opts, 'flags', '1 %a-+ ')
+  let l:flags = get(a:opts, 'flags', '1u%a-+ ')
 
   if empty(l:flags)
     return {-> ''}
@@ -43,15 +43,15 @@ function! s:buffer_status(state, ctx, result) abort
 
   let l:width = len(l:flags)
 
-  if stridx(l:flags, '1') != -1
-    let l:bufnr_width = strdisplaywidth(bufnr('$'))
-    let l:width += l:bufnr_width - 1
-  endif
-
   let l:hl = get(a:state, 'hl', a:ctx.highlights['default'])
   let l:selected_hl = get(a:state, 'selected_hl', a:ctx.highlights['selected'])
 
   let l:empty_chunks = [[repeat(' ', l:width), l:hl, l:selected_hl]]
+
+  if stridx(l:flags, '1') != -1
+    let l:bufnr_width = strdisplaywidth(bufnr('$'))
+    let l:width += l:bufnr_width - 1
+  endif
 
   let l:i = l:start
   while l:i <= l:end
@@ -78,34 +78,13 @@ function! s:buffer_status(state, ctx, result) abort
 
     let l:j = 0
     while l:j < l:width
-      let l:char = l:flags[l:j]
+      let l:flag = l:flags[l:j]
 
-      if l:char ==# ' '
-        let l:status .= ' '
-      elseif l:char ==# '1'
+      if l:flag ==# '1'
         let l:status .= repeat(' ', l:bufnr_width - strdisplaywidth(l:bufnr))
-        let l:status .= l:bufnr
-      elseif l:char ==# '%'
-        if l:bufnr == bufnr('%')
-          let l:status .= '%'
-        elseif l:bufnr == bufnr('#')
-          let l:status .= '#'
-        else
-          let l:status .= ' '
-        endif
-      elseif l:char ==# '+'
-        let l:status .= nvim_buf_get_option(l:bufnr, 'modified') ?  '+' : ' '
-      elseif l:char ==# '-'
-        let l:status .= nvim_buf_get_option(l:bufnr, 'readonly') ? '=' :
-              \ !nvim_buf_get_option(l:bufnr, 'modifiable') ? '-' : ' '
-      elseif l:char ==# 'a'
-        if bufloaded(l:bufnr)
-          let l:is_active = !empty(win_findbuf(l:bufnr))
-          let l:status .= l:is_active ? 'a' : 'h'
-        else
-          let l:status .= ' '
-        endif
       endif
+
+      let l:status .= s:get_str(l:flag, l:bufnr)
 
       let l:chunks = [[l:status, l:hl, l:selected_hl]]
       call a:state.cache.set(l:x, l:chunks)
@@ -118,4 +97,49 @@ function! s:buffer_status(state, ctx, result) abort
   endwhile
 
   return l:buffer_status
+endfunction
+
+function! s:get_str(flag, bufnr) abort
+  if a:flag ==# ' '
+    return ' '
+  endif
+
+  if a:flag ==# '1'
+    return a:bufnr
+  endif
+
+  if a:flag ==# '%'
+    if a:bufnr == bufnr('%')
+      return '%'
+    endif
+
+    if a:bufnr == bufnr('#')
+      return '#'
+    endif
+
+    return ' '
+  endif
+
+  if a:flag ==# '+'
+    return nvim_buf_get_option(a:bufnr, 'modified') ?  '+' : ' '
+  endif
+
+  if a:flag ==# '-'
+    return nvim_buf_get_option(a:bufnr, 'readonly') ? '=' :
+          \ !nvim_buf_get_option(a:bufnr, 'modifiable') ? '-' : ' '
+  endif
+
+  if a:flag ==# 'a'
+    if bufloaded(a:bufnr)
+      return !empty(win_findbuf(a:bufnr)) ? 'a' : 'h'
+    endif
+
+    return ' '
+  endif
+
+  if a:flag ==# 'u'
+    return buflisted(a:bufnr) ? ' ' : 'u'
+  endif
+
+  return ''
 endfunction
