@@ -755,7 +755,7 @@ class Wilder(object):
         return spans
 
     @neovim.function('_wilder_python_pcre2_highlight', sync=True)
-    def _highlight_pcre2(self, args):
+    def _pcre2_highlight(self, args):
         pattern = args[0]
         string = args[1]
         module_name = args[2]
@@ -780,7 +780,7 @@ class Wilder(object):
         return captures
 
     @neovim.function('_wilder_python_cpsm_highlight', sync=True)
-    def _highlight_cpsm(self, args):
+    def _cpsm_highlight(self, args):
         opts = args[0]
         x = args[1]
         query = args[2]
