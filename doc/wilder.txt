@@ -2285,6 +2285,13 @@ wilder#basic_highlighter([{opts}])  *wilder#basic_highlighter()*
 
             Default: 0
 
+                                    *wilder#vim_basic_highlighter()*
+wilder#vim_basic_highlighter([{opts}])
+                                    *wilder#python_basic_highlighter()*
+wilder#python_basic_highlighter([{opts}])
+            Shorthand for |wilder#basic_highlighter()| with the `language`
+            option set to `vim` and `python` respectively.
+
 wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
                                     Neovim only~
                                     pcre2 package required for lua option~
@@ -2319,6 +2326,13 @@ wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
             The regex engine to use. Only used when `language` is 'python'.
 
             Default: 're'
+
+                                    *wilder#python_pcre2_highlighter()*
+wilder#python_pcre2_highlighter([{opts}])
+                                    *wilder#lua_pcre2_highlighter()*
+wilder#lua_pcre2_highlighter([{opts}])
+            Shorthand for |wilder#pcre2_highlighter()| with the `language`
+            option set to `python` and `lua` respectively.
 
 wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
                                     *wilder#python_cpsm_highlighter()*

@@ -117,26 +117,50 @@ function! wilder#basic_highlighter(...)
   return wilder#highlighter#basic_highlighter(l:opts)
 endfunction
 
-function! wilder#pcre2_highlighter(...)
+function! wilder#vim_basic_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'vim'
+  return wilder#highlighter#basic_highlighter(l:opts)
+endfunction
+
+function! wilder#python_basic_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'python'
+  return wilder#highlighter#basic_highlighter(l:opts)
+endfunction
+
+function! wilder#pcre2_highlighter(...) abort
   let l:opts = get(a:, 1, {})
   return wilder#highlighter#pcre2_highlighter(l:opts)
 endfunction
 
+function! wilder#python_pcre2_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'python'
+  return wilder#highlighter#pcre2_highlighter(l:opts)
+endfunction
+
+function! wilder#lua_pcre2_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'lua'
+  return wilder#highlighter#pcre2_highlighter(l:opts)
+endfunction
+
 " DEPRECATED: use wilder#pcre2_highlighter()
-function! wilder#pcre2_capture_spans(...)
+function! wilder#pcre2_capture_spans(...) abort
   return call('wilder#pcre2_highlighter', a:000)
 endfunction
 
-function! wilder#cpsm_highlighter(...)
+function! wilder#cpsm_highlighter(...) abort
   return call('wilder#python_cpsm_highlighter', a:000)
 endfunction
 
-function! wilder#python_cpsm_highlighter(...)
+function! wilder#python_cpsm_highlighter(...) abort
   let l:opts = get(a:, 1, {})
   return wilder#highlighter#python_cpsm_highlighter(l:opts)
 endfunction
 
-function! wilder#lua_fzy_highlighter(...)
+function! wilder#lua_fzy_highlighter(...) abort
   return wilder#highlighter#lua_fzy_highlighter()
 endfunction
 
@@ -794,6 +818,8 @@ function! s:get_project_root(path, root_markers) abort
   return ''
 endfunction
 
+" DEPRECATED: This function is to be removed.
+" Use wilder#popupmenu_devicons() instead.
 function! wilder#result_draw_devicons()
   return wilder#result({
         \ 'draw': ['wilder#draw_devicons'],
