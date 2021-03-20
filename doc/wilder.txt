@@ -1754,6 +1754,9 @@ wilder#popupmenu_devicons([{options}])
 
             To use `nerdfont.vim`, set this to {name -> nerdfont#find(name)}.
 
+            Note: The icons returned should all be of the same
+            |strdisplaywidth()|.
+
             Default: 'WebDevIconsGetFileTypeSymbol'
 
             `padding`
