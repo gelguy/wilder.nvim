@@ -2332,9 +2332,9 @@ wilder#python_uniq()                *wilder#python_uniq()*
                                     Deprecated~
             Deprecated: Use |wilder#python_filter_uniq()|.
 
-wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
+wilder#filter_fuzzy()               *wilder#filter_fuzzy()*
                                     Deprecated~
-            Deprecated: Use |wilder#filter_fuzzy()|.
+            Deprecated: Use |wilder#fuzzy_filter()|.
 
 wilder#python_filter_fuzzy()        *wilder#python_filter_fuzzy()*
                                     Deprecated~
