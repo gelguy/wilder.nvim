@@ -251,6 +251,8 @@ function! s:render(state, ctx, result) abort
     elseif l:total_width < l:expected_width
       let l:to_pad = l:expected_width - l:total_width
 
+      " l:chunks might point to the cached version
+      let l:chunks = copy(l:chunks)
       call add(l:chunks, [repeat(' ', l:to_pad)])
     endif
 
