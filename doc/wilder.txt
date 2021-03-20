@@ -1752,7 +1752,8 @@ wilder#popupmenu_buffer_flags([{options}])
             {options} is a dictionary with keys:
             `flags`
             Optional~
-            The flags to show.
+            A string representing the flags to show. The flags are drawn in
+            the order specified in the string.
 
             Each character represents a flag to draw. The characters can be:
               `<Space>`
@@ -1762,7 +1763,7 @@ wilder#popupmenu_buffer_flags([{options}])
               Shows the buffer number |bufnr()|.
 
               `%`
-              Shows '%' if the buffer is the |current-buffer|, '#' if the buffer
+              Shows '%' if the buffer is the |current-file|, '#' if the buffer
               is the |alternate-file| and ' ' otherwise.
 
               `+`
@@ -2333,6 +2334,9 @@ wilder#python_cpsm_highlighter([{opts}])
             If {data} does not contain the key `query`, returns 0.
             Otherwise, returns a list of highlight spans as determined by
             `cpsm`.
+
+            The `cpsm` plugin can be found at
+            https://github.com/nixprime/cpsm.
 
             {opts} is a dictionary with keys:
             `cpsm_path`
