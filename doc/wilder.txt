@@ -460,6 +460,9 @@ wilder#python_fuzzy_pattern([{options}])
             If true, the regex will only match at the beginning of a word
             boundary.
 
+            Note: This makes the regex more complicated and will slow down the
+            fuzzy searching.
+
             Default: 1
 
                                     *wilder#python_fuzzy_delimiter_pattern()*
@@ -495,6 +498,9 @@ wilder#python_fuzzy_delimiter_pattern([{options}])
             Optional~
             If true, the regex will only match at the beginning of a word
             boundary or delimiter.
+
+            Note: This makes the regex more complicated and will slow down the
+            fuzzy searching.
 
             Default: 1
 

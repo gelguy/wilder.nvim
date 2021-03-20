@@ -64,7 +64,7 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
     endif
 
     if l:first
-      let l:start_at_boundary =  get(a:args, 'start_at_boundary', 0)
+      let l:start_at_boundary =  get(a:args, 'start_at_boundary', 1)
 
       if l:escaped || l:char ==# toupper(l:char)
         let l:res .= '(' . l:char . ')'
