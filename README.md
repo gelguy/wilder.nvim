@@ -41,7 +41,7 @@ set wildcharm=<Tab>
 cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
 cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 
-" only / and ? is enabled by default
+" only / and ? are enabled by default
 call wilder#set_option('modes', ['/', '?', ':'])
 ```
 
@@ -62,6 +62,7 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 "   'use_python' : use python for fuzzy searching
 " For wild#python_search_pipeline():
 "   'pattern'    : can be set to wilder#python_fuzzy_delimiter_pattern() for stricter fuzzy matching
+"   'sorter'     : omit to get results in the order they appear in the buffer
 "   'engine'     : can be set to 're2' for performance, requires pyre2 to be installed
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -80,10 +81,13 @@ call wilder#set_option('pipeline', [
 
 ![Fuzzy](https://i.imgur.com/rFgEVJ2.png)
 
-The pipeline is essentially a list of functions (referred to as pipes) which are executed in order, passing the result of the previous function to the next one.
+The pipeline is a list of functions (referred to as pipes) which are executed
+in order, passing the result of the previous function to the next one.
 `wilder#branch()` is a higher-order pipe which is able to provide control flow given its own lists of pipelines.
 
-See the docs at `:h wilder-pipeline` for a more details. In the meantime, here are some pipeline examples:
+See the docs at `:h wilder-pipeline` for a more details. 
+
+Here are some more example pipelines:
 
 #### History
 
@@ -144,27 +148,11 @@ call wilder#set_option('pipeline', [
 
 ![File finder](https://i.imgur.com/2gmT1vq.png)
 
-When getting file completions, fuzzily search and match through all files under the current directory.
+When getting file completions, fuzzily search and match through all files under the project directory.
 Has to be placed above `wilder#cmdline_pipeline()`.
 
 To optimise for performane, the `file_command`, `dir_command` and `filters` options can be customised.
 See `:h wilder#python_file_finder_pipeline()` for more details.
-
-#### Devicons (Experimental)
-
-`ryanoasis/vim-devicons` is required. Note: the API is experimental and subject to change.
-
-```vim
-" Add wilder#result_draw_devicons() to the end of the pipeline
-call wilder#set_option('pipeline', [
-      \   wilder#branch(
-      \      ... pipelines ...
-      \   ),
-      \   wilder#result_draw_devicons(),
-      \ ])
-```
-
-![Devicons](https://i.imgur.com/twcyhtv.png)
 
 ## Customising the renderer
 
@@ -241,43 +229,111 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }))
 ```
 
+##### Devicons for popupmenu
+
+Uses `ryanoasis/vim-devicons` by default. To use other plugins, the `get_icon` option can be changed.
+See `:h wilder#popupmenu_devicons` for more details.
+
+```vim
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlighter': wilder#basic_highlighter(),
+      \ 'left': [
+      \   wilder#popupmenu_devicons(),
+      \ ],
+      \ }))
+```
+
+![Devicons](https://i.imgur.com/twcyhtv.png)
+
+### Fuzzy highlighting
+
+The `highlighter` option for both `wilder#wildmenu_renderer()` and `wilder#popupmenu_renderer()`
+can be changed for better fuzzy highlighting.
+
+```vim
+" Neovim only
+" For lua_pcre2_highlighter : requires `luarocks install pcre2`
+" For lua_fzy_highlighter   : requires fzy-lua-native vim plugin found
+"                             at https://github.com/romgrk/fzy-lua-native
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlighter': [
+      \   wilder#lua_pcre2_highlighter(),
+      \   wilder#lua_fzy_highlighter(),
+      \ ],
+      \ }))
+```
+
+Other available highlighters are `wilder#python_pcre2_highlighter()` and
+`wilder#python_cpsm_highlighter()` which needs `cpsm` to be installed.
+
 # Tips
 
-#### Disabling in the case of errors
+### Input latency
+
+Input latency when typing in the cmdline is due to `wilder` rendering synchronously.
+Rendering time increases for each `wilder#wildmenu_renderer()` item, `wilder#popupmenu_renderer()` column,
+or by having a slow `highlighter`.
+
+The fastest configuration for `wilder` is to use the non-fuzzy Python pipelines
+and the default renderers.
+
+```vim
+" Neovim only
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#cmdline_pipeline({'use_python': 1}),
+      \     wilder#python_search_pipeline(),
+      \   ),
+      \ ])
+
+" The wildmenu renderer is faster than the popupmenu renderer.
+" By default no highlighting is applied.
+
+" call wilder#set_option('renderer', wilder#popupmenu_renderer())
+call wilder#set_option('renderer', wilder#wildmenu_renderer())
+```
+
+If this configuration is still not fast enough, the available options are to
+implement a faster renderer e.g. using Lua or to improve the current rendering
+code.
+
+If highlighting is important, use the Lua highlighters for best performance.
+
+### Disabling in the case of errors
 
 Use `q:` to open the `cmdline-window` and enter the following command
 
-```
+```vim
 call wilder#disable()
 ```
 
 Alternatively, define a mapping in your `init.vim` or `.vimrc`
 
-```
-nnoremap <expr> <Leader>w wilder#toggle()
+```vim
+nnoremap <Leader>w :call wilder#toggle()<CR>
 ```
 
 # Acknowledgements
 
 Many thanks to the following codebases for providing ideas and reference:
-> [denite.nvim](https://github.com/Shougo/denite.nvim)
+> [Shougo/denite.nvim](https://github.com/Shougo/denite.nvim)
 
-> [fzf.vim](https://github.com/junegunn/fzf.vim)
+> [junegunn/fzf.vim](https://github.com/junegunn/fzf.vim)
 
-> [vim-airline](https://github.com/vim-airline/vim-airline)
+> [vim-airline/vim-airline](https://github.com/vim-airline/vim-airline)
 
-> [lightline.vim](https://github.com/itchyny/lightline.vim)
+> [itchyny/lightline.vim](https://github.com/itchyny/lightline.vim)
 
-> [cpsm](https://github.com/nixprime/cpsm)
+> [nixprime/cpsm](https://github.com/nixprime/cpsm)
 
-> [fruzzy](https://github.com/raghur/fruzzy)
+> [raghur/fruzzy](https://github.com/raghur/fruzzy)
 
-> [LeaderF](https://github.com/Yggdroot/LeaderF)
+> [Yggdroot/LeaderF](https://github.com/Yggdroot/LeaderF)
 
-> [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+> [nvim-telescope/telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 
-> [vim-devicons](https://github.com/ryanoasis/vim-devicons)
+> [ryanoasis/vim-devicons](https://github.com/ryanoasis/vim-devicons)
 
-> [scrollbar.nvim](https://github.com/Xuyuanp/scrollbar.nvim)
+> [Xuyuanp/scrollbar.nvim](https://github.com/Xuyuanp/scrollbar.nvim)
 
 > and many more!
