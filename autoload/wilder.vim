@@ -635,9 +635,9 @@ function! wilder#popupmenu_devicons(...) abort
   return wilder#renderer#popupmenu_column#devicons#make(l:args)
 endfunction
 
-function! wilder#popupmenu_buffer_status(...) abort
+function! wilder#popupmenu_buffer_flags(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu_column#buffer_status#make(l:args)
+  return wilder#renderer#popupmenu_column#buffer_flags#make(l:args)
 endfunction
 
 " renderers

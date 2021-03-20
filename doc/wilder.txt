@@ -1719,10 +1719,10 @@ wilder#popupmenu_devicons([{options}])
 
             Default: [0, 1]
 
-                                    *wilder#popupmenu_buffer_status()*
-wilder#popupmenu_buffer_status([{options}])
+                                    *wilder#popupmenu_buffer_flags()*
+wilder#popupmenu_buffer_flags([{options}])
                                     wilder#popupmenu_renderer() column~
-            Adds buffer status information.
+            Adds buffer flag information from |:ls|.
 
             {options} is a dictionary with keys:
             `flags`

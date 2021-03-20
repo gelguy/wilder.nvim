@@ -1,7 +1,23 @@
-function! wilder#renderer#popupmenu_column#buffer_status#make(opts) abort
-  let l:state = copy(a:opts)
-  let l:state.cache = wilder#cache#cache()
-  let l:state.run_id = -1
+function! wilder#renderer#popupmenu_column#buffer_flags#make(opts) abort
+  let l:flags = get(a:opts, 'flags', '1 %+ ')
+
+  if empty(l:flags)
+    return {-> ''}
+  endif
+
+  let l:state = {
+        \ 'flags': l:flags,
+        \ 'cache': wilder#cache#cache(),
+        \ 'session_id': -1,
+        \ }
+
+  if has_key(a:opts, 'hl')
+    let l:state.hl = a:opts.hl
+  endif
+
+  if has_key(a:opts, 'selected_hl')
+    let l:state.selected_hl = a:opts.selected_hl
+  endif
 
   return {ctx, result -> s:buffer_status(l:state, ctx, result)}
 endfunction
@@ -13,16 +29,12 @@ function! s:buffer_status(state, ctx, result) abort
     return ''
   endif
 
-  let l:flags = get(a:state, 'flags', '1 %+ ')
+  let l:flags = a:state.flags
 
-  if empty(l:flags)
-    return ''
-  endif
-
-  let l:run_id = a:ctx.run_id
-  if a:state.run_id != l:run_id
+  let l:session_id = a:ctx.session_id
+  if a:state.session_id != l:session_id
     call a:state.cache.clear()
-    let a:state.run_id = l:run_id
+    let a:state.session_id = l:session_id
   endif
 
   let [l:start, l:end] = a:ctx.page
