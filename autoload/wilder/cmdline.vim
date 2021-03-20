@@ -823,9 +823,9 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     if has_key(a:opts, 'fuzzy_filter')
       let l:Filter = a:opts['fuzzy_filter']
     elseif l:use_python
-      let l:Filter = wilder#python_filter_fuzzy()
+      let l:Filter = wilder#python_fuzzy_filter()
     else
-      let l:Filter = wilder#filter_fuzzy()
+      let l:Filter = wilder#fuzzy_filter()
     endif
 
     let l:Fuzzy_filter = wilder#result({
