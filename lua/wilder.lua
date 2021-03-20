@@ -17,17 +17,41 @@ local function pcre2_highlight(pattern, str)
     return {}
   end
 
-  local captures = {}
+  local chunks = {}
+
+  current_start = nil
+  current_end = nil
 
   -- remove first element which is the matched string
   for i = 2, #head do
+    -- filter empty matches {0, 0}
     if tail[i] > 0 then
-      -- convert from [{start+1}, {end+1}] to [{start}, {len}]
-      table.insert(captures, {head[i] - 1, tail[i] - head[i] + 1})
+      if current_start == nil then
+        current_start = head[i]
+        current_end = tail[i]
+      else
+        next_start = head[i]
+        next_end = tail[i]
+
+        -- merge 2 contiguous chunks together
+        if next_start == current_end + 1 then
+          current_end = next_end
+        else
+          -- add the current chunk
+          -- convert from {start+1}, {end+1} to {start}, {len}
+          table.insert(chunks, {current_start - 1, current_end - current_start + 1})
+          current_start = next_start
+          current_end = next_end
+        end
+      end
     end
   end
 
-  return captures
+  if current_start ~= nil then
+    table.insert(chunks, {current_start - 1, current_end - current_start + 1})
+  end
+
+  return chunks
 end
 
 local function fzy_highlight(needle, haystack)

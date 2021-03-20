@@ -19,6 +19,7 @@ function! s:prepare_state(opts) abort
         \ 'longest_line_width': 0,
         \ 'ns_id': nvim_create_namespace(''),
         \ 'reverse': get(a:opts, 'reverse', 0),
+        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')
@@ -330,7 +331,9 @@ function! s:render_lines(state, lines, width, pos, selected) abort
         let l:hl = get(l:chunk, 1, l:default_hl)
       endif
 
-      call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, l:i, l:start, l:end)
+      if l:hl !=# l:default_hl
+        call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, l:i, l:start, l:end)
+      endif
 
       let l:start = l:end
     endfor
@@ -543,27 +546,47 @@ function! s:draw_line(state, ctx, result, i) abort
 
   let l:Highlighter = a:state.highlighter
   if l:Highlighter isnot 0
-    if a:state.highlight_cache.has_key(l:str)
-      let l:highlights = a:state.highlight_cache.get(l:str)
-    else
-      let l:data = get(a:result, 'data', {})
-      let l:highlights = l:Highlighter(a:ctx, l:str, l:data)
-
-      if l:highlights isnot 0
-        call a:state.highlight_cache.set(l:str, l:highlights)
-      else
-        return [[l:str]]
-      endif
+    if !l:is_selected &&
+          \ a:state.highlight_cache.has_key(l:str)
+      return a:state.highlight_cache.get(l:str)
     endif
 
-    return wilder#render#spans_to_chunks(
+    let l:data = get(a:result, 'data', {})
+    let l:spans = l:Highlighter(a:ctx, l:str, l:data)
+
+    if l:spans is 0
+      return [[l:str]]
+    endif
+
+    if a:state.highlight_mode ==# 'basic'
+      let l:spans = s:merge_spans(l:spans)
+    endif
+
+    let l:chunks = wilder#render#spans_to_chunks(
           \ l:str,
-          \ l:highlights,
+          \ l:spans,
           \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
           \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+
+    if !l:is_selected
+      call a:state.highlight_cache.set(l:str, l:chunks)
+    endif
+
+    return l:chunks
   endif
 
   return [[l:str]]
+endfunction
+
+function! s:merge_spans(spans) abort
+  if empty(a:spans)
+    return []
+  endif
+
+  let l:start_byte = a:spans[0][0]
+  let l:end_byte = a:spans[-1][0] + a:spans[-1][1]
+
+  return [[l:start_byte, l:end_byte]]
 endfunction
 
 function! s:close_win(state) abort
@@ -595,7 +618,8 @@ function! s:open_win(state) abort
         \ })
 
   call nvim_win_set_option(l:win, 'winblend', a:state.winblend)
-  call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
+  call nvim_win_set_option(l:win, 'winhighlight',
+        \ 'Search:None,IncSearch:None,Normal:' . a:state.highlights['default'])
 
   let a:state.win = l:win
 endfunction
