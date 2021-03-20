@@ -186,6 +186,11 @@ The first argument to a pipe is a {ctx} context object. The context is a
                 `run_id`
                 A number to indicate the current pipeline running.
 
+                `session_id`
+                A number to indicate the current cmdline session. A session
+                begins when the cmdline is ended and ends when leaving the
+                cmdline.
+
 Although it is not recommended, pipes can use the {ctx} to pass information to
 subsequent pipes.
 
@@ -993,6 +998,10 @@ A renderer is a dictionary containing the following keys:
 
                 `run_id`
                 The `run_id` from the context which returned {result}. See
+                |wilder-pipeline-context|.
+
+                `session_id`
+                The `session_id` from the context which returned {result}. See
                 |wilder-pipeline-context|.
 
             `pre_hook`

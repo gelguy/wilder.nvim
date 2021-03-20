@@ -5,6 +5,7 @@ let s:init = 0
 let s:active = 0
 let s:hidden = 0
 let s:session_id = 0
+let s:result_session_id = -1
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
@@ -282,6 +283,7 @@ function! wilder#main#on_finish(ctx, x) abort
   endif
 
   let s:result_run_id = a:ctx.run_id
+  let s:result_session_id = a:ctx.session_id
 
   let l:result = (a:x is v:false || a:x is v:true)
         \ ? {'value': []}
@@ -398,6 +400,7 @@ function! s:draw(...) abort
             \ 'direction': l:direction,
             \ 'run_id': s:result_run_id,
             \ 'done': s:run_id == s:result_run_id,
+            \ 'session_id': s:result_session_id,
             \ }
       let s:clear_selection = 0
 
