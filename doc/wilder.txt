@@ -56,14 +56,15 @@ wilder#set_option({dict})
             call wilder#set_option({'foo': 'bar'})
 <
 
+The options for `wilder` are:
 
-modes                               *wilder-option-modes*
+`modes`                             *wilder-option-modes*
             List of modes which wilder will be active in.
             Possible elements: '/', '?' and ':'
 
             Default: ['/', '?']
 
-use_cmdlinechanged                  *wilder-option-use_cmdlinechanged*
+`use_cmdlinechanged`                *wilder-option-use_cmdlinechanged*
             If true, wilder will refresh queries when the |CmdlineChanged|
             autocommand is triggered.
             Otherwise it will use a |timer| to check whether the cmdline has
@@ -72,14 +73,14 @@ use_cmdlinechanged                  *wilder-option-use_cmdlinechanged*
 
             Default: exists('##CmdlineChanged')
 
-interval                            *wilder-option-interval*
+`interval`                          *wilder-option-interval*
             Interval of the |timer| used to check whether the cmdline has
             changed, in milliseconds.
             Only applicable if |wilder-option-use_cmdlinechanged| is false.
 
             Default: 100
 
-before_cursor                       *wilder-option-before_cursor*
+`before_cursor`                     *wilder-option-before_cursor*
             If true, wilder will look only at the part of the cmdline before
             the cursor, and when selecting a completion, the entire cmdline
             will be replaced.
@@ -87,14 +88,14 @@ before_cursor                       *wilder-option-before_cursor*
 
             Default: 0
 
-num_workers                         *wilder-option-num_workers*
+`num_workers`                       *wilder-option-num_workers*
             Number of workers for the Python 3 |remote-plugin|.
             Has to be set at startup, before wilder is first run. Setting the
             option after the first run has no effect.
 
             Default: 2
 
-pipeline                            *wilder-option-pipeline*
+`pipeline`                          *wilder-option-pipeline*
             Sets the pipeline to use to get completions.
             See |wilder-pipeline|.
 
@@ -104,14 +105,14 @@ pipeline                            *wilder-option-pipeline*
                      |wilder#python_search_pipeline()| for Neovim with
                                                        Python 3 support
 
-renderer                            *wilder-option-renderer*
+`renderer`                          *wilder-option-renderer*
             Sets the renderer to used to display the completions.
             See |wilder-renderer|.
 
             Default: |wilder#wildmenu_renderer()| with
                      |wilder#previous_arrow()| and |wilder#next_arrow()|
 
-pre_hook                            *wilder-option-pre_hook*
+`pre_hook`                          *wilder-option-pre_hook*
             A function which takes a {ctx}. This function is called when
             wilder starts, or when wilder becomes unhidden. See
             |wilder-hidden|.
@@ -120,7 +121,7 @@ pre_hook                            *wilder-option-pre_hook*
 
             Default: None
 
-post_hook                           *wilder-option-post_hook*
+`post_hook`                         *wilder-option-post_hook*
             A function which takes a {ctx}. This function is called when
             wilder stops, or when wilder becomes hidden. See
             |wilder-hidden|.
@@ -148,8 +149,8 @@ result of the last element will be the completions for that query. See
 A contrived example:
 >
     wilder#set_option('pipeline', [
-      \   {ctx, x -> [x, 'foo', 'bar']},
-      \   ])
+      \ {ctx, x -> [x, 'foo', 'bar']},
+      \ ])
 <
 This will return the 3 completions, the current cmdline and the strings 'foo'
 and 'bar'.
@@ -203,9 +204,9 @@ a pipeline based on certain conditions.
 Example:
 >
     wilder#set_option('pipeline', [
-      \   {ctx, x -> empty(x) ? v:false : x},
-      \   {ctx, x -> MyCompletionFunction(x)},
-      \   ]
+      \ {ctx, x -> empty(x) ? v:false : x},
+      \ {ctx, x -> MyCompletionFunction(x)},
+      \ ]
 <
 This pipeline will terminate early if the cmdline is empty.
 Since this is a common pattern, it is provided as the |wilder#check()|
@@ -243,10 +244,10 @@ than one will result in an error.
 
 Example:
 >
-    wilder#set_option('pipeline', [
-      \   {_, x -> {ctx -> timer_start(100, {-> wilder#resolve(ctx, x)})}},
-      \   {ctx, x -> MyCompletionFunction(x)},
-      \   ]
+    call wilder#set_option('pipeline', [
+      \ {_, x -> {ctx -> timer_start(100, {-> wilder#resolve(ctx, x)})}},
+      \ {ctx, x -> MyCompletionFunction(x)},
+      \ ]
 <
 This will call `MyCompletionFunction` after a 100 millisecond delay.
 
@@ -355,14 +356,32 @@ The Result dictionary has the following keys:
 6. Finally, the output from above will be inserted to the cmdline.
    See |wilder-option-before_cursor| on which part of the cmdline will be
    replaced.
-   If {result} does not contain the key `output`, its {x} entry is used.
-   Otherwise, |wilder-pipeline-result-output| is applied. The result is then
+   If {result} does not contain the key `replace`, its {x} entry is used.
+   Otherwise, |wilder-pipeline-result-replace| is applied. The result is then
    used to replace the cmdline.
 
 The |wilder#result()| pipe is a helper which allows easy modification of the
 result dictionary.
 
                                     *wilder-pipeline-pipe*
+A |wilder-pipeline| is a list of pipes that transforms the initial input into
+the final result. For example:
+
+>
+    call wilder#set_option('pipeline', [
+      \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
+      \ wilder#vim_substring_pattern(),
+      \ wilder#vim_search(),
+      \ ])
+<
+
+This pipeline checks that the user is currently searching with '/' or '?',
+transforms the current cmdline to a substring pattern and searches the current
+buffer for matching candidates using the pattern from before.
+
+See |wilder-pipeline| for more details.
+
+Here is the list of provided pipes:
 
 wilder#check({f}, ...)              *wilder#check()*
                                     Pipe~
@@ -401,14 +420,14 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
             Example:
 >
                 wilder#set_option('pipeline', [
-                  \   wilder#branch(
-                  \     [
-                  \       wilder#check({ctx, x -> empty(x)}),
-                  \       wilder#history(),
-                  \     ],
-                  \     wilder#search_pipeline(),
-                  \   ),
-                  \   ]
+                  \ wilder#branch(
+                  \   [
+                  \     wilder#check({ctx, x -> empty(x)}),
+                  \     wilder#history(),
+                  \   ],
+                  \   wilder#search_pipeline(),
+                  \ ),
+                  \ ]
 <
             This pipeline will return completions from the history is {x} is
             empty.
@@ -566,8 +585,8 @@ wilder#result([{dictionary}])       *wilder#result()*
             [
             \ {ctx, x -> MyCompletionFunction(x)},
             \ wilder#result({'draw': [{ctx, x -> (ctx['i'] + 1) . '. ' . x}]}),
-            \ wilder#result({'draw': [{ctx, x -> ctx['selected']
-            \                         ? '[' . x . ']' : x)}]}),
+            \ wilder#result({'draw': [{ctx, x -> ctx['selected'] ?
+            \                         '[' . x . ']' : x)}]}),
             \ ]
 <
             This pipeline will first prepend the index of the candidate and
@@ -2564,7 +2583,7 @@ Minimal Configuration~
     cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
     cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 
-    " only / and ? is enabled by default
+    " only / and ? are enabled by default
     call wilder#set_option('modes', ['/', '?', ':'])
 <
 
@@ -2577,7 +2596,10 @@ Pipelines (Neovim only)~
           \       wilder#check({_, x -> empty(x)}),
           \       wilder#history(100),
           \     ],
-          \     wilder#cmdline_pipeline(),
+          \     wilder#cmdline_pipeline({
+          \       'fuzzy': 1,
+          \       'use_python': 1,
+          \     }),
           \     wilder#python_search_pipeline({
           \       'fuzzy': 1,
           \     }),
@@ -2585,12 +2607,12 @@ Pipelines (Neovim only)~
           \ ])
 <
 
-Airline/Lightline Theme Renderer~
+Airline/Lightline Theme for Wildmenu Renderer~
 >
     " use wilder#lightline_theme() for Lightline
     call wilder#set_option('renderer', wilder#wildmenu_renderer(
           \ wilder#airline_theme({
-          \   'apply_highlights': wilder#query_common_subsequence_spans(),
+          \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
           \ })))
 <
