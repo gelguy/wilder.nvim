@@ -1,5 +1,5 @@
 function! wilder#renderer#popupmenu_column#buffer_flags#make(opts) abort
-  let l:flags = get(a:opts, 'flags', '1 %+ ')
+  let l:flags = get(a:opts, 'flags', '1 %a-+ ')
 
   if empty(l:flags)
     return {-> ''}
@@ -98,6 +98,13 @@ function! s:buffer_status(state, ctx, result) abort
       elseif l:char ==# '-'
         let l:status .= nvim_buf_get_option(l:bufnr, 'readonly') ? '=' :
               \ !nvim_buf_get_option(l:bufnr, 'modifiable') ? '-' : ' '
+      elseif l:char ==# 'a'
+        if bufloaded(l:bufnr)
+          let l:is_active = !empty(win_findbuf(l:bufnr))
+          let l:status .= l:is_active ? 'a' : 'h'
+        else
+          let l:status .= ' '
+        endif
       endif
 
       let l:chunks = [[l:status, l:hl, l:selected_hl]]

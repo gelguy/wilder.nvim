@@ -1766,14 +1766,18 @@ wilder#popupmenu_buffer_flags([{options}])
               Shows '%' if the buffer is the |current-file|, '#' if the buffer
               is the |alternate-file| and ' ' otherwise.
 
-              `+`
-              Shows '+' if the buffer has been 'modified' and ' ' otherwise.
+              `a`
+              Shows 'a' if the buffer is an |active-buffer|, 'h' if the buffer
+              is a |hidden-buffer| and ' ' otherwise (|inactive-buffer|).
 
               `-`
               Shows '-' if the buffer is not 'modifiable', '=' if the buffer is
               'readonly' and ' ' otherwise.
 
-              Default: '1 % + '
+              `+`
+              Shows '+' if the buffer has been 'modified' and ' ' otherwise.
+
+              Default: '1 %a-+ '
 
             `hl`
             The highlight group to use.
