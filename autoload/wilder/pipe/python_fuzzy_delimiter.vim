@@ -64,12 +64,16 @@ function! s:fuzzy_delimiter(args, ctx, x) abort
     endif
 
     if l:first
+      let l:start_at_boundary =  get(a:args, 'start_at_boundary', 1)
+
       if l:escaped || l:char ==# toupper(l:char)
         let l:res .= '(' . l:char . ')'
-      elseif get(a:args, 'start_at_boundary', 1)
-        let l:res .= '(?:(?:(?<=' . l:delimiter . ')|\b)('. l:char . ')|(' . toupper(l:char) . '))'
       else
-        let l:res .= '('. l:char . '|' . toupper(l:char) . ')'
+        let l:res .= '(?:(?:(?<=' . l:delimiter . ')|\b)('. l:char . ')|(' . toupper(l:char) . '))'
+      endif
+
+      if !l:start_at_boundary
+        let l:res = l:word_or_delimiter . '*' . l:res
       endif
 
       let l:first = 0

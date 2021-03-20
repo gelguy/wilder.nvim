@@ -56,14 +56,15 @@ wilder#set_option({dict})
             call wilder#set_option({'foo': 'bar'})
 <
 
+The options for `wilder` are:
 
-modes                               *wilder-option-modes*
+`modes`                             *wilder-option-modes*
             List of modes which wilder will be active in.
             Possible elements: '/', '?' and ':'
 
             Default: ['/', '?']
 
-use_cmdlinechanged                  *wilder-option-use_cmdlinechanged*
+`use_cmdlinechanged`                *wilder-option-use_cmdlinechanged*
             If true, wilder will refresh queries when the |CmdlineChanged|
             autocommand is triggered.
             Otherwise it will use a |timer| to check whether the cmdline has
@@ -72,14 +73,14 @@ use_cmdlinechanged                  *wilder-option-use_cmdlinechanged*
 
             Default: exists('##CmdlineChanged')
 
-interval                            *wilder-option-interval*
+`interval`                          *wilder-option-interval*
             Interval of the |timer| used to check whether the cmdline has
             changed, in milliseconds.
             Only applicable if |wilder-option-use_cmdlinechanged| is false.
 
             Default: 100
 
-before_cursor                       *wilder-option-before_cursor*
+`before_cursor`                     *wilder-option-before_cursor*
             If true, wilder will look only at the part of the cmdline before
             the cursor, and when selecting a completion, the entire cmdline
             will be replaced.
@@ -87,14 +88,14 @@ before_cursor                       *wilder-option-before_cursor*
 
             Default: 0
 
-num_workers                         *wilder-option-num_workers*
+`num_workers`                       *wilder-option-num_workers*
             Number of workers for the Python 3 |remote-plugin|.
             Has to be set at startup, before wilder is first run. Setting the
             option after the first run has no effect.
 
             Default: 2
 
-pipeline                            *wilder-option-pipeline*
+`pipeline`                          *wilder-option-pipeline*
             Sets the pipeline to use to get completions.
             See |wilder-pipeline|.
 
@@ -104,14 +105,14 @@ pipeline                            *wilder-option-pipeline*
                      |wilder#python_search_pipeline()| for Neovim with
                                                        Python 3 support
 
-renderer                            *wilder-option-renderer*
+`renderer`                          *wilder-option-renderer*
             Sets the renderer to used to display the completions.
             See |wilder-renderer|.
 
             Default: |wilder#wildmenu_renderer()| with
                      |wilder#previous_arrow()| and |wilder#next_arrow()|
 
-pre_hook                            *wilder-option-pre_hook*
+`pre_hook`                          *wilder-option-pre_hook*
             A function which takes a {ctx}. This function is called when
             wilder starts, or when wilder becomes unhidden. See
             |wilder-hidden|.
@@ -120,7 +121,7 @@ pre_hook                            *wilder-option-pre_hook*
 
             Default: None
 
-post_hook                           *wilder-option-post_hook*
+`post_hook`                         *wilder-option-post_hook*
             A function which takes a {ctx}. This function is called when
             wilder stops, or when wilder becomes hidden. See
             |wilder-hidden|.
@@ -148,8 +149,8 @@ result of the last element will be the completions for that query. See
 A contrived example:
 >
     wilder#set_option('pipeline', [
-      \   {ctx, x -> [x, 'foo', 'bar']},
-      \   ])
+      \ {ctx, x -> [x, 'foo', 'bar']},
+      \ ])
 <
 This will return the 3 completions, the current cmdline and the strings 'foo'
 and 'bar'.
@@ -186,6 +187,11 @@ The first argument to a pipe is a {ctx} context object. The context is a
                 `run_id`
                 A number to indicate the current pipeline running.
 
+                `session_id`
+                A number to indicate the current cmdline session. A session
+                begins when the cmdline is ended and ends when leaving the
+                cmdline.
+
 Although it is not recommended, pipes can use the {ctx} to pass information to
 subsequent pipes.
 
@@ -198,9 +204,9 @@ a pipeline based on certain conditions.
 Example:
 >
     wilder#set_option('pipeline', [
-      \   {ctx, x -> empty(x) ? v:false : x},
-      \   {ctx, x -> MyCompletionFunction(x)},
-      \   ]
+      \ {ctx, x -> empty(x) ? v:false : x},
+      \ {ctx, x -> MyCompletionFunction(x)},
+      \ ]
 <
 This pipeline will terminate early if the cmdline is empty.
 Since this is a common pattern, it is provided as the |wilder#check()|
@@ -238,10 +244,10 @@ than one will result in an error.
 
 Example:
 >
-    wilder#set_option('pipeline', [
-      \   {_, x -> {ctx -> timer_start(100, {-> wilder#resolve(ctx, x)})}},
-      \   {ctx, x -> MyCompletionFunction(x)},
-      \   ]
+    call wilder#set_option('pipeline', [
+      \ {_, x -> {ctx -> timer_start(100, {-> wilder#resolve(ctx, x)})}},
+      \ {ctx, x -> MyCompletionFunction(x)},
+      \ ]
 <
 This will call `MyCompletionFunction` after a 100 millisecond delay.
 
@@ -350,14 +356,32 @@ The Result dictionary has the following keys:
 6. Finally, the output from above will be inserted to the cmdline.
    See |wilder-option-before_cursor| on which part of the cmdline will be
    replaced.
-   If {result} does not contain the key `output`, its {x} entry is used.
-   Otherwise, |wilder-pipeline-result-output| is applied. The result is then
+   If {result} does not contain the key `replace`, its {x} entry is used.
+   Otherwise, |wilder-pipeline-result-replace| is applied. The result is then
    used to replace the cmdline.
 
 The |wilder#result()| pipe is a helper which allows easy modification of the
 result dictionary.
 
                                     *wilder-pipeline-pipe*
+A |wilder-pipeline| is a list of pipes that transforms the initial input into
+the final result. For example:
+
+>
+    call wilder#set_option('pipeline', [
+      \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}),
+      \ wilder#vim_substring_pattern(),
+      \ wilder#vim_search(),
+      \ ])
+<
+
+This pipeline checks that the user is currently searching with '/' or '?',
+transforms the current cmdline to a substring pattern and searches the current
+buffer for matching candidates using the pattern from before.
+
+See |wilder-pipeline| for more details.
+
+Here is the list of provided pipes:
 
 wilder#check({f}, ...)              *wilder#check()*
                                     Pipe~
@@ -396,14 +420,14 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
             Example:
 >
                 wilder#set_option('pipeline', [
-                  \   wilder#branch(
-                  \     [
-                  \       wilder#check({ctx, x -> empty(x)}),
-                  \       wilder#history(),
-                  \     ],
-                  \     wilder#search_pipeline(),
-                  \   ),
-                  \   ]
+                  \ wilder#branch(
+                  \   [
+                  \     wilder#check({ctx, x -> empty(x)}),
+                  \     wilder#history(),
+                  \   ],
+                  \   wilder#search_pipeline(),
+                  \ ),
+                  \ ]
 <
             This pipeline will return completions from the history is {x} is
             empty.
@@ -460,6 +484,9 @@ wilder#python_fuzzy_pattern([{options}])
             If true, the regex will only match at the beginning of a word
             boundary.
 
+            Note: This makes the regex more complicated and will slow down the
+            fuzzy searching.
+
             Default: 1
 
                                     *wilder#python_fuzzy_delimiter_pattern()*
@@ -494,7 +521,10 @@ wilder#python_fuzzy_delimiter_pattern([{options}])
             `start_at_boundary`
             Optional~
             If true, the regex will only match at the beginning of a word
-            boundary.
+            boundary or delimiter.
+
+            Note: This makes the regex more complicated and will slow down the
+            fuzzy searching.
 
             Default: 1
 
@@ -555,8 +585,8 @@ wilder#result([{dictionary}])       *wilder#result()*
             [
             \ {ctx, x -> MyCompletionFunction(x)},
             \ wilder#result({'draw': [{ctx, x -> (ctx['i'] + 1) . '. ' . x}]}),
-            \ wilder#result({'draw': [{ctx, x -> ctx['selected']
-            \                         ? '[' . x . ']' : x)}]}),
+            \ wilder#result({'draw': [{ctx, x -> ctx['selected'] ?
+            \                         '[' . x . ']' : x)}]}),
             \ ]
 <
             This pipeline will first prepend the index of the candidate and
@@ -989,6 +1019,10 @@ A renderer is a dictionary containing the following keys:
                 The `run_id` from the context which returned {result}. See
                 |wilder-pipeline-context|.
 
+                `session_id`
+                The `session_id` from the context which returned {result}. See
+                |wilder-pipeline-context|.
+
             `pre_hook`
             Optional~
             A function which takes a {ctx}. This function is called when
@@ -1130,15 +1164,15 @@ wilder#wildmenu_renderer([{options}])
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
-            |wilder#query_highlighter()| and |wilder#pcre2_highlighter()| are
-            helper functions which can be used to apply accents to the
-            candidates from |wilder#cmdline_pipeline()| and
-            |wilder#python_search_pipeline()|.
+            Note: Highlighting is slow and will result in noticeable input
+            delay. For best performance, use the Lua highlighters e.g.
+            |wilder#lua_fzy_highlighter()|. Python highlighters have high RPC
+            overhead and should be avoided.
 
             Example:
 >
             call wilder#set_option('renderer', wilder#wildmenu_renderer({
-                  \ 'highlighter': wilder#pcre2_highlighter(),
+                  \ 'highlighter': wilder#basic_highlighter(),
                   \ }))
 <
 
@@ -1357,8 +1391,8 @@ The following items are provided:
                                     *wilder#wildmenu_previous_arrow()*
 wilder#wildmenu_previous_arrow([{options}])
                                     wilder#wildmenu_renderer() item~
-            Returns an item which shows a previous arrow when there are
-            previous candidates which do not fit in the current view.
+            Adds an arrow when there are candidates to the left which do not
+            fit in the current view.
             Note Has to be used with |wilder#next_arrow()|, otherwise the
             `len` entry will not be evaluated correctly.
 
@@ -1378,8 +1412,8 @@ wilder#wildmenu_previous_arrow([{options}])
                                     *wilder#wildmenu_next_arrow()*
 wilder#wldmnue_next_arrow([{options}])
                                     wilder#wildmenu_renderer() item~
-            Returns an item which shows a next arrow when there are
-            additional candidates which do not fit in the current view.
+            Adds an arrow when there are additional candidates to the right
+            which do not fit in the current view.
             Note Has to be used with |wilder#previous_arrow()|, otherwise the
             `len` entry will not be evaluated correctly.
 
@@ -1404,8 +1438,8 @@ wilder#wldmnue_next_arrow([{options}])
              
 wilder#wildmenu_index([{options}])  *wilder#wildmenu_index()*
                                     wilder#wildmenu_renderer() item~
-            Returns an item which shows the index of the currently
-            selected candidate and the total number of candidates.
+            Adds the index of the currently selected candidate and the total
+            number of candidates.
             For example, if there are 10 candidates and the 5th one is
             selected, it will draw ' 5/10'.
 
@@ -1419,8 +1453,8 @@ wilder#wildmenu_index([{options}])  *wilder#wildmenu_index()*
                                     *wilder#wildmenu_spinner()*
 wilder#wildmenu_spinner([{options}])
                                     wilder#wildmenu_renderer() item~
-            Returns an item which indicates whether the current pipeline
-            is still running.
+            Adds a spinner which indicates whether the current pipeline is
+            still running.
 
             {options} is a dictionary with keys:
             `frames`
@@ -1452,22 +1486,21 @@ wilder#wildmenu_spinner([{options}])
             Default: 100
 
                                     *wilder#wildmenu_powerline_separator()*
-wilder#wildmenu_powerline_separator({str}, {fg}, {bg}, [{key}])
+wilder#wildmenu_powerline_separator({str}, {fg}, {bg}, [{name}])
                                     wilder#wildmenu_renderer() item~
-            Helper function to draw an powerline-like separator.
-            {str} should be the separator character
+            Draws a powerline-like separator.
+            {str} should be the separator character.
             {fg} is the highlight group from which the |highlight-ctermfg| and
-            |highlight-guifg| should be from.
+            |highlight-guifg| is derived from.
             {bg} is the highlight group from which the |highlight-ctermbg| and
-            |highlight-guibg| should be from.
-            {key} is an optional argument which will be used to name the new
+            |highlight-guibg| is derived from.
+            {name} is an optional argument which will be used to name the new
             highlight group. Otherwise, a new name will be generated.
 
                                     *wilder#wildmenu_condition()*
 wilder#wildmenu_condition({predicate}, {if_true}, [{if_false}])
                                     wilder#wildmenu_renderer() item~
-            Returns a item which renders the given items based on the
-            {predicate}.
+            Draws the given items based on the {predicate}.
             {predicate} is a function which takes a {ctx} and the pipeline
             result {result} and returns true or false.
             The keys of {ctx} are the same as the ones in the `render` key of
@@ -1542,10 +1575,10 @@ wilder#popupmenu_renderer([{options}])
 
             Default: [' ', wilder#popupmenu_scrollbar()]
 
-            `apply_highlights`
+            `highlighter`
             Optional~
 
-            See the `apply_highlights` key of |wilder#wildmenu_renderer()|.
+            See the `highlighter` key of |wilder#wildmenu_renderer()|.
 
             Default: []
 
@@ -1596,16 +1629,25 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
             The empty string ' ' can be used to give padding to the left or
             right of the popupmenu.
 
+            List:
+            A list of highlight chunks.
+
+            A highlight chunk can be in the form of [{text}], [{text}, {hl}]
+            or [{text}, {default_hl}, {selected_hl}]. For [{text}], the
+            default and selected highlights of the renderer will be used. For
+            [{text}, {hl}], {hl} will be used for both default and selected
+            states.
+
             Function:
-            A function which takes a {ctx}, the pipeline result {result} and
-            the index of the current row {i} and returns a string or a list of
-            highlight chunks [[{text}, {hl}], ...].
+            A function which takes a {ctx} and the pipeline result {result}
+            and returns a string or a list of highlight chunks. See the List
+            section above for the structure of highlight chunks.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a
             2 element array [{start}, {end}] indicating the start and end of
-            the candidates currently being drawn. If no candidates are drawn,
-            the page is [-1, -1].
+            the candidates currently being drawn. It can be assumed that if
+            this function is called, there is at least 1 candidate.
 
             Dictionary:
             A dictionary with the following keys:
@@ -1637,7 +1679,7 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
                                     *wilder#popupmenu_scrollbar()*
 wilder#popupmenu_scrollbar([{options}]
                                     wilder#popupmenu_renderer() column~
-            Returns a column which adds a scrollbar to the popupmenu.
+            Adds a scrollbar to the popupmenu.
 
             {options} is a dictionary with keys:
             `thumb_char`
@@ -1667,8 +1709,8 @@ wilder#popupmenu_scrollbar([{options}]
                                     *wilder#popupmenu_spinner()*
 wilder#popupmenu_spinner([{options}])
                                     wilder#popupmenu_renderer() column~
-            Returns a column which indicates whether the current pipeline is
-            still running.
+            Adds a spinner to indicate whether the current pipeline is still
+            running.
 
             {options} is a dictionary with keys:
             `frames`
@@ -1698,6 +1740,81 @@ wilder#popupmenu_spinner([{options}])
             The time in milliseconds for each frame.
 
             Default: 100
+
+                                    *wilder#popupmenu_devicons()*
+wilder#popupmenu_devicons([{options}])
+                                    wilder#popupmenu_renderer() column~
+            Adds devicons for files and buffers.
+
+            {options} is a dictionary with keys:
+            `get_icon`
+            Optional~
+            A function name or a function. The function should take 2
+            arguments {file_name} and {is_dir} and return the icon to use.
+
+            To use `nerdfont.vim`, set this to {name -> nerdfont#find(name)}.
+
+            Note: The icons returned should all be of the same
+            |strdisplaywidth()|.
+
+            Default: 'WebDevIconsGetFileTypeSymbol'
+
+            `padding`
+            Optional~
+            A list in the form of [{left_padding_width},
+            {right_padding_width}].
+
+            Default: [0, 1]
+
+                                    *wilder#popupmenu_buffer_flags()*
+wilder#popupmenu_buffer_flags([{options}])
+                                    wilder#popupmenu_renderer() column~
+            Adds buffer flag information from |:ls|.
+
+            {options} is a dictionary with keys:
+            `flags`
+            Optional~
+            A string representing the flags to show. The flags are drawn in
+            the order specified in the string.
+
+            Each character represents a flag to draw. The characters can be:
+              `<Space>`
+              Empty space for padding.
+
+              `1`
+              Shows the buffer number |bufnr()|.
+
+              `%`
+              Shows '%' if the buffer is the |current-file|, '#' if the buffer
+              is the |alternate-file| and ' ' otherwise.
+
+              `a`
+              Shows 'a' if the buffer is an |active-buffer|, 'h' if the buffer
+              is a |hidden-buffer| and ' ' otherwise (|inactive-buffer|).
+
+              `-`
+              Shows '-' if the buffer is not 'modifiable', '=' if the buffer is
+              'readonly' and ' ' otherwise.
+
+              `+`
+              Shows '+' if the buffer has been 'modified' and ' ' otherwise.
+
+              `u`
+              Shows ' ' if the buffer is 'buflisted' and 'u' otherwise.
+
+            Default: '1u%a-+ '
+
+            `hl`
+            Optional~
+            The highlight group to use.
+
+            Default: The `default` highlight of the renderer
+
+            `selected_hl`
+            Optional~
+            The highlight group to use when the line is selected.
+
+            Default: The `selected` highlight of the renderer
 
 
 ==============================================================================
@@ -1804,8 +1921,8 @@ wilder#start_from_normal_mode()     *wilder#start_from_normal_mode()*
             nnoremap <expr> : wilder#start_from_normal_mode() . ':'
 <
 
-wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                                     *wilder#make_hl()*
+wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
             Helper function to create a highlight group. Creates a highlight
             group with the given {name} based on {args}.
 
@@ -1918,8 +2035,16 @@ wilder#make_hl({name}, {args}, [, {args1}, ..., {argsN}])
                     \ [{}, {}, {'underline': 1, 'reverse': 0}])
 <
 
-wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
+                                    *wilder#make_temp__hl()*
+wilder#make_temp_hl({name}, {args}, [, {args1}, ..., {argsN}])
+            Same as |wilder#make_hl()|, except the highlight groups are not
+            recreated each time wilder is started.
+
+            This should be used for highlights which are dynamically created
+            e.g. in a pre-hook.
+
                                     *wilder#hl_with_attr()*
+wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
             Helper function to create a new |highlight-group| named {name} by
             applying attributes to {hl_group}. Attributes can be turned off by
             prefixing it with 'no'.
@@ -2165,7 +2290,7 @@ wilder#python_fuzzywuzzy_sorter([{partial}])
             The {partial} argument is passed to
             |wilder#python_fuzzywuzzy_sort()| as an option.
 
-wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
+wilder#basic_highlighter([{opts}])  *wilder#basic_highlighter()*
                                     python option only for Neovim~
             Helper function which returns a function for the
             `highlighter` option for |wilder#wildmenu_renderer()| or
@@ -2194,6 +2319,13 @@ wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
             otherwise.
 
             Default: 0
+
+                                    *wilder#vim_basic_highlighter()*
+wilder#vim_basic_highlighter([{opts}])
+                                    *wilder#python_basic_highlighter()*
+wilder#python_basic_highlighter([{opts}])
+            Shorthand for |wilder#basic_highlighter()| with the `language`
+            option set to `vim` and `python` respectively.
 
 wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
                                     Neovim only~
@@ -2230,13 +2362,17 @@ wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
 
             Default: 're'
 
-            Note: This function is slow and should be avoided by users who are
-            concerned about performance. Using 'lua' is slightly faster, but
-            will still increase the rendering time.
+                                    *wilder#python_pcre2_highlighter()*
+wilder#python_pcre2_highlighter([{opts}])
+                                    *wilder#lua_pcre2_highlighter()*
+wilder#lua_pcre2_highlighter([{opts}])
+            Shorthand for |wilder#pcre2_highlighter()| with the `language`
+            option set to `python` and `lua` respectively.
 
 wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
+                                    *wilder#python_cpsm_highlighter()*
+wilder#python_cpsm_highlighter([{opts}])
                                     Neovim only~
-                                    Async~
                                     cpsm plugin required~
             Helper function which returns a function for the `highlighter`
             option for |wilder#wildmenu_renderer()| or
@@ -2247,6 +2383,9 @@ wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
             If {data} does not contain the key `query`, returns 0.
             Otherwise, returns a list of highlight spans as determined by
             `cpsm`.
+
+            The `cpsm` plugin can be found at
+            https://github.com/nixprime/cpsm.
 
             {opts} is a dictionary with keys:
             `cpsm_path`
@@ -2262,8 +2401,23 @@ wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
 
             Default: 'basic'
 
-            Note: This function is slow and should be avoided by users who are
-            concerned about performance.
+wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
+                                    Neovim only~
+                                    fzy-lua-native plugin required~
+            Helper function which returns a function for the `highlighter`
+            option for |wilder#wildmenu_renderer()| or
+            |wilder#popupmenu_renderer()|.
+
+            Returns a function which takes {ctx}, {candidate} and {data} as
+            arguments.
+            If {data} does not contain the key `query`, returns 0.
+            Otherwise, returns a list of highlight spans as determined by
+            `fzy-lua-native`.
+
+            The `fzy-lua-native` plugin can be found at
+            https://github.com/romgrk/fzy-lua-native.
+
+            Note: This may not handle multibyte characters properly.
 
                                     *wilder#project_root()*
 wilder#project_root([{root_markers}])
@@ -2276,18 +2430,42 @@ wilder#project_root([{root_markers}])
 
 wilder#renderer_mux({args})         *wilder#renderer_mux()*
             Creates a renderer multiplexer which chooses the renderer to use
-            based on |getcmdchar()|.
+            based on {args}.
 
-            The keys of {args} should be a cmdtype e.g. '/', ':' or '?'.
+            {args} can either be a Dictionary or a List.
 
-            If the '?' key is omitted and the '/' key is present, '?' will use
-            the renderer for '/'.
+            If {args} is a Dictionary, it should be in the form {{key}:
+            {rendderer}} where the keys represent a cmdtype e.g. '/', ':' or
+            '?'. The renderer with key equal to |getcmdtype()| will be the
+            used.
+
+            '/' matches both '/' and '?'.
 
             The special key 'substitute' sets the renderer when the cmdline is
-            in a |:substitute| command. If omitted, the '/' renderer is used.
+            in a |:substitute| command. If omitted, the ':' renderer is used.
+
+            If {args} is a List, it should be a list of [{check}, {renderer}]
+            elements. {check} can either be a function or string. The list is
+            iterated in order and the {renderer} with the first passing
+            {check} is used.
+
+            If {check} is a function, it should take an empty {ctx} and return
+            true if {renderer} should be used.
+
+            If {check} is a string, the |getcmdtype()| described in the
+            Dictionary section above is used.
+
+            {renderer} can be 0 indicating no renderer is used.
 
             Example:
 >
+            " disables rendering in subsitute commands
+            wilder#set_option('renderer, wilder#renderer_mux([
+                  \ ['substitute', 0],
+                  \ [':', wilder#popupmenu_renderer()],
+                  \ ['/', wilder#wildmenu_renderer()],
+                  \ ])
+
             wilder#set_option('renderer, wilder#renderer_mux({
                   \ ':': wilder#popupmenu_renderer(),
                   \ '/': wilder#wildmenu_renderer(),
@@ -2358,10 +2536,14 @@ wilder#python_sort_fuzzywuzzy({ctx}, {opts}, {candidates}, {query})
                                     Deprecated~
             Deprecated: Use |wilder#python_fuzzywuzzy_sort()|.
 
+wilder#query_highlighter([{opts}])  *wilder#query_highlighter()*
+                                    Deprecated~
+            Deprecated: Use |wilder#basic_highlighter()|.
+
                                     *wilder#query_common_subsequence_spans()*
 wilder#query_common_subsequence_spans([{opts}])
                                     Deprecated~
-            Deprecated: Use |wilder#query_highlighter()|.
+            Deprecated: Use |wilder#basic_highlighter()|.
 
                                     *wilder#pcre2_capture_spans()*
 wilder#pcre2_capture_spans([{opts}])
@@ -2413,7 +2595,7 @@ Minimal Configuration~
     cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
     cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 
-    " only / and ? is enabled by default
+    " only / and ? are enabled by default
     call wilder#set_option('modes', ['/', '?', ':'])
 <
 
@@ -2426,7 +2608,10 @@ Pipelines (Neovim only)~
           \       wilder#check({_, x -> empty(x)}),
           \       wilder#history(100),
           \     ],
-          \     wilder#cmdline_pipeline(),
+          \     wilder#cmdline_pipeline({
+          \       'fuzzy': 1,
+          \       'use_python': 1,
+          \     }),
           \     wilder#python_search_pipeline({
           \       'fuzzy': 1,
           \     }),
@@ -2434,12 +2619,12 @@ Pipelines (Neovim only)~
           \ ])
 <
 
-Airline/Lightline Theme Renderer~
+Airline/Lightline Theme for Wildmenu Renderer~
 >
     " use wilder#lightline_theme() for Lightline
     call wilder#set_option('renderer', wilder#wildmenu_renderer(
           \ wilder#airline_theme({
-          \   'apply_highlights': wilder#query_common_subsequence_spans(),
+          \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
           \ })))
 <

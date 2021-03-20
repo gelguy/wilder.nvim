@@ -17,7 +17,7 @@ function! s:fuzzy_match(args, ctx, x) abort
     " starts with word boundary or is preceded by a non-word character
     let l:res = '(?:\b|^|(?!' . l:word  . '))'
   else
-    let l:res = ''
+    let l:res = '(?:' . l:word . ')*'
   endif
 
   let l:chars = split(a:x, '\zs')

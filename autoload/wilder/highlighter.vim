@@ -14,18 +14,18 @@ function! s:apply_first(highlighters, ctx, x, data)
   return 0
 endfunction
 
-function! wilder#highlighter#query_highlighter(...)
+function! wilder#highlighter#basic_highlighter(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'vim')
 
   if l:language ==# 'python'
-    return {ctx, x, data -> wilder#highlighter#python_highlight_query(ctx, l:opts, x, data)}
+    return {ctx, x, data -> wilder#highlighter#python_basic_highlight(ctx, l:opts, x, data)}
   endif
 
-  return {ctx, x, data -> wilder#highlighter#vim_highlight_query(ctx, l:opts, x, data)}
+  return {ctx, x, data -> wilder#highlighter#vim_basic_highlight(ctx, l:opts, x, data)}
 endfunction
 
-function! wilder#highlighter#vim_highlight_query(ctx, opts, x, data)
+function! wilder#highlighter#vim_basic_highlight(ctx, opts, x, data)
   if !has_key(a:data, 'query')
     return 0
   endif
@@ -77,7 +77,7 @@ function! wilder#highlighter#vim_highlight_query(ctx, opts, x, data)
   return l:spans
 endfunction
 
-function! wilder#highlighter#python_highlight_query(ctx, opts, x, data)
+function! wilder#highlighter#python_basic_highlight(ctx, opts, x, data)
   if !has_key(a:data, 'query')
     return 0
   endif
@@ -85,7 +85,7 @@ function! wilder#highlighter#python_highlight_query(ctx, opts, x, data)
   let l:query = a:data['query']
   let l:case_sensitive = get(a:opts, 'case_sensitive', 0)
 
-  return _wilder_python_highlight_query(a:x, l:query, l:case_sensitive)
+  return _wilder_python_basic_highlight(a:x, l:query, l:case_sensitive)
 endfunction
 
 function! wilder#highlighter#pcre2_highlighter(...)
@@ -93,13 +93,13 @@ function! wilder#highlighter#pcre2_highlighter(...)
   let l:language = get(l:opts, 'language', 'python')
 
   if l:language ==# 'lua'
-    return {ctx, x, data -> wilder#highlighter#lua_highlight_pcre2(ctx, l:opts, x, data)}
+    return {ctx, x, data -> wilder#highlighter#lua_pcre2_highlight(ctx, l:opts, x, data)}
   endif
 
-  return {ctx, x, data -> wilder#highlighter#python_highlight_pcre2(ctx, l:opts, x, data)}
+  return {ctx, x, data -> wilder#highlighter#python_pcre2_highlight(ctx, l:opts, x, data)}
 endfunction
 
-function! wilder#highlighter#python_highlight_pcre2(ctx, opts, x, data)
+function! wilder#highlighter#python_pcre2_highlight(ctx, opts, x, data)
   if !has_key(a:data, 'pcre2.pattern')
     return 0
   endif
@@ -107,26 +107,22 @@ function! wilder#highlighter#python_highlight_pcre2(ctx, opts, x, data)
   let l:pattern = a:data['pcre2.pattern']
   let l:engine = get(a:opts, 'engine', 're')
 
-  return _wilder_python_highlight_pcre2(l:pattern, a:x, l:engine)
+  return _wilder_python_pcre2_highlight(l:pattern, a:x, l:engine)
 endfunction
 
-function! wilder#highlighter#lua_highlight_pcre2(ctx, opts, x, data)
+function! wilder#highlighter#lua_pcre2_highlight(ctx, opts, x, data)
   if !has_key(a:data, 'pcre2.pattern')
     return 0
   endif
 
   let l:pattern = a:data['pcre2.pattern']
 
-  let l:spans = luaeval(
-        \ 'require("wilder").highlight_pcre2(_A[1], _A[2])',
+  return luaeval(
+        \ 'require("wilder").pcre2_highlight(_A[1], _A[2])',
         \ [l:pattern, a:x])
-
-  " remove first element which is the matched string
-  " convert from [{start+1}, {end+1}] to [{start}, {len}]
-  return map(l:spans[1:], {i, s -> [s[0] - 1, s[1] - s[0] + 1]})
 endfunction
 
-function! wilder#highlighter#cpsm_highlighter(...)
+function! wilder#highlighter#python_cpsm_highlighter(...)
   let l:opts = get(a:, 1, {})
   return {ctx, x, data -> wilder#highlighter#python_highlight_cpsm(ctx, l:opts, x, data)}
 endfunction
@@ -151,5 +147,19 @@ function! wilder#highlighter#python_highlight_cpsm(ctx, opts, x, data)
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'basic'),
         \ }
 
-  return _wilder_python_highlight_cpsm(l:opts, a:x, l:query)
+  return _wilder_python_cpsm_highlight(l:opts, a:x, l:query)
+endfunction
+
+function! wilder#highlighter#lua_fzy_highlighter()
+  return {ctx, x, data -> wilder#highlighter#lua_fzy_highlight(ctx, {}, x, data)}
+endfunction
+
+function! wilder#highlighter#lua_fzy_highlight(ctx, opts, x, data)
+  if !has_key(a:data, 'query')
+    return 0
+  endif
+
+  return luaeval(
+        \ 'require("wilder").fzy_highlight(_A[1], _A[2])',
+        \ [a:data.query, a:x])
 endfunction

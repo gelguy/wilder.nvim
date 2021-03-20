@@ -74,6 +74,14 @@ function! wilder#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abo
     let a:state.page = [-1, -1]
   endif
 
+  if a:state.page != [-1, -1]
+    if a:state.page[0] > len(a:result.value)
+      let a:state.page = [-1, -1]
+    elseif a:state.page[1] > len(a:result.value)
+      let a:state.page[1] = len(a:result.value) - 1
+    endif
+  endif
+
   let l:space_used = wilder#renderer#wildmenu#item_len(
         \ a:state.left,
         \ a:ctx,

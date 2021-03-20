@@ -18,6 +18,8 @@ function! s:prepare_state(opts) abort
         \ 'run_id': -1,
         \ 'longest_line_width': 0,
         \ 'ns_id': nvim_create_namespace(''),
+        \ 'reverse': get(a:opts, 'reverse', 0),
+        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')
@@ -131,6 +133,14 @@ function! s:render(state, ctx, result) abort
     let a:state.page = [-1, -1]
   endif
 
+  if a:state.page != [-1, -1]
+    if a:state.page[0] > len(a:result.value)
+      let a:state.page = [-1, -1]
+    elseif a:state.page[1] > len(a:result.value)
+      let a:state.page[1] = len(a:result.value) - 1
+    endif
+  endif
+
   let l:page = s:make_page(a:state, a:ctx, a:result)
   let a:ctx.page = l:page
   let a:state.page = l:page
@@ -164,20 +174,30 @@ function! s:render(state, ctx, result) abort
   let l:Highlighter = get(a:state, 'highlighter', [])
 
   let [l:start, l:end] = l:page
+  let l:height = l:end - l:start + 1
 
-  " [[left_columns, chunks, right_columns]]
-  let l:raw_lines = []
+  " Add 1 column of padding.
+  let l:left_column_chunks = map(repeat([0], l:height), {-> [[' ']]})
+  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result, l:height)
+
+  let l:right_column_chunks = map(repeat([0], l:height), {-> []})
+  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result, l:height)
+
+  " [[left_column, chunks, right_column]]
+  let l:raw_lines = repeat([0], l:height)
   " [[chunks_width, total_width]]
-  let l:widths = []
+  let l:widths = repeat([0], l:height)
 
   " Draw each line and calculate the width taken by the chunks.
   let l:i = l:start
   while l:i <= l:end
     let l:line = s:draw_line(a:state, a:ctx, a:result, l:i)
+    let l:left_column = l:left_column_chunks[l:i - l:start]
+    let l:right_column = l:right_column_chunks[l:i - l:start]
 
-    let l:left_width = wilder#render#chunks_displaywidth(l:line[0])
-    let l:chunks_width = wilder#render#chunks_displaywidth(l:line[1])
-    let l:right_width = wilder#render#chunks_displaywidth(l:line[2])
+    let l:left_width = wilder#render#chunks_displaywidth(l:left_column)
+    let l:chunks_width = wilder#render#chunks_displaywidth(l:line)
+    let l:right_width = wilder#render#chunks_displaywidth(l:right_column)
 
     let l:total_width = l:left_width + l:chunks_width + l:right_width
 
@@ -186,8 +206,9 @@ function! s:render(state, ctx, result) abort
       let a:state.longest_line_width = l:total_width
     endif
 
-    call add(l:raw_lines, l:line)
-    call add(l:widths, [l:chunks_width, l:total_width])
+    let l:index = l:i - l:start
+    let l:raw_lines[l:index] = [l:left_column, l:line, l:right_column]
+    let l:widths[l:index] = [l:chunks_width, l:total_width]
 
     let l:i += 1
   endwhile
@@ -207,7 +228,7 @@ function! s:render(state, ctx, result) abort
 
   " lines is the list of list of chunks which will be drawn.
   " Each element represents one line of the popupmenu.
-  let l:lines = []
+  let l:lines = repeat([0], l:height)
 
   let l:i = 0
   while l:i < len(l:raw_lines)
@@ -226,14 +247,14 @@ function! s:render(state, ctx, result) abort
       let l:chunks_width -= l:to_truncate
       let l:chunks = wilder#render#truncate_chunks(l:chunks_width, l:chunks)
 
-      call add(l:chunks, [l:ellipsis, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
+      call add(l:chunks, [l:ellipsis])
     elseif l:total_width < l:expected_width
       let l:to_pad = l:expected_width - l:total_width
 
-      call add(l:chunks, [repeat(' ', l:to_pad), a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
+      call add(l:chunks, [repeat(' ', l:to_pad)])
     endif
 
-    call add(l:lines, l:left_column + l:chunks + l:right_column)
+    let l:lines[l:i] = l:left_column + l:chunks + l:right_column
 
     let l:i += 1
   endwhile
@@ -242,21 +263,25 @@ function! s:render(state, ctx, result) abort
   " -1 to shift left by 1 column for the added padding.
   let l:pos = get(a:result, 'pos', 0)
 
+  if a:state.reverse
+    let l:lines = reverse(l:lines)
+  endif
+
   if l:in_sandbox
-    call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos)})
+    call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected)})
   else
-    call s:render_lines(a:state, l:lines, l:expected_width, l:pos)
+    call s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected)
   endif
 endfunction
 
-function! s:render_lines(state, lines, width, pos) abort
+function! s:render_lines(state, lines, width, pos, selected) abort
   if a:state.win == -1
     call s:open_win(a:state)
   endif
 
-  let [l:start, l:end] = a:state.page
+  let [l:page_start, l:page_end] = a:state.page
 
-  let l:height = l:end - l:start + 1
+  let l:height = l:page_end - l:page_start + 1
 
   let l:col = a:pos % &columns
 
@@ -274,6 +299,9 @@ function! s:render_lines(state, lines, width, pos) abort
 
   call nvim_win_set_option(a:state.win, 'wrap', v:false)
 
+  let l:default_hl = a:state.highlights['default']
+  let l:selected_hl = a:state.highlights['selected']
+
   let l:i = 0
   while l:i < len(a:lines)
     let l:chunks = a:lines[l:i]
@@ -285,13 +313,27 @@ function! s:render_lines(state, lines, width, pos) abort
 
     call nvim_buf_set_lines(a:state.buf, l:i, l:i, v:true, [l:text])
 
+    let l:is_selected = l:page_start + l:i == a:selected
+
     let l:start = 0
     for l:chunk in l:chunks
       let l:end = l:start + len(l:chunk[0])
 
-      let l:hl = get(l:chunk, 1, a:state.highlights['default'])
+      if l:is_selected
+        if len(l:chunk) == 1
+          let l:hl = l:selected_hl
+        elseif len(l:chunk) == 2
+          let l:hl = l:chunk[1]
+        else
+          let l:hl = l:chunk[2]
+        endif
+      else
+        let l:hl = get(l:chunk, 1, l:default_hl)
+      endif
 
-      call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, l:i, l:start, l:end)
+      if l:hl !=# l:default_hl
+        call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, l:i, l:start, l:end)
+      endif
 
       let l:start = l:end
     endfor
@@ -456,76 +498,95 @@ function! s:draw_x(state, ctx, result, i) abort
   return l:x
 endfunction
 
-function! s:draw_column(column, ctx, result, i) abort
-  let l:is_selected = a:ctx.selected == a:i
+function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
+  for l:Column in a:columns
+    let l:column = s:draw_column(l:Column, a:ctx, a:result, a:height)
+
+    if empty(l:column)
+      continue
+    endif
+
+    let l:i = 0
+    while l:i < a:height
+      let a:column_chunks[l:i] += l:column[l:i]
+
+      let l:i += 1
+    endwhile
+  endfor
+endfunction
+
+function! s:draw_column(column, ctx, result, height) abort
   let l:Column = a:column
 
   if type(l:Column) is v:t_dict
     let l:Column = l:Column.value
   endif
 
-  if type(l:Column) is v:t_string
-    return [[l:Column, a:ctx.highlights[l:is_selected ? 'selected' : 'default']]]
+  if type(l:Column) is v:t_list
+    return repeat([[l:Column]], a:height)
   endif
 
-  let l:result = l:Column(a:ctx, a:result, a:i)
+  if type(l:Column) is v:t_string
+    return repeat([[[l:Column]]], a:height)
+  endif
+
+  let l:result = l:Column(a:ctx, a:result)
 
   if type(l:result) is v:t_list
     return l:result
   endif
 
-  return [[l:result, a:ctx.highlights[l:is_selected ? 'selected' : 'default']]]
+  return repeat([[[l:result]]], a:height)
 endfunction
 
-" Returns [left_column, chunks, right_column]
 function! s:draw_line(state, ctx, result, i) abort
-  let l:is_selected = a:ctx.selected == a:i
-
-  " Add 1 column of padding.
-  let l:left_chunks = [[' ', a:ctx.highlights[l:is_selected ? 'selected' : 'default']]]
-  for l:Column in a:state.left
-    let l:left_chunks += s:draw_column(l:Column, a:ctx, a:result, a:i)
-  endfor
-
-  let l:right_chunks = []
-  for l:Column in a:state.right
-    let l:right_chunks += s:draw_column(l:Column, a:ctx, a:result, a:i)
-  endfor
-
-  let l:chunks = s:draw_line_chunks(
-        \ a:state, a:ctx, a:result, a:i)
-
-  return [l:left_chunks, l:chunks, l:right_chunks]
-endfunction
-
-function! s:draw_line_chunks(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
   let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)
 
   let l:Highlighter = a:state.highlighter
   if l:Highlighter isnot 0
-    if a:state.highlight_cache.has_key(l:str)
-      let l:highlights = a:state.highlight_cache.get(l:str)
-    else
-      let l:data = get(a:result, 'data', {})
-      let l:highlights = l:Highlighter(a:ctx, l:str, l:data)
-
-      if l:highlights isnot 0
-        call a:state.highlight_cache.set(l:str, l:highlights)
-      else
-        return [[l:str, a:ctx.highlights[l:is_selected ? 'selected' : 'default']]]
-      endif
+    if !l:is_selected &&
+          \ a:state.highlight_cache.has_key(l:str)
+      return a:state.highlight_cache.get(l:str)
     endif
 
-    return wilder#render#spans_to_chunks(
+    let l:data = get(a:result, 'data', {})
+    let l:spans = l:Highlighter(a:ctx, l:str, l:data)
+
+    if l:spans is 0
+      return [[l:str]]
+    endif
+
+    if a:state.highlight_mode ==# 'basic'
+      let l:spans = s:merge_spans(l:spans)
+    endif
+
+    let l:chunks = wilder#render#spans_to_chunks(
           \ l:str,
-          \ l:highlights,
+          \ l:spans,
           \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
           \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+
+    if !l:is_selected
+      call a:state.highlight_cache.set(l:str, l:chunks)
+    endif
+
+    return l:chunks
   endif
 
-  return [[l:str, a:ctx.highlights[l:is_selected ? 'selected' : 'default']]]
+  return [[l:str]]
+endfunction
+
+function! s:merge_spans(spans) abort
+  if empty(a:spans)
+    return []
+  endif
+
+  let l:start_byte = a:spans[0][0]
+  let l:end_byte = a:spans[-1][0] + a:spans[-1][1]
+
+  return [[l:start_byte, l:end_byte]]
 endfunction
 
 function! s:close_win(state) abort
@@ -557,7 +618,8 @@ function! s:open_win(state) abort
         \ })
 
   call nvim_win_set_option(l:win, 'winblend', a:state.winblend)
-  call nvim_win_set_option(l:win, 'winhighlight', 'Normal:Normal,Search:None,IncSearch:None')
+  call nvim_win_set_option(l:win, 'winhighlight',
+        \ 'Search:None,IncSearch:None,Normal:' . a:state.highlights['default'])
 
   let a:state.win = l:win
 endfunction

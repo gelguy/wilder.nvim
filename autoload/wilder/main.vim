@@ -5,6 +5,7 @@ let s:init = 0
 let s:active = 0
 let s:hidden = 0
 let s:session_id = 0
+let s:result_session_id = -1
 let s:run_id = 0
 let s:result_run_id = -1
 let s:draw_done = 0
@@ -176,6 +177,10 @@ function! wilder#main#stop() abort
     unlet s:replaced_cmdline
   endif
 
+  if exists('s:keep_reject_completion')
+    unlet s:keep_reject_completion
+  endif
+
   if !s:hidden
     call s:post_hook()
   endif
@@ -193,10 +198,6 @@ function! s:pre_hook() abort
   if has_key(s:opts.renderer, 'pre_hook')
     call s:opts.renderer.pre_hook({})
   endif
-
-  " create highlight before and after since there might be renderer-defined
-  " highlights which depend on existing highlights
-  call wilder#highlight#init_hl()
 endfunction
 
 function! s:post_hook() abort
@@ -226,8 +227,9 @@ function! s:do(check) abort
   let l:has_completion = exists('s:completion') && l:input ==# s:completion
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
+  let l:should_keep_reject_completion = exists('s:keep_reject_completion') && s:keep_reject_completion ==# l:input
 
-  if !l:has_completion
+  if !l:has_completion && !l:should_keep_reject_completion
     if exists('s:completion')
       unlet s:completion
     endif
@@ -235,6 +237,12 @@ function! s:do(check) abort
     if exists('s:replaced_cmdline')
       unlet s:replaced_cmdline
     endif
+
+    let s:completion_stack = []
+  endif
+
+  if !l:should_keep_reject_completion && exists('s:keep_reject_completion')
+    unlet s:keep_reject_completion
   endif
 
   if !exists('s:previous_cmdline') || l:input_changed
@@ -286,6 +294,7 @@ function! wilder#main#on_finish(ctx, x) abort
   endif
 
   let s:result_run_id = a:ctx.run_id
+  let s:result_session_id = a:ctx.session_id
 
   let l:result = (a:x is v:false || a:x is v:true)
         \ ? {'value': []}
@@ -402,6 +411,7 @@ function! s:draw(...) abort
             \ 'direction': l:direction,
             \ 'run_id': s:result_run_id,
             \ 'done': s:run_id == s:result_run_id,
+            \ 'session_id': s:result_session_id,
             \ }
       let s:clear_selection = 0
 
@@ -663,6 +673,7 @@ function! wilder#main#reject_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
+    let s:keep_reject_completion = l:cmdline
     let s:result = {'value': []}
     let s:selected = -1
     let s:clear_selection = 1

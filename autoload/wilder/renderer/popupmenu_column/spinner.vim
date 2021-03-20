@@ -26,17 +26,13 @@ function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
   endif
 
   return {
-        \ 'value': {ctx, result, i -> s:spinner(l:state, ctx, result, i)},
+        \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
         \ }
 endfunction
 
-function! s:spinner(state, ctx, result, i) abort
+function! s:spinner(state, ctx, result) abort
   let [l:start, l:end] = a:ctx.page
-
-  if (a:state.align ==# 'bottom' && a:i != l:end) ||
-        \ (a:state.align ==# 'top' && a:i != l:start)
-    return ' '
-  endif
+  let l:height = l:end - l:start + 1
 
   let l:frame_number = a:state.spinner.spin(a:ctx, a:result)
 
@@ -46,11 +42,13 @@ function! s:spinner(state, ctx, result, i) abort
     let l:frame = a:state.frames[l:frame_number]
   endif
 
-  if a:ctx.selected == a:i
-    let l:hl = get(a:state, 'selected_hl', a:ctx.highlights['selected'])
+  let l:column_chunks = repeat([[['']]], l:height)
+
+  if a:state.align ==# 'bottom'
+    let l:column_chunks[-1] = [[l:frame]]
   else
-    let l:hl = get(a:state, 'hl', a:ctx.highlights['default'])
+    let l:column_chunks[0] = [[l:frame]]
   endif
 
-  return [[l:frame, l:hl]]
+  return l:column_chunks
 endfunction

@@ -86,6 +86,10 @@ function! wilder#make_hl(name, args, ...) abort
   return wilder#highlight#make_hl(a:name, a:args, a:000)
 endfunction
 
+function! wilder#make_temp_hl(name, args, ...) abort
+  return wilder#highlight#make_temp_hl(a:name, a:args, a:000)
+endfunction
+
 function! wilder#hl_with_attr(name, hl_group, ...) abort
   let l:attrs = {}
   for l:attr in a:000
@@ -98,29 +102,66 @@ function! wilder#hl_with_attr(name, hl_group, ...) abort
   return wilder#make_hl(a:name, a:hl_group, [{}, l:attrs, l:attrs])
 endfunction
 
+" DEPRECATED: use wilder#basic_highlighter()
 function! wilder#query_highlighter(...)
-  let l:opts = get(a:, 1, {})
-  return wilder#highlighter#query_highlighter(l:opts)
+  return call('wilder#basic_highlighter', a:000)
 endfunction
 
-" DEPRECATED: use wilder#query_highlighter()
+" DEPRECATED: use wilder#basic_highlighter()
 function! wilder#query_common_subsequence_spans(...)
-  return call('wilder#query_highlighter', a:000)
+  return call('wilder#basic_highlighter', a:000)
 endfunction
 
-function! wilder#pcre2_highlighter(...)
+function! wilder#basic_highlighter(...)
+  let l:opts = get(a:, 1, {})
+  return wilder#highlighter#basic_highlighter(l:opts)
+endfunction
+
+function! wilder#vim_basic_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'vim'
+  return wilder#highlighter#basic_highlighter(l:opts)
+endfunction
+
+function! wilder#python_basic_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'python'
+  return wilder#highlighter#basic_highlighter(l:opts)
+endfunction
+
+function! wilder#pcre2_highlighter(...) abort
   let l:opts = get(a:, 1, {})
   return wilder#highlighter#pcre2_highlighter(l:opts)
 endfunction
 
+function! wilder#python_pcre2_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'python'
+  return wilder#highlighter#pcre2_highlighter(l:opts)
+endfunction
+
+function! wilder#lua_pcre2_highlighter(...) abort
+  let l:opts = get(a:, 1, {})
+  let l:opts.language = 'lua'
+  return wilder#highlighter#pcre2_highlighter(l:opts)
+endfunction
+
 " DEPRECATED: use wilder#pcre2_highlighter()
-function! wilder#pcre2_capture_spans(...)
+function! wilder#pcre2_capture_spans(...) abort
   return call('wilder#pcre2_highlighter', a:000)
 endfunction
 
-function! wilder#cpsm_highlighter(...)
+function! wilder#cpsm_highlighter(...) abort
+  return call('wilder#python_cpsm_highlighter', a:000)
+endfunction
+
+function! wilder#python_cpsm_highlighter(...) abort
   let l:opts = get(a:, 1, {})
-  return wilder#highlighter#cpsm_highlighter(l:opts)
+  return wilder#highlighter#python_cpsm_highlighter(l:opts)
+endfunction
+
+function! wilder#lua_fzy_highlighter(...) abort
+  return wilder#highlighter#lua_fzy_highlighter()
 endfunction
 
 " pipes
@@ -613,6 +654,16 @@ function! wilder#popupmenu_spinner(...) abort
   return wilder#renderer#popupmenu_column#spinner#make(l:args)
 endfunction
 
+function! wilder#popupmenu_devicons(...) abort
+  let l:args = get(a:, 1, {})
+  return wilder#renderer#popupmenu_column#devicons#make(l:args)
+endfunction
+
+function! wilder#popupmenu_buffer_flags(...) abort
+  let l:args = get(a:, 1, {})
+  return wilder#renderer#popupmenu_column#buffer_flags#make(l:args)
+endfunction
+
 " renderers
 
 function! wilder#renderer_mux(args)
@@ -767,6 +818,8 @@ function! s:get_project_root(path, root_markers) abort
   return ''
 endfunction
 
+" DEPRECATED: This function is to be removed.
+" Use wilder#popupmenu_devicons() instead.
 function! wilder#result_draw_devicons()
   return wilder#result({
         \ 'draw': ['wilder#draw_devicons'],

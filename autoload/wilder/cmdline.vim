@@ -46,6 +46,13 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
     let l:prefix = ''
     let l:fuzzy_char = ''
     let a:res.match_arg = a:res.expand_arg
+  elseif a:res.expand ==# 'buffer'
+    " getcompletion() for buffers checks against the file name, but we want to
+    " check against the full path. Return all buffers and let the fuzzy filter
+    " remove the non-matching candidates.
+    let l:prefix = ''
+    let l:fuzzy_char = ''
+    let a:res.match_arg = a:res.expand_arg
   else
     let l:prefix = ''
     let l:fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
@@ -389,10 +396,11 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'behave')
   elseif a:res.expand ==# 'buffer'
     let l:buffers = getcompletion(l:expand_arg, 'buffer')
-    let l:buffers = map(l:buffers, {_, x -> fnamemodify(x, ':.')})
+    let l:buffers = map(l:buffers, {_, x -> fnamemodify(x, ':~:.')})
 
     let l:alt_file = expand('#')
     if !empty(l:alt_file)
+      let l:alt_file = fnamemodify(l:alt_file, ':~:.')
       let l:i = index(l:buffers, l:alt_file)
 
       if l:i > 0
@@ -815,9 +823,9 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     if has_key(a:opts, 'fuzzy_filter')
       let l:Filter = a:opts['fuzzy_filter']
     elseif l:use_python
-      let l:Filter = wilder#python_filter_fuzzy()
+      let l:Filter = wilder#python_fuzzy_filter()
     else
-      let l:Filter = wilder#filter_fuzzy()
+      let l:Filter = wilder#fuzzy_filter()
     endif
 
     let l:Fuzzy_filter = wilder#result({
@@ -878,7 +886,6 @@ let s:substitute_commands = {
       \ 'snomagic': v:true,
       \ 'global': v:true,
       \ 'vglobal': v:true,
-      \ '&': v:true,
       \ }
 
 function! wilder#cmdline#is_substitute_command(cmd) abort

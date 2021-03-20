@@ -12,7 +12,6 @@ import itertools
 import os
 from pathlib import Path
 import pwd
-import queue
 import re
 import shutil
 import stat
@@ -32,7 +31,6 @@ class Wilder(object):
     def __init__(self, nvim):
         self.nvim = nvim
         self.has_init = False
-        self.queue = queue.Queue()
         self.events = []
         self.events_lock = threading.Lock()
         self.executor = None
@@ -43,8 +41,17 @@ class Wilder(object):
         self.path_files_dict = dict()
         self.added_sys_path = set()
 
-    def handle(self, ctx, x, command='resolve'):
-        self.nvim.call('wilder#' + command, ctx, x)
+    def resolve(self, ctx, x):
+        self.nvim.async_call(self._resolve, ctx, x)
+
+    def _resolve(self, ctx, x):
+        self.nvim.call('wilder#resolve', ctx, x)
+
+    def reject(self, ctx, x):
+        self.nvim.async_call(self._reject, ctx, x)
+
+    def _reject(self, ctx, x):
+        self.nvim.call('wilder#reject', ctx, x)
 
     def echomsg(self, x):
         self.nvim.session.threadsafe_call(lambda: self.nvim.command('echomsg "' + x + '"'))
@@ -71,21 +78,6 @@ class Wilder(object):
 
         return self.executor.submit(functools.partial( fn, *([event] + args), ))
 
-    def consumer(self):
-        while True:
-            args = self.queue.get()
-            ctx = args[0]
-            res = args[1]
-
-            if ctx['run_id'] < self.run_id:
-                continue
-
-            if len(args) > 2:
-                command = args[2]
-                self.nvim.async_call(self.handle, ctx, res, command=command)
-            else:
-                self.nvim.async_call(self.handle, ctx, res)
-
     @neovim.function('_wilder_init', sync=True)
     def _init(self, args):
         if self.has_init:
@@ -96,8 +88,6 @@ class Wilder(object):
         opts = args[0]
 
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=opts['num_workers'])
-        t = threading.Thread(target=self.consumer, daemon=True)
-        t.start()
 
     def add_sys_path(self, path):
         path = os.path.expanduser(path)
@@ -157,17 +147,17 @@ class Wilder(object):
                     return
 
             if 'timeout' in result:
-                self.queue.put((ctx, False,))
+                self.resolve(ctx, False)
                 return
 
             if 'error' in result:
-                self.queue.put((ctx, 'find_files: ' + result['error'], 'reject',))
+                self.reject(ctx, 'find_files: ' + result['error'])
                 return
 
             candidates = result['files']
 
             if not candidates:
-                return self.queue.put((ctx, [],))
+                return self.resolve(ctx, [])
 
             if query:
                 for filter in filters:
@@ -209,9 +199,9 @@ class Wilder(object):
             if find_dir:
                 candidates = [c + os.sep if c and c[-1] != os.sep else c  for c in candidates]
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_file_finder: ' + str(e), 'reject'))
+            self.reject(ctx, 'python_file_finder: ' + str(e))
 
     def find_files_subprocess(self, command, path, timeout_ms, result):
         try:
@@ -252,7 +242,7 @@ class Wilder(object):
             return
 
         time.sleep(t)
-        self.queue.put((ctx, x,))
+        self.resolve(ctx, x)
 
     @neovim.function('_wilder_python_search', sync=False, allow_nested=True)
     def _search(self, args):
@@ -275,9 +265,9 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_search: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_search: ' + str(e))
 
     def search(self, event, opts, x, buf):
         module_name = opts['engine'] if 'engine' in opts else 're'
@@ -314,9 +304,9 @@ class Wilder(object):
 
         try:
             res = [x for x in candidates if not (x in seen or seen.add(x))]
-            self.queue.put((ctx, res,))
+            self.resolve(ctx, res)
         except Exception as e:
-            self.queue.put((ctx, 'python_uniq_filt: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_uniq_filt: ' + str(e))
 
     @neovim.function('_wilder_python_lexical_sort', sync=False, allow_nested=True)
     def _sort(self, args):
@@ -329,9 +319,9 @@ class Wilder(object):
         try:
             res = sorted(candidates)
 
-            self.queue.put((ctx, res,))
+            self.resolve(ctx, res)
         except Exception as e:
-            self.queue.put((ctx, 'python_lexical_sort: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_lexical_sort: ' + str(e))
 
     # sync=True as it needs to query nvim for some data
     @neovim.function('_wilder_python_get_file_completion', sync=True, allow_nested=True)
@@ -477,9 +467,9 @@ class Wilder(object):
             elif expand_arg == '..':
                 res.insert(0, '../')
 
-            self.queue.put((ctx, res,))
+            self.resolve(ctx, res)
         except Exception as e:
-            self.queue.put((ctx, 'python_get_file_completion: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_get_file_completion: ' + str(e))
 
     # Returns True if p2 is a descendant of p1
     def is_descendant_path(self, p1, p2):
@@ -506,9 +496,9 @@ class Wilder(object):
                     res.append(user.pw_name)
 
             res = sorted(res)
-            self.queue.put((ctx, res,))
+            self.resolve(ctx, res)
         except Exception as e:
-            self.queue.put((ctx, 'python_get_users: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_get_users: ' + str(e))
 
     @neovim.function('_wilder_python_fuzzy_filt', sync=False, allow_nested=True)
     def _fuzzy_filt(self, args):
@@ -521,9 +511,9 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_fuzzy_filt: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_fuzzy_filt: ' + str(e))
 
     # case_sensitive: 0 - case insensitive
     #                 1 - case sensitive
@@ -590,9 +580,9 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_fruzzy_filt: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_fruzzy_filt: ' + str(e))
 
     def fruzzy_filt(self, *args):
         opts = args[1]
@@ -646,9 +636,9 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_cpsm_filt: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_cpsm_filt: ' + str(e))
 
     def cpsm_filt(self, event, opts, candidates, query):
         if 'cpsm_path' in opts:
@@ -673,9 +663,9 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_difflib_sort: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_difflib_sort: ' + str(e))
 
     def difflib_sort(self, event, opts, candidates, query):
         quick = opts['quick'] if 'quick' in opts else True
@@ -707,9 +697,9 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            self.queue.put((ctx, candidates,))
+            self.resolve(ctx, candidates)
         except Exception as e:
-            self.queue.put((ctx, 'python_fuzzywuzzy_sort: ' + str(e), 'reject',))
+            self.reject(ctx, 'python_fuzzywuzzy_sort: ' + str(e))
 
     def fuzzywuzzy_sort(self, event, opts, candidates, query):
         fuzzy = importlib.import_module('fuzzywuzzy.fuzz')
@@ -726,8 +716,8 @@ class Wilder(object):
 
         return [x[0] for x in sorted(xs, key=lambda x: x[1])]
 
-    @neovim.function('_wilder_python_highlight_query', sync=True)
-    def _highlight_query(self, args):
+    @neovim.function('_wilder_python_basic_highlight', sync=True)
+    def _basic_highlight(self, args):
         string = args[0]
         query = args[1]
         case_sensitive = args[2]
@@ -764,8 +754,8 @@ class Wilder(object):
 
         return spans
 
-    @neovim.function('_wilder_python_highlight_pcre2', sync=True)
-    def _highlight_pcre2(self, args):
+    @neovim.function('_wilder_python_pcre2_highlight', sync=True)
+    def _pcre2_highlight(self, args):
         pattern = args[0]
         string = args[1]
         module_name = args[2]
@@ -789,8 +779,8 @@ class Wilder(object):
 
         return captures
 
-    @neovim.function('_wilder_python_highlight_cpsm', sync=True)
-    def _highlight_cpsm(self, args):
+    @neovim.function('_wilder_python_cpsm_highlight', sync=True)
+    def _cpsm_highlight(self, args):
         opts = args[0]
         x = args[1]
         query = args[2]
