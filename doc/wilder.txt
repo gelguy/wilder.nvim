@@ -1728,7 +1728,17 @@ wilder#popupmenu_devicons([{options}])
             Adds devicons for files and buffers.
 
             {options} is a dictionary with keys:
+            `get_icon`
+            Optional~
+            A function name or a function. The function should take 2
+            arguments {file_name} and {is_dir} and return the icon to use.
+
+            To use `nerdfont.vim`, set this to {name -> nerdfont#find(name)}.
+
+            Default: 'WebDevIconsGetFileTypeSymbol'
+
             `padding`
+            Optional~
             A list in the form of [{left_padding_width},
             {right_padding_width}].
 
