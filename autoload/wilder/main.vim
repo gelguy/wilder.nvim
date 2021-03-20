@@ -177,6 +177,10 @@ function! wilder#main#stop() abort
     unlet s:replaced_cmdline
   endif
 
+  if exists('s:keep_reject_completion')
+    unlet s:keep_reject_completion
+  endif
+
   if !s:hidden
     call s:post_hook()
   endif
@@ -223,8 +227,9 @@ function! s:do(check) abort
   let l:has_completion = exists('s:completion') && l:input ==# s:completion
   let l:is_new_input = !exists('s:previous_cmdline')
   let l:input_changed = exists('s:previous_cmdline') && s:previous_cmdline !=# l:input
+  let l:should_keep_reject_completion = exists('s:keep_reject_completion') && s:keep_reject_completion ==# l:input
 
-  if !l:has_completion
+  if !l:has_completion && !l:should_keep_reject_completion
     if exists('s:completion')
       unlet s:completion
     endif
@@ -232,6 +237,12 @@ function! s:do(check) abort
     if exists('s:replaced_cmdline')
       unlet s:replaced_cmdline
     endif
+
+    let s:completion_stack = []
+  endif
+
+  if !l:should_keep_reject_completion && exists('s:keep_reject_completion')
+    unlet s:keep_reject_completion
   endif
 
   if !exists('s:previous_cmdline') || l:input_changed
@@ -662,6 +673,7 @@ function! wilder#main#reject_completion() abort
     endif
 
     let s:previous_cmdline = l:cmdline
+    let s:keep_reject_completion = l:cmdline
     let s:result = {'value': []}
     let s:selected = -1
     let s:clear_selection = 1
