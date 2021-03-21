@@ -1,4 +1,5 @@
 import asyncio
+from collections import Counter
 import concurrent.futures
 import difflib
 import fnmatch
@@ -39,6 +40,9 @@ class Wilder(object):
         self.find_files_lock = threading.Lock()
         self.find_files_session_id = -1
         self.path_files_dict = dict()
+        self.help_tags_lock = threading.Lock()
+        self.help_tags_session_id = -1
+        self.help_tags_result = None
         self.added_sys_path = set()
 
     def resolve(self, ctx, x):
@@ -151,7 +155,7 @@ class Wilder(object):
                 return
 
             if 'error' in result:
-                self.reject(ctx, 'find_files: ' + result['error'])
+                self.reject(ctx, 'python_file_finder: ' + result['error'])
                 return
 
             candidates = result['files']
@@ -479,6 +483,131 @@ class Wilder(object):
         if f.endswith(os.sep) or f.endswith('/'):
             return os.path.basename(f[:-1])
         return os.path.basename(f)
+
+    @neovim.function('_wilder_python_get_help_tags', sync=False, allow_nested=True)
+    def _get_get_help_tags(self, args):
+        self.run_in_background(self.get_help_tags_handler, args)
+
+    def get_help_tags_handler(self, event, ctx, rtp, helplang):
+        try:
+            result = None
+            with self.help_tags_lock:
+                if ctx['session_id'] > self.help_tags_session_id:
+                    self.help_tags_session_id = ctx['session_id']
+
+                    if self.help_tags_result is not None:
+                        self.help_tags_result['kill'].set()
+
+                    self.help_tags_result = None
+
+                if self.help_tags_result is not None:
+                    result = self.help_tags_result
+                else:
+                    kill_event = threading.Event()
+                    done_event = threading.Event()
+                    result = {'kill': kill_event, 'done': done_event}
+                    self.help_tags_result = result
+                    self.executor.submit(functools.partial(self.get_help_tags_thread, result, rtp, helplang))
+            while True:
+                if result['done'].is_set():
+                    break
+                if event.wait(timeout=0.01):
+                    return
+
+            if 'error' in result:
+                self.reject(ctx, 'python_get_help_tags: ' + result['error'])
+                return
+
+            self.resolve(ctx, result['tags'])
+        except Exception as e:
+            self.reject(ctx, 'python_get_help_tags: ' + str(e))
+
+    def get_help_tags_thread(self, result, rtp, helplang):
+        try:
+            directories = rtp.split(',')
+
+            if not helplang:
+                langs = ['en']
+            else:
+                langs = helplang.split(',')
+                if not 'en' in langs:
+                    langs.append('en')
+
+            default_lang = langs[0]
+
+            lang_tags_dict = dict()
+            tag_counter = Counter()
+
+            for lang in langs:
+                lang_tags_dict[lang] = set()
+
+            checker = EventChecker(result['kill'])
+
+            for directory in directories:
+                tags_path = os.path.join(directory, 'doc', 'tags*')
+                it = glob.iglob(tags_path)
+
+                for name in it:
+                    if checker.check():
+                        return
+
+                    tail = os.path.basename(name)
+                    if tail == 'tags':
+                        lang = 'en'
+                    # tags-zz
+                    elif len(tail) == 7 and tail.startswith('tags-'):
+                        lang = tail[5:7]
+                    else:
+                        continue
+
+                    if lang not in langs:
+                        langs.append(lang)
+
+                    if lang not in lang_tags_dict:
+                        lang_tags_dict[lang] = set()
+
+                    if not os.path.isfile(name) or not os.access(name, os.R_OK):
+                        continue
+
+                    try:
+                        with open(name, 'r') as f:
+                            for line in f.readlines():
+                                if line.startswith('!_TAG_'):
+                                    continue
+                                columns = line.split("\t")
+                                if not len(columns):
+                                    continue
+
+                                tag = columns[0]
+                                tag_counter.update([tag])
+
+                                lang_tags_dict[lang].add(tag)
+                    except UnicodeDecodeError:
+                        continue
+                    except IOError:
+                        continue
+
+            tags = list(lang_tags_dict[default_lang])
+
+            for lang in lang_tags_dict:
+                if lang == default_lang:
+                    continue
+
+                lang_tags = lang_tags_dict[lang]
+
+                for tag in lang_tags:
+                    if tag in lang_tags_dict[default_lang]:
+                        continue
+                    elif tag_counter.get(tag) == 1:
+                        tags.append(tag)
+                    else:
+                        tags.append(tag + '@' + lang)
+
+            result['tags'] = sorted(tags)
+        except Exception as e:
+            result['error'] = str(e)
+        finally:
+            result['done'].set()
 
     @neovim.function('_wilder_python_get_users', sync=False, allow_nested=True)
     def _get_users(self, args):

@@ -17,7 +17,7 @@ endfunction
 " expand_arg : the argument passed to getcompletion()
 " expand     : the type passed to getcompletion()
 " fuzzy_char : the character used to get fuzzy completion if fuzzy mode is 1
-function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
+function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy, use_python) abort
   let a:res.match_arg = a:res.arg
   let a:res.expand_arg = has_key(a:res, 'subcommand_start')
         \ ? a:res.cmdline[a:res.subcommand_start :]
@@ -27,25 +27,32 @@ function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
     return a:res
   endif
 
-  return s:prepare_fuzzy_completion(a:ctx, a:res)
+  return s:prepare_fuzzy_completion(a:ctx, a:res, a:use_python)
 endfunction
 
-" Sets match_arg, expand_arg fuzzy_char based on expand and expand_arg.
+" Sets match_arg, expand_arg fuzzy_char based on expand and expand_arg. These
+" will be used by wilder#cmdline#get_fuzzy_completion() to decide how to get
+" the completions.
 " Generally we want to use the first char in expand_arg as fuzzy_char,
 " set match_arg to expand_arg, and adjust expand_arg to '' since we are only
 " expanding the fuzzy char.
-function! s:prepare_fuzzy_completion(ctx, res) abort
-  " if argument is empty, use normal completions
-  " only up to 300 tags are returned, don't fuzzy match for 'help'
-  if a:res.pos == len(a:res.cmdline) ||
-        \ a:res.expand ==# 'help'
+function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
+  " For non-python completion, a maximum of 300 help tags are returned, so
+  " getting all the candidates and filtering will miss out on a lot of matches
+  if a:res.expand ==# 'help'
+    if !a:use_python
+      return a:res
+    endif
+  " If argument is empty, don't fuzzy match except for expanding 'help', where
+  " the default argument is 'help'
+  elseif a:res.pos == len(a:res.cmdline)
     return a:res
   endif
 
-  " only up to 300 tags are returned, don't fuzzy match for 'tag'
+  " Maximum of 300 tags are returned, don't fuzzy match for 'tag'
   if a:res.expand ==# 'tags' ||
         \ a:res.expand ==# 'tags_listfiles'
-    " if tag-regexp, prevent filtering by removing match_arg
+    " If using tag-regexp, prevent fuzzy filtering by removing match_arg
     if a:res.expand_arg[0] ==# '/'
       let a:res.match_arg = ''
     endif
@@ -53,27 +60,39 @@ function! s:prepare_fuzzy_completion(ctx, res) abort
     return a:res
   endif
 
+  " Remove the starting s: and g: so the fuzzy filter does not match against
+  " that them.
   if (a:res.expand ==# 'expression' || a:res.expand ==# 'var') &&
         \ a:res.expand_arg[1] ==# ':' &&
         \ (a:res.expand_arg[0] ==# 'g' || a:res.expand_arg[0] ==# 's')
     let l:prefix = a:res.expand_arg[0: 1]
     let l:fuzzy_char = a:res.expand_arg[2]
     let a:res.match_arg = a:res.expand_arg[2 :]
-  elseif a:res.expand ==# 'mapping'
-    " Special keys such as <Space> cannot be fuzzy completed since < will not
-    " get completions for <Space>. A workaround is to return all mappings and
-    " let the fuzzy filter remove the non-matching candidates.
+
+  " Return all tags and let the fuzzy filter remove the non-matching
+  " candidates for the following cases:
+  "
+  " mapping: special keys such as <Space> cannot be fuzzy completed since
+  " < will not get completions for <Space>.
+  "
+  " buffer: getcompletion() for buffers checks against the file name, but
+  " we want to check against the full path.
+  "
+  " help: help tag matching does not have to start from beginning of word.
+  elseif a:res.expand ==# 'mapping' ||
+        \ a:res.expand ==# 'buffer' ||
+        \ a:res.expand ==# 'help'
     let l:prefix = ''
     let l:fuzzy_char = ''
-    let a:res.match_arg = a:res.expand_arg
-  elseif a:res.expand ==# 'buffer'
-    " getcompletion() for buffers checks against the file name, but we want to
-    " check against the full path. Return all buffers and let the fuzzy filter
-    " remove the non-matching candidates.
-    let l:prefix = ''
-    let l:fuzzy_char = ''
-    let a:res.match_arg = a:res.expand_arg
+
+    " Default arugment is 'help'
+    if a:res.expand ==# 'help' && empty(a:res.expand_arg)
+      let a:res.match_arg = 'help'
+    else
+      let a:res.match_arg = a:res.expand_arg
+    endif
   else
+    " Default case, expand with thte fuzzy_char
     let l:prefix = ''
     let l:fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
   endif
@@ -326,12 +345,12 @@ function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
   return {ctx -> _wilder_python_cpsm_filt(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
-function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode) abort
+function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode, use_python) abort
   " if argument is empty, use normal completions
-  " don't fuzzy complete for help since a maximum of 300 help tags are returned
-  " don't fuzzy complete for tag-regexp
+  " don't fuzzy complete for vim help since a maximum of 300 help tags are returned
+  " don't fuzzy complete for tags since a maximum of 300 tags are returned
   if a:res.pos == len(a:res.cmdline) ||
-        \ a:res.expand ==# 'help' ||
+        \ (a:res.expand ==# 'help' && !a:use_python) ||
         \ a:res.expand ==# 'tags' ||
         \ a:res.expand ==# 'tags_listfiles'
     return a:getcompletion(a:ctx, a:res)
@@ -707,14 +726,18 @@ function! s:convert_result_to_data(res)
   return l:data
 endfunction
 
-function! s:getcompletion(ctx, res, fuzzy, use_python, is_file_expansion) abort
-  let l:Completion_func = a:use_python && a:is_file_expansion
-        \ ? funcref('wilder#cmdline#python_get_file_completion')
-        \ : funcref('wilder#cmdline#getcompletion')
+function! s:getcompletion(ctx, res, fuzzy, use_python) abort
+  if a:use_python && wilder#cmdline#is_file_expansion(a:res.expand)
+    let l:Completion_func = funcref('wilder#cmdline#python_get_file_completion')
+  elseif a:use_python && a:res.expand ==# 'help'
+    let l:Completion_func = {-> {ctx -> _wilder_python_get_help_tags(ctx, &rtp, &helplang)}}
+  else
+    let l:Completion_func = funcref('wilder#cmdline#getcompletion')
+  endif
 
   if a:fuzzy
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
-          \ ctx, x, l:Completion_func, a:fuzzy)}
+          \ ctx, x, l:Completion_func, a:fuzzy, a:use_python)}
   else
     let l:Getcompletion = l:Completion_func
   endif
@@ -862,7 +885,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ wilder#check({_, res -> wilder#cmdline#is_file_expansion(res.expand)}),
         \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
         \ wilder#subpipeline({ctx, res -> [
-        \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 1)},
+        \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python)},
         \ ] + (get(res, 'relative_to_home_dir', 0) ?
         \   [wilder#result({
         \     'value': {ctx, xs -> map(xs, {i, x -> fnamemodify(x, ':~')})},
@@ -884,8 +907,8 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ }))
 
   let l:completion_subpipeline = [
-        \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy)},
-        \ {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python, 0)},
+        \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy, l:use_python)},
+        \ {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python)},
         \ ]
 
   if l:fuzzy
