@@ -85,14 +85,14 @@ function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
     let l:prefix = ''
     let l:fuzzy_char = ''
 
-    " Default arugment is 'help'
+    " Default argument is 'help'
     if a:res.expand ==# 'help' && empty(a:res.expand_arg)
       let a:res.match_arg = 'help'
     else
       let a:res.match_arg = a:res.expand_arg
     endif
   else
-    " Default case, expand with thte fuzzy_char
+    " Default case, expand with the fuzzy_char
     let l:prefix = ''
     let l:fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
   endif
@@ -346,9 +346,9 @@ function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode, use_python) abort
-  " if argument is empty, use normal completions
-  " don't fuzzy complete for vim help since a maximum of 300 help tags are returned
-  " don't fuzzy complete for tags since a maximum of 300 tags are returned
+  " If argument is empty, use normal completions
+  " Don't fuzzy complete for vim help since a maximum of 300 help tags are returned
+  " Don't fuzzy complete for tags since a maximum of 300 tags are returned
   if a:res.pos == len(a:res.cmdline) ||
         \ (a:res.expand ==# 'help' && !a:use_python) ||
         \ a:res.expand ==# 'tags' ||
@@ -638,7 +638,7 @@ endfunction
 " returns [{handled}, {result}, [{res}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
-    return [0, a:res]
+    return [0, 0, a:res]
   endif
 
   if !has('nvim')
@@ -682,7 +682,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     let l:res = copy(a:res)
     let l:res['expand'] = l:user_command['complete']
 
-    return [0, l:res]
+    return [0, 0, l:res]
   endif
 
   return [1, v:false, a:res]
@@ -726,7 +726,11 @@ function! s:convert_result_to_data(res)
   return l:data
 endfunction
 
+" Gets completions based on whether res, fuzzy and use_python
 function! s:getcompletion(ctx, res, fuzzy, use_python) abort
+  " For python file completions, use wilder#cmdline#python_get_file_completion()
+  " For help tags, use _wilder_python_get_help_tags()
+  " Else use wilder#cmdline#getcompletion()
   if a:use_python && wilder#cmdline#is_file_expansion(a:res.expand)
     let l:Completion_func = funcref('wilder#cmdline#python_get_file_completion')
   elseif a:use_python && a:res.expand ==# 'help'
@@ -735,6 +739,7 @@ function! s:getcompletion(ctx, res, fuzzy, use_python) abort
     let l:Completion_func = funcref('wilder#cmdline#getcompletion')
   endif
 
+  " If fuzzy, wrap the completion func in wilder#cmdline#get_fuzzy_completion()
   if a:fuzzy
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
           \ ctx, x, l:Completion_func, a:fuzzy, a:use_python)}
@@ -867,6 +872,25 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
   return l:pipeline
 endfunction
 
+" parsed ---------: is file expansion?
+"                 |--> file_completion_pipeline
+"                 └--> completion_pipeline
+"
+" file_completion_pipeline
+" parsed ---------: prepare_file_completion
+"                 └--> parsed
+" parsed ---------: s:getcompletion
+"                 └--> result
+" result ---------: file_fuzzy_filter if needed
+"                 └--> return result
+"
+" completion_pipeline
+" parsed ---------: prepare_completion
+"                 └--> parsed
+" parsed ---------: s:getcompletion
+"                 └--> result
+" result ---------: fuzzy_filter if needed
+"                 └--> return candidates
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
   let l:use_python = get(a:opts, 'use_python', has('nvim'))
 
@@ -989,6 +1013,27 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
   return l:pipeline
 endfunction
 
+" cmdline --------: check getcmdtype()?
+"                 |--> return v:false
+"                 └--> cmdline
+" cmdline --------: parse_cmdline
+"                 └--> parsed
+" parsed ---------: check is substitute command and should hide?
+"                 |--> return v:true
+"                 └--> parsed
+" parsed ---------: prepare_user_completion
+"                 └--> [handled, user_completions, parsed]
+" [h, u, p] ------: handled?
+"                 |--> return u
+"                 └--> [p]
+" parsed ---------: getcompletion_pipeline 
+"                 └--> candidates
+" result ---------: sort if needed
+"                 └--> result
+" result ---------: add pcre2 pattern if needed
+"                 └--> result
+" result ---------: add data.query
+"                 └--> return result
 function! wilder#cmdline#pipeline(opts) abort
   let l:pipeline = [
         \ wilder#check({-> getcmdtype() ==# ':'}),
@@ -1011,7 +1056,7 @@ function! wilder#cmdline#pipeline(opts) abort
 
   call add(l:pipeline, {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)})
 
-  let l:getcompletion_pipeline = [{ctx, res -> res[1]}] +
+  let l:getcompletion_pipeline = [{ctx, res -> res[2]}] +
         \ wilder#cmdline#getcompletion_pipeline(a:opts)
 
   let l:Sorter = get(a:opts, 'sorter', get(a:opts, 'sort', 0))
