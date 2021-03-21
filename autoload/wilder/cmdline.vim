@@ -13,6 +13,10 @@ function! wilder#cmdline#parse(cmdline) abort
   return copy(s:cmdline_cache.get(a:cmdline))
 endfunction
 
+" match_arg  : the argument for the fuzzy filter to match against
+" expand_arg : the argument passed to getcompletion()
+" expand     : the type passed to getcompletion()
+" fuzzy_char : the character used to get fuzzy completion if fuzzy mode is 1
 function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
   let a:res.match_arg = a:res.arg
   let a:res.expand_arg = has_key(a:res, 'subcommand_start')
@@ -26,10 +30,26 @@ function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy) abort
   return s:prepare_fuzzy_completion(a:ctx, a:res)
 endfunction
 
+" Sets match_arg, expand_arg fuzzy_char based on expand and expand_arg.
+" Generally we want to use the first char in expand_arg as fuzzy_char,
+" set match_arg to expand_arg, and adjust expand_arg to '' since we are only
+" expanding the fuzzy char.
 function! s:prepare_fuzzy_completion(ctx, res) abort
   " if argument is empty, use normal completions
-  " up to 300 help tags returned, so fuzzy matching does not work for 'help'
-  if a:res.pos == len(a:res.cmdline) || a:res.expand ==# 'help'
+  " only up to 300 tags are returned, don't fuzzy match for 'help'
+  if a:res.pos == len(a:res.cmdline) ||
+        \ a:res.expand ==# 'help'
+    return a:res
+  endif
+
+  " only up to 300 tags are returned, don't fuzzy match for 'tag'
+  if a:res.expand ==# 'tags' ||
+        \ a:res.expand ==# 'tags_listfiles'
+    " if tag-regexp, prevent filtering by removing match_arg
+    if a:res.expand_arg[0] ==# '/'
+      let a:res.match_arg = ''
+    endif
+
     return a:res
   endif
 
@@ -307,7 +327,13 @@ function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode) abort
-  if a:res.pos == len(a:res.cmdline) || a:res.expand ==# 'help'
+  " if argument is empty, use normal completions
+  " don't fuzzy complete for help since a maximum of 300 help tags are returned
+  " don't fuzzy complete for tag-regexp
+  if a:res.pos == len(a:res.cmdline) ||
+        \ a:res.expand ==# 'help' ||
+        \ a:res.expand ==# 'tags' ||
+        \ a:res.expand ==# 'tags_listfiles'
     return a:getcompletion(a:ctx, a:res)
   endif
 
@@ -561,8 +587,11 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return []
   elseif a:res.expand ==# 'user_commands'
     return filter(getcompletion(l:expand_arg, 'command'), {_, x -> !(x[0] >= 'a' && x[0] <= 'z')})
-  elseif a:res.expand ==# 'tags_listfiles'
-    return getcompletion(l:expand_arg, 'tag_listfiles')
+  elseif a:res.expand ==# 'tags' ||
+        \ a:res.expand ==# 'tags_listfiles'
+    " tags_listfiles is only used for c_CTRL-D
+    " both return the same result for getcompletion()
+    return getcompletion(l:expand_arg, 'tag')
   elseif a:res.expand ==# 'var'
     return getcompletion(l:expand_arg, 'var')
   endif
@@ -827,16 +856,6 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     else
       let l:Filter = wilder#fuzzy_filter()
     endif
-
-    let l:Fuzzy_filter = wilder#result({
-          \ 'value': {ctx, xs, data -> l:Filter(
-          \   ctx, xs, get(data, 'cmdline.match_arg', '')
-          \ )}})
-
-    let l:File_fuzzy_filter = wilder#result({
-          \ 'value': {ctx, xs, data -> l:Filter(
-          \   ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', '')
-          \ )}})
   endif
 
   let l:file_completion_subpipeline = [
@@ -852,6 +871,10 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ ]
 
   if l:fuzzy
+    let l:File_fuzzy_filter = wilder#result({
+          \ 'value': {ctx, xs, data -> l:Filter(
+          \   ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', '')
+          \ )}})
     call add(l:file_completion_subpipeline, l:File_fuzzy_filter)
   endif
 
@@ -866,6 +889,10 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ ]
 
   if l:fuzzy
+    let l:Fuzzy_filter = wilder#result({
+          \ 'value': {ctx, xs, data -> l:Filter(
+          \   ctx, xs, get(data, 'cmdline.match_arg', '')
+          \ )}})
     call add(l:completion_subpipeline, l:Fuzzy_filter)
   endif
 
