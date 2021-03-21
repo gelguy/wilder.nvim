@@ -57,6 +57,10 @@ end
 local function fzy_highlight(needle, haystack)
   local fzy = require('fzy-lua-native')
 
+  if not fzy.has_match(needle, haystack) then
+    return 0
+  end
+
   local positions = fzy.positions(needle, haystack)
 
   if #positions == 0 then
