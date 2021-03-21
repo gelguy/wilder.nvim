@@ -733,7 +733,7 @@ function! s:getcompletion(ctx, res, fuzzy, use_python) abort
   " Else use wilder#cmdline#getcompletion()
   if a:use_python && wilder#cmdline#is_file_expansion(a:res.expand)
     let l:Completion_func = funcref('wilder#cmdline#python_get_file_completion')
-  elseif a:use_python && a:res.expand ==# 'help'
+  elseif a:use_python && a:res.expand ==# 'help' && a:fuzzy
     let l:Completion_func = {-> {ctx -> _wilder_python_get_help_tags(ctx, &rtp, &helplang)}}
   else
     let l:Completion_func = funcref('wilder#cmdline#getcompletion')
@@ -798,6 +798,67 @@ function wilder#cmdline#should_use_file_finder(res) abort
   return 1
 endfunction
 
+let s:substitute_commands = {
+      \ 'substitute': v:true,
+      \ 'smagic': v:true,
+      \ 'snomagic': v:true,
+      \ 'global': v:true,
+      \ 'vglobal': v:true,
+      \ }
+
+function! wilder#cmdline#is_substitute_command(cmd) abort
+  return has_key(s:substitute_commands, a:cmd)
+endfunction
+
+function! wilder#cmdline#substitute_pipeline(opts) abort
+  if has_key(a:opts, 'hide_in_replace')
+    let l:hide_in_replace = a:opts.hide_in_replace
+  elseif has_key(a:opts, 'hide')
+    " DEPRECATED: use hide_in_replace
+    let l:hide_in_replace = a:opts.hide
+  else
+    let l:hide_in_replace = has('nvim') && !has('nvim-0.3.7')
+  endif
+
+  if has_key(a:opts, 'pipeline')
+    let l:search_pipeline = a:opts['pipeline']
+  elseif has('nvim')
+    let l:search_pipeline = wilder#python_search_pipeline({'skip_cmdtype_check': 1})
+  else
+    let l:search_pipeline = wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
+  endif
+
+  " cmdline
+  " : check getcmdtype()?
+  " |--> return v:false
+  " : parse_cmdline
+  " : check is substitute command
+  " |--> return v:false
+  " : check len(substitute_args) [s]/[pattern]/[replace]/[flags]
+  " |--> return v:false or v:true
+  " : search_pipeline
+  " : add command, pos and replace
+  " └--> result
+  return [
+        \ wilder#check({-> getcmdtype() ==# ':'}),
+        \ {_, x -> wilder#cmdline#parse(x)},
+        \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
+        \ wilder#subpipeline({ctx, res -> [
+        \   {_, res -> len(res.substitute_args) == 2 ?
+        \     res.substitute_args[1] :
+        \     l:hide_in_replace ? v:true : v:false},
+        \ ] + l:search_pipeline + [
+        \   wilder#result({
+        \     'data': {
+        \       'cmdline.command': res.cmd,
+        \     },
+        \     'pos': res.pos + 1,
+        \     'replace': ['wilder#cmdline#replace'],
+        \   }),
+        \ ]}),
+        \ ]
+endfunction
+
 function! wilder#cmdline#python_file_finder_pipeline(opts) abort
   let l:opts = copy(a:opts)
 
@@ -805,6 +866,8 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
   if l:should_debounce
     let l:debounce_interval = l:opts['debounce']
     let l:Debounce = wilder#debounce(l:debounce_interval)
+  else
+    let l:Debounce = 0
   endif
 
   if has_key(l:opts, 'filters')
@@ -846,7 +909,21 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
     let l:Path_func = wilder#project_root()
   endif
 
-  let l:pipeline = [
+  " cmdline
+  " : check getcmdtype()?
+  " |--> return v:false
+  " : parse_cmdline
+  " : check is file or dir
+  " |--> return v:false
+  " : prepare_file_completion
+  " | reset parsed.pos to original
+  " : should use file finder?
+  " |--> return v:false
+  " : debounce if needed
+  " : _wilder_python_file_finder
+  " : add pos, replace and data
+  " └--> result
+  return [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#check({_, res -> res.expand ==# 'file' || res.expand ==# 'dir'}),
@@ -855,7 +932,7 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   {ctx, res2 -> extend(res2, {'pos': res1.pos})},
         \ ]}),
         \ wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
-        \ ] + (l:should_debounce ? [l:Debounce] : []) + [
+        \ wilder#if(l:should_debounce, l:Debounce),
         \ wilder#subpipeline({ctx, res -> [
         \   {-> {ctx -> _wilder_python_file_finder(
         \     ctx, l:opts, getcwd(), l:Path_func(ctx, res),
@@ -868,29 +945,8 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   }),
         \ ]}),
         \ ]
-
-  return l:pipeline
 endfunction
 
-" parsed ---------: is file expansion?
-"                 |--> file_completion_pipeline
-"                 └--> completion_pipeline
-"
-" file_completion_pipeline
-" parsed ---------: prepare_file_completion
-"                 └--> parsed
-" parsed ---------: s:getcompletion
-"                 └--> result
-" result ---------: file_fuzzy_filter if needed
-"                 └--> return result
-"
-" completion_pipeline
-" parsed ---------: prepare_completion
-"                 └--> parsed
-" parsed ---------: s:getcompletion
-"                 └--> result
-" result ---------: fuzzy_filter if needed
-"                 └--> return candidates
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
   let l:use_python = get(a:opts, 'use_python', has('nvim'))
 
@@ -905,44 +961,48 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     endif
   endif
 
+  " parsed cmdline
+  " : prepare_file_completion
+  " : s:getcompletion
+  " : map if relative_to_home_dir
+  " : file_fuzzy_filter if needed
+  " └--> result
   let l:file_completion_subpipeline = [
         \ wilder#check({_, res -> wilder#cmdline#is_file_expansion(res.expand)}),
         \ {ctx, res -> wilder#cmdline#prepare_file_completion(ctx, res, l:fuzzy)},
         \ wilder#subpipeline({ctx, res -> [
         \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python)},
-        \ ] + (get(res, 'relative_to_home_dir', 0) ?
-        \   [wilder#result({
-        \     'value': {ctx, xs -> map(xs, {i, x -> fnamemodify(x, ':~')})},
-        \   })] : [])
-        \ }),
+        \   wilder#result({
+        \     'value': {ctx, xs -> get(res, 'relative_to_home_dir', 0) ?
+        \       map(xs, {i, x -> fnamemodify(x, ':~')}) : xs},
+        \   }),
+        \ ]}),
+        \ wilder#if(l:fuzzy, wilder#result({
+        \   'value': {ctx, xs, data -> l:Filter(
+        \     ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', ''))},
+        \   'output': [{_, x -> escape(x, ' ')}],
+        \   'draw': ['wilder#cmdline#draw_path'],
+        \ })),
         \ ]
 
-  if l:fuzzy
-    let l:File_fuzzy_filter = wilder#result({
-          \ 'value': {ctx, xs, data -> l:Filter(
-          \   ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', '')
-          \ )}})
-    call add(l:file_completion_subpipeline, l:File_fuzzy_filter)
-  endif
-
-  call add(l:file_completion_subpipeline, wilder#result({
-        \ 'output': [{_, x -> escape(x, ' ')}],
-        \ 'draw': ['wilder#cmdline#draw_path'],
-        \ }))
-
+  " parsed cmdline
+  " : prepare_completion
+  " : s:getcompletion
+  " : fuzzy_filter if needed
+  " └--> result
   let l:completion_subpipeline = [
         \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy, l:use_python)},
         \ {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python)},
+        \ wilder#if(l:fuzzy, wilder#result({
+        \   'value': {ctx, xs, data -> l:Filter(
+        \     ctx, xs, get(data, 'cmdline.match_arg', ''))},
+        \ })),
         \ ]
 
-  if l:fuzzy
-    let l:Fuzzy_filter = wilder#result({
-          \ 'value': {ctx, xs, data -> l:Filter(
-          \   ctx, xs, get(data, 'cmdline.match_arg', '')
-          \ )}})
-    call add(l:completion_subpipeline, l:Fuzzy_filter)
-  endif
-
+  " parsed cmdline
+  " : is file expansion?
+  " |--> file_completion_pipeline
+  " └--> completion_pipeline
   return [
         \ wilder#branch(
         \   l:file_completion_subpipeline,
@@ -954,91 +1014,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ ]
 endfunction
 
-let s:substitute_commands = {
-      \ 'substitute': v:true,
-      \ 'smagic': v:true,
-      \ 'snomagic': v:true,
-      \ 'global': v:true,
-      \ 'vglobal': v:true,
-      \ }
-
-function! wilder#cmdline#is_substitute_command(cmd) abort
-  return has_key(s:substitute_commands, a:cmd)
-endfunction
-
-function! wilder#cmdline#substitute_pipeline(opts) abort
-  let l:pipeline = [
-      \ wilder#check({-> getcmdtype() ==# ':'}),
-      \ {_, x -> wilder#cmdline#parse(x)},
-      \ ]
-
-  let l:search_pipeline = [
-        \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-        \ ]
-
-  if has_key(a:opts, 'hide_in_replace')
-    let l:hide_in_replace = a:opts.hide_in_replace
-  elseif has_key(a:opts, 'hide')
-    " DEPRECATED: use hide_in_replace
-    let l:hide_in_replace = a:opts.hide
-  else
-    let l:hide_in_replace = has('nvim') && !has('nvim-0.3.7')
-  endif
-
-  if l:hide_in_replace
-    let l:search_pipeline += [{_, res -> len(res.substitute_args) == 2 ?
-          \ res.substitute_args[1] : v:true}]
-  else
-    let l:search_pipeline += [{_, res -> len(res.substitute_args) == 2 ?
-          \ res.substitute_args[1] : v:false}]
-  endif
-
-  if has_key(a:opts, 'pipeline')
-    let l:search_pipeline += a:opts['pipeline']
-  elseif has('nvim')
-    let l:search_pipeline += wilder#python_search_pipeline({'skip_cmdtype_check': 1})
-  else
-    let l:search_pipeline += wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
-  endif
-
-  call add(l:pipeline, wilder#subpipeline({ctx, res -> l:search_pipeline + [
-        \ wilder#result({
-        \   'data': {
-        \     'cmdline.command': res.cmd,
-        \   },
-        \   'pos': res.pos + 1,
-        \   'replace': ['wilder#cmdline#replace'],
-        \ })]}))
-
-  return l:pipeline
-endfunction
-
-" cmdline --------: check getcmdtype()?
-"                 |--> return v:false
-"                 └--> cmdline
-" cmdline --------: parse_cmdline
-"                 └--> parsed
-" parsed ---------: check is substitute command and should hide?
-"                 |--> return v:true
-"                 └--> parsed
-" parsed ---------: prepare_user_completion
-"                 └--> [handled, user_completions, parsed]
-" [h, u, p] ------: handled?
-"                 |--> return u
-"                 └--> [p]
-" parsed ---------: getcompletion_pipeline 
-"                 └--> candidates
-" result ---------: sort if needed
-"                 └--> result
-" result ---------: add pcre2 pattern if needed
-"                 └--> result
-" result ---------: add data.query
-"                 └--> return result
 function! wilder#cmdline#pipeline(opts) abort
-  let l:pipeline = [
-        \ wilder#check({-> getcmdtype() ==# ':'}),
-        \ ]
-
   if has_key(a:opts, 'hide_in_substitute')
     let l:hide_in_substitute = a:opts.hide_in_substitute
   elseif has_key(a:opts, 'hide')
@@ -1048,62 +1024,87 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:hide_in_substitute = has('nvim') && !has('nvim-0.3.7')
   endif
 
-  call add(l:pipeline, {_, x -> wilder#cmdline#parse(x)})
-
-  if l:hide_in_substitute
-    call add(l:pipeline, {ctx, res -> len(get(res, 'substitute_args', [])) >= 2 ? v:true : res})
-  endif
-
-  call add(l:pipeline, {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)})
-
-  let l:getcompletion_pipeline = [{ctx, res -> res[2]}] +
-        \ wilder#cmdline#getcompletion_pipeline(a:opts)
-
   let l:Sorter = get(a:opts, 'sorter', get(a:opts, 'sort', 0))
-  if l:Sorter isnot 0
-    call add(l:getcompletion_pipeline, wilder#result({
-          \ 'value': {ctx, xs, data ->
-          \   l:Sorter(ctx, xs, get(data, 'cmdline.match_arg', ''))}
-          \ }))
+
+  let l:fuzzy = get(a:opts, 'fuzzy', 0)
+
+  let l:set_pcre2_pattern = get(a:opts, 'set_pcre2_pattern', 1)
+
+  " [handled, user_completions, parsed]
+  " : handled?
+  " └--> user_completions
+  let l:user_completion_pipeline = [
+        \ {ctx, res -> res[0] ? res : v:false},
+        \ wilder#subpipeline({ctx, res -> [
+        \   {_, res -> res[1]},
+        \   wilder#result({
+        \     'pos': res[2].pos,
+        \     'replace': ['wilder#cmdline#replace'],
+        \     'data': s:convert_result_to_data(res[2]),
+        \   }),
+        \ ]}),
+        \ ]
+
+  " [handled, user_completions, parsed]
+  " : not handled, extract parsed
+  " : getcompletion_pipeline 
+  " : sort if needed
+  " : add pcre2 pattern if needed
+  " └--> result
+  let l:getcompletion_pipeline = [{ctx, res -> res[2]}] +
+        \ wilder#cmdline#getcompletion_pipeline(a:opts) + [
+        \ wilder#if(l:Sorter isnot 0, wilder#result({
+        \   'value': {ctx, xs, data ->
+        \     l:Sorter(ctx, xs, get(data, 'cmdline.match_arg', ''))}
+        \ })),
+        \ wilder#if(l:set_pcre2_pattern, wilder#result({
+        \   'data': {ctx, data -> s:set_pcre2_pattern(data, l:fuzzy)},
+        \ })),
+        \ ]
+
+  " cmdline
+  " : check getcmdtype()?
+  " |--> return v:false
+  " : parse_cmdline
+  " : check is substitute command and should hide?
+  " |--> return v:true
+  " : prepare_user_completion
+  " : is user completion?
+  " |--> user_completion_pipeline
+  " └--> getcompletion_pipeline
+  "    : add data.query
+  "    └--> result
+  return [
+        \ wilder#check({-> getcmdtype() ==# ':'}),
+        \ {_, x -> wilder#cmdline#parse(x)},
+        \ wilder#if(l:hide_in_substitute, {ctx, res -> len(get(res, 'substitute_args', [])) >= 2 ? v:true : res}),
+        \ {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)},
+        \ wilder#branch(
+        \   l:user_completion_pipeline,
+        \   l:getcompletion_pipeline,
+        \ ),
+        \ wilder#result({
+        \   'data': {ctx, data -> s:set_query(data)},
+        \ }),
+        \ ]
+endfunction
+
+function! s:set_pcre2_pattern(data, fuzzy) abort
+  let l:data = a:data is v:null ? {} : a:data
+  let l:match_arg = get(l:data, 'cmdline.match_arg', '')
+
+  if l:fuzzy
+    let l:pcre2_pattern = s:make_python_fuzzy_regex(l:match_arg)
+  else
+    let l:pcre2_pattern = '('. escape(l:match_arg), '\.^$*+?|(){}[]') . ')'
   endif
 
-  if get(a:opts, 'set_pcre2_pattern', 1)
-    if get(a:opts, 'fuzzy', 0)
-      call add(l:getcompletion_pipeline, wilder#result({
-            \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
-            \     'pcre2.pattern': s:make_python_fuzzy_regex(get(data is v:null ? {} : data, 'cmdline.match_arg', ''))
-            \   })},
-            \ }))
-    else
-      call add(l:getcompletion_pipeline, wilder#result({
-            \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
-            \     'pcre2.pattern': '(' .
-            \         escape(get(data is v:null ? {} : data, 'cmdline.match_arg', ''), '\.^$*+?|(){}[]') . ')'
-            \   })},
-            \ }))
-    endif
-  endif
+  return extend(a:data, {'pcre2.pattern': l:pcre2_pattern})
+endfunction
 
-  call add(l:pipeline, wilder#branch(
-        \ [
-        \   {ctx, res -> res[0] ? res : v:false},
-        \   wilder#subpipeline({ctx, res -> [
-        \     {_, res -> res[1]},
-        \     wilder#result({
-        \       'pos': res[2].pos,
-        \       'replace': ['wilder#cmdline#replace'],
-        \       'data': s:convert_result_to_data(res[2]),
-        \     }),
-        \   ]}),
-        \ ],
-        \ l:getcompletion_pipeline,
-        \ ))
+function! s:set_query(data) abort
+  let l:data = a:data is v:null ? {} : a:data
+  let l:match_arg = get(l:data, 'cmdline.match_arg', '')
 
-  call add(l:pipeline, wilder#result({
-        \   'data': {ctx, data -> extend(data is v:null ? {} : data, {
-        \     'query': get(data is v:null ? {} : data, 'cmdline.match_arg', ''),
-        \   })},
-        \ }))
-
-  return l:pipeline
+  return extend(a:data, {'query': l:match_arg})
 endfunction
