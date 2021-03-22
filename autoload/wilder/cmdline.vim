@@ -836,6 +836,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
   " |--> return v:false
   " : check len(substitute_args) [s]/[pattern]/[replace]/[flags]
   " |--> return v:false or v:true
+  " : extract substitute [pattern]
   " : search_pipeline
   " : add command, pos and replace
   " └--> result
@@ -843,10 +844,9 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
+        \ {_, res -> len(res.substitute_args) == 2 ? res : l:hide_in_replace ? v:true : v:false},
         \ wilder#subpipeline({ctx, res -> [
-        \   {_, res -> len(res.substitute_args) == 2 ?
-        \     res.substitute_args[1] :
-        \     l:hide_in_replace ? v:true : v:false},
+        \   {_, res -> res.substitute_args[1]},
         \ ] + l:search_pipeline + [
         \   wilder#result({
         \     'data': {
@@ -1030,6 +1030,14 @@ function! wilder#cmdline#pipeline(opts) abort
 
   let l:set_pcre2_pattern = get(a:opts, 'set_pcre2_pattern', 1)
 
+  let l:should_debounce = get(a:opts, 'debounce', 0) > 0
+  if l:should_debounce
+    let l:debounce_interval = a:opts['debounce']
+    let l:Debounce = wilder#debounce(l:debounce_interval)
+  else
+    let l:Debounce = 0
+  endif
+
   " [handled, user_completions, parsed]
   " : handled?
   " └--> user_completions
@@ -1078,6 +1086,7 @@ function! wilder#cmdline#pipeline(opts) abort
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#if(l:hide_in_substitute, {ctx, res -> len(get(res, 'substitute_args', [])) >= 2 ? v:true : res}),
+        \ wilder#if(l:should_debounce, l:Debounce),
         \ {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)},
         \ wilder#branch(
         \   l:user_completion_pipeline,

@@ -513,9 +513,9 @@ function! wilder#python_search_pipeline(...) abort
   elseif l:Pattern ==# 'fuzzy'
     let l:Pattern = wilder#python_fuzzy_pattern()
   elseif l:Pattern ==# 'fuzzy_delimiter'
-    let l:Pattern ==# wilder#python_fuzzy_delimiter_pattern()
+    let l:Pattern = wilder#python_fuzzy_delimiter_pattern()
   else
-    let l:Pattern ==# wilder#python_substring_pattern()
+    let l:Pattern = wilder#python_substring_pattern()
   endif
 
   let l:Sorter = get(l:opts, 'sorter', get(l:opts, 'sort', 0))

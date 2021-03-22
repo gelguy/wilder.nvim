@@ -625,6 +625,13 @@ wilder#vim_search_pipeline([{options}])
 
             Default: 0
 
+            `debounce`
+            Optional~
+            An interval in milliseconds. If greater than 0, debounces the
+            pipeline using |wilder#debounce()|.
+
+            Default: 0
+
 wilder#python_search_pipeline([{options}])
                                     *wilder#python_search_pipeline()*
                                     Neovim only~
@@ -780,6 +787,13 @@ wilder#cmdline_pipeline([{options}])
             PCRE2.
 
             Default: 1
+
+            `debounce`
+            Optional~
+            An interval in milliseconds. If greater than 0, debounces the
+            pipeline using |wilder#debounce()|.
+
+            Default: 0
 
             `sort`
             Deprecated: Use `sorter`.
