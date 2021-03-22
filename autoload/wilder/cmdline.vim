@@ -1093,10 +1093,10 @@ function! s:set_pcre2_pattern(data, fuzzy) abort
   let l:data = a:data is v:null ? {} : a:data
   let l:match_arg = get(l:data, 'cmdline.match_arg', '')
 
-  if l:fuzzy
+  if a:fuzzy
     let l:pcre2_pattern = s:make_python_fuzzy_regex(l:match_arg)
   else
-    let l:pcre2_pattern = '('. escape(l:match_arg), '\.^$*+?|(){}[]') . ')'
+    let l:pcre2_pattern = '('. escape(l:match_arg, '\.^$*+?|(){}[]') . ')'
   endif
 
   return extend(a:data, {'pcre2.pattern': l:pcre2_pattern})
