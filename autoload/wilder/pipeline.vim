@@ -163,15 +163,11 @@ function! s:run(pipeline, on_finish, on_error, ctx, x, i) abort
   call a:on_finish(a:ctx, l:x)
 endfunction
 
-function! wilder#pipeline#wait(f, on_finish, ...) abort
+function! wilder#pipeline#wait(f, on_finish) abort
   let l:state = {
         \ 'f': a:f,
         \ 'on_finish': a:on_finish,
         \ }
-
-  if a:0
-    let l:state.on_error = a:1
-  endif
 
   return {ctx -> s:wait_start(l:state, ctx)}
 endfunction
@@ -220,11 +216,7 @@ function! s:wait_on_finish(state, ctx, x)
   try
     call a:state.on_finish(l:ctx, a:x)
   catch
-    if has_key(a:state, 'on_error')
-      call a:state.on_error(l:ctx, v:exception)
-    else
-      call wilder#reject(l:ctx, v:exception)
-    endif
+    call wilder#reject(l:ctx, v:exception)
   endtry
 endfunction
 
@@ -232,11 +224,7 @@ function! s:wait_on_error(state, ctx, x)
   let l:ctx = copy(a:ctx)
   let l:ctx.handler_id = a:state.wait_handler_id
 
-  if has_key(a:state, 'on_error')
-    call a:state.on_error(l:ctx, a:x)
-  else
-    call wilder#reject(l:ctx, a:x)
-  endif
+  call wilder#reject(l:ctx, a:x)
 endfunction
 
 function! s:echoerr(message)

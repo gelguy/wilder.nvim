@@ -46,18 +46,18 @@ function! s:buffer_status(state, ctx, result) abort
   let l:hl = get(a:state, 'hl', a:ctx.highlights['default'])
   let l:selected_hl = get(a:state, 'selected_hl', a:ctx.highlights['selected'])
 
-  let l:empty_chunks = [[repeat(' ', l:width), l:hl, l:selected_hl]]
-
   if stridx(l:flags, '1') != -1
     let l:bufnr_width = strdisplaywidth(bufnr('$'))
     let l:width += l:bufnr_width - 1
   endif
 
+  let l:empty_chunks = [[repeat(' ', l:width), l:hl, l:selected_hl]]
+
   let l:i = l:start
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:x = fnamemodify(simplify(a:result.value[l:i]), ':~')
+    let l:x = fnamemodify(a:result.value[l:i], ':~')
 
     if a:state.cache.has_key(l:x)
       let l:buffer_status[l:index] = a:state.cache.get(l:x)

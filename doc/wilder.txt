@@ -454,6 +454,7 @@ wilder#vim_search([{options}])      *wilder#vim_search()*
 
             {options} is a dictionary with keys:
             `max_candidates`
+            Optional~
             Maximum number of candidates to return.
             0 or less sets no limit.
 
@@ -625,6 +626,13 @@ wilder#vim_search_pipeline([{options}])
 
             Default: 0
 
+            `debounce`
+            Optional~
+            An interval in milliseconds. If greater than 0, debounces the
+            pipeline using |wilder#debounce()|.
+
+            Default: 0
+
 wilder#python_search_pipeline([{options}])
                                     *wilder#python_search_pipeline()*
                                     Neovim only~
@@ -781,6 +789,13 @@ wilder#cmdline_pipeline([{options}])
 
             Default: 1
 
+            `debounce`
+            Optional~
+            An interval in milliseconds. If greater than 0, debounces the
+            pipeline using |wilder#debounce()|.
+
+            Default: 0
+
             `sort`
             Deprecated: Use `sorter`.
 
@@ -804,8 +819,10 @@ wilder#python_file_finder_pipeline([{options}])
             {options} is a dictionary with keys:
             `file_command`
             Optional~
-            A list of strings representing the command used to search for
-            files.
+            A function or a list of strings representing the command used to
+            search for files. The function should take a {ctx} and the file
+            completion argument {arg} and return the command as a list of
+            strings.
 
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
@@ -814,8 +831,10 @@ wilder#python_file_finder_pipeline([{options}])
 
             `dir_command`
             Optional~
-            A list of strings representing the command used to search for
-            directories.
+            A function or a list of strings representing the command used to
+            search for directories. The function should take a {ctx} and the
+            directory completion argument {arg} and return the command as a
+            list of strings.
 
             To use `fd`, set to this option to ['fd', '-td'].
 
@@ -1890,23 +1909,26 @@ wilder#reject({ctx}, {err})         *wilder#reject()*
             |wilder-pipeline|.
             See |wilder-pipeline-thunk|.
 
-wilder#wait({f}, [{on_finish}, [{on_error}]])
+wilder#wait({f}, {on_finish})
                                     *wilder#wait()*
                                     Experimental~
-            If {f} is not a function, calls {on_finish} with it if provided,
-            otherwise calls |wilder#resolve()|.
+            {on_finish} should be a function that takes a {ctx} and the result
+            of {f} and eventually calls |wilder#resolve()|.
+
+            If {f} is not a function, calls {on_finish} with {f}.
 
             If {f} is a function, calls it as a |wilder-pipeline-thunk|. When
-            the thunk resolves, it will call {on_finish} if provided,
-            otherwise it calls |wilder#resolve()|. If there is an error, calls
-            {on_error} if provided, otherwise it calls |wilder#reject()|.
+            the thunk resolves, it will call {on_finish} with the resolved
+            result.
+
+            If there is an error, calls |wilder#reject()| with the error.
 
             This can be used to wait for thunks within another thunk.
             Example:
 >
             function! Foo(ctx, x) abort
               return wilder#wait(Bar, {ctx, result_of_bar ->
-                    \  wilder#resolve(Baz(result_of_bar))})
+                    \  wilder#resolve(ctx, Baz(result_of_bar))})
             endfunction
 <
 

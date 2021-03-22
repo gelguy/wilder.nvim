@@ -299,6 +299,23 @@ code.
 
 If highlighting is important, use the Lua highlighters for best performance.
 
+### Faster Startup time
+
+Define the pipeline and renderer in an `autocmd` so the initialisation is deferred to the first `CmdlineEnter`.
+
+```vim
+" Other options should be set outside
+call wilder#set_option('modes', ...)
+
+" ++once supported in Nvim 0.4+ and Vim 8.1+
+autocmd CmdlineEnter * ++once s:wilder_init()
+
+function! s:wilder_init() abort
+  call wilder#set_option('pipeline', ...)
+  call wilder#set_option('renderer', ...)
+endfunction
+```
+
 ### Disabling in the case of errors
 
 Use `q:` to open the `cmdline-window` and enter the following command

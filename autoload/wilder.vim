@@ -189,6 +189,10 @@ function! wilder#check(...) abort
   return wilder#pipe#check#make(a:000)
 endfunction
 
+function! wilder#if(condition, p) abort
+  return {ctx, x -> a:condition ? a:p(ctx, x) : x}
+endfunction
+
 function! wilder#debounce(t) abort
   return wilder#pipe#debounce#make(a:t)
 endfunction
@@ -479,72 +483,52 @@ endfunction
 function! s:search_pipeline(...) abort
   let l:opts = a:0 > 0 ? a:1 : {}
 
-  let l:pipeline = []
-  if !get(l:opts, 'skip_cmdtype_check', 0)
-    call add(l:pipeline,
-          \ wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'}))
-  endif
-
-  if get(l:opts, 'debounce', 0) > 0
-    call add(l:pipeline, wilder#debounce(l:opts['debounce']))
-  endif
-
-  let l:pipeline += get(l:opts, 'pipeline', [
+  let l:search_pipeline = get(l:opts, 'pipeline', [
         \ wilder#vim_substring(),
         \ wilder#vim_search(),
         \ wilder#result_output_escape('^$*~[]/\'),
         \ ])
 
-  return l:pipeline
+  let l:skip_cmdtype_check = get(l:opts, 'skip_cmdtype_check', 0)
+
+  let l:should_debounce = get(l:opts, 'debounce', 0) > 0
+
+  return [
+        \ wilder#if(!l:skip_cmdtype_check,
+        \   wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'})),
+        \ wilder#if(l:should_debounce, wilder#debounce(l:opts['debounce'])),
+        \ ] + l:search_pipeline
 endfunction
 
 function! wilder#vim_search_pipeline(...) abort
   return s:search_pipeline(get(a:, 1, {}))
 endfunction
 
-function! s:extract_keys(obj, ...)
-  let l:res = {}
-
-  for l:key in a:000
-    if has_key(a:obj, l:key)
-      let l:res[l:key] = a:obj[l:key]
-    endif
-  endfor
-
-  return l:res
-endfunction
-
 function! wilder#python_search_pipeline(...) abort
   let l:opts = get(a:, 1, {})
 
-  let l:pipeline = []
-
   let l:Pattern = get(l:opts, 'pattern', get(l:opts, 'regex', 'substring'))
   if type(l:Pattern) is v:t_func
-    call add(l:pipeline, l:Pattern)
+    " pass
   elseif l:Pattern ==# 'fuzzy'
-    call add(l:pipeline, wilder#python_fuzzy_pattern())
+    let l:Pattern = wilder#python_fuzzy_pattern()
   elseif l:Pattern ==# 'fuzzy_delimiter'
-    call add(l:pipeline, wilder#python_fuzzy_delimiter_pattern())
+    let l:Pattern = wilder#python_fuzzy_delimiter_pattern()
   else
-    call add(l:pipeline, wilder#python_substring_pattern())
+    let l:Pattern = wilder#python_substring_pattern()
   endif
-
-  let l:subpipeline = []
-
-  call add(l:subpipeline, wilder#python_search(
-        \ s:extract_keys(l:opts, 'max_candidates', 'engine')))
 
   let l:Sorter = get(l:opts, 'sorter', get(l:opts, 'sort', 0))
-  if l:Sorter isnot 0
-    call add(l:subpipeline, {ctx, xs -> l:Sorter(ctx, xs, ctx.input)})
-  endif
 
-  call add(l:subpipeline, wilder#result_output_escape('^$*~[]/\'))
-
-  call add(l:pipeline, wilder#subpipeline({ctx, x -> l:subpipeline + [
-        \ wilder#result({'data': {'pcre2.pattern': x}}),
-        \ ]}))
+  let l:pipeline = [
+        \ l:Pattern,
+        \ wilder#subpipeline({ctx, x -> [
+        \   wilder#python_search(s:extract_keys(l:opts, 'max_candidates', 'engine')),
+        \   wilder#if(l:Sorter isnot 0, {ctx, xs -> l:Sorter(ctx, xs, ctx.input)}),
+        \   wilder#result_output_escape('^$*~[]/\'),
+        \   wilder#result({'data': {'pcre2.pattern': x}}),
+        \ ]}),
+        \ ]
 
   return s:search_pipeline({
         \ 'debounce': get(l:opts, 'debounce', 0),
@@ -846,4 +830,16 @@ function! wilder#draw_devicons(ctx, x, data) abort
   let l:is_dir = a:x[-1:] ==# l:slash
 
   return WebDevIconsGetFileTypeSymbol(a:x, l:is_dir) . ' ' . a:x
+endfunction
+
+function! s:extract_keys(obj, ...)
+  let l:res = {}
+
+  for l:key in a:000
+    if has_key(a:obj, l:key)
+      let l:res[l:key] = a:obj[l:key]
+    endif
+  endfor
+
+  return l:res
 endfunction
