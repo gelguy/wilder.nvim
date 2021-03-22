@@ -39,7 +39,7 @@ class Wilder(object):
         self.run_id = -1
         self.find_files_lock = threading.Lock()
         self.find_files_session_id = -1
-        self.path_files_dict = dict()
+        self.find_files_cache = dict()
         self.help_tags_lock = threading.Lock()
         self.help_tags_session_id = -1
         self.help_tags_result = None
@@ -130,18 +130,18 @@ class Wilder(object):
                 if ctx['session_id'] > self.find_files_session_id:
                     self.find_files_session_id = ctx['session_id']
 
-                    for result in self.path_files_dict.values():
+                    for result in self.find_files_cache.values():
                         result['kill'].set()
 
-                    self.path_files_dict = dict()
+                    self.find_files_cache = dict()
 
-                if key in self.path_files_dict:
-                    result = self.path_files_dict[key]
+                if key in self.find_files_cache:
+                    result = self.find_files_cache[key]
                 else:
                     kill_event = threading.Event()
                     done_event = threading.Event()
                     result = {'kill': kill_event, 'done': done_event}
-                    self.path_files_dict[key] = result
+                    self.find_files_cache[key] = result
                     self.executor.submit(functools.partial( self.find_files_subprocess, *([command, path, timeout_ms, result]), ))
 
             while True:

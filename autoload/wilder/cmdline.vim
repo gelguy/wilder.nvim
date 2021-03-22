@@ -356,10 +356,12 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mod
     return a:getcompletion(a:ctx, a:res)
   endif
 
-  if a:fuzzy_mode == 2
+  let l:fuzzy_char = get(a:res, 'fuzzy_char', '')
+
+  " Keep leading . in file expansion to search hidden directories
+  if a:fuzzy_mode == 2 &&
+        \ !(wilder#cmdline#is_file_expansion(a:res.expand) && l:fuzzy_char ==# '.')
     let l:fuzzy_char = ''
-  else
-    let l:fuzzy_char = get(a:res, 'fuzzy_char', '')
   endif
 
   if toupper(l:fuzzy_char) ==# l:fuzzy_char
