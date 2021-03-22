@@ -1909,23 +1909,26 @@ wilder#reject({ctx}, {err})         *wilder#reject()*
             |wilder-pipeline|.
             See |wilder-pipeline-thunk|.
 
-wilder#wait({f}, [{on_finish}, [{on_error}]])
+wilder#wait({f}, {on_finish})
                                     *wilder#wait()*
                                     Experimental~
-            If {f} is not a function, calls {on_finish} with it if provided,
-            otherwise calls |wilder#resolve()|.
+            {on_finish} should be a function that takes a {ctx} and the result
+            of {f} and eventually calls |wilder#resolve()|.
+
+            If {f} is not a function, calls {on_finish} with {f}.
 
             If {f} is a function, calls it as a |wilder-pipeline-thunk|. When
-            the thunk resolves, it will call {on_finish} if provided,
-            otherwise it calls |wilder#resolve()|. If there is an error, calls
-            {on_error} if provided, otherwise it calls |wilder#reject()|.
+            the thunk resolves, it will call {on_finish} with the resolved
+            result.
+
+            If there is an error, calls |wilder#reject()| with the error.
 
             This can be used to wait for thunks within another thunk.
             Example:
 >
             function! Foo(ctx, x) abort
               return wilder#wait(Bar, {ctx, result_of_bar ->
-                    \  wilder#resolve(Baz(result_of_bar))})
+                    \  wilder#resolve(ctx, Baz(result_of_bar))})
             endfunction
 <
 
