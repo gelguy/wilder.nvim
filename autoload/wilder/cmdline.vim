@@ -649,11 +649,21 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
   let l:user_commands = nvim_get_commands({})
 
-  if !has_key(l:user_commands, a:res.cmd)
-    return [1, v:false, a:res]
+  if has_key(l:user_commands, a:res.cmd)
+    let l:command = a:res.cmd
+  else
+    " Command might be a partial name
+    let l:matches = getcompletion(a:res.cmd, 'command')
+
+    " 2 or more matches indicates command is ambiguous
+    if len(l:matches) != 1
+      return [1, v:false, a:res]
+    endif
+
+    let l:command = l:matches[0]
   endif
 
-  let l:user_command = l:user_commands[a:res.cmd]
+  let l:user_command = l:user_commands[l:command]
 
   if has_key(l:user_command, 'complete_arg') &&
         \ l:user_command.complete_arg isnot v:null
