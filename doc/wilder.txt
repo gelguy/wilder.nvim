@@ -454,6 +454,7 @@ wilder#vim_search([{options}])      *wilder#vim_search()*
 
             {options} is a dictionary with keys:
             `max_candidates`
+            Optional~
             Maximum number of candidates to return.
             0 or less sets no limit.
 
@@ -818,8 +819,10 @@ wilder#python_file_finder_pipeline([{options}])
             {options} is a dictionary with keys:
             `file_command`
             Optional~
-            A list of strings representing the command used to search for
-            files.
+            A function or a list of strings representing the command used to
+            search for files. The function should take a {ctx} and the file
+            completion argument {arg} and return the command as a list of
+            strings.
 
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
@@ -828,8 +831,10 @@ wilder#python_file_finder_pipeline([{options}])
 
             `dir_command`
             Optional~
-            A list of strings representing the command used to search for
-            directories.
+            A function or a list of strings representing the command used to
+            search for directories. The function should take a {ctx} and the
+            directory completion argument {arg} and return the command as a
+            list of strings.
 
             To use `fd`, set to this option to ['fd', '-td'].
 

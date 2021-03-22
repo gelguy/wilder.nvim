@@ -897,16 +897,13 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
     let l:opts['filters'] = l:checked_filters
   endif
 
-  if has_key(l:opts, 'path')
-    let l:Path = l:opts['path']
+  if !has_key(l:opts, 'path')
+    let l:opts['path'] = wilder#project_root()
+  endif
 
-    if type(l:Path) isnot v:t_func
-      let l:Path_func = {-> l:Path}
-    else
-      let l:Path_func = l:Path
-    endif
-  else
-    let l:Path_func = wilder#project_root()
+  let l:Path = l:opts['path']
+  if type(l:Path) isnot v:t_func
+    let l:opts['path'] = {-> l:Path}
   endif
 
   " cmdline
@@ -934,10 +931,7 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \ wilder#check({ctx, res -> wilder#cmdline#should_use_file_finder(res)}),
         \ wilder#if(l:should_debounce, l:Debounce),
         \ wilder#subpipeline({ctx, res -> [
-        \   {-> {ctx -> _wilder_python_file_finder(
-        \     ctx, l:opts, getcwd(), l:Path_func(ctx, res),
-        \     expand(simplify(res.arg)), res.expand ==# 'dir')
-        \   }},
+        \   {-> s:file_finder(ctx, l:opts, res)},
         \   wilder#result({
         \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
@@ -945,6 +939,31 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   }),
         \ ]}),
         \ ]
+endfunction
+
+function! s:file_finder(ctx, opts, res) abort
+  let l:opts = copy(a:opts)
+
+  let l:cwd = getcwd()
+  let l:path = l:opts['path'](a:ctx, a:res)
+  let l:match_arg = expand(simplify(a:res.arg))
+  let l:is_dir = a:res.expand ==# 'dir'
+
+  if !l:is_dir && has_key(l:opts, 'file_command')
+    let l:File_command = l:opts['file_command']
+
+    if type(l:File_command) is v:t_func
+      let l:opts['file_command'] = l:File_command(a:ctx, a:res.arg)
+    endif
+  elseif l:is_dir && has_key(l:opts, 'dir_command')
+    let l:Dir_command = l:opts['dir_command']
+
+    if type(l:Dir_command) is v:t_func
+      let l:opts['dir_command'] = l:Dir_command(a:ctx, a:res.arg)
+    endif
+  endif
+
+  return {ctx -> _wilder_python_file_finder(ctx, l:opts, l:cwd, l:path, l:match_arg, l:is_dir)}
 endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
