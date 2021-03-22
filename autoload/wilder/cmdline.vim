@@ -922,6 +922,9 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
   " : check getcmdtype()?
   " |--> return v:false
   " : parse_cmdline
+  " : prepare user completion to update res.expand
+  " : if handled
+  " |--> return v:false
   " : check is file or dir
   " |--> return v:false
   " : prepare_file_completion
@@ -935,6 +938,8 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
   return [
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
+        \ {ctx, res -> wilder#cmdline#prepare_user_completion(ctx, res)},
+        \ {ctx, res -> res[0] ? v:false : res[2]},
         \ wilder#check({_, res -> res.expand ==# 'file' || res.expand ==# 'dir'}),
         \ wilder#subpipeline({ctx, res1 -> [
         \   {ctx, res1 -> wilder#cmdline#prepare_file_completion(ctx, copy(res1), 0)},
