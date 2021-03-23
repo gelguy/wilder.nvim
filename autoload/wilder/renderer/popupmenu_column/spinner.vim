@@ -12,7 +12,7 @@ function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
 
   let l:state = {
         \ 'frames': l:frames,
-        \ 'done': get(a:opts, 'done', ' '),
+        \ 'done': get(a:opts, 'done', ''),
         \ 'spinner': l:spinner,
         \ 'align': get(a:opts, 'align', 'bottom'),
         \ }
@@ -27,6 +27,7 @@ function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
 
   return {
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
+        \ 'dynamic': 1,
         \ }
 endfunction
 

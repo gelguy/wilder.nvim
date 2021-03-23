@@ -9,6 +9,10 @@ function! wilder#renderer#wildmenu_statusline#make(args) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
+  if !a:ctx.done && !a:state.dynamic
+    return
+  endif
+
   let l:chunks = wilder#renderer#wildmenu#make_hl_chunks(
         \ a:state, winwidth(0), a:ctx, a:result)
 

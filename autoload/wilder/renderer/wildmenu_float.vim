@@ -18,6 +18,10 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
+  if !a:ctx.done && !a:state.dynamic
+    return
+  endif
+
   let l:chunks = wilder#renderer#wildmenu#make_hl_chunks(
         \ a:state, &columns, a:ctx, a:result)
 

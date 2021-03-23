@@ -26,6 +26,7 @@ function! wilder#renderer#wildmenu_item#spinner#make(args) abort
         \ 'hl': get(a:args, 'hl', ''),
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
+        \ 'dynamic': 1,
         \ }
 endfunction
 
