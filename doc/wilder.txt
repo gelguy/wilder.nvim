@@ -1643,7 +1643,7 @@ wilder#popupmenu_renderer([{options}])
 
             Setting to 0 indicates no minimum width.
 
-            Default: 0
+            Default: 16
 
 
                                     *wilder#wildmenu_renderer()-column*
