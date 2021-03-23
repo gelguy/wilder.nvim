@@ -194,7 +194,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
 
   " Check if tail is trying to complete an env var.
   let l:matches = matchlist(l:tail, '\$\(\f*\)$')
-  if len(l:matches) >= 2
+  if len(l:matches)
     let l:env_var = l:matches[1]
     let l:path_prefix = l:arg[:-len(l:env_var)-1]
 
@@ -408,6 +408,10 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
 endfunction
 
 function! wilder#cmdline#getcompletion(ctx, res) abort
+  if has_key(a:res, 'completions')
+    return a:res['completions']
+  endif
+
   let l:expand_arg = a:res.expand_arg
 
   " getting all shellcmds takes a significant amount of time
@@ -607,7 +611,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
 
     return []
   elseif a:res.expand ==# 'user_commands'
-    return filter(getcompletion(l:expand_arg, 'command'), {_, x -> !(x[0] >= 'a' && x[0] <= 'z')})
+    return filter(getcompletion(l:expand_arg, 'command'), {_, x -> x[0] >=# 'A' && x[0] <=# 'Z'})
   elseif a:res.expand ==# 'tags' ||
         \ a:res.expand ==# 'tags_listfiles'
     " tags_listfiles is only used for c_CTRL-D
@@ -637,6 +641,8 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
+let s:has_script_local_completion = {}
+
 " returns [{handled}, {result}, [{res}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
@@ -645,6 +651,14 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
   if !has('nvim')
     return [1, v:true, a:res]
+  endif
+
+  " Calling getcompletion() interferes with wildmenu command completion so
+  " we return v:true early
+  if has_key(s:has_script_local_completion, a:res.cmd)
+    let l:res = copy(a:res)
+    let l:res.pos = 0
+    return [1, v:true, l:res]
   endif
 
   let l:user_commands = nvim_get_commands({})
@@ -672,6 +686,10 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:Completion_func = function(l:user_command.complete_arg)
       let l:result = l:Completion_func(a:res.arg, a:res.cmdline, len(a:res.cmdline))
     catch
+      " Add both the full command and partial command
+      let s:has_script_local_completion[l:command] = 1
+      let s:has_script_local_completion[a:res.cmd] = 1
+
       let l:res = copy(a:res)
       let l:res.pos = 0
       return [1, v:true, l:res]
@@ -679,7 +697,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
     if get(l:user_command, 'complete', '') ==# 'custom'
       let l:result = split(l:result, '\n')
-      let l:result = filter(l:result, {i, x -> match(x, l:res.arg) != -1})
+      let l:result = filter(l:result, {i, x -> match(x, a:res.arg) != -1})
     endif
 
     let l:res = copy(a:res)
@@ -1016,9 +1034,11 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ wilder#if(l:fuzzy, wilder#result({
         \   'value': {ctx, xs, data -> l:Filter(
         \     ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', ''))},
+        \ })),
+        \ wilder#result({
         \   'output': [{_, x -> escape(x, ' ')}],
         \   'draw': ['wilder#cmdline#draw_path'],
-        \ })),
+        \ }),
         \ ]
 
   " parsed cmdline

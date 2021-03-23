@@ -6,10 +6,14 @@ function! wilder#renderer#wildmenu_item#condition#make(predicate, if_true, if_fa
         \ 'chosen': [],
         \ }
 
+  let l:dynamic = wilder#renderer#wildmenu#item_is_dynamic(a:if_true) ||
+        \ wilder#renderer#wildmenu#item_is_dynamic(a:if_false)
+
   return {
         \ 'value': {ctx, result -> s:value(l:state, ctx, result)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
+        \ 'dynamic': l:dynamic,
         \ }
 endfunction
 

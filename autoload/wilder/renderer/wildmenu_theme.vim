@@ -122,24 +122,30 @@ function! s:theme(opts, namespace, hls) abort
 
   let l:theme = {
         \ 'left': [
-        \   {'value': [
-        \     wilder#condition(
-        \       {-> getcmdtype() ==# ':'},
-        \       ' COMMAND ',
-        \       ' SEARCH ',
-        \     ),
-        \     wilder#condition(
-        \       {ctx, x -> has_key(ctx, 'error')},
-        \       '!',
-        \       wilder#wildmenu_spinner()
-        \     ), ' '],
-        \   'hl': l:highlights['mode']
+        \   {
+        \     'value': [
+        \       wilder#condition(
+        \         {-> getcmdtype() ==# ':'},
+        \         ' COMMAND ',
+        \         ' SEARCH ',
+        \       ),
+        \       wilder#condition(
+        \         {ctx, x -> has_key(ctx, 'error')},
+        \         '!',
+        \         wilder#wildmenu_spinner()
+        \       ), ' '],
+        \     'hl': l:highlights['mode'],
+        \     'dynamic': 1,
         \   },
-        \   l:separators[0], l:separators[1], ' ', 
+        \   l:separators[0],
+        \   l:separators[1],
+        \   ' ', 
         \ ],
         \ 'right': [
-        \   ' ',  l:separators[2], l:separators[3],
-        \    wilder#index({'hl': l:highlights['index']}),
+        \   ' ',
+        \   l:separators[2],
+        \   l:separators[3],
+        \   wilder#index({'hl': l:highlights['index']}),
         \ ],
         \ }
 

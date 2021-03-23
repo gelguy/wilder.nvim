@@ -241,43 +241,58 @@ function! wilder#cmdline#main#do(ctx) abort
     call wilder#cmdline#main#skip_whitespace(a:ctx)
   endif
 
-  " +cmd or ++opt
+  " Handle +cmd or ++opt
   if a:ctx.cmdline[a:ctx.pos] ==# '+' &&
         \ ((and(l:flags, s:EDITCMD) && !l:use_filter) ||
         \ and(l:flags, s:ARGOPT))
+    let l:allow_opt = 1
     let l:allow_cmd = and(l:flags, s:EDITCMD) && !l:use_filter
-    let a:ctx.pos += 1
 
-    if a:ctx.cmdline[a:ctx.pos] ==# '+'
+    while a:ctx.cmdline[a:ctx.pos] ==# '+' &&
+          \ a:ctx.pos < len(a:ctx.cmdline)
       let a:ctx.pos += 1
-      let l:expand = 'option'
-    elseif l:allow_cmd
-      let l:expand = 'command'
-    else
-      let l:expand = 'nothing'
-    endif
 
-    let l:arg_start = a:ctx.pos
-
-    while a:ctx.pos < len(a:ctx.cmdline)
-          \ && !wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
-      if a:ctx.cmdline[a:ctx.pos] ==# '\\' &&
-            \ a:ctx.pos + 1 < len(a:ctx.cmdline)
-        let a:ctx.pos += 1
+      if a:ctx.cmdline[a:ctx.pos] ==# '+'
+        if l:allow_opt
+          let a:ctx.pos += 1
+          let l:expand = 'option'
+        else
+          let l:expand = 'nothing'
+        endif
+      elseif l:allow_cmd
+        let l:expand = 'command'
+        " ++opt must be before +cmd
+        let l:allow_opt = 0
+        " only 1 +cmd allowed
+        let l:allow_cmd = 0
+      else
+        let l:expand = 'nothing'
       endif
 
-      " TODO: multibyte
-      let a:ctx.pos += 1
+      let l:arg_start = a:ctx.pos
+
+      " skip to next arg
+      while a:ctx.pos < len(a:ctx.cmdline)
+            \ && !wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos])
+        if a:ctx.cmdline[a:ctx.pos] ==# '\' &&
+              \ a:ctx.pos + 1 < len(a:ctx.cmdline)
+          let a:ctx.pos += 1
+        endif
+
+        " TODO: multibyte
+        let a:ctx.pos += 1
+      endwhile
+
+      " still in command or option
+      if empty(a:ctx.cmdline[a:ctx.pos])
+        let a:ctx.pos = l:arg_start
+        let a:ctx.expand = l:expand
+        return
+      endif
+
+      call wilder#cmdline#main#skip_whitespace(a:ctx)
     endwhile
 
-    " still in command or option
-    if empty(a:ctx.cmdline[a:ctx.pos])
-      let a:ctx.pos = l:arg_start
-      let a:ctx.expand = l:expand
-      return
-    endif
-
-    call wilder#cmdline#main#skip_whitespace(a:ctx)
     if a:ctx.cmd ==# 'write' && a:ctx.cmdline[a:ctx.pos] ==# '!'
       let a:ctx.pos += 1
       let l:use_filter = 1
@@ -354,87 +369,26 @@ function! wilder#cmdline#main#do(ctx) abort
     endif
   endif
 
-  let l:arg_start = a:ctx.pos
 
   if l:use_filter || a:ctx.cmd ==# '!' || a:ctx.cmd ==# 'terminal'
+    let l:before_args = a:ctx.pos
+
     if !wilder#cmdline#main#skip_nonwhitespace(a:ctx)
-      let a:ctx.pos = l:arg_start
+      let a:ctx.pos = l:before_args
       let a:ctx.expand = 'shellcmd'
       return
     endif
 
-    let a:ctx.pos = l:arg_start
+    " Reset pos back to before_args
+    let a:ctx.pos = l:before_args
   endif
 
-  " find start of last argument
-  let l:before_args = a:ctx.pos
-  while a:ctx.pos < len(a:ctx.cmdline)
-    let l:char = a:ctx.cmdline[a:ctx.pos]
-
-    if l:char ==# ' ' || l:char ==# "\t"
-      let a:ctx.pos += 1
-      let l:arg_start = a:ctx.pos
-    else
-      if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
-        let a:ctx.pos += 1
-      endif
-      let a:ctx.pos += 1
-    endif
-  endwhile
-
-  let a:ctx.pos = l:arg_start
-
   if and(l:flags, s:XFILE)
-    let l:in_quote = 0
-    let l:beginning_of_word = -1
-
-    call wilder#cmdline#main#skip_whitespace(a:ctx)
+    " TODO: handle backticks :h backtick-expansion
 
     let l:arg_start = a:ctx.pos
 
-    while a:ctx.pos < len(a:ctx.cmdline)
-      let l:char = a:ctx.cmdline[a:ctx.pos]
-      if l:char ==# '\\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
-        let a:ctx.pos += 1
-      elseif l:char ==# '`'
-        if !l:in_quote
-          let l:arg_start = a:ctx.pos
-          let l:beginning_of_word = a:ctx.pos + 1
-        endif
-
-        let l:in_quote = !l:in_quote
-      elseif l:char ==# '|' ||
-            \ l:char ==# "\n" ||
-            \ l:char ==# '"' ||
-            \ wilder#cmdline#main#is_whitespace(l:char)
-        let l:len = 0
-
-        while a:ctx.pos < len(a:ctx.cmdline)
-          if l:char ==# '`' || s:isfilec_or_wc(l:char)
-            break
-          endif
-
-          let l:len = len(l:char)
-          let a:ctx.pos += 1
-        endwhile
-
-        if l:in_quote
-          let l:beginning_of_word = a:ctx.pos
-        endif
-
-        let a:ctx.pos -= l:len
-      endif
-
-      let a:ctx.pos += 1
-    endwhile
-
-    if l:beginning_of_word != -1 && l:in_quote
-      let a:ctx.pos = l:beginning_of_word
-    else
-      let a:ctx.pos = l:arg_start
-    endif
-    let a:ctx.expand = 'file'
-
+    " Check if completing $ENV
     if a:ctx.cmdline[a:ctx.pos] ==# '$'
       let l:arg_start = a:ctx.pos
       let a:ctx.pos += 1
@@ -453,19 +407,24 @@ function! wilder#cmdline#main#do(ctx) abort
         let a:ctx.pos = l:arg_start + 1
         return
       endif
-    elseif a:ctx.cmdline[a:ctx.pos] ==# '~'
+    endif
+
+    " Check if completing ~user
+    if a:ctx.cmdline[a:ctx.pos] ==# '~'
       let l:allow_backslash = has('win32') || has('win64')
 
       while a:ctx.pos < len(a:ctx.cmdline)
         let l:char = a:ctx.cmdline[a:ctx.pos]
         if l:char ==# '/' ||
-              \ l:allow_backslash && l:char ==# '\'
+              \ l:allow_backslash && l:char ==# '\' ||
+              \ !s:is_filec(l:char)
           break
         endif
 
         let a:ctx.pos += 1
       endwhile
 
+      " + 1 since we want to expand ~ to $HOME
       if a:ctx.pos == len(a:ctx.cmdline) &&
             \ a:ctx.pos > l:arg_start + 1
         let a:ctx.expand = 'user'
@@ -473,12 +432,37 @@ function! wilder#cmdline#main#do(ctx) abort
         return
       endif
     endif
+
+    let a:ctx.pos = l:arg_start
+    let a:ctx.expand = 'file'
+
+    " vim assumes for XFILE, we can ignore arguments other than the last one but
+    " this is not necessarily true, we should not do this for NOSPC
+    if !and(l:flags, s:NOSPC)
+      let l:last_arg = a:ctx.pos
+
+      " find start of last argument
+      while a:ctx.pos < len(a:ctx.cmdline)
+        let l:char = a:ctx.cmdline[a:ctx.pos]
+
+        if l:char ==# ' ' || l:char ==# "\t"
+          let a:ctx.pos += 1
+          let l:last_arg = a:ctx.pos
+        else
+          if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
+            let a:ctx.pos += 1
+          endif
+          let a:ctx.pos += 1
+        endif
+      endwhile
+
+      let a:ctx.pos = l:last_arg
+    endif
   endif
 
   if a:ctx.cmd ==# 'find' ||
         \ a:ctx.cmd ==# 'sfind' ||
         \ a:ctx.cmd ==# 'tabfind'
-    let a:ctx.pos = l:before_args
     if a:ctx.expand ==# 'file'
       let a:ctx.expand = 'file_in_path'
     endif
@@ -494,12 +478,10 @@ function! wilder#cmdline#main#do(ctx) abort
     endif
     return
   elseif a:ctx.cmd ==# 'help'
-    let a:ctx.pos = l:before_args
     let a:ctx.expand = 'help'
     return
   " command modifiers
   elseif has_key(s:command_modifiers, a:ctx.cmd)
-    let a:ctx.pos = l:before_args
     let a:ctx.cmd = ''
     let a:ctx.expand = ''
 
@@ -507,7 +489,6 @@ function! wilder#cmdline#main#do(ctx) abort
 
     return
   elseif a:ctx.cmd ==# 'filter'
-    let a:ctx.pos = l:before_args
     call wilder#cmdline#filter#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'match'
@@ -585,7 +566,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lexpr' ||
         \ a:ctx.cmd ==# 'laddexpr' ||
         \ a:ctx.cmd ==# 'lgetexpr'
-    let a:ctx.pos = l:before_args
+    "TODO call has extra arugments
     call wilder#cmdline#let#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'unlet'
@@ -615,8 +596,6 @@ function! wilder#cmdline#main#do(ctx) abort
   elseif a:ctx.cmd ==# 'bdelete' ||
         \ a:ctx.cmd ==# 'bwipeout' ||
         \ a:ctx.cmd ==# 'bunload'
-    call wilder#cmdline#main#find_last_whitespace(a:ctx)
-
     let a:ctx.expand = 'buffer'
     return
   elseif a:ctx.cmd ==# 'buffer' ||
@@ -628,7 +607,6 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'unabbreviate' ||
         \ a:ctx.cmd[-3 :] ==# 'map' ||
         \ a:ctx.cmd[-6 :] ==# 'abbrev'
-    let a:ctx.pos = l:before_args
     call wilder#cmdline#map#do(a:ctx)
     return
   elseif a:ctx.cmd[-8 :] ==# 'mapclear'
@@ -650,6 +628,7 @@ function! wilder#cmdline#main#do(ctx) abort
     let a:ctx.expand = 'packadd'
     return
   elseif a:ctx.cmd ==# 'language'
+    let l:arg_start = a:ctx.pos
     call wilder#cmdline#main#skip_nonwhitespace(a:ctx)
 
     if a:ctx.pos == len(a:ctx.cmdline)
@@ -661,7 +640,7 @@ function! wilder#cmdline#main#do(ctx) abort
             \ l:subcommand ==# 'ctype' ||
             \ l:subcommand ==# 'time'
         let a:ctx.expand = 'locales'
-        call wilder#cmdline#skip_whitespace(a:ctx)
+        call wilder#cmdline#main#skip_whitespace(a:ctx)
       endif
     endif
   elseif a:ctx.cmd ==# 'profile'
@@ -683,12 +662,9 @@ function! wilder#cmdline#main#do(ctx) abort
     let a:ctx.expand = 'syntime'
     return
   elseif a:ctx.cmd ==# 'argdelete'
-    call wilder#cmdline#main#find_last_whitespace(a:ctx)
     let a:ctx.expand = 'arglist'
     return
   endif
-
-  let a:ctx.pos = l:arg_start
 endfunction
 
 function! wilder#cmdline#main#has_file_args(cmd) abort
@@ -780,6 +756,7 @@ endfunc
 
 let s:EXTRA      =    0x004
 let s:XFILE      =    0x008
+let s:NOSPC      =    0x010
 let s:TRLBAR     =    0x100
 let s:EDITCMD    =   0x8000
 let s:ARGOPT     =  0x40000

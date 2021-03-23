@@ -1362,6 +1362,14 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
 
                 Default: None
 
+                `dynamic`
+                Optional~
+                Whether the item needs to update even when pipeline is not
+                done. For example, |wilder#wildmenu_spinner()| needs to set
+                this to 1 since the spinner frames need to be updated.
+
+                Default: 0
+
             Function:
             A function which takes a {ctx} and the pipeline result {result}
             and returns a item.
@@ -1635,7 +1643,7 @@ wilder#popupmenu_renderer([{options}])
 
             Setting to 0 indicates no minimum width.
 
-            Default: 0
+            Default: 16
 
 
                                     *wilder#wildmenu_renderer()-column*
@@ -1694,6 +1702,14 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
                 {ctx} contains no keys.
 
                 Default: None
+
+                `dynamic`
+                Optional~
+                Whether the item needs to update even when pipeline is not
+                done. For example, |wilder#popupmenu_spinner()| needs to set
+                this to 1 since the spinner frames need to be updated.
+
+                Default: 0
 
                                     *wilder#popupmenu_scrollbar()*
 wilder#popupmenu_scrollbar([{options}]

@@ -56,7 +56,7 @@ function! s:prepare_state(opts) abort
     endif
   endif
 
-  let l:min_width = get(a:opts, 'min_width', 0)
+  let l:min_width = get(a:opts, 'min_width', 16)
   if type(l:min_width) is v:t_number
     let l:state.get_min_width = {-> l:min_width}
   else
@@ -76,6 +76,8 @@ function! s:prepare_state(opts) abort
     let l:state.left = get(a:opts, 'left', [])
     let l:state.right = get(a:opts, 'right', [])
   endif
+
+  let l:state.dynamic = s:has_dynamic_column(l:state)
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
@@ -168,6 +170,10 @@ function! s:render(state, ctx, result) abort
 
   if l:page == [-1, -1]
     call s:close_win(a:state)
+    return
+  endif
+
+  if !a:ctx.done && !a:state.dynamic
     return
   endif
 
@@ -641,4 +647,16 @@ function! s:get_cmdheight() abort
   endif
 
   return l:cmdheight
+endfunction
+
+function! s:has_dynamic_column(state) abort
+  for l:Column in a:state.left + a:state.right
+    if type(l:Column) is v:t_dict &&
+          \ has_key(l:Column, 'dynamic') &&
+          \ l:Column['dynamic']
+      return 1
+    endif
+  endfor
+
+  return 0
 endfunction

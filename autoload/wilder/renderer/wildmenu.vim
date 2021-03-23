@@ -24,6 +24,9 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
     let l:state.right = get(a:args, 'right', [])
   endif
 
+  let l:state.dynamic = wilder#renderer#wildmenu#item_is_dynamic(l:state.left) ||
+        \ wilder#renderer#wildmenu#item_is_dynamic(l:state.right)
+
   if !has_key(l:state.highlights, 'separator')
     let l:state.highlights.separator =
           \ get(a:args, 'separator_hl', l:state.highlights['default'])
@@ -143,6 +146,24 @@ function! wilder#renderer#wildmenu#item_len(item, ctx, result) abort
   endfor
 
   return l:len
+endfunction
+
+function! wilder#renderer#wildmenu#item_is_dynamic(item) abort
+  if type(a:item) is v:t_dict
+    return has_key(a:item, 'dynamic') && a:item['dynamic']
+  endif
+
+  if type(a:item) is v:t_list
+    for l:Elem in a:item
+      if wilder#renderer#wildmenu#item_is_dynamic(l:Elem)
+        return 1
+      endif
+    endfor
+
+    return 0
+  endif
+
+  return 0
 endfunction
 
 function! wilder#renderer#wildmenu#item_pre_hook(item, ctx) abort
