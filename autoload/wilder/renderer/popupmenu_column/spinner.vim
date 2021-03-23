@@ -12,7 +12,7 @@ function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
 
   let l:state = {
         \ 'frames': l:frames,
-        \ 'done': get(a:opts, 'done', ''),
+        \ 'done': get(a:opts, 'done', ' '),
         \ 'spinner': l:spinner,
         \ 'align': get(a:opts, 'align', 'bottom'),
         \ }
@@ -43,7 +43,11 @@ function! s:spinner(state, ctx, result) abort
     let l:frame = a:state.frames[l:frame_number]
   endif
 
-  let l:column_chunks = repeat([[['']]], l:height)
+  let l:width = strdisplaywidth(l:frame)
+
+  let l:spaces = repeat(' ', l:width)
+
+  let l:column_chunks = repeat([[[l:spaces]]], l:height)
 
   if a:state.align ==# 'bottom'
     let l:column_chunks[-1] = [[l:frame]]
