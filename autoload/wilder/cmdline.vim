@@ -194,7 +194,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
 
   " Check if tail is trying to complete an env var.
   let l:matches = matchlist(l:tail, '\$\(\f*\)$')
-  if len(l:matches) >= 2
+  if len(l:matches)
     let l:env_var = l:matches[1]
     let l:path_prefix = l:arg[:-len(l:env_var)-1]
 
@@ -408,6 +408,10 @@ function! wilder#cmdline#python_get_file_completion(ctx, res) abort
 endfunction
 
 function! wilder#cmdline#getcompletion(ctx, res) abort
+  if has_key(a:res, 'completions')
+    return a:res['completions']
+  endif
+
   let l:expand_arg = a:res.expand_arg
 
   " getting all shellcmds takes a significant amount of time
@@ -607,7 +611,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
 
     return []
   elseif a:res.expand ==# 'user_commands'
-    return filter(getcompletion(l:expand_arg, 'command'), {_, x -> !(x[0] >= 'a' && x[0] <= 'z')})
+    return filter(getcompletion(l:expand_arg, 'command'), {_, x -> x[0] >=# 'A' && x[0] <=# 'Z'})
   elseif a:res.expand ==# 'tags' ||
         \ a:res.expand ==# 'tags_listfiles'
     " tags_listfiles is only used for c_CTRL-D
@@ -1016,9 +1020,11 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ wilder#if(l:fuzzy, wilder#result({
         \   'value': {ctx, xs, data -> l:Filter(
         \     ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', ''))},
+        \ })),
+        \ wilder#result({
         \   'output': [{_, x -> escape(x, ' ')}],
         \   'draw': ['wilder#cmdline#draw_path'],
-        \ })),
+        \ }),
         \ ]
 
   " parsed cmdline
