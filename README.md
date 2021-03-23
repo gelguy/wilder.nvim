@@ -268,11 +268,13 @@ Other available highlighters are `wilder#python_pcre2_highlighter()` and
 
 # Tips
 
-### Input latency
+### Reducing input latency
 
 Input latency when typing in the cmdline is due to `wilder` rendering synchronously.
 Rendering time increases for each `wilder#wildmenu_renderer()` item, `wilder#popupmenu_renderer()` column,
 or by having a slow `highlighter`.
+
+#### Use minimal configuration
 
 The fastest configuration for `wilder` is to use the non-fuzzy Python pipelines
 and the default renderers.
@@ -298,6 +300,40 @@ implement a faster renderer e.g. using Lua or to improve the current rendering
 code.
 
 If highlighting is important, use the Lua highlighters for best performance.
+
+Avoid `wilder#wildmenu_spinner()` and `wilder#popupmenu_spinner()` as they cause frequent re-renders.
+
+#### Use debounce
+
+Use `wilder#debounce()` or the `debounce` option in pipelines to avoid rendering too often.
+The `debounce` option is currently supported by `wilder#search_pipeline()` (both `vim` and `python`),
+`wilder#cmdline_pipeline()` and `wilder#python_file_finder_pipeline()`.
+The debounce interval is in milliseconds.
+
+There is a tradeoff in increased latency for the final result due to the debounce versus the
+increased input latency per character typed due to the rendering of intermediate results.
+
+```vim
+" Debounce the whole pipeline
+call wilder#set_option('pipeline', [
+      \ wilder#debounce(10),
+      \ wilder#branch([
+      \   ...
+      \ ]),
+      \ ])
+
+" Or debounce individual pipelines
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#cmdline_pipeline({
+      \       'debounce': 10,
+      \     }),
+      \     wilder#search_pipeline({
+      \       'debounce': 10,
+      \     }),
+      \   ),
+      \ ])
+```
 
 ### Faster Startup time
 
