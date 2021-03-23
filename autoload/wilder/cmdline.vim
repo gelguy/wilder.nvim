@@ -641,6 +641,8 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
+let s:has_script_local_completion = {}
+
 " returns [{handled}, {result}, [{res}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
@@ -649,6 +651,14 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
   if !has('nvim')
     return [1, v:true, a:res]
+  endif
+
+  " Calling getcompletion() interferes with wildmenu command completion so
+  " we return v:true early
+  if has_key(s:has_script_local_completion, a:res.cmd)
+    let l:res = copy(a:res)
+    let l:res.pos = 0
+    return [1, v:true, l:res]
   endif
 
   let l:user_commands = nvim_get_commands({})
@@ -676,6 +686,10 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:Completion_func = function(l:user_command.complete_arg)
       let l:result = l:Completion_func(a:res.arg, a:res.cmdline, len(a:res.cmdline))
     catch
+      " Add both the full command and partial command
+      let s:has_script_local_completion[l:command] = 1
+      let s:has_script_local_completion[a:res.cmd] = 1
+
       let l:res = copy(a:res)
       let l:res.pos = 0
       return [1, v:true, l:res]
@@ -683,7 +697,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
     if get(l:user_command, 'complete', '') ==# 'custom'
       let l:result = split(l:result, '\n')
-      let l:result = filter(l:result, {i, x -> match(x, l:res.arg) != -1})
+      let l:result = filter(l:result, {i, x -> match(x, a:res.arg) != -1})
     endif
 
     let l:res = copy(a:res)
