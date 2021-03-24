@@ -864,7 +864,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
   " : parse_cmdline
   " : check is substitute command
   " |--> return v:false
-  " : check len(substitute_args) [s]/[pattern]/[replace]/[flags]
+  " : check len(substitute_args) s[/][pattern][/][replace][/][flags]
   " |--> return v:false or v:true
   " : extract substitute [pattern]
   " : search_pipeline
@@ -874,7 +874,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-        \ {_, res -> len(res.substitute_args) == 2 ? res : l:hide_in_replace ? v:true : v:false},
+        \ {_, res -> len(res.substitute_args) <= 2 ? res : l:hide_in_replace ? v:true : v:false},
         \ wilder#subpipeline({ctx, res -> [
         \   {_, res -> res.substitute_args[1]},
         \ ] + l:search_pipeline + [
