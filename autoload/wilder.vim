@@ -492,11 +492,12 @@ function! s:search_pipeline(...) abort
   let l:skip_cmdtype_check = get(l:opts, 'skip_cmdtype_check', 0)
 
   let l:should_debounce = get(l:opts, 'debounce', 0) > 0
+  let l:Debounce = l:should_debounce ? wilder#debounce(l:opts['debounce']) : 0
 
   return [
         \ wilder#if(!l:skip_cmdtype_check,
         \   wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'})),
-        \ wilder#if(l:should_debounce, wilder#debounce(l:opts['debounce'])),
+        \ wilder#if(l:should_debounce, l:Debounce),
         \ ] + l:search_pipeline
 endfunction
 
