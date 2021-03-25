@@ -1227,10 +1227,10 @@ wilder#wildmenu_renderer([{options}])
             Deprecated~
             Use `highlighter`.
 
-                                    *wilder#airline_theme()*
-                                    *wilder#lightline_theme()*
-wilder#airline_theme([{options}])
-wilder#lightline_theme([{options}])
+                                    *wilder#wildmenu_airline_theme()*
+                                    *wilder#wildmenu_lightline_theme()*
+wilder#wildmenu_airline_theme([{options}])
+wilder#wildmenu_lightline_theme([{options}])
                                     Wildmenu renderer theme~
             Returns an object which can be passed to
             |wilder#wildmenu_renderer()| to styles the renderer to look like
@@ -1308,7 +1308,7 @@ wilder#lightline_theme([{options}])
             Example:
 >
             call wilder#set_option('renderer', wilder#wildmenu_renderer(
-                  \ wilder#airline_theme({
+                  \ wilder#wildmenu_airline_theme({
                   \   'highlights': {'default': 'Statusline'},
                   \   'separator': '  ',
                   \ })))
@@ -2634,6 +2634,14 @@ wilder#condition({predicate}, {if_true}, [{if_false}])
                                     Deprecated~
             Deprecated: Use |wilder#wildmenu_condition()|.
 
+                                    *wilder#wildmenu_airline_theme()*
+                                    *wilder#wildmenu_lightline_theme()*
+                                    Deprecated~
+wilder#wildmenu_airline_theme([{options}])
+wilder#wildmenu_lightline_theme([{options}])
+            Deprecated: Use |wilder#wildmenu_airline_theme()| or
+            |wilder#wildmenu_lightline_theme()|.
+
 
 ==============================================================================
 8. Configurations                   *wilder-configurations*
@@ -2674,9 +2682,9 @@ Pipelines (Neovim only)~
 
 Airline/Lightline Theme for Wildmenu Renderer~
 >
-    " use wilder#lightline_theme() for Lightline
+    " use wilder#wildmenu_lightline_theme() for Lightline
     call wilder#set_option('renderer', wilder#wildmenu_renderer(
-          \ wilder#airline_theme({
+          \ wilder#wildmenu_airline_theme({
           \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
           \ })))

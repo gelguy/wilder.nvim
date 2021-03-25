@@ -688,12 +688,22 @@ function! wilder#popupmenu_renderer(...)
   return wilder#renderer#popupmenu#make(l:args)
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_airline_theme()
 function! wilder#airline_theme(...)
+  return call('wilder#wildmenu_airline_theme', a:000)
+endfunction
+
+function! wilder#wildmenu_airline_theme(...)
   let l:args = get(a:000, 0, {})
   return wilder#renderer#wildmenu_theme#airline_theme(l:args)
 endfunction
 
+" DEPRECATED: use wilder#wildmenu_lightline_theme()
 function! wilder#lightline_theme(...)
+  return call('wilder#wildmenu_lightline_theme', a:000)
+endfunction
+
+function! wilder#wildmenu_lightline_theme(...)
   let l:args = get(a:000, 0, {})
   return wilder#renderer#wildmenu_theme#lightline_theme(l:args)
 endfunction

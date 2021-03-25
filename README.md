@@ -187,13 +187,13 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
 
 ![Minimal](https://i.imgur.com/AifaC11.png)
 
-For Airline and Lightline users, `wilder#airline_theme()` and `wilder#lightline_theme()` can be used.
+For Airline and Lightline users, `wilder#wildmenu_airline_theme()` and `wilder#wildmenu_lightline_theme()` can be used.
 
 ```vim
-" use wilder#lightline_theme() if using Lightline
+" use wilder#wildmenu_lightline_theme() if using Lightline
 " 'highlights' : can be overriden, see :h wilder#wildmenu_renderer()
 call wilder#set_option('renderer', wilder#wildmenu_renderer(
-      \ wilder#airline_theme({
+      \ wilder#wildmenu_airline_theme({
       \   'highlights': {},
       \   'highlighter': wilder#basic_highlighter(),
       \   'separator': ' · ',
