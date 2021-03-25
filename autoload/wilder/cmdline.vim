@@ -1023,7 +1023,13 @@ function! s:simplify(path)
 endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
-  let l:use_python = get(a:opts, 'use_python', has('nvim'))
+  if has_key(a:opts, 'language')
+    let l:use_python = a:opts['language'] ==# 'python'
+  elseif has_key(a:opts, 'use_python')
+    let l:use_python = a:opts['use_python']
+  else
+    let l:use_python = has('nvim')
+  endif
 
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
   if l:fuzzy
