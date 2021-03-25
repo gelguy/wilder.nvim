@@ -58,8 +58,8 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 ```vim
 " For Neovim only
 " For wild#cmdline_pipeline():
+"   'language'   : set to 'python' to use python
 "   'fuzzy'      : set fuzzy searching
-"   'use_python' : use python for fuzzy searching
 " For wild#python_search_pipeline():
 "   'pattern'    : can be set to wilder#python_fuzzy_delimiter_pattern() for stricter fuzzy matching
 "   'sorter'     : omit to get results in the order they appear in the buffer
@@ -67,8 +67,8 @@ For example, in Neovim, to use fuzzy matching instead of substring matching:
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
+      \       'language': 'python',
       \       'fuzzy': 1,
-      \       'use_python': 1,
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': wilder#python_fuzzy_pattern(),
@@ -187,13 +187,13 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
 
 ![Minimal](https://i.imgur.com/AifaC11.png)
 
-For Airline and Lightline users, `wilder#airline_theme()` and `wilder#lightline_theme()` can be used.
+For Airline and Lightline users, `wilder#wildmenu_airline_theme()` and `wilder#wildmenu_lightline_theme()` can be used.
 
 ```vim
-" use wilder#lightline_theme() if using Lightline
+" use wilder#wildmenu_lightline_theme() if using Lightline
 " 'highlights' : can be overriden, see :h wilder#wildmenu_renderer()
 call wilder#set_option('renderer', wilder#wildmenu_renderer(
-      \ wilder#airline_theme({
+      \ wilder#wildmenu_airline_theme({
       \   'highlights': {},
       \   'highlighter': wilder#basic_highlighter(),
       \   'separator': ' · ',
@@ -283,7 +283,7 @@ and the default renderers.
 " Neovim only
 call wilder#set_option('pipeline', [
       \   wilder#branch(
-      \     wilder#cmdline_pipeline({'use_python': 1}),
+      \     wilder#cmdline_pipeline({'language': 'python'}),
       \     wilder#python_search_pipeline(),
       \   ),
       \ ])

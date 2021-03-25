@@ -804,20 +804,11 @@ function wilder#cmdline#should_use_file_finder(res) abort
 
   let l:path = a:res.expand_arg
 
-  " ./. simplifies to .
-  if l:path ==# './.' ||
-        \ l:path ==# '.\.'
-    return 0
-  endif
-
-  let l:path = simplify(l:path)
-
-  if l:path[0] ==# '~' ||
+  " Prevent scanning of filesystem accidentally.
+  if l:path ==# '~' ||
         \ l:path[0] ==# '/' ||
         \ l:path[0] ==# '\' ||
-        \ l:path[0:1] ==# '..' ||
-        \ l:path[0:1] ==# './' ||
-        \ l:path[0:1] ==# '.\'
+        \ l:path[0:1] ==# '..'
     return 0
   endif
 
@@ -925,6 +916,8 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
     endfor
 
     let l:opts['filters'] = l:checked_filters
+  else
+    let l:opts['filters'] = [{'name': 'fuzzy_filter', 'opts': {}}, {'name': 'difflib_sorter', 'opts': {}}]
   endif
 
   if !has_key(l:opts, 'path')
@@ -970,39 +963,73 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   wilder#result({
         \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
-        \     'data': extend(s:convert_result_to_data(res), {'query': expand(simplify(res.arg))}),
+        \     'data': extend(s:convert_result_to_data(res), {'query': expand(res.arg)}),
         \   }),
         \ ]}),
         \ ]
 endfunction
 
 function! s:file_finder(ctx, opts, res) abort
-  let l:opts = copy(a:opts)
-
   let l:cwd = getcwd()
-  let l:path = l:opts['path'](a:ctx, a:res)
-  let l:match_arg = expand(simplify(a:res.arg))
+  let l:match_arg = expand(a:res.arg)
   let l:is_dir = a:res.expand ==# 'dir'
 
-  if !l:is_dir && has_key(l:opts, 'file_command')
-    let l:File_command = l:opts['file_command']
-
-    if type(l:File_command) is v:t_func
-      let l:opts['file_command'] = l:File_command(a:ctx, a:res.arg)
+  if !l:is_dir
+    if has_key(a:opts, 'file_command')
+      let l:Command = a:opts['file_command']
+    else
+      let l:Command = ['find', '.', '-type', 'f', '-printf', '%P\\n']
     endif
-  elseif l:is_dir && has_key(l:opts, 'dir_command')
-    let l:Dir_command = l:opts['dir_command']
-
-    if type(l:Dir_command) is v:t_func
-      let l:opts['dir_command'] = l:Dir_command(a:ctx, a:res.arg)
+  else
+    if has_key(a:opts, 'dir_command')
+      let l:Command = a:opts['dir_command']
+    else
+      let l:Command = ['find', '.', '-type', 'd', '-printf', '%P\\n']
     endif
   endif
 
-  return {ctx -> _wilder_python_file_finder(ctx, l:opts, l:cwd, l:path, l:match_arg, l:is_dir)}
+  if type(l:Command) is v:t_func
+    let l:Command = l:Command(a:ctx, l:match_arg)
+
+    if l:Command is v:false
+      return v:false
+    endif
+  endif
+
+  let l:path = a:opts['path'](a:ctx, l:match_arg)
+
+  let l:opts = {
+        \ 'timeout': get(a:opts, 'timeout', 5000),
+        \ }
+
+  return {ctx -> _wilder_python_file_finder(ctx, l:opts, l:Command, a:opts['filters'],
+        \ l:cwd, l:path, l:match_arg, l:is_dir)}
+endfunction
+
+function! s:simplify(path)
+  let l:path = simplify(a:path)
+
+  let l:slash = !has('win32') && !has('win64')
+        \ ? '/'
+        \ : &shellslash
+        \ ? '/'
+        \ : '\'
+
+  if a:path[-2:-1] ==# '/.' || a:path[-2:-1] ==# l:slash . '.'
+    let l:path .= a:path[-2:-1]
+  endif
+
+  return l:path
 endfunction
 
 function! wilder#cmdline#getcompletion_pipeline(opts) abort
-  let l:use_python = get(a:opts, 'use_python', has('nvim'))
+  if has_key(a:opts, 'language')
+    let l:use_python = a:opts['language'] ==# 'python'
+  elseif has_key(a:opts, 'use_python')
+    let l:use_python = a:opts['use_python']
+  else
+    let l:use_python = has('nvim')
+  endif
 
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
   if l:fuzzy

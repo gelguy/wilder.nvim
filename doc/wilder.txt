@@ -10,7 +10,7 @@ wilder                                *wilder*
 4. Pipeline                         |wilder-pipeline|
 5. Renderer                         |wilder-renderer|
 6. API                              |wilder-api|
-7. Depcrecated                      |wilder-deprecated|
+7. Deprecated                       |wilder-deprecated|
 8. Configurations                   |wilder-configurations|
 
 ==============================================================================
@@ -695,10 +695,12 @@ wilder#python_search_pipeline([{options}])
             Default: 0
 
             `sort`
-            Deprecated: Use `sorter`.
+            Deprecated~
+            Use `sorter`.
 
             `regex`
-            Deprecated: Use `pattern`.
+            Deprecated~
+            Use `pattern`.
 
                                     *wilder#cmdline_pipeline()*
 wilder#cmdline_pipeline([{options}])
@@ -716,6 +718,7 @@ wilder#cmdline_pipeline([{options}])
 
             {options} is a dictionary with keys:
             `fuzzy`
+            Optional~
             0, 1, or 2 representing the fuzzy matching mode. If 0, fuzzy
             matching is disabled. If 1, fuzzy matching is done and candidates
             have to start with the first character of the query. If 2, the
@@ -731,14 +734,16 @@ wilder#cmdline_pipeline([{options}])
 
             Default: 0
 
-            `use_python`
-            Neovim only~
-            Use async Python to get file or directory completions and for
-            fuzzy fitering.
+            `language`
+            Optional~
+            python option only for Neovim~
+            'python' or 'vim' representing the language to use for getting
+            completions and filtering.
 
-            Default: has('nvim')
+            Default: has('nvim') ? 'python' : 'vim'
 
             `fuzzy_filter`
+            Optional~
             The function to use when matching candidates in fuzzy completion.
             Takes a {ctx}, {candidates} and {query} and returns the list of
             filtered candidates. 
@@ -753,7 +758,7 @@ wilder#cmdline_pipeline([{options}])
                   \ SomeCondition(x)})
             endfunction
 <
-            Default: |wilder#python_fuzzy_filter()| if `use_python` is true
+            Default: |wilder#python_fuzzy_filter()| if `language` is 'python'
                      |wilder#fuzzy_filter()| otherwise
 
             `hide_in_substitute`
@@ -797,7 +802,12 @@ wilder#cmdline_pipeline([{options}])
             Default: 0
 
             `sort`
-            Deprecated: Use `sorter`.
+            Deprecated~
+            Use `sorter`.
+
+            `use_python`
+            Deprecated~
+            Use `language`.
 
                                     *wilder#python_file_finder_pipeline()*
 wilder#python_file_finder_pipeline([{options}])
@@ -809,9 +819,8 @@ wilder#python_file_finder_pipeline([{options}])
             used when the cmdline is expanding `file` or `dir` completions,
             which for example occurs when in the |:edit| or |:cd| commands.
 
-            If the path for the argument is not relative to the current
-            directory, or cannot be resolved as a descendant of the current
-            path, or starts with './', the pipeline will return |v:false|.
+            If the path for the argument starts with '~', '/' or '..', the
+            pipeline will return |v:false|.
 
             Note |wilder#python_file_finder_pipeline()| should be placed in
             front of |wilder#cmdline_pipeline()| when using |wilder#branch()|.
@@ -862,7 +871,7 @@ wilder#python_file_finder_pipeline([{options}])
             gather the files from. If it is a string, it will be converted to
             a function which returns the string.
 
-            The function should take {ctx} and {res} as arguments and return
+            The function should take {ctx} and {path} as arguments and return
             the directory to search in. The directory path should be an
             absolute path and not a relative one.  Returning an empty string
             will search in the current directory.
@@ -1198,24 +1207,29 @@ wilder#wildmenu_renderer([{options}])
             Default: []
 
             `hl`
-            Deprecated: Use `highlights`.
+            Deprecated~
+            Use `highlights`.
 
             `selected_hl`
-            Deprecated: Use `highlights`.
+            Deprecated~
+            Use `highlights`.
 
             `error_hl`
-            Deprecated: Use `highlights`.
+            Deprecated~
+            Use `highlights`.
 
             `separator_hl`
-            Deprecated: Use `highlights`.
+            Deprecated~
+            Use `highlights`.
 
             `apply_highlights`
-            Deprecated: Use `highlighter`.
+            Deprecated~
+            Use `highlighter`.
 
-                                    *wilder#airline_theme()*
-                                    *wilder#lightline_theme()*
-wilder#airline_theme([{options}])
-wilder#lightline_theme([{options}])
+                                    *wilder#wildmenu_airline_theme()*
+                                    *wilder#wildmenu_lightline_theme()*
+wilder#wildmenu_airline_theme([{options}])
+wilder#wildmenu_lightline_theme([{options}])
                                     Wildmenu renderer theme~
             Returns an object which can be passed to
             |wilder#wildmenu_renderer()| to styles the renderer to look like
@@ -1293,7 +1307,7 @@ wilder#lightline_theme([{options}])
             Example:
 >
             call wilder#set_option('renderer', wilder#wildmenu_renderer(
-                  \ wilder#airline_theme({
+                  \ wilder#wildmenu_airline_theme({
                   \   'highlights': {'default': 'Statusline'},
                   \   'separator': '  ',
                   \ })))
@@ -2512,7 +2526,7 @@ wilder#renderer_mux({args})         *wilder#renderer_mux()*
 
 
 ==============================================================================
-7. Depcrecated                      *wilder-deprecated*
+7. Deprecated                       *wilder-deprecated*
 
 wilder#vim_substring()              *wilder#vim_substring()*
                                     Deprecated~
@@ -2619,6 +2633,14 @@ wilder#condition({predicate}, {if_true}, [{if_false}])
                                     Deprecated~
             Deprecated: Use |wilder#wildmenu_condition()|.
 
+                                    *wilder#wildmenu_airline_theme()*
+                                    *wilder#wildmenu_lightline_theme()*
+                                    Deprecated~
+wilder#wildmenu_airline_theme([{options}])
+wilder#wildmenu_lightline_theme([{options}])
+            Deprecated: Use |wilder#wildmenu_airline_theme()| or
+            |wilder#wildmenu_lightline_theme()|.
+
 
 ==============================================================================
 8. Configurations                   *wilder-configurations*
@@ -2647,8 +2669,8 @@ Pipelines (Neovim only)~
           \       wilder#history(100),
           \     ],
           \     wilder#cmdline_pipeline({
+          \       'language': 'python',
           \       'fuzzy': 1,
-          \       'use_python': 1,
           \     }),
           \     wilder#python_search_pipeline({
           \       'fuzzy': 1,
@@ -2659,9 +2681,9 @@ Pipelines (Neovim only)~
 
 Airline/Lightline Theme for Wildmenu Renderer~
 >
-    " use wilder#lightline_theme() for Lightline
+    " use wilder#wildmenu_lightline_theme() for Lightline
     call wilder#set_option('renderer', wilder#wildmenu_renderer(
-          \ wilder#airline_theme({
+          \ wilder#wildmenu_airline_theme({
           \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
           \ })))

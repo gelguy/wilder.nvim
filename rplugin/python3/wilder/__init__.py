@@ -104,26 +104,14 @@ class Wilder(object):
     def _file_finder(self, args):
         self.run_in_background(self.file_finder_handler, args)
 
-    def file_finder_handler(self, event, ctx, opts, cwd, path, query, find_dir):
+    def file_finder_handler(self, event, ctx, opts, command, filters, cwd, path, query, find_dir):
         try:
             if not path:
                 path = cwd
 
             path = Path(os.path.expanduser(path)).resolve()
             path_str = str(path)
-
-            if find_dir:
-                command = opts['dir_command'] if 'dir_command' in opts else \
-                        ['find', '.', '-type', 'd', '-printf', '%P\\n']
-            else:
-                command = opts['file_command'] if 'file_command' in opts else \
-                        ['find', '.', '-type', 'f', '-printf', '%P\\n']
-
             key = str(path) + ':' + str(command)
-
-            timeout_ms = opts['timeout'] if 'timeout' in opts else 5000
-            filters = opts['filters'] if 'filters' in opts else \
-                    [{'name': 'fuzzy_filter', 'opts': {}}, {'name': 'difflib_sorter', 'opts': {}}]
 
             result = None
             with self.find_files_lock:
@@ -138,6 +126,8 @@ class Wilder(object):
                 if key in self.find_files_cache:
                     result = self.find_files_cache[key]
                 else:
+                    timeout_ms = opts['timeout'] if 'timeout' in opts else 5000
+
                     kill_event = threading.Event()
                     done_event = threading.Event()
                     result = {'kill': kill_event, 'done': done_event}
@@ -196,9 +186,12 @@ class Wilder(object):
             if event.is_set():
                 return
 
-            relpath = os.path.relpath(path, cwd)
-            if relpath != '.':
-                candidates = [os.path.join(relpath, c) for c in candidates]
+            relative_to_cwd = opts['relative_to_cwd'] if 'relative_to_cwd' in opts else True
+
+            if relative_to_cwd:
+                relpath = os.path.relpath(path, cwd)
+                if relpath != '.':
+                    candidates = [os.path.join(relpath, c) for c in candidates]
 
             if find_dir:
                 candidates = [c + os.sep if c and c[-1] != os.sep else c  for c in candidates]
