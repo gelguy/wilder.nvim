@@ -819,9 +819,8 @@ wilder#python_file_finder_pipeline([{options}])
             used when the cmdline is expanding `file` or `dir` completions,
             which for example occurs when in the |:edit| or |:cd| commands.
 
-            If the path for the argument is not relative to the current
-            directory, or cannot be resolved as a descendant of the current
-            path, or starts with './', the pipeline will return |v:false|.
+            If the path for the argument starts with '~', '/' or '..', the
+            pipeline will return |v:false|.
 
             Note |wilder#python_file_finder_pipeline()| should be placed in
             front of |wilder#cmdline_pipeline()| when using |wilder#branch()|.
