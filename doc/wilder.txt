@@ -2633,11 +2633,11 @@ wilder#condition({predicate}, {if_true}, [{if_false}])
                                     Deprecated~
             Deprecated: Use |wilder#wildmenu_condition()|.
 
-                                    *wilder#wildmenu_airline_theme()*
-                                    *wilder#wildmenu_lightline_theme()*
+                                    *wilder#airline_theme()*
+                                    *wilder#lightline_theme()*
                                     Deprecated~
-wilder#wildmenu_airline_theme([{options}])
-wilder#wildmenu_lightline_theme([{options}])
+wilder#airline_theme([{options}])
+wilder#lightline_theme([{options}])
             Deprecated: Use |wilder#wildmenu_airline_theme()| or
             |wilder#wildmenu_lightline_theme()|.
 
