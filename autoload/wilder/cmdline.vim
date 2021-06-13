@@ -681,10 +681,23 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
   if has_key(l:user_command, 'complete_arg') &&
         \ l:user_command.complete_arg isnot v:null
+
+    " Find last argument by looking for the last whitespace character
+    let l:pos = len(a:res.cmdline)
+    while l:pos >= a:res.pos
+      if a:res.cmdline[l:pos] ==# ' ' || a:res.cmdline[l:pos] ==# "\t"
+        break
+      endif
+
+      let l:pos -= 1
+    endwhile
+
+    let l:arg = a:res.cmdline[l:pos+1 :]
+
     try
       " Function might be script-local or point to script-local variables.
       let l:Completion_func = function(l:user_command.complete_arg)
-      let l:result = l:Completion_func(a:res.arg, a:res.cmdline, len(a:res.cmdline))
+      let l:result = l:Completion_func(l:arg, a:res.cmdline, len(a:res.cmdline))
     catch
       " Add both the full command and partial command
       let s:has_script_local_completion[l:command] = 1
@@ -697,11 +710,12 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
 
     if get(l:user_command, 'complete', '') ==# 'custom'
       let l:result = split(l:result, '\n')
-      let l:result = filter(l:result, {i, x -> match(x, a:res.arg) != -1})
+      let l:result = filter(l:result, {i, x -> match(x, l:arg) != -1})
     endif
 
     let l:res = copy(a:res)
-    let l:res.match_arg = l:res.cmdline[l:res.pos :]
+    let l:res.pos = l:pos
+    let l:res.match_arg = l:arg
     return [1, l:result, l:res]
   endif
 
