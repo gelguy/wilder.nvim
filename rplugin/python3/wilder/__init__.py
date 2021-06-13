@@ -38,7 +38,7 @@ class Wilder(object):
         self.cached_buffer = {'bufnr': -1, 'undotree_seq_cur': -1, 'buffer': []}
         self.run_id = -1
         self.find_files_lock = threading.Lock()
-        self.find_files_session_id = -1
+        self.find_files_timestamp = -1
         self.find_files_cache = dict()
         self.help_tags_lock = threading.Lock()
         self.help_tags_session_id = -1
@@ -104,7 +104,7 @@ class Wilder(object):
     def _file_finder(self, args):
         self.run_in_background(self.file_finder_handler, args)
 
-    def file_finder_handler(self, event, ctx, opts, command, filters, cwd, path, query, find_dir):
+    def file_finder_handler(self, event, ctx, opts, command, filters, cwd, path, query, find_dir, timestamp):
         try:
             if not path:
                 path = cwd
@@ -115,8 +115,8 @@ class Wilder(object):
 
             result = None
             with self.find_files_lock:
-                if ctx['session_id'] > self.find_files_session_id:
-                    self.find_files_session_id = ctx['session_id']
+                if timestamp > self.find_files_timestamp:
+                    self.find_files_timestamp = timestamp
 
                     for result in self.find_files_cache.values():
                         result['kill'].set()

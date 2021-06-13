@@ -854,7 +854,7 @@ wilder#python_file_finder_pipeline([{options}])
             A timeout in milliseconds. If the process used to gather the list
             of files does not finish before the timeout, the process is
             killed.  Any subsequent call to the pipeline will result in
-            |v:false|.
+            |v:false| until the cache is invalidated.
 
             Default: 5000
 
@@ -877,6 +877,40 @@ wilder#python_file_finder_pipeline([{options}])
             will search in the current directory.
 
             Default: |wilder#project_root()|
+
+            `cache_timestamp`
+            Optional~
+            A function that takes a {ctx} and returns a number indicating
+            whether the cache for `path` should be invalidated. Returning a
+            number larger than the current `cache_timestamp` will invalidate
+            the cache. The initial timestamp is -1. See
+            |wilder-pipeline-context| for the keys of {ctx}.
+
+            By default, `ctx.session_id` is used. This means the cache is
+            invalidated each time the cmdline is entered.
+
+            To never use the cache, use {ctx -> localtime()}.
+
+            To never invalidate the cache, a constant can be returned, e.g.
+            {ctx -> 1}.
+
+            To programatically invalidate the cache, the following snippet can
+            be used.
+>
+        let s:cache_timestamp = 0
+
+        " call this function to invalidate the cache
+        function! InvalidateCache()
+          let s:cache_timestamp += 1
+        endfunction
+
+        " set cache_timestamp option
+        " wilder#python_file_finder_pipeline({
+        "   'cache_timestamp': {-> s:cache_timestamp},
+        " }),
+<
+
+            Default: {ctx -> ctx.session_id}
 
             `filters`
             Optional~

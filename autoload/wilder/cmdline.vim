@@ -996,6 +996,12 @@ function! s:file_finder(ctx, opts, res) abort
     endif
   endif
 
+  if has_key(a:opts, 'cache_timestamp')
+    let l:timestamp = a:opts['cache_timestamp'](a:ctx)
+  else
+    let l:timestamp = a:ctx.session_id
+  endif
+
   let l:path = a:opts['path'](a:ctx, l:match_arg)
 
   let l:opts = {
@@ -1003,7 +1009,7 @@ function! s:file_finder(ctx, opts, res) abort
         \ }
 
   return {ctx -> _wilder_python_file_finder(ctx, l:opts, l:Command, a:opts['filters'],
-        \ l:cwd, l:path, l:match_arg, l:is_dir)}
+        \ l:cwd, l:path, l:match_arg, l:is_dir, l:timestamp)}
 endfunction
 
 function! s:simplify(path)
@@ -1046,7 +1052,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   " : prepare_file_completion
   " : s:getcompletion
   " : map if relative_to_home_dir
-  " : file_fuzzy_filter if needed
+  " : fuzzy_filter if needed
   " └--> result
   let l:file_completion_subpipeline = [
         \ wilder#check({_, res -> wilder#cmdline#is_file_expansion(res.expand)}),
