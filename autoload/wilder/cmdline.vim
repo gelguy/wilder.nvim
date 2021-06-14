@@ -486,7 +486,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'history')
   elseif a:res.expand ==# 'language'
     return getcompletion(l:expand_arg, 'locale') +
-          \ filter(['ctype', 'messages', 'time'], {_, x -> match(x, l:expand_arg) == 0})
+          \ filter(['ctype', 'messages', 'time'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'locale'
     return getcompletion(l:expand_arg, 'locale')
   elseif a:res.expand ==# 'mapping'
@@ -503,7 +503,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
       endfor
 
       if l:expand_arg[0] ==# '<'
-        call filter(l:result, {_, x -> match(x, l:expand_arg) == 0})
+        call filter(l:result, {_, x -> s:is_prefix(x, l:expand_arg)})
       endif
     endif
 
@@ -547,7 +547,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
 
     return wilder#uniq_filt(0, 0, l:result)
   elseif a:res.expand ==# 'mapclear'
-    return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
+    return s:is_prefix('<buffer>', l:expand_arg) ? ['<buffer>'] : []
   elseif a:res.expand ==# 'menu'
     if !has_key(a:res, 'menu_arg')
       return []
@@ -559,7 +559,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'option')
   elseif a:res.expand ==# 'option_bool'
     return filter(wilder#cmdline#set#get_bool_options(),
-          \ {_, x -> match(x, l:expand_arg == 0)})
+          \ {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'option_old'
     let l:old_option = eval('&' . a:res.option)
     return [type(l:old_option) is v:t_string ? l:old_option : string(l:old_option)]
@@ -567,7 +567,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'packadd')
   elseif a:res.expand ==# 'profile'
     return filter(['continue', 'dump', 'file', 'func', 'pause', 'start'],
-          \ {_, x -> match(x, l:expand_arg) == 0})
+          \ {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'ownsyntax'
     return getcompletion(l:expand_arg, 'syntax')
   elseif a:res.expand ==# 'shellcmd'
@@ -586,10 +586,10 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return map(l:functions, {_, x -> x[-1 :] ==# ')' ? x[: -3] : x[: -2]})
   elseif a:res.expand ==# 'user_addr_type'
     return filter(['arguments', 'buffers', 'lines', 'loaded_buffers',
-          \ 'quickfix', 'tabs', 'windows'], {_, x -> match(x, l:expand_arg) == 0})
+          \ 'quickfix', 'tabs', 'windows'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'user_cmd_flags'
     return filter(['addr', 'bar', 'buffer', 'complete', 'count',
-          \ 'nargs', 'range', 'register'], {_, x -> match(x, l:expand_arg) == 0})
+          \ 'nargs', 'range', 'register'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'user_complete'
     return filter(['arglist', 'augroup', 'behave', 'buffer', 'checkhealth',
           \ 'color', 'command', 'compiler', 'cscope', 'custom',
@@ -598,7 +598,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
           \ 'highlight', 'history', 'locale', 'mapclear', 'mapping',
           \ 'menu', 'messages', 'option', 'packadd', 'shellcmd',
           \ 'sign', 'syntax', 'syntime', 'tag', 'tag_listfiles',
-          \ 'user', 'var'], {_, x -> match(x, l:expand_arg) == 0})
+          \ 'user', 'var'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'user_nargs'
     if empty(l:expand_arg)
       return ['*', '+', '0', '1', '?']
@@ -1219,4 +1219,16 @@ function! s:set_query(data) abort
   let l:match_arg = get(l:data, 'cmdline.match_arg', '')
 
   return extend(a:data, {'query': l:match_arg})
+endfunction
+
+function! s:is_prefix(str, q) abort
+  if empty(a:q)
+    return 1
+  endif
+
+  if len(a:q) > len(a:str)
+    return 0
+  endif
+
+  return a:str[0 : len(a:q) - 1] ==# a:q
 endfunction
