@@ -24,6 +24,13 @@ function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy, use_python) abor
         \ : a:res.arg
 
   if !a:fuzzy
+    if a:res.expand ==# 'tags' &&
+          \ !empty(a:res.expand_arg) &&
+          \ a:res.expand_arg[0] !=# '/'
+      " Search taglist for tags starting with expand_arg
+      let a:res.expand_arg = '/^' . a:res.expand_arg
+    endif
+
     return a:res
   endif
 
@@ -49,27 +56,22 @@ function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
     return a:res
   endif
 
-  " Maximum of 300 tags are returned, don't fuzzy match for 'tag'
-  if a:res.expand ==# 'tags' ||
-        \ a:res.expand ==# 'tags_listfiles'
-    " If using tag-regexp, prevent fuzzy filtering by removing match_arg
-    if a:res.expand_arg[0] ==# '/'
-      let a:res.match_arg = ''
-    endif
-
-    return a:res
-  endif
-
   " Remove the starting s: and g: so the fuzzy filter does not match against
   " that them.
   if (a:res.expand ==# 'expression' || a:res.expand ==# 'var') &&
         \ a:res.expand_arg[1] ==# ':' &&
         \ (a:res.expand_arg[0] ==# 'g' || a:res.expand_arg[0] ==# 's')
-    let l:prefix = a:res.expand_arg[0: 1]
-    let l:fuzzy_char = a:res.expand_arg[2]
+    let a:res.fuzzy_char = a:res.expand_arg[2]
     let a:res.match_arg = a:res.expand_arg[2 :]
+    let a:res.expand_arg = a:res.expand_arg[0: 1]
 
-  " Return all tags and let the fuzzy filter remove the non-matching
+  " For tag-regexp, use the whole argument as expand_arg as s:getcompletion
+  " will use expand_arg as the pattern for match()
+  elseif a:res.expand ==# 'tags' && a:res.expand_arg[0] ==# '/'
+    let a:res.fuzzy_char = ''
+    let a:res.match_arg = ''
+
+  " Return all candidates and let the fuzzy filter remove the non-matching
   " candidates for the following cases:
   "
   " mapping: special keys such as <Space> cannot be fuzzy completed since
@@ -82,23 +84,21 @@ function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
   elseif a:res.expand ==# 'mapping' ||
         \ a:res.expand ==# 'buffer' ||
         \ a:res.expand ==# 'help'
-    let l:prefix = ''
-    let l:fuzzy_char = ''
-
-    " Default argument is 'help'
+    " Default argument for help completion is 'help'
     if a:res.expand ==# 'help' && empty(a:res.expand_arg)
       let a:res.match_arg = 'help'
     else
       let a:res.match_arg = a:res.expand_arg
     endif
+
+    let a:res.expand_arg = ''
+    let a:res.fuzzy_char = ''
   else
     " Default case, expand with the fuzzy_char
-    let l:prefix = ''
-    let l:fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
+    let a:res.fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
+    let a:res.expand_arg = ''
   endif
 
-  let a:res.expand_arg = l:prefix
-  let a:res.fuzzy_char = l:fuzzy_char
   return a:res
 endfunction
 
@@ -346,13 +346,32 @@ function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode, use_python) abort
+  " Use tag-regexp to get fuzzy completions from taglist()
+  if a:res.expand ==# 'tags'
+    let l:fuzzy_char = get(a:res, 'fuzzy_char', '')
+
+    if empty(l:fuzzy_char)
+      let a:res.expand_arg = '.'
+    else
+      let a:res.expand_arg = '/'
+      if toupper(l:fuzzy_char) !=# l:fuzzy_char
+        let a:res.expand_arg .= '\c'
+      endif
+
+      if a:fuzzy_mode == 1
+        let a:res.expand_arg .= '^'
+      endif
+
+      let a:res.expand_arg .= l:fuzzy_char
+    endif
+
+    return a:getcompletion(a:ctx, a:res)
+  endif
+
   " If argument is empty, use normal completions
   " Don't fuzzy complete for vim help since a maximum of 300 help tags are returned
-  " Don't fuzzy complete for tags since a maximum of 300 tags are returned
   if a:res.pos == len(a:res.cmdline) ||
-        \ (a:res.expand ==# 'help' && !a:use_python) ||
-        \ a:res.expand ==# 'tags' ||
-        \ a:res.expand ==# 'tags_listfiles'
+        \ (a:res.expand ==# 'help' && !a:use_python)
     return a:getcompletion(a:ctx, a:res)
   endif
 
@@ -379,6 +398,9 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mod
         \ {ctx, upper_xs -> wilder#resolve(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
         \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#uniq_filt(0, 0, lower_xs + upper_xs))}))})
 endfunction
+
+let s:cached_tags = {}
+let s:cached_tags_session_id = -1
 
 function! wilder#cmdline#python_get_file_completion(ctx, res) abort
   if has_key(a:res, 'completions')
@@ -612,11 +634,28 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return []
   elseif a:res.expand ==# 'user_commands'
     return filter(getcompletion(l:expand_arg, 'command'), {_, x -> x[0] >=# 'A' && x[0] <=# 'Z'})
-  elseif a:res.expand ==# 'tags' ||
-        \ a:res.expand ==# 'tags_listfiles'
-    " tags_listfiles is only used for c_CTRL-D
-    " both return the same result for getcompletion()
-    return getcompletion(l:expand_arg, 'tag')
+  elseif a:res.expand ==# 'tags'
+    if a:ctx.session_id > s:cached_tags_session_id
+      let s:cached_tags_session_id = a:ctx.session_id
+      let s:cached_tags = {}
+    endif
+
+    let l:arg = a:res.expand_arg
+    if l:arg[0] ==# '/'
+      let l:taglist_arg = l:arg[1:]
+    else
+      let l:taglist_arg = l:arg
+    endif
+
+    if empty(l:taglist_arg)
+      let l:taglist_arg = '.'
+    endif
+
+    if !has_key(s:cached_tags, l:taglist_arg)
+      let s:cached_tags[l:taglist_arg] = map(taglist(l:taglist_arg), {_, x -> x.name})
+    endif
+
+    return copy(s:cached_tags[l:taglist_arg])
   elseif a:res.expand ==# 'var'
     return getcompletion(l:expand_arg, 'var')
   endif
@@ -783,8 +822,11 @@ function! s:getcompletion(ctx, res, fuzzy, use_python) abort
     let l:Completion_func = funcref('wilder#cmdline#getcompletion')
   endif
 
+  " For tag-regexp, don't do fuzzy completion
   " If fuzzy, wrap the completion func in wilder#cmdline#get_fuzzy_completion()
-  if a:fuzzy
+  if a:res.expand ==# 'tags' && a:res.expand_arg[0] ==# '/'
+    let l:Getcompletion = l:Completion_func
+  elseif a:fuzzy
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
           \ ctx, x, l:Completion_func, a:fuzzy, a:use_python)}
   else

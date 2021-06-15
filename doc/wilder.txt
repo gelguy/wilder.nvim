@@ -724,10 +724,9 @@ wilder#cmdline_pipeline([{options}])
             have to start with the first character of the query. If 2, the
             candidates do not have to start with the first character.
 
-            Note: Fuzzy matching does not work in some cases, e.g. when
-            getting |help| completions, when completing filenames with
-            |wildcards| or user-defined command completions
-            |:command-completion|.
+            Note: Fuzzy matching does not work in some cases, e.g.  when
+            completing filenames with |wildcards| or user-defined command
+            completions |:command-completion|.
 
             Note: When set to 2, `shellcmd` candidates will still start with
             the first character of the query due to performance reasons.

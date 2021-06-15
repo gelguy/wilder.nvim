@@ -163,3 +163,36 @@ function! wilder#highlighter#lua_fzy_highlight(ctx, opts, x, data)
         \ 'require("wilder").fzy_highlight(_A[1], _A[2])',
         \ [a:data.query, a:x])
 endfunction
+
+function! wilder#highlighter#tag_regexp_highlighter()
+  return funcref('wilder#highlighter#tag_regexp_highlight')
+endfunction
+
+function! wilder#highlighter#tag_regexp_highlight(ctx, x, data)
+  let l:expand = get(a:data, 'cmdline.expand', '')
+
+  if l:expand !=# 'tags'
+    return 0
+  endif
+
+  let l:arg = get(a:data, 'cmdline.arg', '')
+
+  if l:arg[0] !=# '/'
+    return 0
+  endif
+
+  let l:pattern = l:arg[1:]
+
+  let l:start = match(a:x, l:pattern)
+  if l:start == -1
+    return []
+  endif
+
+  let l:matches = matchlist(a:x, l:arg[1:])
+  if empty(l:matches)
+    return []
+  endif
+
+  let l:len = strlen(l:matches[0])
+  return [[l:start, l:len]]
+endfunction
