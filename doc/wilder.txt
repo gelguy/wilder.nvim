@@ -2268,8 +2268,10 @@ wilder#python_cpsm_filt({ctx}, {opts}, {candidates}, {query})
                                     Async~
                                     cpsm plugin required~
             Takes a list of candidates and fuzzily filters and sorts the
-            candidates using `cpsm`. The `cpsm` Vim plugin is required and can
-            be found at https://github.com/nixprime/cpsm.
+            candidates using `cpsm`.
+
+            The `cpsm` Vim plugin is required and can be found at
+            https://github.com/nixprime/cpsm.
 
             {opts} can contain the following keys:
             `cpsm_path`
@@ -2284,13 +2286,33 @@ wilder#python_cpsm_filter([{cpsm_path}])
                                     Neovim only~
                                     cpsm plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#python_cpsm_filt()|.
+            |wilder#python_cpsm_filt()|. Can be used as the `fuzzy_filter`
+            option in |wilder#cmdline_pipeline()|.
 
             The {cpsm_path} argument is passed to |wilder#python_cpsm_filt()|
             as an option.
 
             {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
             is inferred by Neovim otherwise.
+
+                                    *wilder#lua_fzy_filt()*
+wilder#lua_fzy_filt({ctx}, {opts}, {candidates}, {query})
+                                    Neovim only~
+                                    fzy-lua-native plugin required~
+            Takes a list of candidates and fuzzily filters and sorts the
+            candidates using `fzy-lua-native`.
+
+            The `fzy-lua-native` plugin can be found at
+            https://github.com/romgrk/fzy-lua-native.
+
+            {opts} is ignored.
+
+wilder#lua_fzy_filter()             *wilder#lua_fzy_filter()*
+                                    Neovim only~
+                                    fzy-lua-native plugin required~
+            Returns a fuzzy filter that filters and sorts the candidates using
+            |wilder#lua_fzy_filt()|. Can be used as the `fuzzy_filter` option
+            in |wilder#cmdline_pipeline()|.
 
                                     *wilder#lexical_sort()*
 wilder#lexical_sort({ctx}, {opts}, {candidates}[, {query}])

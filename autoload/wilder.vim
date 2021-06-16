@@ -470,6 +470,18 @@ function! wilder#python_cpsm_filt(ctx, opts, candidates, query) abort
   return wilder#cmdline#python_cpsm_filt(a:ctx, a:opts, a:candidates, a:query)
 endfunction
 
+function! wilder#lua_fzy_filter() abort
+  return {ctx, xs, q -> wilder#lua_fzy_filt(ctx, 0, xs, q)}
+endfunction
+
+function! wilder#lua_fzy_filt(ctx, opts, candidates, query) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  return luaeval('require("wilder").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
+endfunction
+
 " pipelines
 
 function! wilder#search_pipeline(...) abort

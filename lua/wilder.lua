@@ -1,3 +1,24 @@
+local function fzy_filter(xs, q)
+  local scores = require'fzy-lua-native'.filter(q, xs, false)
+  result = {}
+
+  table.sort(scores, function(a, b)
+    if b[3] == nil then
+      return true
+    elseif a[3] == nil then
+      return false
+    end
+
+    return a[3] > b[3]
+  end)
+
+  for i = 1, #scores do
+    table.insert(result, scores[i][1])
+  end
+
+  return result
+end
+
 local cached_pattern = nil
 local cached_re = nil
 
@@ -90,6 +111,7 @@ local function fzy_highlight(needle, haystack)
 end
 
 return {
+  fzy_filter = fzy_filter,
   fzy_highlight = fzy_highlight,
   pcre2_highlight = pcre2_highlight,
 }
