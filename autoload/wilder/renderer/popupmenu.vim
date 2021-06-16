@@ -271,21 +271,21 @@ function! s:render(state, ctx, result) abort
   " -1 to shift left by 1 column for the added padding.
   let l:pos = get(a:result, 'pos', 0)
 
-  if a:state.reverse
-    let l:lines = reverse(l:lines)
-  endif
+  let l:reverse = a:state.reverse
 
   if l:in_sandbox
-    call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected)})
+    call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected, l:reverse)})
   else
-    call s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected)
+    call s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected, l:reverse)
   endif
 endfunction
 
-function! s:render_lines(state, lines, width, pos, selected) abort
+function! s:render_lines(state, lines, width, pos, selected, reverse) abort
   if a:state.win == -1
     call s:open_win(a:state)
   endif
+
+  let l:lines = a:reverse ? reverse(a:lines) : a:lines
 
   let [l:page_start, l:page_end] = a:state.page
 
@@ -311,8 +311,8 @@ function! s:render_lines(state, lines, width, pos, selected) abort
   let l:selected_hl = a:state.highlights['selected']
 
   let l:i = 0
-  while l:i < len(a:lines)
-    let l:chunks = a:lines[l:i]
+  while l:i < len(l:lines)
+    let l:chunks = l:lines[l:i]
 
     let l:text = ''
     for l:chunk in l:chunks
@@ -321,7 +321,9 @@ function! s:render_lines(state, lines, width, pos, selected) abort
 
     call nvim_buf_set_lines(a:state.buf, l:i, l:i, v:true, [l:text])
 
-    let l:is_selected = l:page_start + l:i == a:selected
+    let l:is_selected = a:reverse ? 
+          \ l:page_start + (len(l:lines) - l:i - 1) == a:selected :
+          \ l:page_start + l:i == a:selected
 
     let l:start = 0
     for l:chunk in l:chunks
