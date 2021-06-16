@@ -927,6 +927,11 @@ wilder#python_file_finder_pipeline([{options}])
 
             For performance, using `cpsm` with ['cpsm_filter'] is recommended.
 
+            Note: The arguments are different from the `fuzzy_filter` option
+            in other pipelines such as |wilder#cmdline_pipeline()|. This is
+            for performance reasons as it allows the filtering to be done in
+            Python returning the results.
+
             The available filters are:
             `fuzzy_filter`
             Filters the list with |wilder#python_fuzzy_filter()|.
@@ -2815,21 +2820,21 @@ Minimal Configuration~
     call wilder#set_option('modes', ['/', '?', ':'])
 <
 
-Pipelines (Neovim only)~
+Fuzzy pipelines (Neovim only)~
 >
     " add minimal configuration
     call wilder#set_option('pipeline', [
           \   wilder#branch(
           \     [
           \       wilder#check({_, x -> empty(x)}),
-          \       wilder#history(100),
+          \       wilder#history(),
           \     ],
           \     wilder#cmdline_pipeline({
           \       'language': 'python',
           \       'fuzzy': 1,
           \     }),
           \     wilder#python_search_pipeline({
-          \       'fuzzy': 1,
+          \       'pattern': 'fuzzy',
           \     }),
           \   ),
           \ ])
@@ -2843,6 +2848,15 @@ Airline/Lightline Theme for Wildmenu Renderer~
           \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
           \ })))
+<
+
+Use Popupmenu for : and Wildmenu for /~
+>
+    " use wilder#wildmenu_lightline_theme() for Lightline
+    wilder#set_option('renderer, wilder#renderer_mux({
+          \ ':': wilder#popupmenu_renderer(),
+          \ '/': wilder#wildmenu_renderer(),
+          \ })
 <
 
 ==============================================================================

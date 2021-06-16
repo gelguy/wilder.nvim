@@ -478,7 +478,7 @@ class Wilder(object):
         return os.path.basename(f)
 
     @neovim.function('_wilder_python_get_help_tags', sync=False, allow_nested=True)
-    def _get_get_help_tags(self, args):
+    def _get_help_tags(self, args):
         self.run_in_background(self.get_help_tags_handler, args)
 
     def get_help_tags_handler(self, event, ctx, rtp, helplang):
