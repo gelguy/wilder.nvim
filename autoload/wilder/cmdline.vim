@@ -494,6 +494,8 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
   elseif a:res.expand ==# 'event'
     return getcompletion(l:expand_arg, 'event')
+  elseif a:res.expand ==# 'event_and_augroup'
+    return getcompletion(l:expand_arg, 'event') + getcompletion(l:expand_arg, 'augroup')
   elseif a:res.expand ==# 'expression'
     return getcompletion(l:expand_arg, 'expression')
   elseif a:res.expand ==# 'environment'

@@ -1,27 +1,30 @@
 function! wilder#cmdline#autocmd#do(ctx, doautocmd) abort
+  " :au[tocmd] [group] {event} {pat} [++once] [++nested] {cmd}
+
   let l:group = ''
 
   " check for group name
   let l:arg_start = a:ctx.pos
-  let l:in_group = 1
   while a:ctx.pos < len(a:ctx.cmdline)
     if wilder#cmdline#main#is_whitespace(a:ctx.cmdline[a:ctx.pos]) ||
           \ a:ctx.cmdline[a:ctx.pos] ==# '|'
-      let l:in_group = 0
       break
     endif
 
     let a:ctx.pos += 1
   endwhile
 
-  " group name does not exist
-  " move cursor back to front and assume there is no group argument
+  let l:has_group = 0
   let l:group_name = a:ctx.cmdline[l:arg_start : a:ctx.pos - 1]
-  if !exists('#' . l:group_name)
-    let a:ctx.pos = l:arg_start
-  else
-    " else move cursor to start of next arg
+
+  " exists('#abc') returns 1 if either the group or event exists so we have to
+  " confirm that this is a group by checking that the event does not exist.
+  if exists('#' . l:group_name) && !exists('##' . l:group_name)
+    let l:has_group = 1
     call wilder#cmdline#main#skip_whitespace(a:ctx)
+  else
+    " Return to the start and treat the arg as an event
+    let a:ctx.pos = l:arg_start
   endif
 
   " handle event name
@@ -38,7 +41,11 @@ function! wilder#cmdline#autocmd#do(ctx, doautocmd) abort
 
   " complete event/group name
   if a:ctx.pos == len(a:ctx.cmdline)
-    let a:ctx.expand = 'event'
+    if l:has_group
+      let a:ctx.expand = 'event'
+    else
+      let a:ctx.expand = 'event_and_augroup'
+    endif
     let a:ctx.pos = l:arg_start
     return
   endif
@@ -69,5 +76,8 @@ function! wilder#cmdline#autocmd#do(ctx, doautocmd) abort
   if a:doautocmd
     let a:ctx.expand = 'file'
     let a:ctx.pos =  l:arg_start
+  else
+    " still in pattern
+    let a:ctx.expand = 'nothing'
   endif
 endfunction
