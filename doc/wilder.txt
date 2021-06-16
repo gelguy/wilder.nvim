@@ -1831,15 +1831,34 @@ wilder#popupmenu_devicons([{options}])
             {options} is a dictionary with keys:
             `get_icon`
             Optional~
-            A function name or a function. The function should take 2
-            arguments {file_name} and {is_dir} and return the icon to use.
-
-            To use `nerdfont.vim`, set this to {name -> nerdfont#find(name)}.
+            A function which takes {ctx}, {file_name} and {is_dir} as
+            arguments and return the icon to use.
+            {ctx} contains a single key `session_id` (see
+            |wilder-pipeline-context| for the meaning of `session_id`).
 
             Note: The icons returned should all be of the same
             |strdisplaywidth()|.
 
-            Default: 'WebDevIconsGetFileTypeSymbol'
+            Default:
+            |wilder#devicons_get_icon_from_nvim_web_devicons()|,
+            |wilder#devicons_get_icon_from_vim_devicons()| or
+            |wilder#devicons_get_icon_from_nerdfont_vim()|
+            depending on whether their respective dependencies are installed.
+
+            `get_hl`
+            Optional~
+            A function which takes {ctx}, {file_name}, {is_dir} and {icon} as
+            arguments and return the highlight to use.
+            {ctx} contains a single key `session_id` (see
+            |wilder-pipeline-context| for the meaning of `session_id`).
+            {icon} is the icon returned from `get_icon`.
+
+            Setting this to v:null turns off highlighting.
+
+            Default:
+            |wilder#devicons_get_hl_from_nvim_web_devicons()| or
+            |wilder#devicons_get_hl_from_glyph_palette_vim()|
+            depending on whether their respective dependencies are installed.
 
             `padding`
             Optional~
@@ -2557,6 +2576,88 @@ wilder#renderer_mux({args})         *wilder#renderer_mux()*
                   \ })
 <
 
+                           *wilder#devicons_get_icon_from_nvim_web_devicons()*
+                           Neovim 0.5+ only~
+                           nvim-web-devicons plugin required~
+wilder#devicons_get_icon_from_nvim_web_devicons([{options}])
+            Returns a function for the `get_icon` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `nvim-web-devicons` plugin can be found at
+            https://github.com/kyazdani42/nvim-web-devicons.
+
+            {options} is a dictionary with keys:
+            `dir_icon`
+            Optional~
+            The icon for directories since `nvim-web-devicons` does not
+            support directories.
+
+            Default: ''
+
+            `default_icon`
+            Optional~
+            The default icon when there is no match from `nvim-web-devicons`.
+
+            Default: ''
+
+                               *wilder#devicons_get_icon_from_vim_devicons()*
+                               vim-devicons plugin required~
+wilder#devicons_get_icon_from_vim_devicons()
+            Returns a function for `get_icon` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `vim-devicons` plugin can be found at
+            https://github.com/ryanoasis/vim-devicons.
+
+                               *wilder#devicons_get_icon_from_nerdfont_vim()*
+                               nerdfont.vim plugin required~
+wilder#devicons_get_icon_from_nerdfont_vim()
+            Returns a function for the `get_icon` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `nerdfont.vim` plugin can be found at
+            https://github.com/lambdalisue/nerdfont.vim.
+
+                           *wilder#devicons_get_hl_from_nvim_web_devicons()*
+                           Neovim 0.5+ only~
+                           nvim-web-devicons plugin required~
+wilder#devicons_get_hl_from_nvim_web_devicons([{options}])
+            Returns a function for the `get_hl` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `nvim-web-devicons` plugin can be found at
+            https://github.com/kyazdani42/nvim-web-devicons.
+
+            {options} is a dictionary with keys:
+            `dir_hl`
+            Optional~
+            The highlight used for directories.
+
+            Default: 'Directory'
+
+            `default_hl`
+            Optional~
+            The highlight used when there is no match from
+            `nvim-web-devicons`.
+
+            Default: 'Normal'
+
+                           *wilder#devicons_get_hl_from_glyph_palette_vim()*
+                           glyph-palette.vim plugin required~
+wilder#devicons_get_hl_from_glyph_palette_vim([{options}])
+            Returns a function for the `get_hl` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `glyph-palette.vim` plugin can be found at
+            https://github.com/lambdalisue/glyph-palette.vim.
+
+            {options} is a dictionary with keys:
+            `default_hl`
+            Optional~
+            The highlight used when there is no match from
+            `glyph-palette.vim`.
+
+            Default: 'Normal'
 
 ==============================================================================
 7. Deprecated                       *wilder-deprecated*

@@ -843,6 +843,29 @@ function! wilder#draw_devicons(ctx, x, data) abort
   return WebDevIconsGetFileTypeSymbol(a:x, l:is_dir) . ' ' . a:x
 endfunction
 
+function! wilder#devicons_get_icon_from_vim_devicons()
+  return wilder#renderer#popupmenu_column#devicons#get_icon_from_vim_devicons()
+endfunction
+
+function! wilder#devicons_get_icon_from_nerdfont_vim()
+  return wilder#renderer#popupmenu_column#devicons#get_icon_from_nerdfont_vim()
+endfunction
+
+function! wilder#devicons_get_icon_from_nvim_web_devicons(...)
+  let l:opts = a:0 ? a:1 : {}
+  return wilder#renderer#popupmenu_column#devicons#get_icon_from_nvim_web_devicons(l:opts)
+endfunction
+
+function! wilder#devicons_get_hl_from_glyph_palette_vim(...)
+  let l:opts = a:0 ? a:1 : {}
+  return wilder#renderer#popupmenu_column#devicons#get_hl_from_glyph_palette_vim(l:opts)
+endfunction
+
+function! wilder#devicons_get_hl_from_nvim_web_devicons(...)
+  let l:opts = a:0 ? a:1 : {}
+  return wilder#renderer#popupmenu_column#devicons#get_hl_from_nvim_web_devicons(l:opts)
+endfunction
+
 function! s:extract_keys(obj, ...)
   let l:res = {}
 
