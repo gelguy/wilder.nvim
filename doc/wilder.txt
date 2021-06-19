@@ -835,6 +835,10 @@ wilder#python_file_finder_pipeline([{options}])
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
 
+            To dynamically search hidden directories depending on the
+            argument, use (for `fd`)
+            {_, arg -> arg[0] ==# '.' ? ['fd', '-tf', -H'] : ['fd', '-tf']}
+
             Default: ['find', '.', '-type', 'f', '-printf', '%P\n']
 
             `dir_command`

@@ -1040,13 +1040,13 @@ function! s:file_finder(ctx, opts, res) abort
     if has_key(a:opts, 'file_command')
       let l:Command = a:opts['file_command']
     else
-      let l:Command = ['find', '.', '-type', 'f', '-printf', '%P\\n']
+      let l:Command = ['find', '.', '-type', 'f', '-printf', '%P\n']
     endif
   else
     if has_key(a:opts, 'dir_command')
       let l:Command = a:opts['dir_command']
     else
-      let l:Command = ['find', '.', '-type', 'd', '-printf', '%P\\n']
+      let l:Command = ['find', '.', '-type', 'd', '-printf', '%P\n']
     endif
   endif
 
