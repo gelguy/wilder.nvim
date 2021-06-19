@@ -62,8 +62,7 @@ function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
     let a:res.match_arg = a:res.expand_arg[2 :]
     let a:res.expand_arg = a:res.expand_arg[0: 1]
 
-  " For tag-regexp, use the whole argument as expand_arg as s:getcompletion
-  " will use expand_arg as the pattern for match()
+  " For tag-regexp, keep the argument and don't do fuzzy matching
   elseif a:res.expand ==# 'tags' && a:res.expand_arg[0] ==# '/'
     let a:res.fuzzy_char = ''
     let a:res.match_arg = ''
