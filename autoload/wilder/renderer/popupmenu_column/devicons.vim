@@ -1,11 +1,8 @@
 function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
-  let l:padding = get(a:opts, 'padding', [0, 1])
   let l:state = {
         \ 'session_id': -1,
         \ 'cache': wilder#cache#cache(),
         \ 'created_hls': {},
-        \ 'left_padding': repeat(' ', l:padding[0]),
-        \ 'right_padding': repeat(' ', l:padding[1]),
         \ }
 
   if has_key(a:opts, 'get_icon')
@@ -77,7 +74,7 @@ function! s:devicons(state, ctx, result) abort
     let l:icon = a:state.get_icon(a:ctx, l:x, l:is_dir)
 
     if a:state.get_hl is v:null
-      let l:chunks = [[a:state.left_padding . l:icon . a:state.right_padding]]
+      let l:chunks = [[l:icon]]
     else
       let l:hl = a:state.get_hl(a:ctx, l:x, l:is_dir, l:icon)
 
@@ -89,7 +86,7 @@ function! s:devicons(state, ctx, result) abort
       endif
 
       let [l:default_hl, l:selected_hl] = a:state.created_hls[l:hl]
-      let l:chunks = [[a:state.left_padding], [l:icon, l:default_hl, l:selected_hl], [a:state.right_padding]]
+      let l:chunks = [[l:icon, l:default_hl, l:selected_hl]]
     endif
 
     call a:state.cache.set(l:x, l:chunks)

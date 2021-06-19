@@ -237,9 +237,7 @@ See `:h wilder#popupmenu_devicons` for more details.
 ```vim
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ 'highlighter': wilder#basic_highlighter(),
-      \ 'left': [
-      \   wilder#popupmenu_devicons(),
-      \ ],
+      \ 'left': [wilder#popupmenu_devicons(), '  '],
       \ }))
 ```
 
@@ -366,13 +364,8 @@ let s:highlighters = [
 call wilder#set_option('renderer', wilder#renderer_mux({
       \ ':': wilder#popupmenu_renderer({
       \   'highlighter': s:highlighters,
-      \   'left': [
-      \     wilder#popupmenu_devicons(),
-      \   ],
-      \   'right': [
-      \     ' ',
-      \     wilder#popupmenu_scrollbar(),
-      \   ],
+      \   'left': [wilder#popupmenu_devicons(), '  '],
+      \   'right': [' ', wilder#popupmenu_scrollbar()],
       \ }),
       \ '/': wilder#wildmenu_renderer({
       \   'highlighter': s:highlighters,
