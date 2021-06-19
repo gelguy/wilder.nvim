@@ -10,7 +10,7 @@
   - customisable look and appearance
 - Async query support - uses Python 3 remote plugin for faster and non-blocking queries
 
-![wilder](https://i.imgur.com/5kkjB7X.gif)
+![wilder](https://i.imgur.com/LkOOU6G.gif)
 
 # Requirements
 
