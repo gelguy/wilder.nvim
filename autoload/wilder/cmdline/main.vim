@@ -661,6 +661,9 @@ function! wilder#cmdline#main#do(ctx) abort
   elseif a:ctx.cmd ==# 'argdelete'
     let a:ctx.expand = 'arglist'
     return
+  elseif a:ctx.cmd ==# 'lua'
+    let a:ctx.expand = 'lua'
+    return
   endif
 endfunction
 

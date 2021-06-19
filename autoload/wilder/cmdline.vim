@@ -46,13 +46,10 @@ endfunction
 function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
   " For non-python completion, a maximum of 300 help tags are returned, so
   " getting all the candidates and filtering will miss out on a lot of matches
-  if a:res.expand ==# 'help'
-    if !a:use_python
-      return a:res
-    endif
   " If argument is empty, don't fuzzy match except for expanding 'help', where
   " the default argument is 'help'
-  elseif a:res.pos == len(a:res.cmdline)
+  if (a:res.expand ==# 'help' && !a:use_python) ||
+        \ a:res.pos == len(a:res.cmdline)
     return a:res
   endif
 
@@ -513,6 +510,9 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
           \ filter(['ctype', 'messages', 'time'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'locale'
     return getcompletion(l:expand_arg, 'locale')
+  elseif a:res.expand ==# 'lua'
+    " Lua completion not supported
+    return []
   elseif a:res.expand ==# 'mapping'
     let l:map_args = get(a:res, 'map_args', {})
 
@@ -1156,6 +1156,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   " └--> completion_pipeline
   return [
         \ wilder#branch(
+        \   [{_, res -> res.expand ==# 'lua' ? v:true : v:false}],
         \   l:file_completion_subpipeline,
         \   l:completion_subpipeline,
         \ ),
