@@ -533,15 +533,12 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'ptag' ||
         \ a:ctx.cmd ==# 'ltag' ||
         \ a:ctx.cmd ==# 'tselect' ||
-        \ a:ctx.cmd ==# 'stelect' ||
+        \ a:ctx.cmd ==# 'stselect' ||
         \ a:ctx.cmd ==# 'tjump' ||
         \ a:ctx.cmd ==# 'stjump' ||
+        \ a:ctx.cmd ==# 'ptselect' ||
         \ a:ctx.cmd ==# 'ptjump'
-    if &wildoptions =~# 'tagfile'
-      let a:ctx.expand = 'tags_listfiles'
-    else
-      let a:ctx.expand = 'tags'
-    endif
+    let a:ctx.expand = 'tags'
     return
   elseif a:ctx.cmd ==# 'augroup'
     let a:ctx.expand = 'augroup'
@@ -663,6 +660,9 @@ function! wilder#cmdline#main#do(ctx) abort
     return
   elseif a:ctx.cmd ==# 'argdelete'
     let a:ctx.expand = 'arglist'
+    return
+  elseif a:ctx.cmd ==# 'lua'
+    let a:ctx.expand = 'lua'
     return
   endif
 endfunction

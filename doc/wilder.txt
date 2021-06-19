@@ -724,10 +724,9 @@ wilder#cmdline_pipeline([{options}])
             have to start with the first character of the query. If 2, the
             candidates do not have to start with the first character.
 
-            Note: Fuzzy matching does not work in some cases, e.g. when
-            getting |help| completions, when completing filenames with
-            |wildcards| or user-defined command completions
-            |:command-completion|.
+            Note: Fuzzy matching does not work in some cases, e.g.  when
+            completing filenames with |wildcards| or user-defined command
+            completions |:command-completion|.
 
             Note: When set to 2, `shellcmd` candidates will still start with
             the first character of the query due to performance reasons.
@@ -759,7 +758,7 @@ wilder#cmdline_pipeline([{options}])
             endfunction
 <
             Default: |wilder#python_fuzzy_filter()| if `language` is 'python'
-                     |wilder#fuzzy_filter()| otherwise
+                     |wilder#vim_fuzzy_filter()| otherwise
 
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
@@ -835,6 +834,10 @@ wilder#python_file_finder_pipeline([{options}])
 
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
+
+            To dynamically search hidden directories depending on the
+            argument, use (for `fd`)
+            {_, arg -> arg[0] ==# '.' ? ['fd', '-tf', -H'] : ['fd', '-tf']}
 
             Default: ['find', '.', '-type', 'f', '-printf', '%P\n']
 
@@ -927,6 +930,11 @@ wilder#python_file_finder_pipeline([{options}])
             Can be set to an empty list to return the entire list of files.
 
             For performance, using `cpsm` with ['cpsm_filter'] is recommended.
+
+            Note: The arguments are different from the `fuzzy_filter` option
+            in other pipelines such as |wilder#cmdline_pipeline()|. This is
+            for performance reasons as it allows the filtering to be done in
+            Python returning the results.
 
             The available filters are:
             `fuzzy_filter`
@@ -1832,15 +1840,34 @@ wilder#popupmenu_devicons([{options}])
             {options} is a dictionary with keys:
             `get_icon`
             Optional~
-            A function name or a function. The function should take 2
-            arguments {file_name} and {is_dir} and return the icon to use.
-
-            To use `nerdfont.vim`, set this to {name -> nerdfont#find(name)}.
+            A function which takes {ctx}, {file_name} and {is_dir} as
+            arguments and return the icon to use.
+            {ctx} contains a single key `session_id` (see
+            |wilder-pipeline-context| for the meaning of `session_id`).
 
             Note: The icons returned should all be of the same
             |strdisplaywidth()|.
 
-            Default: 'WebDevIconsGetFileTypeSymbol'
+            Default:
+            |wilder#devicons_get_icon_from_nvim_web_devicons()|,
+            |wilder#devicons_get_icon_from_vim_devicons()| or
+            |wilder#devicons_get_icon_from_nerdfont_vim()|
+            depending on whether their respective dependencies are installed.
+
+            `get_hl`
+            Optional~
+            A function which takes {ctx}, {file_name}, {is_dir} and {icon} as
+            arguments and return the highlight to use.
+            {ctx} contains a single key `session_id` (see
+            |wilder-pipeline-context| for the meaning of `session_id`).
+            {icon} is the icon returned from `get_icon`.
+
+            Setting this to v:null turns off highlighting.
+
+            Default:
+            |wilder#devicons_get_hl_from_nvim_web_devicons()| or
+            |wilder#devicons_get_hl_from_glyph_palette_vim()|
+            depending on whether their respective dependencies are installed.
 
             `padding`
             Optional~
@@ -2166,6 +2193,19 @@ wilder#fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             Takes a list of candidates and fuzzily filters and sorts the
             candidates.
 
+            Uses |wilder#python_fuzzy_filt()| if has('nvim'). Otherwise uses
+            |wilder#vim_fuzzy_filt()|.
+
+wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
+            Returns a fuzzy filter that filters and sorts the candidates using
+            |wilder#fuzzy_filt()|. Can be used as the `fuzzy_filter` option in
+            |wilder#cmdline_pipeline()|.
+
+                                    *wilder#vim_fuzzy_filt()*
+wilder#vim_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
+            Takes a list of candidates and fuzzily filters and sorts the
+            candidates.
+
             A {candidate} is matched if it contains all the characters in
             {query} and in the same order.
 
@@ -2174,10 +2214,10 @@ wilder#fuzzy_filt({ctx}, {opts}, {candidates}, {query})
 
             Options contains no keys.
 
-wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
+wilder#vim_fuzzy_filter()           *wilder#vim_fuzzy_filter()*
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#fuzzy_filt()|. Can be used as the `fuzzy_filter` option in
-            |wilder#cmdline_pipeline()|.
+            |wilder#vim_fuzzy_filt()|. Can be used as the `fuzzy_filter`
+            option in |wilder#cmdline_pipeline()|.
 
                                     *wilder#python_fuzzy_filt()*
 wilder#python_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
@@ -2250,8 +2290,10 @@ wilder#python_cpsm_filt({ctx}, {opts}, {candidates}, {query})
                                     Async~
                                     cpsm plugin required~
             Takes a list of candidates and fuzzily filters and sorts the
-            candidates using `cpsm`. The `cpsm` Vim plugin is required and can
-            be found at https://github.com/nixprime/cpsm.
+            candidates using `cpsm`.
+
+            The `cpsm` Vim plugin is required and can be found at
+            https://github.com/nixprime/cpsm.
 
             {opts} can contain the following keys:
             `cpsm_path`
@@ -2266,13 +2308,33 @@ wilder#python_cpsm_filter([{cpsm_path}])
                                     Neovim only~
                                     cpsm plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
-            |wilder#python_cpsm_filt()|.
+            |wilder#python_cpsm_filt()|. Can be used as the `fuzzy_filter`
+            option in |wilder#cmdline_pipeline()|.
 
             The {cpsm_path} argument is passed to |wilder#python_cpsm_filt()|
             as an option.
 
             {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
             is inferred by Neovim otherwise.
+
+                                    *wilder#lua_fzy_filt()*
+wilder#lua_fzy_filt({ctx}, {opts}, {candidates}, {query})
+                                    Neovim only~
+                                    fzy-lua-native plugin required~
+            Takes a list of candidates and fuzzily filters and sorts the
+            candidates using `fzy-lua-native`.
+
+            The `fzy-lua-native` plugin can be found at
+            https://github.com/romgrk/fzy-lua-native.
+
+            {opts} is ignored.
+
+wilder#lua_fzy_filter()             *wilder#lua_fzy_filter()*
+                                    Neovim only~
+                                    fzy-lua-native plugin required~
+            Returns a fuzzy filter that filters and sorts the candidates using
+            |wilder#lua_fzy_filt()|. Can be used as the `fuzzy_filter` option
+            in |wilder#cmdline_pipeline()|.
 
                                     *wilder#lexical_sort()*
 wilder#lexical_sort({ctx}, {opts}, {candidates}[, {query}])
@@ -2558,6 +2620,88 @@ wilder#renderer_mux({args})         *wilder#renderer_mux()*
                   \ })
 <
 
+                           *wilder#devicons_get_icon_from_nvim_web_devicons()*
+                           Neovim 0.5+ only~
+                           nvim-web-devicons plugin required~
+wilder#devicons_get_icon_from_nvim_web_devicons([{options}])
+            Returns a function for the `get_icon` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `nvim-web-devicons` plugin can be found at
+            https://github.com/kyazdani42/nvim-web-devicons.
+
+            {options} is a dictionary with keys:
+            `dir_icon`
+            Optional~
+            The icon for directories since `nvim-web-devicons` does not
+            support directories.
+
+            Default: ''
+
+            `default_icon`
+            Optional~
+            The default icon when there is no match from `nvim-web-devicons`.
+
+            Default: ''
+
+                               *wilder#devicons_get_icon_from_vim_devicons()*
+                               vim-devicons plugin required~
+wilder#devicons_get_icon_from_vim_devicons()
+            Returns a function for `get_icon` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `vim-devicons` plugin can be found at
+            https://github.com/ryanoasis/vim-devicons.
+
+                               *wilder#devicons_get_icon_from_nerdfont_vim()*
+                               nerdfont.vim plugin required~
+wilder#devicons_get_icon_from_nerdfont_vim()
+            Returns a function for the `get_icon` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `nerdfont.vim` plugin can be found at
+            https://github.com/lambdalisue/nerdfont.vim.
+
+                           *wilder#devicons_get_hl_from_nvim_web_devicons()*
+                           Neovim 0.5+ only~
+                           nvim-web-devicons plugin required~
+wilder#devicons_get_hl_from_nvim_web_devicons([{options}])
+            Returns a function for the `get_hl` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `nvim-web-devicons` plugin can be found at
+            https://github.com/kyazdani42/nvim-web-devicons.
+
+            {options} is a dictionary with keys:
+            `dir_hl`
+            Optional~
+            The highlight used for directories.
+
+            Default: 'Directory'
+
+            `default_hl`
+            Optional~
+            The highlight used when there is no match from
+            `nvim-web-devicons`.
+
+            Default: 'Normal'
+
+                           *wilder#devicons_get_hl_from_glyph_palette_vim()*
+                           glyph-palette.vim plugin required~
+wilder#devicons_get_hl_from_glyph_palette_vim([{options}])
+            Returns a function for the `get_hl` option in
+            |wilder#popupmenu_devicons()|.
+
+            The `glyph-palette.vim` plugin can be found at
+            https://github.com/lambdalisue/glyph-palette.vim.
+
+            {options} is a dictionary with keys:
+            `default_hl`
+            Optional~
+            The highlight used when there is no match from
+            `glyph-palette.vim`.
+
+            Default: 'Normal'
 
 ==============================================================================
 7. Deprecated                       *wilder-deprecated*
@@ -2693,21 +2837,21 @@ Minimal Configuration~
     call wilder#set_option('modes', ['/', '?', ':'])
 <
 
-Pipelines (Neovim only)~
+Fuzzy pipelines (Neovim only)~
 >
     " add minimal configuration
     call wilder#set_option('pipeline', [
           \   wilder#branch(
           \     [
           \       wilder#check({_, x -> empty(x)}),
-          \       wilder#history(100),
+          \       wilder#history(),
           \     ],
           \     wilder#cmdline_pipeline({
           \       'language': 'python',
           \       'fuzzy': 1,
           \     }),
           \     wilder#python_search_pipeline({
-          \       'fuzzy': 1,
+          \       'pattern': 'fuzzy',
           \     }),
           \   ),
           \ ])
@@ -2721,6 +2865,15 @@ Airline/Lightline Theme for Wildmenu Renderer~
           \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
           \ })))
+<
+
+Use Popupmenu for : and Wildmenu for /~
+>
+    " use wilder#wildmenu_lightline_theme() for Lightline
+    wilder#set_option('renderer, wilder#renderer_mux({
+          \ ':': wilder#popupmenu_renderer(),
+          \ '/': wilder#wildmenu_renderer(),
+          \ })
 <
 
 ==============================================================================

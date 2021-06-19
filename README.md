@@ -10,7 +10,7 @@
   - customisable look and appearance
 - Async query support - uses Python 3 remote plugin for faster and non-blocking queries
 
-![wilder](https://i.imgur.com/5kkjB7X.gif)
+![wilder](https://i.imgur.com/LkOOU6G.gif)
 
 # Requirements
 
@@ -265,6 +265,120 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
 
 Other available highlighters are `wilder#python_pcre2_highlighter()` and
 `wilder#python_cpsm_highlighter()` which needs `cpsm` to be installed.
+
+# Example configs
+
+### Basic config (for both Vim and Neovim)
+```vim
+call wilder#enable_cmdline_enter()
+set wildcharm=<Tab>
+cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
+cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+call wilder#set_option('modes', ['/', '?', ':'])
+
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#cmdline_pipeline(),
+      \     wilder#search_pipeline(),
+      \   ),
+      \ ])
+
+call wilder#set_option('renderer', wilder#wildmenu_renderer({
+      \ 'highlighter': wilder#basic_highlighter(),
+      \ }))
+```
+
+### Fuzzy config (for Neovim only)
+```vim
+call wilder#enable_cmdline_enter()
+set wildcharm=<Tab>
+cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
+cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+call wilder#set_option('modes', ['/', '?', ':'])
+
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#cmdline_pipeline({
+      \       'fuzzy': 1,
+      \     }),
+      \     wilder#python_search_pipeline({
+      \       'pattern': 'fuzzy',
+      \     }),
+      \   ),
+      \ ])
+
+let s:highlighters = [
+        \ wilder#pcre2_highlighter(),
+        \ wilder#basic_highlighter(),
+        \ ]
+
+call wilder#set_option('renderer', wilder#renderer_mux({
+      \ ':': wilder#popupmenu_renderer({
+      \   'highlighter': s:highlighters,
+      \ }),
+      \ '/': wilder#wildmenu_renderer({
+      \   'highlighter': s:highlighters,
+      \ }),
+      \ }))
+```
+
+### Advanced config (for Neovim only)
+
+- Requires `fd` from [sharkdp/fd](https://github.com/sharkdp/fd)  (see `:h wilder#python_file_finder_pipeline()` on using other commands)
+- Requires `cpsm` from [nixprime/cpsm](https://github.com/nixprime/cpsm)
+- Requires `fzy-lua-native` from [romgrk/fzy-lua-native](https://github.com/romgrk/fzy-lua-native)
+- Requires `nvim-web-devicons` from [kyazdani42/nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons) or
+  `vim-devicons` from [ryanoasis/vim-devicons](https://github.com/ryanoasis/vim-devicons)
+
+```vim
+call wilder#enable_cmdline_enter()
+set wildcharm=<Tab>
+cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
+cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+call wilder#set_option('modes', ['/', '?', ':'])
+
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#python_file_finder_pipeline({
+      \       'file_command': {_, arg -> stridx(arg, '.') != -1 ? ['fd', '-tf', '-H'] : ['fd', '-tf']},
+      \       'dir_command': ['fdfind', '-td'],
+      \       'filters': ['cpsm_filter'],
+      \       'cache_timestamp': {-> 1},
+      \     }),
+      \     wilder#cmdline_pipeline({
+      \       'fuzzy': 1,
+      \       'fuzzy_filter': wilder#python_cpsm_filter(),
+      \       'set_pcre2_pattern': 0,
+      \     }),
+      \     wilder#python_search_pipeline({
+      \       'pattern': wilder#python_fuzzy_pattern({
+      \         'start_at_boundary': 0,
+      \       }),
+      \     }),
+      \   ),
+      \ ])
+
+let s:highlighters = [
+      \ wilder#pcre2_highlighter(),
+      \ wilder#lua_fzy_highlighter(),
+      \ ]
+
+call wilder#set_option('renderer', wilder#renderer_mux({
+      \ ':': wilder#popupmenu_renderer({
+      \   'highlighter': s:highlighters,
+      \   'left': [
+      \     wilder#popupmenu_devicons(),
+      \   ],
+      \   'right': [
+      \     ' ',
+      \     wilder#popupmenu_scrollbar(),
+      \   ],
+      \ }),
+      \ '/': wilder#wildmenu_renderer({
+      \   'highlighter': s:highlighters,
+      \ }),
+      \ }))
+```
 
 # Tips
 

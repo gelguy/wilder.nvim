@@ -24,6 +24,13 @@ function! wilder#cmdline#prepare_getcompletion(ctx, res, fuzzy, use_python) abor
         \ : a:res.arg
 
   if !a:fuzzy
+    if a:res.expand ==# 'tags' &&
+          \ !empty(a:res.expand_arg) &&
+          \ a:res.expand_arg[0] !=# '/'
+      " Search taglist for tags starting with expand_arg
+      let a:res.expand_arg = '/^' . a:res.expand_arg
+    endif
+
     return a:res
   endif
 
@@ -39,24 +46,10 @@ endfunction
 function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
   " For non-python completion, a maximum of 300 help tags are returned, so
   " getting all the candidates and filtering will miss out on a lot of matches
-  if a:res.expand ==# 'help'
-    if !a:use_python
-      return a:res
-    endif
   " If argument is empty, don't fuzzy match except for expanding 'help', where
   " the default argument is 'help'
-  elseif a:res.pos == len(a:res.cmdline)
-    return a:res
-  endif
-
-  " Maximum of 300 tags are returned, don't fuzzy match for 'tag'
-  if a:res.expand ==# 'tags' ||
-        \ a:res.expand ==# 'tags_listfiles'
-    " If using tag-regexp, prevent fuzzy filtering by removing match_arg
-    if a:res.expand_arg[0] ==# '/'
-      let a:res.match_arg = ''
-    endif
-
+  if (a:res.expand ==# 'help' && !a:use_python) ||
+        \ a:res.pos == len(a:res.cmdline)
     return a:res
   endif
 
@@ -65,11 +58,16 @@ function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
   if (a:res.expand ==# 'expression' || a:res.expand ==# 'var') &&
         \ a:res.expand_arg[1] ==# ':' &&
         \ (a:res.expand_arg[0] ==# 'g' || a:res.expand_arg[0] ==# 's')
-    let l:prefix = a:res.expand_arg[0: 1]
-    let l:fuzzy_char = a:res.expand_arg[2]
+    let a:res.fuzzy_char = a:res.expand_arg[2]
     let a:res.match_arg = a:res.expand_arg[2 :]
+    let a:res.expand_arg = a:res.expand_arg[0: 1]
 
-  " Return all tags and let the fuzzy filter remove the non-matching
+  " For tag-regexp, keep the argument and don't do fuzzy matching
+  elseif a:res.expand ==# 'tags' && a:res.expand_arg[0] ==# '/'
+    let a:res.fuzzy_char = ''
+    let a:res.match_arg = ''
+
+  " Return all candidates and let the fuzzy filter remove the non-matching
   " candidates for the following cases:
   "
   " mapping: special keys such as <Space> cannot be fuzzy completed since
@@ -82,23 +80,21 @@ function! s:prepare_fuzzy_completion(ctx, res, use_python) abort
   elseif a:res.expand ==# 'mapping' ||
         \ a:res.expand ==# 'buffer' ||
         \ a:res.expand ==# 'help'
-    let l:prefix = ''
-    let l:fuzzy_char = ''
-
-    " Default argument is 'help'
+    " Default argument for help completion is 'help'
     if a:res.expand ==# 'help' && empty(a:res.expand_arg)
       let a:res.match_arg = 'help'
     else
       let a:res.match_arg = a:res.expand_arg
     endif
+
+    let a:res.expand_arg = ''
+    let a:res.fuzzy_char = ''
   else
     " Default case, expand with the fuzzy_char
-    let l:prefix = ''
-    let l:fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
+    let a:res.fuzzy_char = strcharpart(a:res.expand_arg, 0, 1)
+    let a:res.expand_arg = ''
   endif
 
-  let a:res.expand_arg = l:prefix
-  let a:res.fuzzy_char = l:fuzzy_char
   return a:res
 endfunction
 
@@ -250,7 +246,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   return l:res
 endfunction
 
-function! wilder#cmdline#fuzzy_filt(ctx, candidates, query) abort
+function! wilder#cmdline#vim_fuzzy_filt(ctx, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
@@ -346,13 +342,32 @@ function! wilder#cmdline#python_cpsm_filt(ctx, opts, candidates, query) abort
 endfunction
 
 function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mode, use_python) abort
+  " Use tag-regexp to get fuzzy completions from taglist()
+  if a:res.expand ==# 'tags'
+    let l:fuzzy_char = get(a:res, 'fuzzy_char', '')
+
+    if empty(l:fuzzy_char)
+      let a:res.expand_arg = '.'
+    else
+      let a:res.expand_arg = '/'
+      if toupper(l:fuzzy_char) !=# l:fuzzy_char
+        let a:res.expand_arg .= '\c'
+      endif
+
+      if a:fuzzy_mode == 1
+        let a:res.expand_arg .= '^'
+      endif
+
+      let a:res.expand_arg .= l:fuzzy_char
+    endif
+
+    return a:getcompletion(a:ctx, a:res)
+  endif
+
   " If argument is empty, use normal completions
   " Don't fuzzy complete for vim help since a maximum of 300 help tags are returned
-  " Don't fuzzy complete for tags since a maximum of 300 tags are returned
   if a:res.pos == len(a:res.cmdline) ||
-        \ (a:res.expand ==# 'help' && !a:use_python) ||
-        \ a:res.expand ==# 'tags' ||
-        \ a:res.expand ==# 'tags_listfiles'
+        \ (a:res.expand ==# 'help' && !a:use_python)
     return a:getcompletion(a:ctx, a:res)
   endif
 
@@ -379,6 +394,9 @@ function! wilder#cmdline#get_fuzzy_completion(ctx, res, getcompletion, fuzzy_mod
         \ {ctx, upper_xs -> wilder#resolve(ctx, wilder#wait(a:getcompletion(ctx, l:lower_res),
         \ {ctx, lower_xs -> wilder#resolve(ctx, wilder#uniq_filt(0, 0, lower_xs + upper_xs))}))})
 endfunction
+
+let s:cached_tags = {}
+let s:cached_tags_session_id = -1
 
 function! wilder#cmdline#python_get_file_completion(ctx, res) abort
   if has_key(a:res, 'completions')
@@ -472,6 +490,8 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'cscope')
   elseif a:res.expand ==# 'event'
     return getcompletion(l:expand_arg, 'event')
+  elseif a:res.expand ==# 'event_and_augroup'
+    return getcompletion(l:expand_arg, 'event') + getcompletion(l:expand_arg, 'augroup')
   elseif a:res.expand ==# 'expression'
     return getcompletion(l:expand_arg, 'expression')
   elseif a:res.expand ==# 'environment'
@@ -486,9 +506,12 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'history')
   elseif a:res.expand ==# 'language'
     return getcompletion(l:expand_arg, 'locale') +
-          \ filter(['ctype', 'messages', 'time'], {_, x -> match(x, l:expand_arg) == 0})
+          \ filter(['ctype', 'messages', 'time'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'locale'
     return getcompletion(l:expand_arg, 'locale')
+  elseif a:res.expand ==# 'lua'
+    " Lua completion not supported
+    return []
   elseif a:res.expand ==# 'mapping'
     let l:map_args = get(a:res, 'map_args', {})
 
@@ -503,7 +526,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
       endfor
 
       if l:expand_arg[0] ==# '<'
-        call filter(l:result, {_, x -> match(x, l:expand_arg) == 0})
+        call filter(l:result, {_, x -> s:is_prefix(x, l:expand_arg)})
       endif
     endif
 
@@ -547,7 +570,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
 
     return wilder#uniq_filt(0, 0, l:result)
   elseif a:res.expand ==# 'mapclear'
-    return match('<buffer>', l:expand_arg) == 0 ? ['<buffer>'] : []
+    return s:is_prefix('<buffer>', l:expand_arg) ? ['<buffer>'] : []
   elseif a:res.expand ==# 'menu'
     if !has_key(a:res, 'menu_arg')
       return []
@@ -559,7 +582,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'option')
   elseif a:res.expand ==# 'option_bool'
     return filter(wilder#cmdline#set#get_bool_options(),
-          \ {_, x -> match(x, l:expand_arg == 0)})
+          \ {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'option_old'
     let l:old_option = eval('&' . a:res.option)
     return [type(l:old_option) is v:t_string ? l:old_option : string(l:old_option)]
@@ -567,7 +590,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'packadd')
   elseif a:res.expand ==# 'profile'
     return filter(['continue', 'dump', 'file', 'func', 'pause', 'start'],
-          \ {_, x -> match(x, l:expand_arg) == 0})
+          \ {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'ownsyntax'
     return getcompletion(l:expand_arg, 'syntax')
   elseif a:res.expand ==# 'shellcmd'
@@ -586,10 +609,10 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return map(l:functions, {_, x -> x[-1 :] ==# ')' ? x[: -3] : x[: -2]})
   elseif a:res.expand ==# 'user_addr_type'
     return filter(['arguments', 'buffers', 'lines', 'loaded_buffers',
-          \ 'quickfix', 'tabs', 'windows'], {_, x -> match(x, l:expand_arg) == 0})
+          \ 'quickfix', 'tabs', 'windows'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'user_cmd_flags'
     return filter(['addr', 'bar', 'buffer', 'complete', 'count',
-          \ 'nargs', 'range', 'register'], {_, x -> match(x, l:expand_arg) == 0})
+          \ 'nargs', 'range', 'register'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'user_complete'
     return filter(['arglist', 'augroup', 'behave', 'buffer', 'checkhealth',
           \ 'color', 'command', 'compiler', 'cscope', 'custom',
@@ -598,7 +621,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
           \ 'highlight', 'history', 'locale', 'mapclear', 'mapping',
           \ 'menu', 'messages', 'option', 'packadd', 'shellcmd',
           \ 'sign', 'syntax', 'syntime', 'tag', 'tag_listfiles',
-          \ 'user', 'var'], {_, x -> match(x, l:expand_arg) == 0})
+          \ 'user', 'var'], {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'user_nargs'
     if empty(l:expand_arg)
       return ['*', '+', '0', '1', '?']
@@ -612,11 +635,28 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return []
   elseif a:res.expand ==# 'user_commands'
     return filter(getcompletion(l:expand_arg, 'command'), {_, x -> x[0] >=# 'A' && x[0] <=# 'Z'})
-  elseif a:res.expand ==# 'tags' ||
-        \ a:res.expand ==# 'tags_listfiles'
-    " tags_listfiles is only used for c_CTRL-D
-    " both return the same result for getcompletion()
-    return getcompletion(l:expand_arg, 'tag')
+  elseif a:res.expand ==# 'tags'
+    if a:ctx.session_id > s:cached_tags_session_id
+      let s:cached_tags_session_id = a:ctx.session_id
+      let s:cached_tags = {}
+    endif
+
+    let l:arg = a:res.expand_arg
+    if l:arg[0] ==# '/'
+      let l:taglist_arg = l:arg[1:]
+    else
+      let l:taglist_arg = l:arg
+    endif
+
+    if empty(l:taglist_arg)
+      let l:taglist_arg = '.'
+    endif
+
+    if !has_key(s:cached_tags, l:taglist_arg)
+      let s:cached_tags[l:taglist_arg] = map(taglist(l:taglist_arg), {_, x -> x.name})
+    endif
+
+    return copy(s:cached_tags[l:taglist_arg])
   elseif a:res.expand ==# 'var'
     return getcompletion(l:expand_arg, 'var')
   endif
@@ -783,8 +823,11 @@ function! s:getcompletion(ctx, res, fuzzy, use_python) abort
     let l:Completion_func = funcref('wilder#cmdline#getcompletion')
   endif
 
+  " For tag-regexp, don't do fuzzy completion
   " If fuzzy, wrap the completion func in wilder#cmdline#get_fuzzy_completion()
-  if a:fuzzy
+  if a:res.expand ==# 'tags' && a:res.expand_arg[0] ==# '/'
+    let l:Getcompletion = l:Completion_func
+  elseif a:fuzzy
     let l:Getcompletion = {ctx, x -> wilder#cmdline#get_fuzzy_completion(
           \ ctx, x, l:Completion_func, a:fuzzy, a:use_python)}
   else
@@ -879,9 +922,13 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-        \ {_, res -> len(res.substitute_args) <= 2 ? res : l:hide_in_replace ? v:true : v:false},
+        \ {_, res -> res.cmd ==# 'global' || res.cmd ==# 'vglobal' || len(res.substitute_args) <= 2 ?
+        \   res :
+        \   l:hide_in_replace ? v:true : v:false},
         \ wilder#subpipeline({ctx, res -> [
-        \   {_, res -> res.substitute_args[1]},
+        \   {_, res -> res.cmd ==# 'global' || res.cmd ==# 'vglobal' ?
+        \     res.arg :
+        \     res.substitute_args[1]},
         \ ] + l:search_pipeline + [
         \   wilder#result({
         \     'data': {
@@ -992,13 +1039,13 @@ function! s:file_finder(ctx, opts, res) abort
     if has_key(a:opts, 'file_command')
       let l:Command = a:opts['file_command']
     else
-      let l:Command = ['find', '.', '-type', 'f', '-printf', '%P\\n']
+      let l:Command = ['find', '.', '-type', 'f', '-printf', '%P\n']
     endif
   else
     if has_key(a:opts, 'dir_command')
       let l:Command = a:opts['dir_command']
     else
-      let l:Command = ['find', '.', '-type', 'd', '-printf', '%P\\n']
+      let l:Command = ['find', '.', '-type', 'd', '-printf', '%P\n']
     endif
   endif
 
@@ -1058,7 +1105,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     elseif l:use_python
       let l:Filter = wilder#python_fuzzy_filter()
     else
-      let l:Filter = wilder#fuzzy_filter()
+      let l:Filter = wilder#vim_fuzzy_filter()
     endif
   endif
 
@@ -1108,6 +1155,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   " └--> completion_pipeline
   return [
         \ wilder#branch(
+        \   [{_, res -> res.expand ==# 'lua' ? v:true : v:false}],
         \   l:file_completion_subpipeline,
         \   l:completion_subpipeline,
         \ ),
@@ -1219,4 +1267,16 @@ function! s:set_query(data) abort
   let l:match_arg = get(l:data, 'cmdline.match_arg', '')
 
   return extend(a:data, {'query': l:match_arg})
+endfunction
+
+function! s:is_prefix(str, q) abort
+  if empty(a:q)
+    return 1
+  endif
+
+  if len(a:q) > len(a:str)
+    return 0
+  endif
+
+  return a:str[0 : len(a:q) - 1] ==# a:q
 endfunction

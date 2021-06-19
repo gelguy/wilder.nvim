@@ -413,12 +413,28 @@ function! wilder#filter_fuzzy() abort
   return call('wilder#fuzzy_filter', [])
 endfunction
 
-function! wilder#fuzzy_filter() abort
-  return {ctx, xs, q -> wilder#fuzzy_filt(ctx, {}, xs, q)}
+function! wilder#fuzzy_filter(...) abort
+  if has('nvim')
+    return call('wilder#python_fuzzy_filter', a:000)
+  endif
+
+  return wilder#vim_fuzzy_filter()
 endfunction
 
 function! wilder#fuzzy_filt(ctx, opts, candidates, query) abort
-  return wilder#cmdline#fuzzy_filt(a:ctx, a:candidates, a:query)
+  if has('nvim')
+    return wilder#cmdline#python_fuzzy_filt(a:ctx, a:opts, a:candidates, a:query)
+  endif
+
+  return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
+endfunction
+
+function! wilder#vim_fuzzy_filter() abort
+  return {ctx, xs, q -> wilder#fuzzy_filt(ctx, {}, xs, q)}
+endfunction
+
+function! wilder#vim_fuzzy_filt(ctx, opts, candidates, query) abort
+  return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
 endfunction
 
 " DEPRECATED: use wilder#python_fuzzy_filter()
@@ -468,6 +484,18 @@ endfunction
 
 function! wilder#python_cpsm_filt(ctx, opts, candidates, query) abort
   return wilder#cmdline#python_cpsm_filt(a:ctx, a:opts, a:candidates, a:query)
+endfunction
+
+function! wilder#lua_fzy_filter() abort
+  return {ctx, xs, q -> wilder#lua_fzy_filt(ctx, 0, xs, q)}
+endfunction
+
+function! wilder#lua_fzy_filt(ctx, opts, candidates, query) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  return luaeval('require("wilder").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
 endfunction
 
 " pipelines
@@ -841,6 +869,29 @@ function! wilder#draw_devicons(ctx, x, data) abort
   let l:is_dir = a:x[-1:] ==# l:slash
 
   return WebDevIconsGetFileTypeSymbol(a:x, l:is_dir) . ' ' . a:x
+endfunction
+
+function! wilder#devicons_get_icon_from_vim_devicons()
+  return wilder#renderer#popupmenu_column#devicons#get_icon_from_vim_devicons()
+endfunction
+
+function! wilder#devicons_get_icon_from_nerdfont_vim()
+  return wilder#renderer#popupmenu_column#devicons#get_icon_from_nerdfont_vim()
+endfunction
+
+function! wilder#devicons_get_icon_from_nvim_web_devicons(...)
+  let l:opts = a:0 ? a:1 : {}
+  return wilder#renderer#popupmenu_column#devicons#get_icon_from_nvim_web_devicons(l:opts)
+endfunction
+
+function! wilder#devicons_get_hl_from_glyph_palette_vim(...)
+  let l:opts = a:0 ? a:1 : {}
+  return wilder#renderer#popupmenu_column#devicons#get_hl_from_glyph_palette_vim(l:opts)
+endfunction
+
+function! wilder#devicons_get_hl_from_nvim_web_devicons(...)
+  let l:opts = a:0 ? a:1 : {}
+  return wilder#renderer#popupmenu_column#devicons#get_hl_from_nvim_web_devicons(l:opts)
 endfunction
 
 function! s:extract_keys(obj, ...)

@@ -1,5 +1,5 @@
 function! wilder#cmdline#set#get_bool_options() abort
-  return s:bool_options_list
+  return copy(s:bool_options_list)
 endfunction
 
 function! wilder#cmdline#set#do(ctx) abort
