@@ -250,7 +250,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   return l:res
 endfunction
 
-function! wilder#cmdline#fuzzy_filt(ctx, candidates, query) abort
+function! wilder#cmdline#vim_fuzzy_filt(ctx, candidates, query) abort
   if empty(a:query)
     return a:candidates
   endif
@@ -1106,7 +1106,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     elseif l:use_python
       let l:Filter = wilder#python_fuzzy_filter()
     else
-      let l:Filter = wilder#fuzzy_filter()
+      let l:Filter = wilder#vim_fuzzy_filter()
     endif
   endif
 

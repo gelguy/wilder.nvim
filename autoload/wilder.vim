@@ -413,12 +413,28 @@ function! wilder#filter_fuzzy() abort
   return call('wilder#fuzzy_filter', [])
 endfunction
 
-function! wilder#fuzzy_filter() abort
-  return {ctx, xs, q -> wilder#fuzzy_filt(ctx, {}, xs, q)}
+function! wilder#fuzzy_filter(...) abort
+  if has('nvim')
+    return call('wilder#python_fuzzy_filter', a:000)
+  endif
+
+  return wilder#vim_fuzzy_filter()
 endfunction
 
 function! wilder#fuzzy_filt(ctx, opts, candidates, query) abort
-  return wilder#cmdline#fuzzy_filt(a:ctx, a:candidates, a:query)
+  if has('nvim')
+    return wilder#cmdline#python_fuzzy_filt(a:ctx, a:opts, a:candidates, a:query)
+  endif
+
+  return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
+endfunction
+
+function! wilder#vim_fuzzy_filter() abort
+  return {ctx, xs, q -> wilder#fuzzy_filt(ctx, {}, xs, q)}
+endfunction
+
+function! wilder#vim_fuzzy_filt(ctx, opts, candidates, query) abort
+  return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
 endfunction
 
 " DEPRECATED: use wilder#python_fuzzy_filter()
