@@ -1869,6 +1869,13 @@ wilder#popupmenu_devicons([{options}])
             |wilder#devicons_get_hl_from_glyph_palette_vim()|
             depending on whether their respective dependencies are installed.
 
+            `padding`
+            Optional~
+            A list in the form of [{left_padding_width},
+            {right_padding_width}].
+
+            Default: [0, 1]
+
                                     *wilder#popupmenu_buffer_flags()*
 wilder#popupmenu_buffer_flags([{options}])
                                     wilder#popupmenu_renderer() column~
