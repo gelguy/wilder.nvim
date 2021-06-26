@@ -83,8 +83,8 @@ function! s:devicons(state, ctx, result) abort
 
       if !has_key(a:state.created_hls, l:hl)
         let l:guifg = s:get_guifg(l:hl)
-        let l:default_hl = s:make_temp_hl(l:hl, a:ctx.highlights['default'], l:guifg, 0)
-        let l:selected_hl = s:make_temp_hl(l:hl, a:ctx.highlights['selected'], l:guifg, 1)
+        let l:default_hl = s:make_temp_hl(l:hl, a:ctx.highlights['default'], l:guifg)
+        let l:selected_hl = a:ctx.highlights['selected']
         let a:state.created_hls[l:hl] = [l:default_hl, l:selected_hl]
       endif
 
@@ -110,9 +110,8 @@ function! s:get_guifg(hl) abort
         \ get(l:gui_colors, 'foreground', 'NONE')
 endfunction
 
-function! s:make_temp_hl(name, hl, guifg, selected) abort
-  let l:name = a:selected ? 'WilderDeviconsSelected_' : 'WilderDevicons_'
-  let l:name .= a:name
+function! s:make_temp_hl(name, hl, guifg) abort
+  let l:name = 'WilderDevicons_' . a:name
 
   let l:gui_colors = wilder#highlight#get_hl(a:hl)[2]
   let l:reverse = get(l:gui_colors, 'reverse', 0) || get(l:gui_colors, 'standout', 0)
