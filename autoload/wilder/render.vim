@@ -164,7 +164,9 @@ function! wilder#render#truncate_chunks(len, xs) abort
     let l:chunk_width = strdisplaywidth(l:chunk[0])
 
     if l:width + l:chunk_width > a:len
-      call add(l:res, [wilder#render#truncate(a:len - l:width, l:chunk[0]), l:chunk[1]])
+      let l:truncated_chunk = [wilder#render#truncate(a:len - l:width, l:chunk[0])]
+      let l:truncated_chunk += l:chunk[1:]
+      call add(l:res, l:truncated_chunk)
       return l:res
     endif
 
