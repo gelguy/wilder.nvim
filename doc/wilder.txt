@@ -2642,7 +2642,7 @@ wilder#devicons_get_icon_from_nvim_web_devicons([{options}])
             Optional~
             The default icon when there is no match from `nvim-web-devicons`.
 
-            Default: ''
+            Default: ''
 
                                *wilder#devicons_get_icon_from_vim_devicons()*
                                vim-devicons plugin required~
@@ -2684,7 +2684,7 @@ wilder#devicons_get_hl_from_nvim_web_devicons([{options}])
             The highlight used when there is no match from
             `nvim-web-devicons`.
 
-            Default: 'Normal'
+            Default: 'DevIconDefault'
 
                            *wilder#devicons_get_hl_from_glyph_palette_vim()*
                            glyph-palette.vim plugin required~
