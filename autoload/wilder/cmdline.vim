@@ -779,7 +779,20 @@ function! wilder#cmdline#replace(ctx, x, data) abort
     return a:x
   endif
 
-  return l:result.cmdline[: l:result.pos - 1] . a:x
+  if wilder#cmdline#is_user_command(l:result.cmd)
+    let l:pos = len(l:result.cmdline)
+    while l:pos >= l:result.pos
+      if l:result.cmdline[l:pos] ==# ' ' || l:result.cmdline[l:pos] ==# "\t"
+        break
+      endif
+
+      let l:pos -= 1
+    endwhile
+  else
+    let l:pos = l:result.pos - 1
+  endif
+
+  return l:result.cmdline[: l:pos] . a:x
 endfunction
 
 function! wilder#cmdline#draw_path(ctx, x, data) abort
