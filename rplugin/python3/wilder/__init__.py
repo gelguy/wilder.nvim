@@ -12,7 +12,6 @@ import io
 import itertools
 import os
 from pathlib import Path
-import pwd
 import re
 import shutil
 import stat
@@ -610,9 +609,14 @@ class Wilder(object):
         if event.is_set():
             return
 
+        if os.name == 'nt':
+            self.resolve(ctx, [])
+            return
+
         try:
             res = []
 
+            pwd = importlib.import_module('pwd')
             for user in pwd.getpwall():
                 if user.pw_name.startswith(expand_arg):
                     res.append(user.pw_name)
