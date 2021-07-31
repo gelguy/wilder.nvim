@@ -414,7 +414,7 @@ function! wilder#filter_fuzzy() abort
 endfunction
 
 function! wilder#fuzzy_filter(...) abort
-  if has('nvim')
+  if has('nvim') && has('python3')
     return call('wilder#python_fuzzy_filter', a:000)
   endif
 
@@ -422,7 +422,7 @@ function! wilder#fuzzy_filter(...) abort
 endfunction
 
 function! wilder#fuzzy_filt(ctx, opts, candidates, query) abort
-  if has('nvim')
+  if has('nvim') && has('python3')
     return wilder#cmdline#python_fuzzy_filt(a:ctx, a:opts, a:candidates, a:query)
   endif
 

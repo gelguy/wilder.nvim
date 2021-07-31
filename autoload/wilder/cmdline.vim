@@ -913,7 +913,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
 
   if has_key(a:opts, 'pipeline')
     let l:search_pipeline = a:opts['pipeline']
-  elseif has('nvim')
+  elseif has('nvim') && has('python3')
     let l:search_pipeline = wilder#python_search_pipeline({'skip_cmdtype_check': 1})
   else
     let l:search_pipeline = wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
