@@ -64,7 +64,7 @@ function! s:start() abort
     return
   endif
 
-  if has('nvim') && !s:init
+  if has('nvim') && has('python3') && !s:init
     let s:init = 1
     call _wilder_init({'num_workers': s:opts.num_workers})
   endif

@@ -1108,7 +1108,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   elseif has_key(a:opts, 'use_python')
     let l:use_python = a:opts['use_python']
   else
-    let l:use_python = has('nvim')
+    let l:use_python = has('nvim') && has('python3')
   endif
 
   let l:fuzzy = get(a:opts, 'fuzzy', 0)

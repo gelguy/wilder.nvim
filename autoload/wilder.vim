@@ -503,7 +503,7 @@ endfunction
 function! wilder#search_pipeline(...) abort
   let l:opts = get(a:, 1, {})
 
-  return has('nvim') ?
+  return has('nvim') && has('python3') ?
         \ wilder#python_search_pipeline(l:opts) :
         \ wilder#vim_search_pipeline(l:opts)
 endfunction
