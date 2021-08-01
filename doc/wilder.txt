@@ -674,8 +674,8 @@ wilder#python_search_pipeline([{options}])
             If no function is provided, no sorting will be done on the
             candidates.
 
-            For Neovim, |wilder#python_sorter_difflib()| and
-            |wilder#python_sorter_fuzzywuzzy()| can be used here.
+            For Neovim, |wilder#python_difflib_sorter()| and
+            |wilder#python_fuzzywuzzy_sorter()| can be used here.
 
             Default: Empty
 
@@ -777,8 +777,8 @@ wilder#cmdline_pipeline([{options}])
             If no function is provided, no sorting will be done on the
             candidates.
 
-            For Neovim, |wilder#python_sort_difflib()| and
-            |wilder#python_sort_fuzzywuzzy()| can be used here.
+            For Neovim, |wilder#python_difflib_sorter()| and
+            |wilder#python_fuzzywuzzy_sorter()| can be used here.
 
             Default: Empty
 
