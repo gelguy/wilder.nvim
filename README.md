@@ -300,6 +300,7 @@ call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
       \       'fuzzy': 1,
+      \       'sorter': wilder#python_difflib_sorter(),
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': 'fuzzy',
@@ -341,7 +342,7 @@ call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#python_file_finder_pipeline({
       \       'file_command': {_, arg -> stridx(arg, '.') != -1 ? ['fd', '-tf', '-H'] : ['fd', '-tf']},
-      \       'dir_command': ['fdfind', '-td'],
+      \       'dir_command': ['fd', '-td'],
       \       'filters': ['cpsm_filter'],
       \       'cache_timestamp': {-> 1},
       \     }),
