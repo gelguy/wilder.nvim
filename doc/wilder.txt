@@ -1969,13 +1969,14 @@ wilder#can_reject_completion()      *wilder#can_reject_completion()*
             Returns true if |wilder#in_context()| is true, and there is a
             completion which can be rejected.
 
-wilder#accept_completion([{auto_select}])          *wilder#accept_completion()*
-            Accepts the current completion. Mainly used when in |menus| in
-            cmdline mode.
+                                    *wilder#accept_completion()*
+wilder#accept_completion([{auto_select}])
+            Accepts the current completion. This replaces the current cmdline
+            with the selected candidate and retrieves candidates for the new
+            cmdline.
 
-            {auto_select} can be provided to control the auto selection
-            behaviour. If 1 (the default) the first item from the selected
-            directory will be added. If 0 no auto selection is made.
+            If {auto_select} is true, the first item from the new candidates
+            will be selected. Defaults to 1.
 
             Example:
 >

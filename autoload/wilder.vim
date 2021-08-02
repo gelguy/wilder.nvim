@@ -75,8 +75,8 @@ function! wilder#can_accept_completion()
 endfunction
 
 function! wilder#accept_completion(...)
-  let auto_select = get(a:, 1, 1)
-  return wilder#main#accept_completion(auto_select)
+  let l:auto_select = get(a:, 1, 1)
+  return wilder#main#accept_completion(l:auto_select)
 endfunction
 
 function! wilder#start_from_normal_mode()
