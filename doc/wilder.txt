@@ -745,7 +745,7 @@ wilder#cmdline_pipeline([{options}])
             Optional~
             The function to use when matching candidates in fuzzy completion.
             Takes a {ctx}, {candidates} and {query} and returns the list of
-            filtered candidates. 
+            filtered candidates.
 
             Can return a |wilder-pipeline-thunk|.  Only used if `fuzzy` is
             true.
@@ -1518,7 +1518,7 @@ wilder#wldmnue_next_arrow([{options}])
             The highlight group to use.
 
             Default: None
-             
+
 wilder#wildmenu_index([{options}])  *wilder#wildmenu_index()*
                                     wilder#wildmenu_renderer() item~
             Adds the index of the currently selected candidate and the total
@@ -1969,9 +1969,13 @@ wilder#can_reject_completion()      *wilder#can_reject_completion()*
             Returns true if |wilder#in_context()| is true, and there is a
             completion which can be rejected.
 
-wilder#accept_completion()          *wilder#accept_completion()*
+wilder#accept_completion([{auto_select}])          *wilder#accept_completion()*
             Accepts the current completion. Mainly used when in |menus| in
             cmdline mode.
+
+            {auto_select} can be provided to control the auto selection
+            behaviour. If 1 (the default) the first item from the selected
+            directory will be added. If 0 no auto selection is made.
 
             Example:
 >
