@@ -26,7 +26,7 @@ call dein#add('gelguy/wilder.nvim')
 
 " with vim-plug
 " :UpdateRemotePlugins needed
-Plug 'gelguy/wilder.nvim'
+Plug 'gelguy/wilder.nvim', { 'do': ':UpdateRemotePlugins' }
 ```
 
 # Usage
