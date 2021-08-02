@@ -430,7 +430,7 @@ function! wilder#fuzzy_filt(ctx, opts, candidates, query) abort
 endfunction
 
 function! wilder#vim_fuzzy_filter() abort
-  return {ctx, xs, q -> wilder#fuzzy_filt(ctx, {}, xs, q)}
+  return {ctx, xs, q -> wilder#vim_fuzzy_filt(ctx, {}, xs, q)}
 endfunction
 
 function! wilder#vim_fuzzy_filt(ctx, opts, candidates, query) abort

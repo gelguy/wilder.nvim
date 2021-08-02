@@ -459,7 +459,7 @@ Define the pipeline and renderer in an `autocmd` so the initialisation is deferr
 call wilder#set_option('modes', ...)
 
 " ++once supported in Nvim 0.4+ and Vim 8.1+
-autocmd CmdlineEnter * ++once s:wilder_init()
+autocmd CmdlineEnter * ++once call s:wilder_init()
 
 function! s:wilder_init() abort
   call wilder#set_option('pipeline', ...)
