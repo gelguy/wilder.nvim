@@ -681,7 +681,9 @@ function! wilder#cmdline#is_user_command(cmd) abort
   return !empty(a:cmd) && a:cmd[0] >=# 'A' && a:cmd[0] <=# 'Z'
 endfunction
 
+let s:cached_commands_session_id = -1
 let s:has_script_local_completion = {}
+let s:cached_user_commands = {}
 
 " returns [{handled}, {result}, [{res}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
@@ -693,6 +695,12 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     return [1, v:true, a:res]
   endif
 
+  if a:ctx.session_id > s:cached_commands_session_id
+    let s:cached_commands_session_id = a:ctx.session_id
+    let s:cached_user_commands = extend(nvim_get_commands({}), nvim_buf_get_commands(0, {}))
+    let s:has_script_local_completion = {}
+  endif
+
   " Calling getcompletion() interferes with wildmenu command completion so
   " we return v:true early
   if has_key(s:has_script_local_completion, a:res.cmd)
@@ -701,9 +709,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     return [1, v:true, l:res]
   endif
 
-  let l:user_commands = nvim_get_commands({})
-
-  if has_key(l:user_commands, a:res.cmd)
+  if has_key(s:cached_user_commands, a:res.cmd)
     let l:command = a:res.cmd
   else
     " Command might be a partial name
@@ -717,7 +723,7 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     let l:command = l:matches[0]
   endif
 
-  let l:user_command = l:user_commands[l:command]
+  let l:user_command = s:cached_user_commands[l:command]
 
   if has_key(l:user_command, 'complete_arg') &&
         \ l:user_command.complete_arg isnot v:null
