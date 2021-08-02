@@ -618,7 +618,7 @@ function! wilder#main#can_accept_completion() abort
         \ exists('s:selected') && s:selected >= 0
 endfunction
 
-function! wilder#main#accept_completion() abort
+function! wilder#main#accept_completion(auto_select) abort
   if exists('s:selected') && s:selected >= 0
     let l:cmdline = getcmdline()
 
@@ -635,7 +635,7 @@ function! wilder#main#accept_completion() abort
     let s:selected = -1
     let s:clear_selection = 1
 
-    call s:run_pipeline(l:cmdline, {'auto_select': 1})
+    call s:run_pipeline(l:cmdline, {'auto_select': a:auto_select})
   endif
 
   return "\<Insert>\<Insert>"
