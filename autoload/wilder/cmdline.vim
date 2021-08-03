@@ -919,7 +919,7 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
 
   if has_key(a:opts, 'pipeline')
     let l:search_pipeline = a:opts['pipeline']
-  elseif has('nvim') && has('python3')
+  elseif wilder#options#get('use_python_remote_plugin')
     let l:search_pipeline = wilder#python_search_pipeline({'skip_cmdtype_check': 1})
   else
     let l:search_pipeline = wilder#vim_search_pipeline({'skip_cmdtype_check': 1})
@@ -1114,7 +1114,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   elseif has_key(a:opts, 'use_python')
     let l:use_python = a:opts['use_python']
   else
-    let l:use_python = has('nvim') && has('python3')
+    let l:use_python = wilder#options#get('use_python_remote_plugin')
   endif
 
   let l:fuzzy = get(a:opts, 'fuzzy', 0)

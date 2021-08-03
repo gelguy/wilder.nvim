@@ -415,7 +415,7 @@ function! wilder#filter_fuzzy() abort
 endfunction
 
 function! wilder#fuzzy_filter(...) abort
-  if has('nvim') && has('python3')
+  if wilder#options#get('use_python_remote_plugin')
     return call('wilder#python_fuzzy_filter', a:000)
   endif
 
@@ -423,7 +423,7 @@ function! wilder#fuzzy_filter(...) abort
 endfunction
 
 function! wilder#fuzzy_filt(ctx, opts, candidates, query) abort
-  if has('nvim') && has('python3')
+  if wilder#options#get('use_python_remote_plugin')
     return wilder#cmdline#python_fuzzy_filt(a:ctx, a:opts, a:candidates, a:query)
   endif
 
@@ -504,7 +504,7 @@ endfunction
 function! wilder#search_pipeline(...) abort
   let l:opts = get(a:, 1, {})
 
-  return has('nvim') && has('python3') ?
+  return wilder#options#get('use_python_remote_plugin') ?
         \ wilder#python_search_pipeline(l:opts) :
         \ wilder#vim_search_pipeline(l:opts)
 endfunction

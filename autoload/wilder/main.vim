@@ -64,9 +64,17 @@ function! s:start() abort
     return
   endif
 
-  if has('nvim') && has('python3') && !s:init
+  if !s:init && wilder#options#get('use_python_remote_plugin')
     let s:init = 1
-    call _wilder_init({'num_workers': s:opts.num_workers})
+
+    try
+      call _wilder_init({'num_workers': s:opts.num_workers})
+    catch
+      echohl ErrorMsg
+      echomsg 'wilder: Python initialization failed'
+      echomsg v:exception
+      echohl Normal
+    endtry
   endif
 
   if s:opts.use_cmdlinechanged

@@ -3,6 +3,7 @@ let s:opts = {}
 " main options
 call extend(s:opts, {
       \ 'modes': ['/', '?'],
+      \ 'use_python_remote_plugin': has('nvim') && has('python3'),
       \ 'use_cmdlinechanged': exists('##CmdlineChanged'),
       \ 'interval': 100,
       \ 'before_cursor': 0,
@@ -22,5 +23,9 @@ function! wilder#options#set(x, ...) abort
     call extend(s:opts, a:x)
   else
     let s:opts[a:x] = a:1
+  endif
+
+  if !has('nvim') && s:opts['use_python_remote_plugin']
+    call wilder#yarp#init()
   endif
 endfunction
