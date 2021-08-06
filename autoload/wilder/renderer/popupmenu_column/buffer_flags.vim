@@ -121,12 +121,12 @@ function! s:get_str(flag, bufnr) abort
   endif
 
   if a:flag ==# '+'
-    return nvim_buf_get_option(a:bufnr, 'modified') ?  '+' : ' '
+    return getbufvar(a:bufnr, '&modified') ?  '+' : ' '
   endif
 
   if a:flag ==# '-'
-    return nvim_buf_get_option(a:bufnr, 'readonly') ? '=' :
-          \ !nvim_buf_get_option(a:bufnr, 'modifiable') ? '-' : ' '
+    return getbufvar(a:bufnr, '&readonly') ? '=' :
+          \ !getbufvar(a:bufnr, '&modifiable') ? '-' : ' '
   endif
 
   if a:flag ==# 'a'
