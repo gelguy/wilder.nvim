@@ -535,7 +535,21 @@ function! s:search_pipeline(...) abort
         \ wilder#if(!l:skip_cmdtype_check,
         \   wilder#check({-> getcmdtype() ==# '/' || getcmdtype() ==# '?'})),
         \ wilder#if(l:should_debounce, l:Debounce),
-        \ ] + l:search_pipeline
+        \ wilder#subpipeline({ctx, x -> l:search_pipeline + [
+        \  wilder#result({
+        \    'data': {ctx, data -> s:set_query(data, x)},
+        \  }),
+        \ ]})
+        \ ]
+endfunction
+
+function! s:set_query(data, x)
+  let l:data = a:data is v:null ? {} : a:data
+  if has_key(l:data, 'query')
+    return a:data
+  endif
+
+  return extend(l:data, {'query': a:x})
 endfunction
 
 function! wilder#vim_search_pipeline(...) abort
