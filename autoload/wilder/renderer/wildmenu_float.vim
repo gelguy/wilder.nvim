@@ -1,5 +1,3 @@
-let s:index = 0
-
 function! wilder#renderer#wildmenu_float#make(args) abort
   let l:state = wilder#renderer#wildmenu#prepare_state(a:args)
   let l:state.buf = -1
@@ -52,7 +50,7 @@ function! s:render_chunks(state, chunks) abort
     let l:offset = l:cmdheight != 1 && stridx(&display, 'msgsep') >= 0 ? 2 : 1
     call nvim_win_set_config(a:state.win, {
           \ 'relative': 'editor',
-          \ 'row': &lines - s:get_cmdheight() - l:offset,
+          \ 'row': &lines - l:cmdheight - l:offset,
           \ 'col': 0,
           \ })
     let a:state.cmdheight = l:cmdheight
@@ -80,11 +78,12 @@ function! s:render_chunks(state, chunks) abort
 endfunction
 
 function! s:new_win(buf) abort
+  let l:cmdheight = s:get_cmdheight()
   let l:win = nvim_open_win(a:buf, 0, {
         \ 'relative': 'editor',
         \ 'height': 1,
         \ 'width': &columns,
-        \ 'row': &lines - s:get_cmdheight() - 1,
+        \ 'row': &lines - l:cmdheight - 1,
         \ 'col': 0,
         \ 'focusable': 0,
         \ 'style': 'minimal',
@@ -104,13 +103,13 @@ function! s:pre_hook(state, ctx) abort
 
   if a:state.buf == -1 || !bufexists(a:state.buf)
     let a:state.buf = nvim_create_buf(v:false, v:true)
-    call nvim_buf_set_name(a:state.buf, '[Wilder Wildmenu ' . s:index . ']')
-    let s:index += 1
+    call nvim_buf_set_name(a:state.buf, '[Wilder Wildmenu ' . localtime() . ']')
   endif
 
   if a:state.win == -1
     let a:state.win = s:new_win(a:state.buf)
-  elseif a:state.columns != &columns || a:state.cmdheight != s:get_cmdheight()
+  elseif a:state.columns != &columns ||
+        \ a:state.cmdheight != s:get_cmdheight()
     let l:old_win = a:state.win
 
     " set to -1 preemptively in case API calls fail
