@@ -1198,7 +1198,7 @@ function! wilder#cmdline#pipeline(opts) abort
 
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
 
-  let l:set_pcre2_pattern = get(a:opts, 'set_pcre2_pattern', 1)
+  let l:set_pcre2_pattern = get(a:opts, 'set_pcre2_pattern', 0)
 
   let l:should_debounce = get(a:opts, 'debounce', 0) > 0
   if l:should_debounce

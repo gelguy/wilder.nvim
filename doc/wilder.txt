@@ -504,8 +504,7 @@ wilder#python_fuzzy_pattern([{options}])
             If true, the regex will only match at the beginning of a word
             boundary.
 
-            Note: This makes the regex more complicated and will slow down the
-            fuzzy searching.
+            Note: Setting this to false will slow down the fuzzy searching.
 
             Default: 1
 
@@ -812,7 +811,7 @@ wilder#cmdline_pipeline([{options}])
             Should be set to false when using a fuzzy filter not based on
             PCRE2.
 
-            Default: 1
+            Default: 0
 
             `debounce`
             Optional~
