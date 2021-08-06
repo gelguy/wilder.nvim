@@ -702,19 +702,32 @@ function! wilder#wildmenu_renderer(...)
   let l:args = a:0 > 0 ? a:1 : {}
 
   if !has_key(l:args, 'mode')
-    let l:args.mode = has('nvim-0.4') ? 'float' : 'statusline'
+    let l:args.mode = has('nvim-0.4') ? 'float' :
+          \ exists('*popup_create') ? 'popup' :
+          \ 'statusline'
   endif
 
   if l:args.mode ==# 'float'
     return wilder#renderer#wildmenu_float#make(l:args)
+  elseif l:args.mode ==# 'popup'
+    return wilder#renderer#wildmenu_popup#make(l:args)
   endif
 
-    return wilder#renderer#wildmenu_statusline#make(l:args)
+  return wilder#renderer#wildmenu_statusline#make(l:args)
 endfunction
 
 function! wilder#popupmenu_renderer(...)
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu#make(l:args)
+
+  if !has_key(l:args, 'mode')
+    let l:args.mode = has('nvim-0.4') ? 'float' : 'popup'
+  endif
+
+  if l:args.mode ==# 'float'
+    return wilder#renderer#popupmenu_float#make(l:args)
+  endif
+
+  return wilder#renderer#popupmenu_popup#make(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_airline_theme()
