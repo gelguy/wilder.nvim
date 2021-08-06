@@ -8,27 +8,41 @@
 - High level of customisation
   - build your own custom pipeline to suit your needs
   - customisable look and appearance
-- Async query support - uses Python 3 remote plugin for faster and non-blocking queries
+- Async - uses Python 3 remote plugin for faster and non-blocking searches
 
 ![wilder](https://i.imgur.com/LkOOU6G.gif)
 
 # Requirements
 
 - Vim 8.1+ or Neovim 0.3+
-- Python support only in Neovim
-- Floating window support only in Neovim 0.4+
+- Python support only in Neovim or Vim with yarp
 
 # Install
 
+With [Shougo/dein.nvim](https://github.com/Shougo/dein.nvim)
 ```vim
-" with dein
 call dein#add('gelguy/wilder.nvim')
 
-" with vim-plug
-" :UpdateRemotePlugins needed
-Plug 'gelguy/wilder.nvim', { 'do': ':UpdateRemotePlugins' }
+" To use Python remote plugin features in Vim, can be skipped
+if !has('nvim')
+  call dein#add('roxma/nvim-yarp')
+  call dein#add('roxma/vim-hug-neovim-rpc')
+endif
 ```
 
+With [junegunn/vim-plug](https://github.com/junegunn/vim-plug)
+```vim
+if has('nvim')
+  Plug 'gelguy/wilder.nvim', { 'do': ':UpdateRemotePlugins' }
+else
+  Plug 'gelguy/wilder.nvim'
+
+  " To use Python remote plugin features in Vim, can be skipped
+  Plug 'roxma/nvim-yarp'
+  Plug 'roxma/vim-hug-neovim-rpc'
+endif
+
+```
 # Usage
 
 ## Getting started
@@ -43,6 +57,10 @@ cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 
 " only / and ? are enabled by default
 call wilder#set_option('modes', ['/', '?', ':'])
+
+" Required to enable Python remote plugin features in Vim, can be skipped.
+" Can be set to 0 to disable Python features in Neovim.
+call wilder#set_option('use_python_remote_plugin', 1)
 ```
 
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
@@ -56,7 +74,7 @@ Use `wilder#set_option('pipeline', <pipeline>)` to customise the pipeline.
 For example, in Neovim, to use fuzzy matching instead of substring matching:
 
 ```vim
-" For Neovim only
+" For Neovim or Vim with yarp
 " For wild#cmdline_pipeline():
 "   'language'   : set to 'python' to use python
 "   'fuzzy'      : set fuzzy searching
@@ -126,7 +144,7 @@ call wilder#set_option('pipeline', [
 
 ![History](https://i.imgur.com/BuDPosq.png)
 
-#### File finder (Experimental) (Neovim only)
+#### File finder (Neovim or Vim with yarp)
 
 ```vim
 " 'file_command' : for ripgrep : ['rg', '--files']
@@ -162,8 +180,8 @@ By default, `wilder` tries its best to look like the default wildmenu.
 ### Wildmenu renderer
 
 `wilder#wildmenu_renderer()` draws the candidates above the cmdline.
-For Neovim 0.4+, a floating window is used. Otherwise the statusline is used.
-Due to statusline limitations, the wildmenu only fills up the width of the current window.
+For Neovim 0.4+ or Vim 8.1+ with popup support, a floating window is used. Otherwise the statusline is used.
+Due to statusline limitations, the wildmenu will show on the statusline of the current window.
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
@@ -202,9 +220,10 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer(
 
 ![Airline](https://i.imgur.com/1HemK0l.png)
 
-### Popupmenu renderer (Experimental) (Neovim only)
+### Popupmenu renderer
 
-For Neovim 0.4+, `wilder#popupmenu_renderer()` can be used to draw the results on a popupmenu, similar to `wildoptions+=pum`.
+For Neovim 0.4+ or Vim 8.1+ with popup support,
+`wilder#popupmenu_renderer()` can be used to draw the results on a popupmenu, similar to `wildoptions+=pum`.
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
@@ -250,8 +269,8 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
 The `highlighter` option for both `wilder#wildmenu_renderer()` and `wilder#popupmenu_renderer()`
 can be changed for better fuzzy highlighting.
 
+For Neovim:
 ```vim
-" Neovim only
 " For lua_pcre2_highlighter : requires `luarocks install pcre2`
 " For lua_fzy_highlighter   : requires fzy-lua-native vim plugin found
 "                             at https://github.com/romgrk/fzy-lua-native
@@ -263,8 +282,17 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
-Other available highlighters are `wilder#python_pcre2_highlighter()` and
-`wilder#python_cpsm_highlighter()` which needs `cpsm` to be installed.
+For Vim:
+```vim
+" For python_cpsm_highlighter : requires cpsm vim plugin found at
+"                               https://github.com/nixprime/cpsm
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlighter': [
+      \   wilder#pcre2_highlighter(),
+      \   wilder#python_cpsm_highlighter(),
+      \ ],
+      \ }))
+```
 
 # Example configs
 
@@ -274,6 +302,8 @@ call wilder#enable_cmdline_enter()
 set wildcharm=<Tab>
 cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
 cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
+cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
 call wilder#set_option('modes', ['/', '?', ':'])
 
 call wilder#set_option('pipeline', [
@@ -288,19 +318,23 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ }))
 ```
 
-### Fuzzy config (for Neovim only)
+### Fuzzy config (for Neovim or Vim with yarp)
 ```vim
 call wilder#enable_cmdline_enter()
 set wildcharm=<Tab>
 cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
 cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
+cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
 call wilder#set_option('modes', ['/', '?', ':'])
+call wilder#set_option('use_python_remote_plugin', 1)
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
       \       'fuzzy': 1,
       \       'sorter': wilder#python_difflib_sorter(),
+      \       'set_pcre2_pattern': 1,
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': 'fuzzy',
@@ -323,7 +357,7 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }))
 ```
 
-### Advanced config (for Neovim only)
+### Advanced config (for Neovim only or Vim with yarp)
 
 - Requires `fd` from [sharkdp/fd](https://github.com/sharkdp/fd)  (see `:h wilder#python_file_finder_pipeline()` on using other commands)
 - Requires `cpsm` from [nixprime/cpsm](https://github.com/nixprime/cpsm)
@@ -336,7 +370,10 @@ call wilder#enable_cmdline_enter()
 set wildcharm=<Tab>
 cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
 cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
+cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
+cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
 call wilder#set_option('modes', ['/', '?', ':'])
+call wilder#set_option('use_python_remote_plugin', 1)
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -344,12 +381,18 @@ call wilder#set_option('pipeline', [
       \       'file_command': {_, arg -> stridx(arg, '.') != -1 ? ['fd', '-tf', '-H'] : ['fd', '-tf']},
       \       'dir_command': ['fd', '-td'],
       \       'filters': ['cpsm_filter'],
-      \       'cache_timestamp': {-> 1},
+      \     }),
+      \     wilder#substitute_pipeline({
+      \       'pipeline': wilder#python_search_pipeline({
+      \         'skip_cmdtype_check': 1,
+      \         'pattern': wilder#python_fuzzy_pattern({
+      \           'start_at_boundary': 0,
+      \         }),
+      \       }),
       \     }),
       \     wilder#cmdline_pipeline({
       \       'fuzzy': 1,
       \       'fuzzy_filter': wilder#python_cpsm_filter(),
-      \       'set_pcre2_pattern': 0,
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': wilder#python_fuzzy_pattern({
@@ -361,23 +404,32 @@ call wilder#set_option('pipeline', [
 
 let s:highlighters = [
       \ wilder#pcre2_highlighter(),
-      \ wilder#lua_fzy_highlighter(),
+      \ has('nvim') ? wilder#lua_fzy_highlighter() : wilder#cpsm_highlighter(),
       \ ]
 
+let s:popupmenu_renderer = wilder#popupmenu_renderer({
+      \ 'highlighter': s:highlighters,
+      \ 'left': [
+      \   wilder#popupmenu_devicons(),
+      \   wilder#popupmenu_buffer_flags(),
+      \ ],
+      \ 'right': [
+      \   ' ',
+      \   wilder#popupmenu_scrollbar(),
+      \ ],
+      \ })
+
+let s:wildmenu_renderer = wilder#wildmenu_renderer({
+      \ 'highlighter': s:highlighters,
+      \ 'separator': ' · ',
+      \ 'left': [' ', wilder#wildmenu_spinner(), ' '],
+      \ 'right': [' ', wilder#wildmenu_index()],
+      \ })
+
 call wilder#set_option('renderer', wilder#renderer_mux({
-      \ ':': wilder#popupmenu_renderer({
-      \   'highlighter': s:highlighters,
-      \   'left': [
-      \     wilder#popupmenu_devicons(),
-      \   ],
-      \   'right': [
-      \     ' ',
-      \     wilder#popupmenu_scrollbar(),
-      \   ],
-      \ }),
-      \ '/': wilder#wildmenu_renderer({
-      \   'highlighter': s:highlighters,
-      \ }),
+      \ ':': s:popupmenu_renderer,
+      \ '/': s:wildmenu_renderer,
+      \ 'substitute': s:wildmenu_renderer,
       \ }))
 ```
 
@@ -395,7 +447,7 @@ The fastest configuration for `wilder` is to use the non-fuzzy Python pipelines
 and the default renderers.
 
 ```vim
-" Neovim only
+" Neovim or Vim with yarp
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({'language': 'python'}),
@@ -415,6 +467,9 @@ implement a faster renderer e.g. using Lua or to improve the current rendering
 code.
 
 If highlighting is important, use the Lua highlighters for best performance.
+For Vim, avoid using the python highlighers (e.g.
+`wilder#python_cpsm_highlighter()`) due to the overhead introduced by the
+remote plugin.
 
 Avoid `wilder#wildmenu_spinner()` and `wilder#popupmenu_spinner()` as they cause frequent re-renders.
 
