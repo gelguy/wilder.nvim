@@ -62,6 +62,12 @@ function! wilder#cmdline#set#do(ctx) abort
   let l:option_name = a:ctx.cmdline[a:ctx.pos : l:p - 1]
   let l:completions = getcompletion(l:option_name, 'option')
   if empty(l:completions)
+    " Show unknown option error if trying to set non-existent option.
+    if a:ctx.cmdline[len(a:ctx.cmdline) - 1] ==# '='
+      let a:ctx.expand = 'option_old'
+      let a:ctx.option = l:option_name
+    endif
+
     return
   endif
 
@@ -78,7 +84,7 @@ function! wilder#cmdline#set#do(ctx) abort
 
   if (l:char ==# '-' || l:char ==# '+' || l:char ==# '^') &&
         \ l:p < len(a:ctx.cmdline) &&
-        \ a:ctx.cmdline[l:p] ==# '='
+        \ a:ctx.cmdline[l:p+1] ==# '='
     let l:char = '='
     let l:p += 1
   endif
