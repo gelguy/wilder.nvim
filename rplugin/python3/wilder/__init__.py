@@ -887,7 +887,7 @@ class Wilder(object):
         module_name = args[2]
 
         re = importlib.import_module(module_name)
-        match = re.match(pattern, string)
+        match = re.search(pattern, string)
 
         if not match or not match.lastindex:
             return  []
