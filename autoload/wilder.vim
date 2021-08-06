@@ -435,6 +435,14 @@ function! wilder#vim_fuzzy_filter() abort
 endfunction
 
 function! wilder#vim_fuzzy_filt(ctx, opts, candidates, query) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  if exists('*matchfuzzy')
+    return matchfuzzy(a:candidates, a:query)
+  endif
+
   return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
 endfunction
 
