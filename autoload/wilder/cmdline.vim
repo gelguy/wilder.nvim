@@ -941,7 +941,8 @@ function! wilder#cmdline#substitute_pipeline(opts) abort
         \ wilder#check({-> getcmdtype() ==# ':'}),
         \ {_, x -> wilder#cmdline#parse(x)},
         \ wilder#check({_, res -> wilder#cmdline#is_substitute_command(res.cmd)}),
-        \ {_, res -> res.cmd ==# 'global' || res.cmd ==# 'vglobal' || len(res.substitute_args) <= 2 ?
+        \ {_, res -> res.cmd ==# 'global' || res.cmd ==# 'vglobal' ||
+        \   len(res.substitute_args) == 1 || len(res.substitute_args) == 2 ?
         \   res :
         \   l:hide_in_replace ? v:true : v:false},
         \ wilder#subpipeline({ctx, res -> [
