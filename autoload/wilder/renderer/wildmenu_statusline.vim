@@ -48,17 +48,17 @@ function! s:render_chunks(chunks, hl, apply_incsearch_fix) abort
 endfunction
 
 function! s:pre_hook(state, ctx) abort
-  let s:old_laststatus = &laststatus
+  let a:state.old_laststatus = &laststatus
   let &laststatus = 2
-  let s:old_statusline = &statusline
+  let a:state.old_statusline = &statusline
 
   call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
   call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  let &laststatus = s:old_laststatus
-  let &statusline = s:old_statusline
+  let &laststatus = a:state.old_laststatus
+  let &statusline = a:state.old_statusline
   call timer_start(0, {-> execute('redrawstatus')})
 
   call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
