@@ -918,7 +918,7 @@ class Wilder(object):
         highlight_mode = opts['highlight_mode'] if 'highlight_mode' in opts else 'basic'
 
         cpsm = importlib.import_module('cpsm_py')
-        match = cpsm.ctrlp_match([x], query, ispath=ispath, highlight_mode=highlight_mode)
+        match = cpsm.ctrlp_match([x], query, ispath=ispath, highlight_mode=highlight_mode, unicode=True)
 
         if not match[0]:
             return 0
