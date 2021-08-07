@@ -467,6 +467,8 @@ function! s:wilder_init() abort
 endfunction
 ```
 
+# Troubleshooting
+
 ### Disabling in the case of errors
 
 Use `q:` to open the `cmdline-window` and enter the following command
@@ -479,6 +481,17 @@ Alternatively, define a mapping in your `init.vim` or `.vimrc`
 
 ```vim
 nnoremap <Leader>w :call wilder#toggle()<CR>
+```
+
+### dein.vim lazy loading remote plugins
+
+If you have `g:dein#lazy_rplugins` set to true, the remote plugin will not load until the plugin is sourced.
+
+```vim
+call dein#add('gelguy/wilder.nvim', {
+  \ 'lazy': 1,
+	\ 'on_event' : 'CmdlineEnter',
+	\ })
 ```
 
 # Acknowledgements
