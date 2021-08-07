@@ -311,12 +311,11 @@ function! wilder#vim_sort() abort
 endfunction
 
 function! wilder#lexical_sorter() abort
-  return {ctx, xs -> wilder#lexical_sort(ctx, 0, xs)}
+  return call('wilder#transform#lexical_sorter', [])
 endfunction
 
-" opts and query are ignored
-function! wilder#lexical_sort(ctx, opts, xs, ...) abort
-  return sort(copy(a:xs))
+function! wilder#lexical_sort(...) abort
+  return call('wilder#transform#lexical_sort', a:000)
 endfunction
 
 " DEPRECATED: Use wilder#python_lexical_sorter()
@@ -325,12 +324,11 @@ function! wilder#python_sort() abort
 endfunction
 
 function! wilder#python_lexical_sorter() abort
-  return {ctx, xs -> wilder#python_lexical_sort(ctx, 0, xs)}
+  return call('wilder#transform#python_lexical_sorter', [])
 endfunction
 
-" opts and query are ignored
-function! wilder#python_lexical_sort(ctx, opts, xs, ...) abort
-  return {ctx -> _wilder_python_lexical_sort(ctx, a:xs)}
+function! wilder#python_lexical_sort(...) abort
+  return call('wilder#transform#python_lexical_sort', a:000)
 endfunction
 
 " DEPRECATED: Use wilder#python_difflib_sorter()
@@ -339,15 +337,11 @@ function! wilder#python_sorter_difflib(...) abort
 endfunction
 
 function! wilder#python_difflib_sorter(...) abort
-  let l:opts = {
-        \ 'quick': get(a:, 1, 1),
-        \ 'case_sensitive': get(a:, 2, 1),
-        \ }
-  return {ctx, xs, query -> wilder#python_difflib_sort(ctx, l:opts, xs, query)}
+  return call('wilder#transform#python_difflib_sorter', a:000)
 endfunction
 
-function! wilder#python_difflib_sort(ctx, opts, xs, query) abort
-  return {ctx -> _wilder_python_difflib_sort(ctx, a:opts, a:xs, a:query)}
+function! wilder#python_difflib_sort(...) abort
+  return call('wilder#transform#python_difflib_sort', a:000)
 endfunction
 
 " DEPRECATED: Use wilder#python_fuzzywuzzy_sorter()
@@ -356,10 +350,7 @@ function! wilder#python_sorter_fuzzywuzzy(...) abort
 endfunction
 
 function! wilder#python_fuzzywuzzy_sorter(...) abort
-  let l:opts = {
-        \ 'partial': get(a:, 1, 1),
-        \ }
-  return {ctx, xs, query -> wilder#python_fuzzywuzzy_sort(ctx, l:opts, xs, query)}
+  return call('wilder#transform#python_fuzzywuzzy_sorter', a:000)
 endfunction
 
 " DEPRECATED: use wilder#python_fuzzywuzzy_sort()
@@ -367,8 +358,8 @@ function! wilder#python_fuzzywuzzy(ctx, xs, query) abort
   return call('wilder#python_fuzzywuzzy_sort', [a:ctx, {}, a:xs, a:query])
 endfunction
 
-function! wilder#python_fuzzywuzzy_sort(ctx, opts, xs, query) abort
-  return {ctx -> _wilder_python_fuzzywuzzy_sort(ctx, a:opts, a:xs, a:query)}
+function! wilder#python_fuzzywuzzy_sort(...) abort
+  return call('wilder#transform#python_fuzzywuzzy_sort', a:000)
 endfunction
 
 " filters
@@ -379,21 +370,11 @@ function! wilder#uniq() abort
 endfunction
 
 function! wilder#uniq_filter() abort
-  return {ctx, xs -> wilder#uniq_filt(ctx, 0, xs)}
+  return call('wilder#transform#uniq_filter', [])
 endfunction
 
-function! wilder#uniq_filt(ctx, opts, xs, ...) abort
-  let l:seen = {}
-  let l:res = []
-
-  for l:x in a:xs
-    if !has_key(l:seen, l:x)
-      let l:seen[l:x] = 1
-      call add(l:res, l:x)
-    endif
-  endfor
-
-  return l:res
+function! wilder#uniq_filt(...) abort
+  return call('wilder#transform#uniq_filt', a:000)
 endfunction
 
 " DEPRECATED: use wilder#python_uniq_filter()
@@ -402,11 +383,11 @@ function! wilder#python_uniq() abort
 endfunction
 
 function! wilder#python_uniq_filter() abort
-  return {ctx, xs, -> wilder#python_uniq_filt(ctx, 0, xs)}
+  return call('wilder#transform#python_uniq_filter', [])
 endfunction
 
-function! wilder#python_uniq_filt(ctx, opts, xs, ...) abort
-  return {ctx -> _wilder_python_uniq_filt(ctx, a:xs)}
+function! wilder#python_uniq_filt(...) abort
+  return call('wilder#transform#python_uniq_filt', a:000)
 endfunction
 
 " DEPRECATED: use wilder#fuzzy_filter()
@@ -415,35 +396,19 @@ function! wilder#filter_fuzzy() abort
 endfunction
 
 function! wilder#fuzzy_filter(...) abort
-  if wilder#options#get('use_python_remote_plugin')
-    return call('wilder#python_fuzzy_filter', a:000)
-  endif
-
-  return wilder#vim_fuzzy_filter()
+  return call('wilder#transform#fuzzy_filter', a:000)
 endfunction
 
-function! wilder#fuzzy_filt(ctx, opts, candidates, query) abort
-  if wilder#options#get('use_python_remote_plugin')
-    return wilder#cmdline#python_fuzzy_filt(a:ctx, a:opts, a:candidates, a:query)
-  endif
-
-  return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
+function! wilder#fuzzy_filt(...) abort
+  return call('wilder#transform#fuzzy_filt', a:000)
 endfunction
 
 function! wilder#vim_fuzzy_filter() abort
-  return {ctx, xs, q -> wilder#vim_fuzzy_filt(ctx, {}, xs, q)}
+  return call('wilder#transform#vim_fuzzy_filter', [])
 endfunction
 
-function! wilder#vim_fuzzy_filt(ctx, opts, candidates, query) abort
-  if empty(a:query)
-    return a:candidates
-  endif
-
-  if exists('*matchfuzzy')
-    return matchfuzzy(a:candidates, a:query)
-  endif
-
-  return wilder#cmdline#vim_fuzzy_filt(a:ctx, a:candidates, a:query)
+function! wilder#vim_fuzzy_filt(...) abort
+  return call('wilder#transform#vim_fuzzy_filt', a:000)
 endfunction
 
 " DEPRECATED: use wilder#python_fuzzy_filter()
@@ -452,14 +417,11 @@ function! wilder#python_filter_fuzzy(...) abort
 endfunction
 
 function! wilder#python_fuzzy_filter(...) abort
-  let l:opts = {
-        \ 'engine': get(a:, 1, 're'),
-        \ }
-  return {ctx, xs, q -> wilder#python_fuzzy_filt(ctx, l:opts, xs, q)}
+  return call('wilder#transform#python_fuzzy_filter', a:000)
 endfunction
 
-function! wilder#python_fuzzy_filt(ctx, opts, candidates, query) abort
-  return wilder#cmdline#python_fuzzy_filt(a:ctx, a:opts, a:candidates, a:query)
+function! wilder#python_fuzzy_filt(...) abort
+  return call('wilder#transform#python_fuzzy_filt', a:000)
 endfunction
 
 " DEPRECATED: use wilder#python_fruzzy_filter()
@@ -468,15 +430,11 @@ function! wilder#python_filter_fruzzy(...) abort
 endfunction
 
 function! wilder#python_fruzzy_filter(...) abort
-  let l:opts = {
-        \ 'limit': get(a:, 1, 1000),
-        \ 'fruzzy_path': get(a:, 2, wilder#fruzzy_path()),
-        \ }
-  return {ctx, xs, q -> wilder#python_fruzzy_filt(ctx, l:opts, xs, q)}
+  return call('wilder#transform#python_fruzzy_filter', a:000)
 endfunction
 
-function! wilder#python_fruzzy_filt(ctx, opts, candidates, query) abort
-  return wilder#cmdline#python_fruzzy_filt(a:ctx, a:opts, a:candidates, a:query)
+function! wilder#python_fruzzy_filt(...) abort
+  return call('wilder#transform#python_fruzzy_filt', a:000)
 endfunction
 
 " DEPRECATED: use wilder#python_cpsm_filter()
@@ -485,26 +443,19 @@ function! wilder#python_filter_cpsm(...) abort
 endfunction
 
 function! wilder#python_cpsm_filter(...) abort
-  let l:opts = {
-        \ 'cpsm_path': get(a:, 1, wilder#cpsm_path()),
-        \ }
-  return {ctx, xs, q -> wilder#python_cpsm_filt(ctx, l:opts, xs, q)}
+  return call('wilder#transform#python_cpsm_filter', a:000)
 endfunction
 
-function! wilder#python_cpsm_filt(ctx, opts, candidates, query) abort
-  return wilder#cmdline#python_cpsm_filt(a:ctx, a:opts, a:candidates, a:query)
+function! wilder#python_cpsm_filt(...) abort
+  return call('wilder#transform#python_cpsm_filt', a:000)
 endfunction
 
 function! wilder#lua_fzy_filter() abort
-  return {ctx, xs, q -> wilder#lua_fzy_filt(ctx, 0, xs, q)}
+  return call('wilder#transform#lua_fzy_filter', [])
 endfunction
 
-function! wilder#lua_fzy_filt(ctx, opts, candidates, query) abort
-  if empty(a:query)
-    return a:candidates
-  endif
-
-  return luaeval('require("wilder").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
+function! wilder#lua_fzy_filt(...) abort
+  return call('wilder#transform#lua_fzy_filt', a:000)
 endfunction
 
 " pipelines
