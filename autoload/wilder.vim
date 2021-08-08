@@ -753,24 +753,36 @@ endfunction
 
 let s:module_path_cache = wilder#cache#cache()
 
-function! s:get_module_path(f, modify_path, use_cached)
-  if !a:use_cached || !s:module_path_cache.has_key(a:f)
-    let l:file = s:find_function_script_file(a:f)
-    let l:path = empty(l:file) ?
-          \ '' :
-          \ simplify(l:file . a:modify_path)
-    call s:module_path_cache.set(a:f, l:path)
+function! s:get_module_path(file, func, modify_path, use_cached)
+  if !a:use_cached || !s:module_path_cache.has_key(a:func)
+    if exists('*nvim_get_runtime_file')
+      let l:runtime_files = nvim_get_runtime_file(a:file, 0)
+
+      if empty(l:runtime_files)
+        let l:path = ''
+      else
+        let l:path = fnamemodify(l:runtime_files[0], ':h')
+      endif
+    else
+      let l:file = s:find_function_script_file(a:func)
+
+      let l:path = empty(l:file) ?
+            \ '' :
+            \ simplify(l:file . a:modify_path)
+    endif
+
+    call s:module_path_cache.set(a:func, l:path)
   endif
 
-  return s:module_path_cache.get(a:f)
+  return s:module_path_cache.get(a:func)
 endfunction
 
 function! wilder#fruzzy_path(...) abort
-  return s:get_module_path('fruzzy#version', '/../../rplugin/python3', get(a:, 1, 1))
+  return s:get_module_path('rplugin/python3/fruzzy.py', 'fruzzy#version', '/../../rplugin/python3', get(a:, 1, 1))
 endfunction
 
 function! wilder#cpsm_path(...) abort
-  return s:get_module_path('cpsm#CtrlPMatch', '/..', get(a:, 1, 1))
+  return s:get_module_path('autoload/cpsm.py', 'cpsm#CtrlPMatch', '/..', get(a:, 1, 1))
 endfunction
 
 function! wilder#clear_module_path_cache()
