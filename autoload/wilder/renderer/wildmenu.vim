@@ -34,19 +34,23 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
   endif
 
   if !has_key(l:state.highlights, 'accent')
-    let l:state.highlights.accent =
+    let l:state.highlights.accent = [
           \ wilder#hl_with_attr(
           \ 'WilderWildmenuAccent',
           \ l:state.highlights['default'],
-          \'underline', 'bold')
+          \'underline', 'bold')]
+  elseif type(l:state.highlights.accent) != v:t_list
+    let l:state.highlights.accent = [l:state.highlights.accent]
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
-    let l:state.highlights.selected_accent =
+    let l:state.highlights.selected_accent = [
           \ wilder#hl_with_attr(
           \ 'WilderWildmenuSelectedAccent',
           \ l:state.highlights['selected'],
-          \ 'underline', 'bold')
+          \ 'underline', 'bold')]
+  elseif type(l:state.highlights.selected_accent) != v:t_list
+    let l:state.highlights.selected_accent = [l:state.highlights.selected_accent]
   endif
 
   if has_key(a:args, 'highlighter')

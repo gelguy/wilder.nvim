@@ -77,19 +77,23 @@ function! wilder#renderer#popupmenu#prepare_state(opts) abort
   let l:state.dynamic = s:has_dynamic_column(l:state)
 
   if !has_key(l:state.highlights, 'accent')
-    let l:state.highlights.accent =
+    let l:state.highlights.accent = [
           \ wilder#hl_with_attr(
           \ 'WilderPoppupMenuAccent',
           \ l:state.highlights['default'],
-          \ 'underline', 'bold')
+          \ 'underline', 'bold')]
+  elseif type(l:state.highlights.accent) != v:t_list
+    let l:state.highlights.accent = [l:state.highlights.accent]
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
-    let l:state.highlights.selected_accent =
+    let l:state.highlights.selected_accent = [
           \ wilder#hl_with_attr(
           \ 'WilderPopupMenuSelectedAccent',
           \ l:state.highlights['selected'],
-          \ 'underline', 'bold')
+          \ 'underline', 'bold')]
+  elseif type(l:state.highlights.selected_accent) != v:t_list
+    let l:state.highlights.selected_accent = [l:state.highlights.selected_accent]
   endif
 
   if has_key(a:opts, 'highlighter')
@@ -361,37 +365,38 @@ function! s:draw_line(state, ctx, result, i) abort
   let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)
 
   let l:Highlighter = a:state.highlighter
-  if l:Highlighter isnot 0
-    if !l:is_selected &&
-          \ a:state.highlight_cache.has_key(l:str)
-      return a:state.highlight_cache.get(l:str)
-    endif
 
-    let l:data = get(a:result, 'data', {})
-    let l:spans = l:Highlighter(a:ctx, l:str, l:data)
-
-    if l:spans is 0
-      return [[l:str]]
-    endif
-
-    if a:state.highlight_mode ==# 'basic'
-      let l:spans = s:merge_spans(l:spans)
-    endif
-
-    let l:chunks = wilder#render#spans_to_chunks(
-          \ l:str,
-          \ l:spans,
-          \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-          \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
-
-    if !l:is_selected
-      call a:state.highlight_cache.set(l:str, l:chunks)
-    endif
-
-    return l:chunks
+  if l:Highlighter is 0
+    return [[l:str]]
   endif
 
-  return [[l:str]]
+  if !l:is_selected &&
+        \ a:state.highlight_cache.has_key(l:str)
+    return a:state.highlight_cache.get(l:str)
+  endif
+
+  let l:data = get(a:result, 'data', {})
+  let l:spans = l:Highlighter(a:ctx, l:str, l:data)
+
+  if l:spans is 0
+    return [[l:str]]
+  endif
+
+  if a:state.highlight_mode ==# 'basic'
+    let l:spans = s:merge_spans(l:spans)
+  endif
+
+  let l:chunks = wilder#render#spans_to_chunks(
+        \ l:str,
+        \ l:spans,
+        \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
+        \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+
+  if !l:is_selected
+    call a:state.highlight_cache.set(l:str, l:chunks)
+  endif
+
+  return l:chunks
 endfunction
 
 function! s:draw_x(state, ctx, result, i) abort

@@ -572,4 +572,6 @@ Many thanks to the following codebases for providing ideas and reference:
 
 > [Xuyuanp/scrollbar.nvim](https://github.com/Xuyuanp/scrollbar.nvim)
 
+> [liuchengxu/vim-clap](https://github.com/liuchengxu/vim-clap)
+
 > and many more!

@@ -1226,15 +1226,38 @@ wilder#wildmenu_renderer([{options}])
 
                 `accent`
                 Optional~
-                The highlight group used for accents. See the `highlighter`
-                option.
+                A highlight group or list of highlight groups. If it is a
+                highlight group, it is implictly converted to a single-element
+                list. Each string represents a highlight group. 
+
+                When highlighting accents, the next accented character will be
+                highlighted with the next entry in the list. If there are no
+                more entries in the list, the last entry is used. This can be
+                used to create a gradient effect when highlighting characters.
+
+                See the `highlighter` option.
+
+                Example:
+>
+                let s:scale = ["#ffea9a","#fede82","#fecd6a","#feb855"]
+                let s:accent_hls = map(s:scale, {i, fg -> wilder#make_hl(
+                      \ 'Accent' . i, 'StatusLine',
+                      \ [{}, {}, {'foreground': fg}]
+                      \ )})
+                call wilder#set_option('renderer', wilder#wildmenu_renderer({
+                      \ 'highlights': {
+                      \   'accent': s:accent_hls,
+                      \ },
+                      \ 'highlighter': wilder#basic_highlighter(),
+                      \ }))
+<
 
                 Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
-                The highlight group used for accents for a selected candidate.
-                See the `highlighter` option.
+                Like the `accent` option but used to highlight the selected
+                candidate.
 
                 Default: The `selected` highlight with |underline| and |bold|
 
@@ -1705,15 +1728,19 @@ wilder#popupmenu_renderer([{options}])
 
                 `accent`
                 Optional~
-                The highlight group used for accents. See the
-                `apply_highlights` option.
+                A highlight group or list of highlight groups. If it is a
+                highlight group, it is implictly converted to a single-element
+                list. Each string represents a highlight group. 
+
+                See the `accent` entry under the `accent` option in
+                |wilder#wildmenu_renderer()|.
 
                 Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
-                The highlight group used for accents for a selected candidate.
-                See the `apply_highlights` option.
+                Like the `accent` option but used to highlight the selected
+                candidate.
 
                 Default: The `selected` highlight with |underline| and |bold|
 
