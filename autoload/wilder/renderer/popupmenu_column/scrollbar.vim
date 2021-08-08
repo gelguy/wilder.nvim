@@ -34,6 +34,17 @@ function! s:scrollbar(state, ctx, result) abort
     let l:thumb_end -= 1
   endif
 
+  " Adjust case where rounding causes l:thumb_size to equal l:pum_height.
+  if l:thumb_size == l:pum_height
+    let l:thumb_size -= 1
+
+    if l:end < l:num_candidates - 1
+      let l:thumb_end -= 1
+    else
+      let l:thumb_start += 1
+    endif
+  endif
+
   let l:thumb_chunk = a:state['thumb_chunk']
   let l:scrollbar_chunk = a:state['scrollbar_chunk']
 
