@@ -190,7 +190,11 @@ function! s:post_hook(state, ctx) abort
     endif
   endfor
 
-  redraw
+  if getcmdtype() ==# ':'
+    redraw
+  else
+    call timer_start(0, {-> execute('redraw')})
+  endif
 endfunction
 
 function! s:draw_error(state, ctx) abort

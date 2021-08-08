@@ -147,7 +147,14 @@ function! s:post_hook(state, ctx) abort
   call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
   call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
 
-  redraw
+  if getcmdtype() ==# ':'
+    " Avoid redrawing from timer since there might be commands which print
+    " messages e.g. echo.
+    redraw
+  else
+    " Redraw from timer to avoid hlsearch flashing.
+    call timer_start(0, {-> execute('redraw')})
+  endif
 endfunction
 
 function! s:clear_props(state) abort
