@@ -68,6 +68,11 @@ function! s:start() abort
     let s:init = 1
 
     try
+      if !has('nvim')
+        " set up yarp
+        call wilder#yarp#init()
+      endif
+
       call _wilder_init({'num_workers': s:opts.num_workers})
     catch
       echohl ErrorMsg

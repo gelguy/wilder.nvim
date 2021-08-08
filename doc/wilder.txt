@@ -50,14 +50,9 @@ Minimal config~
 <
 
 To enable Python features in Vim, `yarp` needs to be installed.
-The following plugins need to be installed:
+The following plugins are needed:
 - github.com/roxma/vim-hug-neovim-rpc
 - github.com/roxma/nvim-yarp
-
-And the following option needs to be set
->
-    call wilder#set_option('use_python_remote_plugin', 1)
-<
 
 ==============================================================================
 3. Options                          *wilder-options*
@@ -113,11 +108,12 @@ The options for `wilder` are:
 
 `use_python_remote_plugin`          *wilder-option-use_python_remote_plugin*
             If true, uses the Python remote plugin. This option can be set to
-            0 to disable Python. When using `yarp`, this has to be set to 1.
+            0 to disable the Python remote plugin.
 
-            This option has to be set before wilder is first run.
+            This option has to be set before setting the `pipeline` option and
+            before wilder is first run.
 
-            Default: has('nvim') && has('python3')
+            Default: has('python3') && (has('nvim') || exists('*yarp#py3'))
 
 `num_workers`                       *wilder-option-num_workers*
             Number of workers for the Python 3 |remote-plugin|.
@@ -2965,8 +2961,6 @@ Yarp Configuration~
     " using vim-plug as an example
     Plug 'roxma/vim-hug-neovim-rpc'
     Plug 'roxma/nvim-yarp'
-
-    call wilder#set_option('use_python_remote_plugin', 1)
 <
 
 Fuzzy pipelines (Neovim or Vim with yarp only)~

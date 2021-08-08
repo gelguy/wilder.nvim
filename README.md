@@ -57,10 +57,6 @@ cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 
 " only / and ? are enabled by default
 call wilder#set_option('modes', ['/', '?', ':'])
-
-" Required to enable Python remote plugin features in Vim, can be skipped.
-" Can be set to 0 to disable Python features in Neovim.
-call wilder#set_option('use_python_remote_plugin', 1)
 ```
 
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
@@ -327,7 +323,6 @@ cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
 cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
 call wilder#set_option('modes', ['/', '?', ':'])
-call wilder#set_option('use_python_remote_plugin', 1)
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -373,7 +368,6 @@ cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
 cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
 cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
 call wilder#set_option('modes', ['/', '?', ':'])
-call wilder#set_option('use_python_remote_plugin', 1)
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
