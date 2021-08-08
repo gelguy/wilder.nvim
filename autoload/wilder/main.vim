@@ -456,7 +456,7 @@ function! wilder#main#next_when_available() abort
   return ''
 endfunction
 
-function! wilder#main#trigger_cmdlinechange() abort
+function! wilder#main#trigger_change() abort
   if exists('s:previous_cmdline')
     unlet s:previous_cmdline
   endif
