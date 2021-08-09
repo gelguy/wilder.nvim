@@ -147,23 +147,11 @@ endfunction
 
 function! s:pre_hook(state, ctx) abort
   if a:state.buf == -1 || !bufexists(a:state.buf)
-    let a:state.buf = bufadd('[Wilder Popupmenu ' . localtime() . ']')
-    call bufload(a:state.buf)
-
-    call setbufvar(a:state.buf, '&buftype', 'nofile')
-    call setbufvar(a:state.buf, '&bufhidden', 1)
-    call setbufvar(a:state.buf, '&swapfile', 0)
-    call setbufvar(a:state.buf, '&undolevels', -1)
+    let a:state.buf = s:new_buf('[Wilder Popupmenu ' . localtime() . ']')
   endif
 
   if a:state.dummy_buf == -1 || !bufexists(a:state.dummy_buf)
-    let a:state.dummy_buf = bufadd('[Wilder Popupmenu Dummy ' . localtime() . ']')
-    call bufload(a:state.dummy_buf)
-
-    call setbufvar(a:state.dummy_buf, '&buftype', 'nofile')
-    call setbufvar(a:state.dummy_buf, '&bufhidden', 1)
-    call setbufvar(a:state.dummy_buf, '&swapfile', 0)
-    call setbufvar(a:state.dummy_buf, '&undolevels', -1)
+    let a:state.dummy_buf = s:new_buf('[Wilder Popupmenu Dummy ' . localtime() . ']')
   endif
 
   for l:Column in a:state.left + a:state.right
@@ -172,6 +160,23 @@ function! s:pre_hook(state, ctx) abort
       call l:Column['pre_hook'](a:ctx)
     endif
   endfor
+endfunction
+
+function! s:new_buf(bufname)
+  let l:old_shortmess = &shortmess
+  set shortmess+=F
+
+  let l:buf = bufadd(a:bufname)
+  call bufload(l:buf)
+
+  call setbufvar(l:buf, '&buftype', 'nofile')
+  call setbufvar(l:buf, '&bufhidden', 1)
+  call setbufvar(l:buf, '&swapfile', 0)
+  call setbufvar(l:buf, '&undolevels', -1)
+
+  let &shortmess = l:old_shortmess
+
+  return l:buf
 endfunction
 
 function! s:post_hook(state, ctx) abort

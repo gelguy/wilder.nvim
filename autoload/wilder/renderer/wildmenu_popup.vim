@@ -111,6 +111,9 @@ endfunction
 
 function! s:pre_hook(state, ctx) abort
   if a:state.buf == -1 || !bufexists(a:state.buf)
+    let l:old_shortmess = &shortmess
+    set shortmess+=F
+
     let a:state.buf = bufadd('[Wilder Wildmenu ' . localtime() . ']')
     call bufload(a:state.buf)
 
@@ -118,6 +121,8 @@ function! s:pre_hook(state, ctx) abort
     call setbufvar(a:state.buf, '&bufhidden', 1)
     call setbufvar(a:state.buf, '&swapfile', 0)
     call setbufvar(a:state.buf, '&undolevels', -1)
+
+    let &shortmess = l:old_shortmess
   endif
 
   if a:state.win == -1
