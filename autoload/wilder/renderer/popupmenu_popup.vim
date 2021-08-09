@@ -134,7 +134,10 @@ function! s:render_lines(state, lines, width, pos, selected, reverse) abort
       endif
 
       let l:length = len(l:chunk[0])
-      call s:add_prop(a:state, l:hl, l:i + 1, l:start, l:length)
+
+      if l:hl !=# l:default_hl
+        call s:add_prop(a:state, l:hl, l:i + 1, l:start, l:length)
+      endif
 
       let l:start += l:length
     endfor
@@ -245,6 +248,7 @@ function! s:open_win(state) abort
         \ 'wrap': 0,
         \ 'scrollbar': 0,
         \ 'cursorline': 0,
+        \ 'highlight': a:state.highlights.default,
         \ })
 
   let a:state.win = l:win
