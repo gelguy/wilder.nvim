@@ -9,10 +9,10 @@ call extend(s:opts, {
       \ 'num_workers': 2,
       \ })
 
-if has('nvim')
-  let s:opts.use_python_remote_plugin = has('python3')
-elseif !has('python3')
+if !has('python3')
   let s:opts.use_python_remote_plugin = 0
+elseif has('nvim')
+  let s:opts.use_python_remote_plugin = 1
 endif
 
 function! wilder#options#get(...) abort
@@ -22,15 +22,8 @@ function! wilder#options#get(...) abort
 
   if a:1 ==# 'use_python_remote_plugin' &&
         \ !has_key(s:opts, 'use_python_remote_plugin')
-    try
-      silent call yarp#py3()
-    catch /E119/
-      " success
-      let s:opts.use_python_remote_plugin = 1
-    catch
-      " fail
-      let s:opts.use_python_remote_plugin = 0
-    endtry
+    let l:file = findfile('autoload/yarp.vim', &rtp)
+    let s:opts.use_python_remote_plugin = !empty(l:file)
   endif
 
   return s:opts[a:1]
