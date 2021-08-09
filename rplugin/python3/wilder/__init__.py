@@ -767,6 +767,9 @@ class Wilder(object):
             self.reject(ctx, 'python_cpsm_filt: ' + str(e))
 
     def cpsm_filt(self, event, opts, candidates, query):
+        if not candidates:
+            return candidates
+
         if 'cpsm_path' in opts:
             self.add_sys_path(opts['cpsm_path'])
 
