@@ -16,7 +16,7 @@ function! wilder#renderer#popupmenu#prepare_state(opts) abort
         \ 'longest_line_width': 0,
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
-        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', 1),
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')

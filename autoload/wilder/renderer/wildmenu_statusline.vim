@@ -59,7 +59,13 @@ endfunction
 function! s:post_hook(state, ctx) abort
   let &laststatus = a:state.old_laststatus
   let &statusline = a:state.old_statusline
-  call timer_start(0, {-> execute('redrawstatus')})
+
+  if getcmdtype() !=# '/' && getcmdtype() !=# '?'
+    redrawstatus
+  else
+    " Redraw from timer to avoid hlsearch flashing.
+    call timer_start(0, {-> execute('redrawstatus')})
+  endif
 
   call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
   call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)

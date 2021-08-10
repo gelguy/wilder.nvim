@@ -1335,7 +1335,7 @@ wilder#wildmenu_renderer([{options}])
 
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
-            Default: has('nvim')
+            Default: 1
 
             `hl`
             Deprecated~
@@ -1811,7 +1811,7 @@ wilder#popupmenu_renderer([{options}])
 
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
-            Default: has('nvim')
+            Default: 1
 
 
                                     *wilder#popupmenu_renderer()-column*

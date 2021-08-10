@@ -145,7 +145,7 @@ function! s:render_lines(state, lines, width, pos, selected, reverse) abort
     let l:i += 1
   endwhile
 
-  redraw
+  call wilder#renderer#redraw(a:state.apply_incsearch_fix)
 endfunction
 
 function! s:pre_hook(state, ctx) abort
