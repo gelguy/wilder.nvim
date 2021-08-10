@@ -436,3 +436,32 @@ function! s:has_dynamic_column(state) abort
 
   return 0
 endfunction
+
+function! wilder#renderer#popupmenu#iterate_column(f) abort
+  return {ctx, result -> s:iterate_column(a:f, ctx, result)}
+endfunction
+
+function! s:iterate_column(f, ctx, result)
+  let [l:start, l:end] = a:ctx.page
+  let l:data = get(a:result, 'data', v:null)
+
+  let l:lines = repeat([0], l:end - l:start + 1)
+
+  let l:i = l:start
+  while l:i <= l:end
+    let l:index = l:i - l:start
+
+    let l:x = a:result.value[l:i]
+    let l:line = a:f(a:ctx, l:x, l:data)
+
+    if l:line is v:false
+      return []
+    endif
+
+    let l:lines[l:index] = l:line
+
+    let l:i += 1
+  endwhile
+
+  return l:lines
+endfunction
