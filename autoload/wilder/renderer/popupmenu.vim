@@ -20,6 +20,7 @@ function! s:prepare_state(opts) abort
         \ 'ns_id': nvim_create_namespace(''),
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')
@@ -351,7 +352,7 @@ function! s:render_lines(state, lines, width, pos, selected, reverse) abort
     let l:i += 1
   endwhile
 
-  redraw
+  call wilder#renderer#redraw(a:state.apply_incsearch_fix)
 endfunction
 
 function! s:pre_hook(state, ctx) abort

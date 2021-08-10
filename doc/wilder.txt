@@ -1248,6 +1248,15 @@ wilder#wildmenu_renderer([{options}])
 
             Default: []
 
+            `apply_incsearch_fix`
+            Optional~
+            Fixes incsearch highlighting disappearing. Might introduce higher
+            latency when typing in the cmdline.
+
+            See https://github.com/gelguy/wilder.nvim/issues/30.
+
+            Default: has('nvim')
+
             `hl`
             Deprecated~
             Use `highlights`.
@@ -1701,8 +1710,17 @@ wilder#popupmenu_renderer([{options}])
 
             Default: 16
 
+            `apply_incsearch_fix`
+            Optional~
+            Fixes incsearch highlighting disappearing. Might introduce higher
+            latency when typing in the cmdline.
 
-                                    *wilder#wildmenu_renderer()-column*
+            See https://github.com/gelguy/wilder.nvim/issues/30.
+
+            Default: has('nvim')
+
+
+                                    *wilder#popupmenu_renderer()-column*
 For |wilder#popupmenu_renderer()|, columns can be of the following types:
 
             String:
