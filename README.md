@@ -516,6 +516,27 @@ function! s:wilder_init() abort
 endfunction
 ```
 
+### Vim-specific optimisations
+
+Using the Python remote plugin with `yarp` is slow, which may cause latency when getting cmdline completions.
+
+`wilder#vim_fuzzy_filter()` should be performant enough as long as the number of candidates is not too large.
+
+```vim
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#cmdline_pipeline({
+      \       'use_python': 0,
+      \       'fuzzy': 1,
+      \       'fuzzy_filter': wilder#vim_fuzzy_filter(),
+      \     }),
+      \     ...
+      \   ),
+      \ ])
+```
+
+Avoid using the Python highlighters e.g. `wilder#cpsm_highlighter()` or `wilder#pcre2_highlighter()`.
+
 # Troubleshooting
 
 ### Disabling in the case of errors
