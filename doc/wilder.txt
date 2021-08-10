@@ -2026,6 +2026,17 @@ wilder#popupmenu_buffer_flags([{options}])
 
             Default: '1u%a-+ '
 
+            `icons`
+            Optional~
+            A dictionary mapping a flag to an icon. The flag will be replaced
+            with the icon when drawn. Does not apply to the '1' flag.
+
+            Note: The icons for '%' and '#' need to have the same
+            |strdisplaywidth()|. The same applies for 'a' and 'h', and for '-'
+            and '='.
+
+            Default: {}
+
             `hl`
             Optional~
             The highlight group to use.

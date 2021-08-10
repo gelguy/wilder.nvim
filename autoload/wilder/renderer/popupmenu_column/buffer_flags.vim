@@ -5,10 +5,35 @@ function! wilder#renderer#popupmenu_column#buffer_flags#make(opts) abort
     return {-> ''}
   endif
 
+  let l:icons = {
+        \ '%': '%',
+        \ '#': '#',
+        \ '+': '+',
+        \ '-': '-',
+        \ '=': '=',
+        \ 'a': 'a',
+        \ 'h': 'h',
+        \ 'u': 'u',
+        \ }
+  if has_key(a:opts, 'icons')
+    let l:icons = extend(l:icons, a:opts.icons)
+  endif
+
+  let l:spacing = {}
+  let l:icon_width = {}
+  for l:flag in ['%', '+', '-', 'a', 'u']
+    let l:width = strdisplaywidth(l:icons[l:flag])
+    let l:icon_width[l:flag] = l:width
+    let l:spacing[l:flag] = repeat(' ', l:width)
+  endfor
+
   let l:state = {
         \ 'flags': l:flags,
         \ 'cache': wilder#cache#cache(),
         \ 'session_id': -1,
+        \ 'icons': l:icons,
+        \ 'icon_width': l:icon_width,
+        \ 'spacing': l:spacing,
         \ }
 
   if has_key(a:opts, 'hl')
@@ -38,19 +63,12 @@ function! s:buffer_status(state, ctx, result) abort
   endif
 
   let [l:start, l:end] = a:ctx.page
-  " [current, modified]
   let l:buffer_status = repeat([0], l:end - l:start + 1)
-
-  let l:width = len(l:flags)
 
   let l:hl = get(a:state, 'hl', a:ctx.highlights['default'])
   let l:selected_hl = get(a:state, 'selected_hl', a:ctx.highlights['selected'])
 
-  if stridx(l:flags, '1') != -1
-    let l:bufnr_width = strdisplaywidth(bufnr('$'))
-    let l:width += l:bufnr_width - 1
-  endif
-
+  let l:width = s:get_strdisplaywidth(l:flags, a:state.icon_width)
   let l:empty_chunks = [[repeat(' ', l:width), l:hl, l:selected_hl]]
 
   let l:i = l:start
@@ -77,14 +95,14 @@ function! s:buffer_status(state, ctx, result) abort
     let l:status = ''
 
     let l:j = 0
-    while l:j < l:width
+    while l:j < len(l:flags)
       let l:flag = l:flags[l:j]
 
       if l:flag ==# '1'
-        let l:status .= repeat(' ', l:bufnr_width - strdisplaywidth(l:bufnr))
+        let l:status .= repeat(' ', a:state.icon_width['1'] - strdisplaywidth(l:bufnr))
       endif
 
-      let l:status .= s:get_str(l:flag, l:bufnr)
+      let l:status .= s:get_str(l:flag, l:bufnr, a:state.icons, a:state.spacing)
 
       let l:chunks = [[l:status, l:hl, l:selected_hl]]
       call a:state.cache.set(l:x, l:chunks)
@@ -99,7 +117,31 @@ function! s:buffer_status(state, ctx, result) abort
   return l:buffer_status
 endfunction
 
-function! s:get_str(flag, bufnr) abort
+function! s:get_strdisplaywidth(flags, icon_width) abort
+  let l:width = 0
+
+  let l:i = 0
+  while l:i < len(a:flags)
+    let l:flag = a:flags[l:i]
+
+    if l:flag ==# '1'
+      let l:bufnr_width = strdisplaywidth(bufnr('$'))
+      let l:width += l:bufnr_width
+
+      let a:icon_width['1'] = l:bufnr_width
+    elseif l:flag ==# ' '
+      let l:width += 1
+    else
+      let l:width += a:icon_width[l:flag]
+    endif
+
+    let l:i += 1
+  endwhile
+
+  return l:width
+endfunction
+
+function! s:get_str(flag, bufnr, icons, spacing) abort
   if a:flag ==# ' '
     return ' '
   endif
@@ -110,35 +152,44 @@ function! s:get_str(flag, bufnr) abort
 
   if a:flag ==# '%'
     if a:bufnr == bufnr('%')
-      return '%'
+      return a:icons['%']
     endif
 
     if a:bufnr == bufnr('#')
-      return '#'
+      return a:icons['#']
     endif
 
-    return ' '
+    return a:spacing['%']
   endif
 
   if a:flag ==# '+'
-    return getbufvar(a:bufnr, '&modified') ?  '+' : ' '
+    return getbufvar(a:bufnr, '&modified') ?
+          \ a:icons['+'] :
+          \ a:spacing['+']
   endif
 
   if a:flag ==# '-'
-    return getbufvar(a:bufnr, '&readonly') ? '=' :
-          \ !getbufvar(a:bufnr, '&modifiable') ? '-' : ' '
+    return getbufvar(a:bufnr, '&readonly') ?
+          \ a:icons['='] :
+          \ !getbufvar(a:bufnr, '&modifiable') ?
+          \ a:icons['-'] :
+          \ a:spacing['-']
   endif
 
   if a:flag ==# 'a'
     if bufloaded(a:bufnr)
-      return !empty(win_findbuf(a:bufnr)) ? 'a' : 'h'
+      return !empty(win_findbuf(a:bufnr)) ?
+            \ a:icons['a'] :
+            \ a:icons['h']
     endif
 
-    return ' '
+    return a:spacing['a']
   endif
 
   if a:flag ==# 'u'
-    return buflisted(a:bufnr) ? ' ' : 'u'
+    return buflisted(a:bufnr) ?
+          \ a:spacing['u'] :
+          \ a:icons['u']
   endif
 
   return ''
