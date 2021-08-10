@@ -1233,6 +1233,9 @@ wilder#wildmenu_renderer([{options}])
 
                 See the `highlighter` option.
 
+                Note: Using a long list of highlight groups will affect
+                performance.
+
                 Example:
 >
                 let s:scale = ["#ffea9a","#fede82","#fecd6a","#feb855"]
@@ -1770,7 +1773,7 @@ wilder#popupmenu_renderer([{options}])
 
             `winblend`
             Optional~
-            'winblend' to apply to the popupmenu.
+            'winblend' to apply to the popupmenu. Only for Neovim.
 
             Default: 0
 
