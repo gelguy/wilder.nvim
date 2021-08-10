@@ -76,7 +76,7 @@ function! s:render_chunks(state, chunks) abort
     let l:start = l:end
   endfor
 
-  redraw
+  call wilder#renderer#redraw(a:state.apply_incsearch_fix)
 endfunction
 
 function! s:new_win(buf) abort

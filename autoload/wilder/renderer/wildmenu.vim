@@ -14,6 +14,7 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
         \ 'draw_cache': wilder#cache#cache(),
         \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
+        \ 'apply_incsearch_fix': get(a:args, 'apply_incsearch_fix', has('nvim')),
         \ }
 
   if !has_key(a:args, 'left') && !has_key(a:args, 'right')

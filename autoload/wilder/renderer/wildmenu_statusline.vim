@@ -16,10 +16,10 @@ function! s:render(state, ctx, result) abort
   let l:chunks = wilder#renderer#wildmenu#make_hl_chunks(
         \ a:state, winwidth(0), a:ctx, a:result)
 
-  call s:render_chunks(l:chunks, a:state.highlights['default'])
+  call s:render_chunks(l:chunks, a:state.highlights['default'], a:state.apply_incsearch_fix)
 endfunction
 
-function! s:render_chunks(chunks, hl) abort
+function! s:render_chunks(chunks, hl, apply_incsearch_fix) abort
   let l:statusline = ''
   let g:_wilder_xs = map(copy(a:chunks), {_, x -> x[0]})
 
@@ -44,7 +44,7 @@ function! s:render_chunks(chunks, hl) abort
 
   call setwinvar(0, '&statusline', l:statusline)
 
-  redrawstatus
+  call wilder#renderer#redrawstatus(a:apply_incsearch_fix)
 endfunction
 
 function! s:pre_hook(state, ctx) abort
@@ -59,7 +59,7 @@ endfunction
 function! s:post_hook(state, ctx) abort
   let &laststatus = s:old_laststatus
   let &statusline = s:old_statusline
-  redrawstatus
+  call timer_start(0, {-> execute('redrawstatus')})
 
   call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
   call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
