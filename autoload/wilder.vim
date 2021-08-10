@@ -191,7 +191,11 @@ function! wilder#check(...) abort
 endfunction
 
 function! wilder#if(condition, p) abort
-  return {ctx, x -> a:condition ? a:p(ctx, x) : x}
+  if !a:condition
+    return {_, x -> x}
+  endif
+
+  return {ctx, x -> a:p(ctx, x)}
 endfunction
 
 function! wilder#debounce(t) abort

@@ -1024,8 +1024,12 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   endif
 
   let l:fuzzy = get(a:opts, 'fuzzy', 0)
+  let l:with_data = 0
   if l:fuzzy
-    if has_key(a:opts, 'fuzzy_filter')
+    if has_key(a:opts, 'fuzzy_filter_with_data')
+      let l:with_data = 1
+      let l:Filter = a:opts['fuzzy_filter_with_data']
+    elseif has_key(a:opts, 'fuzzy_filter')
       let l:Filter = a:opts['fuzzy_filter']
     elseif l:use_python
       let l:Filter = wilder#python_fuzzy_filter()
@@ -1050,9 +1054,13 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \       map(xs, {i, x -> fnamemodify(x, ':~')}) : xs},
         \   }),
         \ ]}),
-        \ wilder#if(l:fuzzy, wilder#result({
+        \ wilder#if(l:fuzzy && !l:with_data, wilder#result({
         \   'value': {ctx, xs, data -> l:Filter(
         \     ctx, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', ''))},
+        \ })),
+        \ wilder#if(l:fuzzy && l:with_data, wilder#result({
+        \   'value': {ctx, xs, data -> l:Filter(
+        \     ctx, data, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', ''))},
         \ })),
         \ wilder#result({
         \   'output': [{_, x -> escape(x, ' ')}],
@@ -1068,9 +1076,13 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   let l:completion_subpipeline = [
         \ {ctx, res -> wilder#cmdline#prepare_getcompletion(ctx, res, l:fuzzy, l:use_python)},
         \ {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python)},
-        \ wilder#if(l:fuzzy, wilder#result({
+        \ wilder#if(l:fuzzy && !l:with_data, wilder#result({
         \   'value': {ctx, xs, data -> l:Filter(
         \     ctx, xs, get(data, 'cmdline.match_arg', ''))},
+        \ })),
+        \ wilder#if(l:fuzzy && l:with_data, wilder#result({
+        \   'value': {ctx, xs, data -> l:Filter(
+        \     ctx, data, xs, get(data, 'cmdline.match_arg', ''))},
         \ })),
         \ ]
 

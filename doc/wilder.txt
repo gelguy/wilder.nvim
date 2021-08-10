@@ -813,6 +813,28 @@ wilder#cmdline_pipeline([{options}])
             Default: |wilder#python_fuzzy_filter()| if `language` is 'python'
                      |wilder#vim_fuzzy_filter()| otherwise
 
+            `fuzzy_filter_with_data`
+            Optional~
+            The function to use when matching candidates in fuzzy completion.
+            If set, overrides `fuzzy_filter`.
+            Takes a {ctx}, {data}, {candidates} and {query} and returns the
+            list of filtered candidates. Note the extra {data} argument.
+
+            Can return a |wilder-pipeline-thunk|.  Only used if `fuzzy` is
+            true.
+
+            The keys of {data} are:
+            `cmdline.expand`
+            The type of expansion, similar to |getcompletion()|.
+
+            `cmdline.command`
+            The cmdline command, if any.
+
+            `cmdline.arg`
+            The cmdline argument being completed.
+
+            Default: None
+
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
             See |wilder-hidden|.
