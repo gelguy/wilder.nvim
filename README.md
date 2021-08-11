@@ -50,13 +50,7 @@ endif
 Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 
 ```vim
-call wilder#enable_cmdline_enter()
-set wildcharm=<Tab>
-cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
-cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
-
-" only / and ? are enabled by default
-call wilder#set_option('modes', ['/', '?', ':'])
+call wilder#setup({'modes': [':', '/', '?']})
 ```
 
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
@@ -294,13 +288,7 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
 
 ### Basic config (for both Vim and Neovim)
 ```vim
-call wilder#enable_cmdline_enter()
-set wildcharm=<Tab>
-cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
-cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
-cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
-cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
-call wilder#set_option('modes', ['/', '?', ':'])
+call wilder#setup({'modes': [':', '/', '?']})
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -316,13 +304,7 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
 
 ### Fuzzy config (for Neovim or Vim with yarp)
 ```vim
-call wilder#enable_cmdline_enter()
-set wildcharm=<Tab>
-cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
-cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
-cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
-cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
-call wilder#set_option('modes', ['/', '?', ':'])
+call wilder#setup({'modes': [':', '/', '?']})
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -361,13 +343,7 @@ call wilder#set_option('renderer', wilder#renderer_mux({
   `vim-devicons` from [ryanoasis/vim-devicons](https://github.com/ryanoasis/vim-devicons)
 
 ```vim
-call wilder#enable_cmdline_enter()
-set wildcharm=<Tab>
-cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
-cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
-cmap <expr> <Up> wilder#can_reject_completion() ? wilder#reject_completion() : "<Up>"
-cmap <expr> <Down> wilder#can_accept_completion() ? wilder#accept_completion(0) : "<Down>"
-call wilder#set_option('modes', ['/', '?', ':'])
+call wilder#setup({'modes': [':', '/', '?']})
 
 call wilder#set_option('pipeline', [
       \   wilder#branch(
@@ -505,7 +481,8 @@ Define the pipeline and renderer in an `autocmd` so the initialisation is deferr
 
 ```vim
 " Other options should be set outside
-call wilder#set_option('modes', ...)
+call wilder#setup(...)
+call wilder#set_option(..., ...)
 
 " ++once supported in Nvim 0.4+ and Vim 8.1+
 autocmd CmdlineEnter * ++once call s:wilder_init()

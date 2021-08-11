@@ -905,3 +905,7 @@ function! s:extract_keys(obj, ...)
 
   return l:res
 endfunction
+
+function! wilder#setup(...)
+  return call('wilder#setup#', a:000)
+endfunction
