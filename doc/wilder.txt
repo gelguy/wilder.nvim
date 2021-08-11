@@ -1244,41 +1244,15 @@ wilder#wildmenu_renderer([{options}])
 
                 `accent`
                 Optional~
-                A highlight group or list of highlight groups. If it is a
-                highlight group, it is implictly converted to a single-element
-                list. Each string represents a highlight group. 
-
-                When highlighting accents, the next accented character will be
-                highlighted with the next entry in the list. If there are no
-                more entries in the list, the last entry is used. This can be
-                used to create a gradient effect when highlighting characters.
-
-                See the `highlighter` option.
-
-                Note: Using a long list of highlight groups will affect
-                performance.
-
-                Example:
->
-                let s:scale = ["#ffea9a","#fede82","#fecd6a","#feb855"]
-                let s:accent_hls = map(s:scale, {i, fg -> wilder#make_hl(
-                      \ 'Accent' . i, 'StatusLine',
-                      \ [{}, {}, {'foreground': fg}]
-                      \ )})
-                call wilder#set_option('renderer', wilder#wildmenu_renderer({
-                      \ 'highlights': {
-                      \   'accent': s:accent_hls,
-                      \ },
-                      \ 'highlighter': wilder#basic_highlighter(),
-                      \ }))
-<
+                The highlight group used for accents. See the `highlighter`
+                option.
 
                 Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
-                Like the `accent` option but used to highlight the selected
-                candidate.
+                The highlight group used for accents for a selected candidate.
+                See the `highlighter` option.
 
                 Default: The `selected` highlight with |underline| and |bold|
 
@@ -1319,11 +1293,24 @@ wilder#wildmenu_renderer([{options}])
             The function should take a {ctx}, {candidate} and {data} and
             return 0 when accents cannot be applied and return a list
             otherwise.
-            The returned list should consist of [{start}, {len}] spans, where
-            each span defines the byte start and byte length of the part of
-            the string to be highlighted to be respectively.
-            The spans should be in strictly increasing order and should not
-            overlap.
+
+            The returned list should be a list of lists containing 2, 3 or 4
+            elements, in the form of 
+            [{start}, {len} <{accent_hl}, <{selected_accent_hl}>>], where
+            {accent_hl} and {selected_accent_hl} are optional.
+
+            {start} and {len} define the byte start and byte length of the
+            part of the string to be highlighted. The spans should be in
+            strictly increasing order and should not overlap.
+            {accent_hl} and {selected_accent_hl} are the highlights to apply
+            to the span.
+
+            When the list is [{start}, {len}], it is implictly converted to
+            [{start}, {len}, ctx.highlights.accent,
+            ctx.highlights.selected_accent].
+
+            When the list is [{start}, {len}, {accent_hl}], it is implictly
+            converted to [{start}, {len}, {accent_hl}, {accent_hl}].
 
             For example, with {candidate} `abcdef` and result list [[0, 1],
             [3, 2]], the characters `a`, `d` and `e` will be highlighted with
@@ -1335,7 +1322,9 @@ wilder#wildmenu_renderer([{options}])
             the first non-0 result will be used to apply the higlights. If all
             functions return 0, no highlights will be applied.
 
-            {ctx} contains no keys.
+            {ctx} contains the following keys:
+            `highlights`
+            The `highlights` option passed to the renderer.
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
@@ -1749,19 +1738,15 @@ wilder#popupmenu_renderer([{options}])
 
                 `accent`
                 Optional~
-                A highlight group or list of highlight groups. If it is a
-                highlight group, it is implictly converted to a single-element
-                list. Each string represents a highlight group. 
-
-                See the `accent` entry under the `accent` option in
-                |wilder#wildmenu_renderer()|.
+                The highlight group used for accents. See the
+                `apply_highlights` option.
 
                 Default: The `default` highlight with |underline| and |bold|
 
                 `selected_accent`
                 Optional~
-                Like the `accent` option but used to highlight the selected
-                candidate.
+                The highlight group used for accents for a selected candidate.
+                See the `apply_highlights` option.
 
                 Default: The `selected` highlight with |underline| and |bold|
 
@@ -2591,6 +2576,7 @@ wilder#python_fuzzywuzzy_sorter([{partial}])
             |wilder#python_fuzzywuzzy_sort()| as an option.
 
 wilder#basic_highlighter([{opts}])  *wilder#basic_highlighter()*
+                                    Highlighter~
                                     python option only for Neovim or~
                                     Vim with `yarp` enabled~
             Helper function which returns a function for the
@@ -2629,6 +2615,7 @@ wilder#python_basic_highlighter([{opts}])
             option set to `vim` and `python` respectively.
 
 wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
+                                    Highlighter~
                                     Neovim or Vim with `yarp` enabled only~
                                     lua option only for Neovim~
                                     pcre2 package required for lua option~
@@ -2674,6 +2661,7 @@ wilder#lua_pcre2_highlighter([{opts}])
 wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
                                     *wilder#python_cpsm_highlighter()*
 wilder#python_cpsm_highlighter([{opts}])
+                                    Highlighter~
                                     Neovim or Vim with `yarp` enabled only~
                                     cpsm plugin required~
             Helper function which returns a function for the `highlighter`
@@ -2704,6 +2692,7 @@ wilder#python_cpsm_highlighter([{opts}])
             Default: 'basic'
 
 wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
+                                    Highlighter~
                                     Neovim only~
                                     fzy-lua-native plugin required~
             Helper function which returns a function for the `highlighter`
@@ -2720,6 +2709,48 @@ wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
             https://github.com/romgrk/fzy-lua-native.
 
             Note: This may not handle multibyte characters properly.
+
+                                    *wilder#highlighter_with_gradient()*
+wilder#highlighter_with_gradient({highlighter})
+                                    Highlighter~
+                                    Experimental~
+            Helper function which wraps {highlighter} and returns a
+            highlighter that applies a gradient highlight to the original
+            highlights.
+
+            {highlighter} can be a highlighter or a list of highlighters.
+
+            Requires the `gradient` key to be set in the renderer's
+            `highlights` option. `gradient` should be a list of highlight
+            groups. For each accented character returned by {highlighter}, the
+            next element in the `gradient` list is used as the highlight. If
+            there are no more elements in the list, the last element is used.
+
+            If the `selected_gradient` key is set in the renderer's
+            `highlights` option, the highlights will be applied when the
+            candidate is selected. Otherwise, the `selected_hl` key will be
+            used.
+
+            Note: Adding gradient highlights will affect rendering
+            performance.
+
+            Example:
+>
+            let s:scale = ['#e1524a','#ec6449','#f3784c','#f88e53','#fba35e']
+            let s:gradient = map(s:scale, {i, fg -> wilder#make_hl(
+                  \ 'Accent' . i, 'StatusLine',
+                  \ [{}, {}, {'foreground': fg}]
+                  \ )})
+
+            call wilder#set_option('renderer', wilder#wildmenu_renderer({
+                  \ 'highlights': {
+                  \   'gradient': s:gradient,
+                  \ },
+                  \ 'highlighter': wilder#highlighter_with_gradient([
+                  \   wilder#basic_highlighter(),
+                  \ ]),
+                  \ }))
+<
 
                                     *wilder#project_root()*
 wilder#project_root([{root_markers}])

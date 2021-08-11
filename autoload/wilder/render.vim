@@ -53,30 +53,45 @@ function! wilder#render#normalise_chunks(hl, chunks) abort
   return l:res
 endfunction
 
-function! wilder#render#spans_to_chunks(str, spans, hl, span_hls) abort
+function! wilder#render#spans_to_chunks(str, spans, is_selected, highlights) abort
   let l:res = []
 
   let l:non_span_start = 0
   let l:end = 0
 
+  let l:non_span_hl = a:highlights[a:is_selected ? 'selected' : 'default']
+  let l:default_span_hl = a:highlights[a:is_selected ? 'selected_accent' : 'accent']
+
   let l:i = 0
-  let l:hl_index = 0
   while l:i < len(a:spans)
     let l:span = a:spans[l:i]
     let l:start = l:span[0]
     let l:len = l:span[1]
 
-    if l:start > 0
-      call add(l:res, [strpart(a:str, l:non_span_start, l:start - l:non_span_start), a:hl])
+    if len(l:span) == 2
+      " [start, length]
+      let l:span_hl = l:default_span_hl
+    elseif len(l:span) == 3
+      " [start, length, hl]
+      let l:span_hl = l:span[2]
+    else
+      " [start, length, hl, selected_hl]
+      let l:span_hl = a:is_selected ?
+            \ l:span[3] :
+            \ l:span[2]
     endif
 
-    let l:hl_index = s:add_span(l:res, strpart(a:str, l:start, l:len), a:span_hls, l:hl_index)
+    if l:start > 0
+      call add(l:res, [strpart(a:str, l:non_span_start, l:start - l:non_span_start), l:non_span_hl])
+    endif
+
+    call add(l:res, [strpart(a:str, l:start, l:len), l:span_hl])
 
     let l:non_span_start = l:start + l:len
     let l:i += 1
   endwhile
 
-  call add(l:res, [strpart(a:str, l:non_span_start), a:hl])
+  call add(l:res, [strpart(a:str, l:non_span_start), l:non_span_hl])
 
   return l:res
 endfunction

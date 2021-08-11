@@ -165,6 +165,10 @@ function! wilder#lua_fzy_highlighter(...) abort
   return wilder#highlighter#lua_fzy_highlighter()
 endfunction
 
+function! wilder#highlighter_with_gradient(highlighter) abort
+  return wilder#highlighter#highlighter_with_gradient(a:highlighter)
+endfunction
+
 " pipes
 
 function! wilder#_sleep(t) abort

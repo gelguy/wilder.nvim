@@ -40,27 +40,37 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  let [l:lines, l:expected_width] = wilder#renderer#popupmenu#make_lines(a:state, a:ctx, a:result)
-
-  " +1 to account for the cmdline prompt.
-  " -1 to shift left by 1 column for the added padding.
-  let l:pos = get(a:result, 'pos', 0)
-
-  let l:reverse = a:state.reverse
+  let a:state.render_id += 1
 
   if l:in_completion
-    call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected, l:reverse)})
+    let l:render_id = a:state.render_id
+    call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
   else
-    call s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected, l:reverse)
+    call s:render_lines(a:state, a:ctx, a:result)
   endif
 endfunction
 
-function! s:render_lines(state, lines, width, pos, selected, reverse) abort
+function! s:render_lines_from_timer(render_id, state, ctx, result)
+  if a:render_id != a:state.render_id
+    return
+  endif
+
+  call s:render_lines(a:state, a:ctx, a:result)
+endfunction
+
+function! s:render_lines(state, ctx, result) abort
+  " +1 to account for the cmdline prompt.
+  " -1 to shift left by 1 column for the added padding.
+  let l:pos = get(a:result, 'pos', 0)
+  let l:selected = a:ctx.selected
+  let l:reverse = a:state.reverse
+
+  let [l:lines, l:width] = wilder#renderer#popupmenu#make_lines(a:state, a:ctx, a:result)
   if a:state.win == -1
     call s:open_win(a:state)
   endif
 
-  if empty(a:lines)
+  if empty(l:lines)
     call popup_hide(a:state.win)
     return
   else
@@ -70,15 +80,15 @@ function! s:render_lines(state, lines, width, pos, selected, reverse) abort
   call s:clear_props(a:state)
   call deletebufline(a:state.buf, 1, '$')
 
-  let l:lines = a:reverse ? reverse(a:lines) : a:lines
+  let l:lines = l:reverse ? reverse(l:lines) : l:lines
 
   let [l:page_start, l:page_end] = a:state.page
 
   let l:height = l:page_end - l:page_start + 1
 
-  let l:col = a:pos % &columns
-  if l:col + a:width > &columns
-    let l:col = &columns - a:width
+  let l:col = l:pos % &columns
+  if l:col + l:width > &columns
+    let l:col = &columns - l:width
   endif
   if l:col < 0
     let l:col = 0
@@ -92,8 +102,8 @@ function! s:render_lines(state, lines, width, pos, selected, reverse) abort
   call popup_move(a:state.win, {
         \ 'line': l:row + 1,
         \ 'col': l:col + 1,
-        \ 'minwidth': a:width,
-        \ 'maxwidth': a:width,
+        \ 'minwidth': l:width,
+        \ 'maxwidth': l:width,
         \ 'minheight': l:height,
         \ 'maxheight': l:height,
         \ })
@@ -115,9 +125,9 @@ function! s:render_lines(state, lines, width, pos, selected, reverse) abort
 
     call setbufline(a:state.buf, l:i + 1, l:text)
 
-    let l:is_selected = a:reverse ? 
-          \ l:page_start + (len(l:lines) - l:i - 1) == a:selected :
-          \ l:page_start + l:i == a:selected
+    let l:is_selected = l:reverse ? 
+          \ l:page_start + (len(l:lines) - l:i - 1) == l:selected :
+          \ l:page_start + l:i == l:selected
 
     let l:start = 1
     for l:chunk in l:chunks

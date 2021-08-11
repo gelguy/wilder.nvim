@@ -17,6 +17,7 @@ function! wilder#renderer#popupmenu#prepare_state(opts) abort
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', 1),
+        \ 'render_id': -1,
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')
@@ -77,23 +78,19 @@ function! wilder#renderer#popupmenu#prepare_state(opts) abort
   let l:state.dynamic = s:has_dynamic_column(l:state)
 
   if !has_key(l:state.highlights, 'accent')
-    let l:state.highlights.accent = [
+    let l:state.highlights.accent =
           \ wilder#hl_with_attr(
           \ 'WilderPoppupMenuAccent',
           \ l:state.highlights['default'],
-          \ 'underline', 'bold')]
-  elseif type(l:state.highlights.accent) != v:t_list
-    let l:state.highlights.accent = [l:state.highlights.accent]
+          \ 'underline', 'bold')
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
-    let l:state.highlights.selected_accent = [
+    let l:state.highlights.selected_accent =
           \ wilder#hl_with_attr(
           \ 'WilderPopupMenuSelectedAccent',
           \ l:state.highlights['selected'],
-          \ 'underline', 'bold')]
-  elseif type(l:state.highlights.selected_accent) != v:t_list
-    let l:state.highlights.selected_accent = [l:state.highlights.selected_accent]
+          \ 'underline', 'bold')
   endif
 
   if has_key(a:opts, 'highlighter')
@@ -389,8 +386,8 @@ function! s:draw_line(state, ctx, result, i) abort
   let l:chunks = wilder#render#spans_to_chunks(
         \ l:str,
         \ l:spans,
-        \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-        \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+        \ l:is_selected,
+        \ a:ctx.highlights)
 
   if !l:is_selected
     call a:state.highlight_cache.set(l:str, l:chunks)
@@ -422,7 +419,7 @@ function! s:merge_spans(spans) abort
   let l:start_byte = a:spans[0][0]
   let l:end_byte = a:spans[-1][0] + a:spans[-1][1]
 
-  return [[l:start_byte, l:end_byte]]
+  return [[l:start_byte, l:end_byte - l:start_byte]]
 endfunction
 
 function! s:has_dynamic_column(state) abort

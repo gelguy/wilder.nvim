@@ -34,23 +34,19 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
   endif
 
   if !has_key(l:state.highlights, 'accent')
-    let l:state.highlights.accent = [
+    let l:state.highlights.accent =
           \ wilder#hl_with_attr(
           \ 'WilderWildmenuAccent',
           \ l:state.highlights['default'],
-          \'underline', 'bold')]
-  elseif type(l:state.highlights.accent) != v:t_list
-    let l:state.highlights.accent = [l:state.highlights.accent]
+          \'underline', 'bold')
   endif
 
   if !has_key(l:state.highlights, 'selected_accent')
-    let l:state.highlights.selected_accent = [
+    let l:state.highlights.selected_accent =
           \ wilder#hl_with_attr(
           \ 'WilderWildmenuSelectedAccent',
           \ l:state.highlights['selected'],
-          \ 'underline', 'bold')]
-  elseif type(l:state.highlights.selected_accent) != v:t_list
-    let l:state.highlights.selected_accent = [l:state.highlights.selected_accent]
+          \ 'underline', 'bold')
   endif
 
   if has_key(a:args, 'highlighter')
@@ -450,8 +446,8 @@ function! s:draw_xs(state, ctx, result) abort
         let l:chunks = wilder#render#spans_to_chunks(
               \ l:x,
               \ a:state.highlight_cache.get(l:x),
-              \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-              \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+              \ l:is_selected,
+              \ a:ctx.highlights)
         let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
       else
         let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
@@ -483,8 +479,8 @@ function! s:draw_xs(state, ctx, result) abort
       let l:chunks = wilder#render#spans_to_chunks(
             \ l:x,
             \ a:state.highlight_cache.get(l:x),
-            \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-            \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+            \ l:is_selected,
+            \ a:ctx.highlights)
       let l:res += chunks
     else
       call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])

@@ -14,6 +14,65 @@ function! s:apply_first(highlighters, ctx, x, data)
   return 0
 endfunction
 
+function! wilder#highlighter#highlighter_with_gradient(highlighters) abort
+  let l:highlighters = type(a:highlighters) is v:t_list ?
+        \ a:highlighters :
+        \ [a:highlighters]
+
+  return {ctx, x, data -> s:highlighter_with_gradient(a:highlighters, ctx, x, data)}
+endfunction
+
+function! s:highlighter_with_gradient(highlighters, ctx, x, data) abort
+  let l:spans = s:apply_first(a:highlighters, a:ctx, a:x, a:data)
+
+  if l:spans is 0
+    return 0
+  endif
+
+  if !has_key(a:ctx.highlights, 'gradient')
+    return l:spans
+  endif
+
+  let l:gradient_hls = a:ctx.highlights.gradient
+
+  if empty(l:gradient_hls)
+    return l:spans
+  endif
+
+  if has_key(a:ctx.highlights, 'selected_gradient')
+    let l:selected_gradient_hls = a:ctx.highlights.selected_gradient
+  else
+    let l:selected_gradient_hls = [a:ctx.highlights.selected_accent]
+  endif
+
+  let l:gradient = []
+
+  let l:i = 0
+  for l:span in l:spans
+    let [l:start, l:length] = l:span
+    let l:str = strpart(a:x, l:start, l:length)
+    let l:chars = split(l:str, '\zs')
+
+    for l:char in l:chars
+      let l:char_length = strlen(l:char)
+
+      let l:gradient_hl = l:i < len(gradient_hls) ?
+            \ l:gradient_hls[l:i] :
+            \ l:gradient_hls[-1]
+      let l:selected_gradient_hl = l:i < len(selected_gradient_hls) ?
+            \ l:selected_gradient_hls[l:i] :
+            \ l:selected_gradient_hls[-1]
+
+      call add(l:gradient, [l:start, l:char_length, l:gradient_hl, l:selected_gradient_hl])
+
+      let l:start += l:char_length
+      let l:i += 1
+    endfor
+  endfor
+
+  return l:gradient
+endfunction
+
 function! wilder#highlighter#basic_highlighter(...)
   let l:opts = get(a:, 1, {})
   let l:language = get(l:opts, 'language', 'vim')
