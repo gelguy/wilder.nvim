@@ -150,12 +150,12 @@ function! wilder#transform#python_fuzzy_filt(ctx, opts, candidates, query) abort
     return a:candidates
   endif
 
-  let l:regex = s:make_python_fuzzy_regex(a:query)
+  let l:regex = wilder#transform#make_python_fuzzy_regex(a:query)
 
   return {ctx -> _wilder_python_fuzzy_filt(ctx, a:opts, a:candidates, l:regex)}
 endfunction
 
-function! s:make_python_fuzzy_regex(query)
+function! wilder#transform#make_python_fuzzy_regex(query)
   let l:split_query = split(a:query, '\zs')
 
   let l:regex = ''
