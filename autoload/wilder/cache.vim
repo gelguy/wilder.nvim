@@ -24,11 +24,12 @@ function! s:clear() dict abort
   let self['_cache'] = {}
 endfunction
 
-function! wilder#cache#mru_cache(size) abort
+function! wilder#cache#mru_cache(max_size) abort
   return {
         \ '_cache': {},
         \ '_queue': [],
-        \ '_size': a:size,
+        \ '_counts': {},
+        \ '_max_size': a:max_size,
         \ 'get': funcref('s:mru_get'),
         \ 'set': funcref('s:mru_set'),
         \ 'has_key': funcref('s:has_key'),
@@ -38,7 +39,6 @@ function! wilder#cache#mru_cache(size) abort
 endfunction
 
 function! s:mru_get(key) dict abort
-  call self.mru_update(a:key)
   return self['_cache'][a:key]
 endfunction
 
@@ -55,17 +55,22 @@ endfunction
 
 function! s:mru_update(key) dict abort
   let l:queue = self['_queue']
+  let l:counts = self['_counts']
 
-  let l:index = index(l:queue, a:key)
-  if l:index == -1
-    call insert(l:queue, a:key)
+  call add(l:queue, a:key)
+  if !has_key(l:counts, a:key)
+    let l:counts[a:key] = 1
+  else
+    let l:counts[a:key] += 1
+  endif
 
-    if len(l:queue) > self['_size']
-      let l:removed = remove(l:queue, -1)
+  if len(l:queue) > self['_max_size']
+    let l:removed_key = remove(l:queue, 0)
+    let l:counts[l:removed_key] -= 1
 
-      unlet self['_cache'][l:removed]
+    if l:counts[l:removed_key] == 0
+      unlet l:counts[l:removed_key]
+      unlet self['_cache'][l:removed_key]
     endif
-  elseif l:index > 0
-    let self['_queue'] = [a:key] + l:queue[0 : l:index-1] + l:queue[l:index+1 :]
   endif
 endfunction
