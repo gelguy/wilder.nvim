@@ -15,7 +15,7 @@
 # Requirements
 
 - Vim 8.1+ or Neovim 0.3+
-- Python support only in Neovim or Vim with yarp
+- Python support only in Neovim or Vim with `yarp`
 
 # Install
 
@@ -50,6 +50,7 @@ endif
 Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 
 ```vim
+" Key bindings can be changed, see :h wilder#setup()
 call wilder#setup({'modes': [':', '/', '?']})
 ```
 
@@ -134,13 +135,14 @@ call wilder#set_option('pipeline', [
 
 ![History](https://i.imgur.com/BuDPosq.png)
 
-#### File finder (Neovim or Vim with yarp)
+#### File finder (Neovim or Vim with `yarp`)
 
 ```vim
 " 'file_command' : for ripgrep : ['rg', '--files']
 "                : for fd      : ['fd', '-tf']
 " 'dir_command'  : for fd      : ['fd', '-td']
-" 'filters'      : use ['cpsm_filter'] for performance, needs cpsm to be installed
+" 'filters'      : use ['cpsm_filter'] for performance, requires cpsm vim plugin
+"                  found at https://github.com/nixprime/cpsm
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#python_file_finder_pipeline({
@@ -272,7 +274,7 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
-For Vim:
+For Neovim or Vim with `yarp`:
 ```vim
 " For python_cpsm_highlighter : requires cpsm vim plugin found at
 "                               https://github.com/nixprime/cpsm
@@ -281,6 +283,13 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \   wilder#pcre2_highlighter(),
       \   wilder#python_cpsm_highlighter(),
       \ ],
+      \ }))
+```
+
+For Vim:
+```vim
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlighter': wilder#basic_highlighter(),
       \ }))
 ```
 
@@ -302,7 +311,7 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ }))
 ```
 
-### Fuzzy config (for Neovim or Vim with yarp)
+### Fuzzy config (for Neovim or Vim with `yarp`)
 ```vim
 call wilder#setup({'modes': [':', '/', '?']})
 
@@ -310,8 +319,7 @@ call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
       \       'fuzzy': 1,
-      \       'sorter': wilder#python_difflib_sorter(),
-      \       'set_pcre2_pattern': 1,
+      \       'set_pcre2_pattern': has('nvim'),
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': 'fuzzy',
@@ -362,7 +370,7 @@ call wilder#set_option('pipeline', [
       \     }),
       \     wilder#cmdline_pipeline({
       \       'fuzzy': 1,
-      \       'fuzzy_filter': wilder#python_cpsm_filter(),
+      \       'fuzzy_filter': has('nvim') ? wilder#lua_fzy_filter() : wilder#vim_fuzzy_filter(),
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': wilder#python_fuzzy_pattern({
@@ -413,14 +421,16 @@ or by having a slow `highlighter`.
 
 #### Use minimal configuration
 
-The fastest configuration for `wilder` is to use the non-fuzzy Python pipelines
-and the default renderers.
+The fastest configuration for `wilder` is to use the non-fuzzy pipelines and the default renderers.
+For Vim, the Python cmdline pipeline might be slow due to the overhead of the remote plugin.
+
+For searching, the Python pipeline is faster as it is async and Python's regex is faster than Vim's.
 
 ```vim
 " Neovim or Vim with yarp
 call wilder#set_option('pipeline', [
       \   wilder#branch(
-      \     wilder#cmdline_pipeline({'language': 'python'}),
+      \     wilder#cmdline_pipeline({'language': has('nvim') ? 'python' : 'vim'}),
       \     wilder#python_search_pipeline(),
       \   ),
       \ ])
@@ -446,7 +456,7 @@ Avoid `wilder#wildmenu_spinner()` and `wilder#popupmenu_spinner()` as they cause
 #### Use debounce
 
 Use `wilder#debounce()` or the `debounce` option in pipelines to avoid rendering too often.
-The `debounce` option is currently supported by `wilder#search_pipeline()` (both `vim` and `python`),
+The `debounce` option is currently supported by `wilder#search_pipeline()`,
 `wilder#cmdline_pipeline()` and `wilder#python_file_finder_pipeline()`.
 The debounce interval is in milliseconds.
 
@@ -495,7 +505,7 @@ endfunction
 
 ### Vim-specific optimisations
 
-Using the Python remote plugin with `yarp` is slow, which may cause latency when getting cmdline completions.
+Using the Python remote plugin is slow, which may cause latency when getting cmdline completions.
 
 `wilder#vim_fuzzy_filter()` should be performant enough as long as the number of candidates is not too large.
 
@@ -530,15 +540,15 @@ Alternatively, define a mapping in your `init.vim` or `.vimrc`
 nnoremap <Leader>w :call wilder#toggle()<CR>
 ```
 
-### dein.vim lazy loading remote plugins
+### `dein.vim` lazy loading remote plugins
 
 If you have `g:dein#lazy_rplugins` set to true, the remote plugin will not load until the plugin is sourced.
 
 ```vim
 call dein#add('gelguy/wilder.nvim', {
-  \ 'lazy': 1,
-	\ 'on_event' : 'CmdlineEnter',
-	\ })
+      \ 'lazy': 1,
+      \ 'on_event' : 'CmdlineEnter',
+      \ })
 ```
 
 # Acknowledgements

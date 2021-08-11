@@ -42,6 +42,8 @@ Minimal configuration~
     call wilder#setup()
 <
 
+Keybindings cann be changed, see |wilder#setup()|.
+
 To enable Python features in Vim, `yarp` needs to be installed.
 The following plugins are needed:
 - github.com/roxma/vim-hug-neovim-rpc
