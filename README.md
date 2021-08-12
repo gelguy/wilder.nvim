@@ -50,7 +50,7 @@ endif
 Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 
 ```vim
-" Key bindings can be changed, see :h wilder#setup()
+" Key bindings can be changed, see below
 call wilder#setup({'modes': [':', '/', '?']})
 ```
 
@@ -58,6 +58,20 @@ When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
 When searching using `/`, suggestions will be provided. The default uses substring matching.
 
 Use `<Tab>` to cycle through the list forwards, and `<S-Tab>` to move backwards.
+
+The keybinds can be changed:
+```vim
+" default keys
+call wilder#setup({
+      \ 'modes': [':', '/', '?'],
+      \ 'next_key': '<Tab>',
+      \ 'previous_key': '<S-Tab>',
+      \ 'accept_key': '<Down>',
+      \ 'reject_key': '<Up>',
+      \ })
+```
+Ideally `next_key` should be set to be the same as `&wildchar`.
+Otherwise there might be a conflict when `wildmenu` is active at the same time as `wilder`.
 
 ## Customising the pipeline
 
@@ -293,6 +307,37 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
+### Gradient highlighting (Experimental)
+
+```vim
+let s:scale = ['#ec6449', '#f3784c', '#f88e53', '#fba35e', '#fdb76b',
+      \ '#fdca79', '#feda89', '#fee89a', '#fdf2a8', '#fbf8b0',
+      \ '#f5faad', '#ebf7a6', '#ddf1a0', '#ccea9f', '#b7e2a1',
+      \ '#a0d9a3', '#89cfa5', '#72c3a7', '#5cb3ac', '#4ba0b1']
+let s:gradient = map(copy(s:scale), {i, fg -> wilder#make_hl(
+      \ 'WilderPopupmenuAccent' . i, 'Pmenu', [{}, {}, {'foreground': fg, 'bold': 0}]
+      \ )})
+
+" wrap the highlighter in wilder#highlighter_with_gradient()
+" 'highlights.gradient' must be set.
+" 'highlights.selected_gradient' can use gradient highlighting for the selected candidate.
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'highlights': {
+      \   'gradient': s:gradient,
+      \ },
+      \ 'highlighter': wilder#highlighter_with_gradient([
+      \    ... highlighters ...
+      \ ]),
+      \ }))
+
+```
+
+A nice set of color scales can be found at [d3-scale-chromatic](https://observablehq.com/@d3/color-schemes?collection=@d3/d3-scale-chromatic).
+Use the dropdown to select `discrete(<x>)` for a smaller list of colors.
+Click on a scale to copy it as a string.
+
+Note: Gradient highlighting slows down performance by a lot.
+
 # Example configs
 
 ### Basic config (for both Vim and Neovim)
@@ -338,6 +383,42 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }),
       \ '/': wilder#wildmenu_renderer({
       \   'highlighter': s:highlighters,
+      \ }),
+      \ }))
+```
+
+### Neovim Python-less config
+
+- Requires `fzy-lua-native` from [romgrk/fzy-lua-native](https://github.com/romgrk/fzy-lua-native)
+
+```vim
+call wilder#setup({'modes': [':', '/', '?']})
+call wilder#set_option('use_python_remote_plugin', 0)
+
+call wilder#set_option('pipeline', [
+      \   wilder#branch(
+      \     wilder#cmdline_pipeline({
+      \       'use_python': 0,
+      \       'fuzzy': 1,
+      \       'fuzzy_filter': wilder#lua_fzy_filter(),
+      \     }),
+      \     wilder#vim_search_pipeline(),
+      \   ),
+      \ ])
+
+call wilder#set_option('renderer', wilder#renderer_mux({
+      \ ':': wilder#popupmenu_renderer({
+      \   'highlighter': wilder#lua_fzy_highlighter(),
+      \   'left': [
+      \     wilder#popupmenu_devicons(),
+      \   ],
+      \   'right': [
+      \     ' ',
+      \     wilder#popupmenu_scrollbar(),
+      \   ],
+      \ }),
+      \ '/': wilder#wildmenu_renderer({
+      \   'highlighter': wilder#lua_fzy_highlighter(),
       \ }),
       \ }))
 ```
