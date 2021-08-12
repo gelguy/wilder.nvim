@@ -24,10 +24,9 @@ function! wilder#setup#(...)
       continue
     endif
 
-    if l:key ==# '<Tab>'
-      let l:tab_mapped = 1
-    elseif l:key ==# '<S-Tab>'
-      let l:s_tab_mapped = 1
+    if l:key ==# 'accept_key' &&
+          \ !get(l:config, 'accept_completion_auto_select', 1)
+      let l:command = 'wilder#can_accept_completion() ? wilder#accept_completion(0) :'
     endif
 
     execute 'cmap <expr>' l:mapping l:command string(l:mapping)

@@ -2106,6 +2106,11 @@ wilder#setup([{config}])            *wilder#setup()*
 
             Default: '<Up>'
 
+            `accept_completion_auto_select`
+            The {auto_select} option passed to |wilder#accept_completion()|,
+            if mapped.
+
+            Default: 1
 
 wilder#in_context()                 *wilder#in_context()*
             Returns true if wilder is enabled, is in one of the modes set in
