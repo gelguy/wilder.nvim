@@ -75,18 +75,20 @@ function! s:buffer_status(state, ctx, result) abort
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:x = fnamemodify(a:result.value[l:i], ':~')
+    let l:key = a:result.value[l:i]
 
-    if a:state.cache.has_key(l:x)
-      let l:buffer_status[l:index] = a:state.cache.get(l:x)
+    if a:state.cache.has_key(l:key)
+      let l:buffer_status[l:index] = a:state.cache.get(l:key)
       let l:i += 1
       continue
     endif
 
+    let l:x = fnamemodify(l:key, ':~')
+
     let l:bufnr = bufnr('^' . l:x . '$')
 
     if l:bufnr == -1
-      call a:state.cache.set(l:x, l:empty_chunks)
+      call a:state.cache.set(l:key, l:empty_chunks)
       let l:buffer_status[l:index] = l:empty_chunks
       let l:i += 1
       continue
@@ -105,11 +107,12 @@ function! s:buffer_status(state, ctx, result) abort
       let l:status .= s:get_str(l:flag, l:bufnr, a:state.icons, a:state.spacing)
 
       let l:chunks = [[l:status, l:hl, l:selected_hl]]
-      call a:state.cache.set(l:x, l:chunks)
       let l:buffer_status[l:index] = l:chunks
 
       let l:j += 1
     endwhile
+
+    call a:state.cache.set(l:key, l:chunks)
 
     let l:i += 1
   endwhile
