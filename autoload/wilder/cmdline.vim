@@ -587,10 +587,10 @@ function! wilder#cmdline#is_user_command(cmd) abort
 endfunction
 
 let s:cached_commands_session_id = -1
-let s:has_script_local_completion = {}
+let s:has_completion_error = {}
 let s:cached_user_commands = {}
 
-" returns [{handled}, {result}, [{res}]]
+" returns [{handled}, {result}, {res}[, {need_filter}]]
 function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if !wilder#cmdline#is_user_command(a:res.cmd)
     return [0, 0, a:res]
@@ -603,12 +603,12 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
   if a:ctx.session_id > s:cached_commands_session_id
     let s:cached_commands_session_id = a:ctx.session_id
     let s:cached_user_commands = extend(nvim_get_commands({}), nvim_buf_get_commands(0, {}))
-    let s:has_script_local_completion = {}
+    let s:has_completion_error = {}
   endif
 
   " Calling getcompletion() interferes with wildmenu command completion so
   " we return v:true early
-  if has_key(s:has_script_local_completion, a:res.cmd)
+  if has_key(s:has_completion_error, a:res.cmd)
     let l:res = copy(a:res)
     let l:res.pos = 0
     return [1, v:true, l:res]
@@ -646,28 +646,32 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     let l:arg = a:res.cmdline[l:pos+1 :]
 
     try
-      " Function might be script-local or point to script-local variables.
-      let l:Completion_func = function(l:user_command.complete_arg)
+      let l:function_name = l:user_command.complete_arg
+      if l:function_name[:1] ==# 's:'
+        let l:function_name = '<SNR>' . l:user_command.script_id . '_' . l:function_name[2:]
+      endif
+
+      let l:Completion_func = function(l:function_name)
       let l:result = l:Completion_func(l:arg, a:res.cmdline, len(a:res.cmdline))
     catch
       " Add both the full command and partial command
-      let s:has_script_local_completion[l:command] = 1
-      let s:has_script_local_completion[a:res.cmd] = 1
+      let s:has_completion_error[l:command] = 1
+      let s:has_completion_error[a:res.cmd] = 1
 
       let l:res = copy(a:res)
       let l:res.pos = 0
       return [1, v:true, l:res]
     endtry
 
-    if get(l:user_command, 'complete', '') ==# 'custom'
+    let l:is_custom_list = get(l:user_command, 'complete', '') ==# 'customlist'
+    if !l:is_custom_list
       let l:result = split(l:result, '\n')
-      let l:result = filter(l:result, {i, x -> match(x, l:arg) != -1})
     endif
 
     let l:res = copy(a:res)
     let l:res.pos = l:pos
     let l:res.match_arg = l:arg
-    return [1, l:result, l:res]
+    return [1, l:result, l:res, !l:is_custom_list]
   endif
 
   if has_key(l:user_command, 'complete') &&
@@ -1014,7 +1018,7 @@ function! s:simplify(path)
   return l:path
 endfunction
 
-function! wilder#cmdline#getcompletion_pipeline(opts) abort
+function! s:get_opts(opts) abort
   if has_key(a:opts, 'language')
     let l:use_python = a:opts['language'] ==# 'python'
   elseif has_key(a:opts, 'use_python')
@@ -1036,7 +1040,15 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
     else
       let l:Filter = wilder#vim_fuzzy_filter()
     endif
+  else
+    let l:Filter = 0
   endif
+
+  return [l:Filter, l:with_data, l:use_python, l:fuzzy]
+endfunction
+
+function! wilder#cmdline#getcompletion_pipeline(opts) abort
+  let [l:Filter, l:with_data, l:use_python, l:fuzzy] = s:get_opts(a:opts)
 
   " parsed cmdline
   " : prepare_file_completion
@@ -1126,7 +1138,22 @@ function! wilder#cmdline#pipeline(opts) abort
     let l:Debounce = 0
   endif
 
-  " [handled, user_completions, parsed]
+  let l:opts = s:get_opts(a:opts)
+  let l:F = l:opts[0]
+  let l:with_data = l:opts[1]
+  let l:fuzzy = l:opts[3]
+
+  if l:fuzzy
+    if l:with_data
+      let l:Filter = {ctx, xs, q -> l:F(ctx, {}, xs, q)}
+    else
+      let l:Filter = l:F
+    endif
+  else
+    let l:Filter = {ctx, xs, q -> filter(xs, {_, x -> match(x, q) == 0})}
+  endif
+
+  " [handled, user_completions, parsed, need_filter]
   " : handled?
   " └--> user_completions
   let l:user_completion_pipeline = [
@@ -1134,6 +1161,7 @@ function! wilder#cmdline#pipeline(opts) abort
         \ wilder#subpipeline({ctx, res -> [
         \   {_, res -> res[1]},
         \   wilder#result({
+        \     'value': {ctx, xs -> res[3] ? l:Filter(ctx, xs, res[2].arg) : xs},
         \     'pos': res[2].pos,
         \     'replace': ['wilder#cmdline#replace'],
         \     'data': s:convert_result_to_data(res[2]),
