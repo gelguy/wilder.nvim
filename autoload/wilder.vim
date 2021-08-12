@@ -704,11 +704,7 @@ function! wilder#popupmenu_renderer(...)
     let l:args.mode = has('nvim-0.4') ? 'float' : 'popup'
   endif
 
-  if l:args.mode ==# 'float'
-    return wilder#renderer#popupmenu_float#make(l:args)
-  endif
-
-  return wilder#renderer#popupmenu_popup#make(l:args)
+  return wilder#renderer#popupmenu#(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_airline_theme()
