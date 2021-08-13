@@ -277,7 +277,7 @@ function! s:render_lines(state, ctx, result) abort
     endif
   endif
 
-  let l:cmdheight = s:get_cmdheight()
+  let l:cmdheight = wilder#renderer#get_cmdheight()
   let l:row = &lines - l:cmdheight - l:height
 
   call a:state.api.move(l:row, l:col, l:height, l:width)
@@ -329,7 +329,7 @@ function! s:render_lines(state, ctx, result) abort
     let l:i += 1
   endwhile
 
-  call a:state.api.reset_cursor()
+  call a:state.api.set_firstline(1)
   call wilder#renderer#redraw(a:state.apply_incsearch_fix)
 endfunction
 
@@ -579,8 +579,6 @@ function! s:pre_hook(state, ctx) abort
 endfunction
 
 function! s:post_hook(state, ctx) abort
-  call a:state.api.clear_all_highlights()
-
   call a:state.api.hide()
 
   for l:Column in a:state.left + a:state.right
@@ -597,7 +595,7 @@ function! s:draw_error(state, ctx) abort
   let l:error = wilder#render#to_printable(a:ctx.error)
   let [l:height, l:width] = s:get_error_dimensions(a:state, l:error)
 
-  let l:cmdheight = s:get_cmdheight()
+  let l:cmdheight = wilder#renderer#get_cmdheight()
   let l:row = &lines - l:cmdheight - l:height
 
   call a:state.api.move(l:row, 0, l:height, l:width)
@@ -611,30 +609,6 @@ function! s:draw_error(state, ctx) abort
   call a:state.api.add_highlight(l:hl, 0, 0, len(l:error))
 
   redraw
-endfunction
-
-function! s:get_cmdheight() abort
-  if !has('nvim')
-    " For Vim, if cmdline exceeds cmdheight, the screen lines are pushed up
-    " similar to :mess, so we draw the popupmenu just above the cmdline.
-    " Lines exceeding cmdheight do not count into target line number.
-    return &cmdheight
-  endif
-
-  " Always show the pum above the cmdline.
-  let l:cmdheight = (strdisplaywidth(getcmdline()) + 1) / &columns + 1
-  if l:cmdheight < &cmdheight
-    let l:cmdheight = &cmdheight
-  elseif l:cmdheight > 1
-    " Show the pum above the msgsep.
-    let l:has_msgsep = stridx(&display, 'msgsep') >= 0
-
-    if l:has_msgsep
-      let l:cmdheight += 1
-    endif
-  endif
-
-  return l:cmdheight
 endfunction
 
 function! s:iterate_column(f) abort

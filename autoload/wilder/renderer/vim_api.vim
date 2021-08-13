@@ -5,7 +5,6 @@ function! wilder#renderer#vim_api#() abort
         \ 'buf': -1,
         \ 'dummy_buf': -1,
         \ 'win': -1,
-        \ 'normal_highlight': 'Normal',
         \ 'prop_types': {},
         \ }
 
@@ -19,7 +18,7 @@ function! wilder#renderer#vim_api#() abort
         \ 'hide',
         \ 'move',
         \ 'set_option',
-        \ 'reset_cursor',
+        \ 'set_firstline',
         \ 'delete_all_lines',
         \ 'set_line',
         \ 'add_highlight',
@@ -48,7 +47,7 @@ function! s:new(opts) dict abort
         \ 'wrap': 0,
         \ 'scrollbar': 0,
         \ 'cursorline': 0,
-        \ 'highlight': a:opts.normal_highlight,
+        \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
         \ })
 endfunction
 
@@ -90,8 +89,10 @@ function! s:move(row, col, height, width) dict abort
         \ })
 endfunction
 
-function! s:reset_cursor() dict abort
-  " No-op
+function! s:set_firstline(line) dict abort
+  call popup_setoptions(self.state.win, {
+        \ 'firstline': a:line,
+        \ })
 endfunction
 
 function! s:set_option(option, value) dict abort

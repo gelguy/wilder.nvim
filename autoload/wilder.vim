@@ -688,13 +688,11 @@ function! wilder#wildmenu_renderer(...)
           \ 'statusline'
   endif
 
-  if l:args.mode ==# 'float'
-    return wilder#renderer#wildmenu_float#make(l:args)
-  elseif l:args.mode ==# 'popup'
-    return wilder#renderer#wildmenu_popup#make(l:args)
+  if l:args.mode ==# 'float' || l:args.mode ==# 'popup'
+    return wilder#renderer#wildmenu_float_or_popup#(l:args)
   endif
 
-  return wilder#renderer#wildmenu_statusline#make(l:args)
+  return wilder#renderer#wildmenu_statusline#(l:args)
 endfunction
 
 function! wilder#popupmenu_renderer(...)

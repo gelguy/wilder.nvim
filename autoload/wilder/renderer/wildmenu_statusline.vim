@@ -1,5 +1,5 @@
-function! wilder#renderer#wildmenu_statusline#make(args) abort
-  let l:state = wilder#renderer#wildmenu#prepare_state(a:args)
+function! wilder#renderer#wildmenu_statusline#(opts) abort
+  let l:state = wilder#renderer#wildmenu#prepare_state(a:opts)
 
   return {
         \ 'render': {ctx, result -> s:render(l:state, ctx, result)},

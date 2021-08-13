@@ -20,7 +20,7 @@ function! wilder#renderer#nvim_api#() abort
         \ 'hide',
         \ 'move',
         \ 'set_option',
-        \ 'reset_cursor',
+        \ 'set_firstline',
         \ 'delete_all_lines',
         \ 'set_line',
         \ 'add_highlight',
@@ -42,8 +42,8 @@ function! s:new(opts) dict abort
     let self.state.dummy_buf = s:new_buf()
   endif
 
-  let self.state.normal_highlight = a:opts.normal_highlight
-  let self.state.winblend = a:opts.winblend
+  let self.state.normal_highlight = get(a:opts, 'normal_highlight', 'Normal')
+  let self.state.winblend = get(a:opts, 'winblend', 0)
 endfunction
 
 function! s:new_buf() abort
@@ -101,8 +101,8 @@ function! s:move(row, col, height, width) dict abort
         \ })
 endfunction
 
-function! s:reset_cursor() dict abort
-  call nvim_win_set_cursor(self.state.win, [1, 0])
+function! s:set_firstline(line) dict abort
+  call nvim_win_set_cursor(self.state.win, [a:line, 0])
 endfunction
 
 function! s:set_option(option, value) dict abort
