@@ -10,7 +10,7 @@
   - customisable look and appearance
 - Async - uses Python 3 remote plugin for faster and non-blocking searches
 
-![wilder](https://i.imgur.com/LkOOU6G.gif)
+![wilder](https://i.imgur.com/FcDnVai.gif)
 
 # Requirements
 
@@ -186,8 +186,8 @@ By default, `wilder` tries its best to look like the default wildmenu.
 ### Wildmenu renderer
 
 `wilder#wildmenu_renderer()` draws the candidates above the cmdline.
-For Neovim 0.4+ or Vim 8.1+ with popup support, a floating window is used. Otherwise the statusline is used.
-Due to statusline limitations, the wildmenu will show on the statusline of the current window.
+For Neovim 0.4+, a floating window is used. For Vim 8.1+ with popup support, a popup window is used.
+Otherwise the statusline is used. Note: When using the statusline, the wildmenu will only show on the statusline of the current window.
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
@@ -230,6 +230,7 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer(
 
 For Neovim 0.4+ or Vim 8.1+ with popup support,
 `wilder#popupmenu_renderer()` can be used to draw the results on a popupmenu, similar to `wildoptions+=pum`.
+The implementation for Vim is still experimental.
 
 ```vim
 " 'highlighter' : applies highlighting to the candidates
@@ -275,16 +276,10 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
 The `highlighter` option for both `wilder#wildmenu_renderer()` and `wilder#popupmenu_renderer()`
 can be changed for better fuzzy highlighting.
 
-For Neovim:
+Basic configuration for both Vim and Neovim:
 ```vim
-" For lua_pcre2_highlighter : requires `luarocks install pcre2`
-" For lua_fzy_highlighter   : requires fzy-lua-native vim plugin found
-"                             at https://github.com/romgrk/fzy-lua-native
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
-      \ 'highlighter': [
-      \   wilder#lua_pcre2_highlighter(),
-      \   wilder#lua_fzy_highlighter(),
-      \ ],
+      \ 'highlighter': wilder#basic_highlighter(),
       \ }))
 ```
 
@@ -300,10 +295,16 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
-For Vim:
+For Neovim:
 ```vim
+" For lua_pcre2_highlighter : requires `luarocks install pcre2`
+" For lua_fzy_highlighter   : requires fzy-lua-native vim plugin found
+"                             at https://github.com/romgrk/fzy-lua-native
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
-      \ 'highlighter': wilder#basic_highlighter(),
+      \ 'highlighter': [
+      \   wilder#lua_pcre2_highlighter(),
+      \   wilder#lua_fzy_highlighter(),
+      \ ],
       \ }))
 ```
 
@@ -423,7 +424,7 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }))
 ```
 
-### Advanced config (for Neovim only or Vim with yarp)
+### Advanced config (for Neovim only or Vim with `yarp`)
 
 - Requires `fd` from [sharkdp/fd](https://github.com/sharkdp/fd)  (see `:h wilder#python_file_finder_pipeline()` on using other commands)
 - Requires `cpsm` from [nixprime/cpsm](https://github.com/nixprime/cpsm)

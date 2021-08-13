@@ -1190,6 +1190,7 @@ wilder#wildmenu_renderer([{options}])
 
             {options} is a dictionary with keys:
             `mode`
+            'popup' option is experimental~
             One of 'float', 'popup' or 'statusline'. The 'float' option
             requires Neovim 0.4+ with |api-floatwin|. The 'popup' option
             requires Vim 8.1+ with |popup|.
@@ -1697,6 +1698,7 @@ wilder#popupmenu_renderer([{options}])
 
             {options} is a dictionary with keys:
             `mode`
+            'popup' option is experimental~
             One of 'float' or 'popup'. The 'float' option requires Neovim 0.4+
             with |api-floatwin|. The 'popup' option requires Vim 8.1+ with
             |popup|.
