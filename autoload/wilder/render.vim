@@ -53,11 +53,14 @@ function! wilder#render#normalise_chunks(hl, chunks) abort
   return l:res
 endfunction
 
-function! wilder#render#spans_to_chunks(str, spans, hl, span_hl) abort
+function! wilder#render#spans_to_chunks(str, spans, is_selected, highlights) abort
   let l:res = []
 
   let l:non_span_start = 0
   let l:end = 0
+
+  let l:non_span_hl = a:highlights[a:is_selected ? 'selected' : 'default']
+  let l:default_span_hl = a:highlights[a:is_selected ? 'selected_accent' : 'accent']
 
   let l:i = 0
   while l:i < len(a:spans)
@@ -65,19 +68,56 @@ function! wilder#render#spans_to_chunks(str, spans, hl, span_hl) abort
     let l:start = l:span[0]
     let l:len = l:span[1]
 
-    if l:start > 0
-      call add(l:res, [strpart(a:str, l:non_span_start, l:start - l:non_span_start), a:hl])
+    if len(l:span) == 2
+      " [start, length]
+      let l:span_hl = l:default_span_hl
+    elseif len(l:span) == 3
+      " [start, length, hl]
+      let l:span_hl = l:span[2]
+    else
+      " [start, length, hl, selected_hl]
+      let l:span_hl = a:is_selected ?
+            \ l:span[3] :
+            \ l:span[2]
     endif
 
-    call add(l:res, [strpart(a:str, l:start, l:len), a:span_hl])
+    if l:start > 0
+      call add(l:res, [strpart(a:str, l:non_span_start, l:start - l:non_span_start), l:non_span_hl])
+    endif
+
+    call add(l:res, [strpart(a:str, l:start, l:len), l:span_hl])
 
     let l:non_span_start = l:start + l:len
     let l:i += 1
   endwhile
 
-  call add(l:res, [strpart(a:str, l:non_span_start), a:hl])
+  call add(l:res, [strpart(a:str, l:non_span_start), l:non_span_hl])
 
   return l:res
+endfunction
+
+function! s:add_span(res, str, span_hls, hl_index) abort
+  if len(a:span_hls) == 1
+    call add(a:res, [a:str, a:span_hls[0]])
+    return a:hl_index
+  elseif empty(a:span_hls)
+    call add(a:res, [a:str])
+    return a:hl_index
+  endif
+
+  let l:chars = split(a:str, '\zs')
+  let l:hl_index = a:hl_index
+
+  for l:char in l:chars
+    if l:hl_index < len(a:span_hls)
+      call add(a:res, [l:char, a:span_hls[l:hl_index]])
+      let l:hl_index += 1
+    else
+      call add(a:res, [l:char, a:span_hls[-1]])
+    endif
+  endfor
+  
+  return l:hl_index
 endfunction
 
 function! wilder#render#to_printable(x) abort

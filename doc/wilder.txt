@@ -34,7 +34,20 @@ Requirements:
 
 - Vim 8.1+ or Neovim 0.3+
 - Certain features (e.g. async, cmdline completion) are only enabled in Neovim
+  or with `yarp` enabled.
 - Default async search needs Python 3 enabled
+
+Minimal configuration~
+>
+    call wilder#setup()
+<
+
+Keybindings cann be changed, see |wilder#setup()|.
+
+To enable Python features in Vim, `yarp` needs to be installed.
+The following plugins are needed:
+- github.com/roxma/vim-hug-neovim-rpc
+- github.com/roxma/nvim-yarp
 
 ==============================================================================
 3. Options                          *wilder-options*
@@ -88,6 +101,15 @@ The options for `wilder` are:
 
             Default: 0
 
+`use_python_remote_plugin`          *wilder-option-use_python_remote_plugin*
+            If true, uses the Python remote plugin. This option can be set to
+            0 to disable the Python remote plugin.
+
+            This option has to be set before setting the `pipeline` option and
+            before wilder is first run.
+
+            Default: has('python3') && (has('nvim') || exists('*yarp#py3'))
+
 `num_workers`                       *wilder-option-num_workers*
             Number of workers for the Python 3 |remote-plugin|.
             Has to be set at startup, before wilder is first run. Setting the
@@ -103,7 +125,7 @@ The options for `wilder` are:
                      |wilder#vim_search_pipeline()| for Vim
                      |wilder#cmdline_pipeline()| and
                      |wilder#python_search_pipeline()| for Neovim with
-                                                       Python 3 support
+                     Python 3 support or Vim with `yarp` enabled.
 
 `renderer`                          *wilder-option-renderer*
             Sets the renderer to used to display the completions.
@@ -148,7 +170,7 @@ result of the last element will be the completions for that query. See
 
 A contrived example:
 >
-    wilder#set_option('pipeline', [
+    call wilder#set_option('pipeline', [
       \ {ctx, x -> [x, 'foo', 'bar']},
       \ ])
 <
@@ -203,7 +225,7 @@ a pipeline based on certain conditions.
 
 Example:
 >
-    wilder#set_option('pipeline', [
+    call wilder#set_option('pipeline', [
       \ {ctx, x -> empty(x) ? v:false : x},
       \ {ctx, x -> MyCompletionFunction(x)},
       \ ]
@@ -419,7 +441,7 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
 
             Example:
 >
-                wilder#set_option('pipeline', [
+                call wilder#set_option('pipeline', [
                   \ wilder#branch(
                   \   [
                   \     wilder#check({ctx, x -> empty(x)}),
@@ -431,6 +453,31 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
 <
             This pipeline will return completions from the history is {x} is
             empty.
+
+wilder#subpipeline({f})             *wilder#subpipeline()*
+                                    Pipe~
+            Takes a function {f} which takes a {ctx} and {x} and returns a
+            pipeline.
+            The original {x} is then passed to the returned pipeline, and the
+            result of the pipeline is the result of the pipe.
+            This is helpful for capturing {x} similar to a closure, or for
+            dynamically creating a different pipeline based on the value of
+            {x}.
+
+            Note: The subpipeline is re-created each time, so creating complex
+            subpipelines might have an impact on performance.
+
+            Example:
+>
+                call wilder#set_option('pipeline', [
+                  \ wilder#subpipeline({ctx, x -> [
+                  \   wilder#history(),
+                  \   {ctx, h -> wilder#vim_fuzzy_filt(ctx, {}, h, x)},
+                  \ ]})
+                  \ ]),
+<
+            This pipeline will return completions from the history is {x}
+            which are fuzzily filtered using |wilder#vim_fuzzy_filt()|
 
                                     *wilder#history()*
 wilder#history([{max_num}, [{cmdtype}]])
@@ -485,8 +532,7 @@ wilder#python_fuzzy_pattern([{options}])
             If true, the regex will only match at the beginning of a word
             boundary.
 
-            Note: This makes the regex more complicated and will slow down the
-            fuzzy searching.
+            Note: Setting this to false will slow down the fuzzy searching.
 
             Default: 1
 
@@ -530,7 +576,7 @@ wilder#python_fuzzy_delimiter_pattern([{options}])
             Default: 1
 
 wilder#python_search([{options}])   *wilder#python_search()*
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` only~
                                     Async~
                                     Pipe~
             Takes a regex and searches the current buffer for completions
@@ -606,8 +652,8 @@ PIPELINES                           *wilder-pipelines*
 
 wilder#search_pipeline([{options}]) *wilder#search_pipeline()*
                                     Pipeline~
-            Returns a |wilder#python_search_pipeline()| for Neovim and a
-            |wilder#vim_search_pipeline()| for Vim.
+            Returns a |wilder#python_search_pipeline()| for Neovim or Vim with
+            `yarp` enabled and a |wilder#vim_search_pipeline()| for Vim.
 
             If provided, the {options} argument is passed to the respective
             function.
@@ -635,7 +681,7 @@ wilder#vim_search_pipeline([{options}])
 
 wilder#python_search_pipeline([{options}])
                                     *wilder#python_search_pipeline()*
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
                                     Pipeline~
             Returns a pipeline which does Python search.
@@ -674,7 +720,8 @@ wilder#python_search_pipeline([{options}])
             If no function is provided, no sorting will be done on the
             candidates.
 
-            For Neovim, |wilder#python_difflib_sorter()| and
+            For Neovim or Vim with `yarp` enabled,
+            |wilder#python_difflib_sorter()| and
             |wilder#python_fuzzywuzzy_sorter()| can be used here.
 
             Default: Empty
@@ -704,7 +751,7 @@ wilder#python_search_pipeline([{options}])
 
                                     *wilder#cmdline_pipeline()*
 wilder#cmdline_pipeline([{options}])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Pipeline~
             Returns a pipeline which returns completions in cmdline mode.
             Handles user command completions, file completions and cmdline
@@ -735,11 +782,12 @@ wilder#cmdline_pipeline([{options}])
 
             `language`
             Optional~
-            python option only for Neovim~
+            python option only for Neovim or Vim with `yarp` enabled~
             'python' or 'vim' representing the language to use for getting
             completions and filtering.
 
-            Default: has('nvim') ? 'python' : 'vim'
+            Default: 'python' if using Neovim or Vim with `yarp`,
+                     otherwise 'vim'
 
             `fuzzy_filter`
             Optional~
@@ -760,6 +808,28 @@ wilder#cmdline_pipeline([{options}])
             Default: |wilder#python_fuzzy_filter()| if `language` is 'python'
                      |wilder#vim_fuzzy_filter()| otherwise
 
+            `fuzzy_filter_with_data`
+            Optional~
+            The function to use when matching candidates in fuzzy completion.
+            If set, overrides `fuzzy_filter`.
+            Takes a {ctx}, {data}, {candidates} and {query} and returns the
+            list of filtered candidates. Note the extra {data} argument.
+
+            Can return a |wilder-pipeline-thunk|.  Only used if `fuzzy` is
+            true.
+
+            The keys of {data} are:
+            `cmdline.expand`
+            The type of expansion, similar to |getcompletion()|.
+
+            `cmdline.command`
+            The cmdline command, if any.
+
+            `cmdline.arg`
+            The cmdline argument being completed.
+
+            Default: None
+
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
             See |wilder-hidden|.
@@ -777,7 +847,8 @@ wilder#cmdline_pipeline([{options}])
             If no function is provided, no sorting will be done on the
             candidates.
 
-            For Neovim, |wilder#python_difflib_sorter()| and
+            For Neovim or Vim with `yarp` enabled,
+            |wilder#python_difflib_sorter()| and
             |wilder#python_fuzzywuzzy_sorter()| can be used here.
 
             Default: Empty
@@ -791,7 +862,7 @@ wilder#cmdline_pipeline([{options}])
             Should be set to false when using a fuzzy filter not based on
             PCRE2.
 
-            Default: 1
+            Default: 0
 
             `debounce`
             Optional~
@@ -810,10 +881,9 @@ wilder#cmdline_pipeline([{options}])
 
                                     *wilder#python_file_finder_pipeline()*
 wilder#python_file_finder_pipeline([{options}])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
                                     Pipeline~
-                                    Experimental~
             Returns a pipeline which matches files fuzzily. This pipeline is
             used when the cmdline is expanding `file` or `dir` completions,
             which for example occurs when in the |:edit| or |:cd| commands.
@@ -971,7 +1041,7 @@ wilder#python_file_finder_pipeline([{options}])
                 Optional~
                 The parent directory of the `fruzzy.py` file.
 
-                Default: Inferred by Neovim.
+                Default: Inferred by Neovim/Vim.
 
             `cpsm_filter`
             Filters and sorts the list with |wilder#python_cpsm_filter()|.
@@ -982,7 +1052,7 @@ wilder#python_file_finder_pipeline([{options}])
                 Optional~
                 The parent directory of the `cpsm_py.so` file.
 
-                Default: Inferred by Neovim.
+                Default: Inferred by Neovim/Vim.
 
             `difflib_sorter`
             Sorts the list with |wilder#python_difflib_sorter()|.
@@ -1120,18 +1190,23 @@ wilder#wildmenu_renderer([{options}])
 
             {options} is a dictionary with keys:
             `mode`
-            One of 'float' or 'statusline'. The 'float' option requires Neovim
-            0.4+ with |api-floatwin|.
+            'popup' option is experimental~
+            One of 'float', 'popup' or 'statusline'. The 'float' option
+            requires Neovim 0.4+ with |api-floatwin|. The 'popup' option
+            requires Vim 8.1+ with |popup|.
 
             When this option is 'float', the results are drawn using a
-            floating window. Otherwise, the results will be drawn on the
+            floating window. When the option is 'popup', the results are drawn
+            using a popup. Otherwise, the results will be drawn on the
             statusline.
 
             Note: The statusline might be truncated or not update correctly
             when there are too many separate highlight chunks. See |E541|.
             This can be mitigated by turning off the `highlighter` option.
 
-            Default: has('nvim-0.4') ? 'float' : 'statusline'
+            Default: has('nvim-0.4') ? 'float' :
+                     exists('*popup_create') ? 'popup' :
+                     'statusline'
 
             `highlights`
             Optional~
@@ -1214,11 +1289,24 @@ wilder#wildmenu_renderer([{options}])
             The function should take a {ctx}, {candidate} and {data} and
             return 0 when accents cannot be applied and return a list
             otherwise.
-            The returned list should consist of [{start}, {len}] spans, where
-            each span defines the byte start and byte length of the part of
-            the string to be highlighted to be respectively.
-            The spans should be in strictly increasing order and should not
-            overlap.
+
+            The returned list should be a list of lists containing 2, 3 or 4
+            elements, in the form of 
+            [{start}, {len} <{accent_hl}, <{selected_accent_hl}>>], where
+            {accent_hl} and {selected_accent_hl} are optional.
+
+            {start} and {len} define the byte start and byte length of the
+            part of the string to be highlighted. The spans should be in
+            strictly increasing order and should not overlap.
+            {accent_hl} and {selected_accent_hl} are the highlights to apply
+            to the span.
+
+            When the list is [{start}, {len}], it is implictly converted to
+            [{start}, {len}, ctx.highlights.accent,
+            ctx.highlights.selected_accent].
+
+            When the list is [{start}, {len}, {accent_hl}], it is implictly
+            converted to [{start}, {len}, {accent_hl}, {accent_hl}].
 
             For example, with {candidate} `abcdef` and result list [[0, 1],
             [3, 2]], the characters `a`, `d` and `e` will be highlighted with
@@ -1230,7 +1318,9 @@ wilder#wildmenu_renderer([{options}])
             the first non-0 result will be used to apply the higlights. If all
             functions return 0, no highlights will be applied.
 
-            {ctx} contains no keys.
+            {ctx} contains the following keys:
+            `highlights`
+            The `highlights` option passed to the renderer.
 
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
@@ -1255,7 +1345,7 @@ wilder#wildmenu_renderer([{options}])
 
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
-            Default: has('nvim')
+            Default: 1
 
             `hl`
             Deprecated~
@@ -1604,10 +1694,21 @@ wilder#wildmenu_condition({predicate}, {if_true}, [{if_false}])
                                     *wilder#popupmenu_renderer()*
 wilder#popupmenu_renderer([{options}])
                                     Renderer~
-                                    Neovim only~
             Returns a renderer which draws the results as a popupmenu.
 
             {options} is a dictionary with keys:
+            `mode`
+            'popup' option is experimental~
+            One of 'float' or 'popup'. The 'float' option requires Neovim 0.4+
+            with |api-floatwin|. The 'popup' option requires Vim 8.1+ with
+            |popup|.
+
+            When this option is 'float', the popupmenu is drawn using a
+            floating window. When the option is 'popup', the popupmenu is
+            drawn using a popup.
+
+            Default: has('nvim-0.4') ? 'float' : 'popup'
+
             `highlights`
             Optional~
             A dictionary whose values are |highlight-groups|. See
@@ -1676,7 +1777,7 @@ wilder#popupmenu_renderer([{options}])
 
             `winblend`
             Optional~
-            'winblend' to apply to the popupmenu.
+            'winblend' to apply to the popupmenu. Only for Neovim.
 
             Default: 0
 
@@ -1717,7 +1818,7 @@ wilder#popupmenu_renderer([{options}])
 
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
-            Default: has('nvim')
+            Default: 1
 
 
                                     *wilder#popupmenu_renderer()-column*
@@ -1932,6 +2033,17 @@ wilder#popupmenu_buffer_flags([{options}])
 
             Default: '1u%a-+ '
 
+            `icons`
+            Optional~
+            A dictionary mapping a flag to an icon. The flag will be replaced
+            with the icon when drawn. Does not apply to the '1' flag.
+
+            Note: The icons for '%' and '#' need to have the same
+            |strdisplaywidth()|. The same applies for 'a' and 'h', and for '-'
+            and '='.
+
+            Default: {}
+
             `hl`
             Optional~
             The highlight group to use.
@@ -1947,6 +2059,68 @@ wilder#popupmenu_buffer_flags([{options}])
 
 ==============================================================================
 6. API                              *wilder-API*
+
+wilder#setup([{config}])            *wilder#setup()*
+            Helper to set up mappings and options for a minimal configuration.
+
+            {config} contains the following keys:
+            `enable_cmdline_enter`
+            If true, calls |wilder#enable_cmdline_enter()|.
+
+            Default: 1
+
+            `modes`
+            List of strings. Passed to |wilder-option-modes|.
+
+            Default: ['/', '?']
+
+            `wildcharm`
+            Key to set the 'wildcharm' option to. Can be set to |v:false| to
+            skip the setting.
+
+            Default: &wildchar
+
+            `next_key`
+            A string or a list of 2 strings representing the mapping to bind
+            to |wilder#next()|. If a string {key}, it is implicitly converted
+            to [{key}, {key}].
+
+            The list represents [{mapping}, {fallback}], where
+            {mapping} is the |cmap| used to bind to |wilder#next()|.
+            {fallback} is the mapping used if |wilder#in_context()| is
+            false.
+
+            This essentially calls
+>
+         cmap <expr> {mapping} wilder#in_context() ? wilder#next() : {fallback}
+<
+
+            For a no-op, set <fallback> to ''.
+
+            Default: '<Tab>'
+
+            `previous_key`
+            Mapping to bind to |wilder#previous()|. See the `next_key` option.
+
+            Default: '<S-Tab>'
+
+            `accept_key`
+            Mapping to bind to |wilder#accept_completion()|. See the
+            `next_key` option.
+
+            Default: '<Down>'
+
+            `reject_key`
+            Mapping to bind to |wilder#reject_completion()|. See the
+            `next_key` option.
+
+            Default: '<Up>'
+
+            `accept_completion_auto_select`
+            The {auto_select} option passed to |wilder#accept_completion()|,
+            if mapped.
+
+            Default: 1
 
 wilder#in_context()                 *wilder#in_context()*
             Returns true if wilder is enabled, is in one of the modes set in
@@ -2199,14 +2373,14 @@ wilder#uniq_filter()                *wilder#uniq_filter()*
 
                                     *wilder#python_uniq_filt()*
 wilder#python_uniq_filt({ctx}, {opts}, {candidates}[, {query}])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
             Takes a list and returns a copy of the list with duplicates
             removed. {opts} and {query} are ignored.
 
 wilder#python_uniq_filter()         *wilder#python_uniq_filter()*
                                     Pipe~
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
             Returns a filter that filters and sorts the candidates using
             |wilder#python_uniq_filt()|.  Can be used as a
             |wilder-pipeline-pipe|.
@@ -2216,8 +2390,8 @@ wilder#fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             Takes a list of candidates and fuzzily filters and sorts the
             candidates.
 
-            Uses |wilder#python_fuzzy_filt()| if has('nvim'). Otherwise uses
-            |wilder#vim_fuzzy_filt()|.
+            Uses |wilder#python_fuzzy_filt()| if using Neovim or Vim with
+            `yarp`. Otherwise uses |wilder#vim_fuzzy_filt()|.
 
 wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
             Returns a fuzzy filter that filters and sorts the candidates using
@@ -2226,8 +2400,7 @@ wilder#fuzzy_filter()               *wilder#fuzzy_filter()*
 
                                     *wilder#vim_fuzzy_filt()*
 wilder#vim_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
-            Takes a list of candidates and fuzzily filters and sorts the
-            candidates.
+            Takes a list of candidates and fuzzily filters the candidates.
 
             A {candidate} is matched if it contains all the characters in
             {query} and in the same order.
@@ -2238,13 +2411,13 @@ wilder#vim_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             Options contains no keys.
 
 wilder#vim_fuzzy_filter()           *wilder#vim_fuzzy_filter()*
-            Returns a fuzzy filter that filters and sorts the candidates using
+            Returns a fuzzy filter that filters the candidates using
             |wilder#vim_fuzzy_filt()|. Can be used as the `fuzzy_filter`
             option in |wilder#cmdline_pipeline()|.
 
                                     *wilder#python_fuzzy_filt()*
 wilder#python_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
             Takes a list of candidates and fuzzily filters and sorts the
             candidates using Python.
@@ -2258,7 +2431,7 @@ wilder#python_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             Options contains no keys.
 
 wilder#python_fuzzy_filter()        *wilder#python_fuzzy_filter()*
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
             Returns a fuzzy filter that filters and sorts the candidates using
             |wilder#python_fuzzy_filt()|. Can be used as the `fuzzy_filter`
@@ -2266,7 +2439,7 @@ wilder#python_fuzzy_filter()        *wilder#python_fuzzy_filter()*
 
                                     *wilder#python_fruzzy_filt()*
 wilder#python_fruzzy_filt({ctx}, {opts}, {candidates}, {query})
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
                                     fruzzy plugin required~
             Takes a list of candidates and fuzzily filters and sorts the
@@ -2294,7 +2467,7 @@ wilder#python_fruzzy_filt({ctx}, {opts}, {candidates}, {query})
 
                                     *wilder#python_fruzzy_filter()*
 wilder#python_fruzzy_filter([{limit}, [{fruzzy_path}]])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     fruzzy plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
             |wilder#python_fruzzy_filt()|. Can be used as the `fuzzy_filter`
@@ -2304,12 +2477,12 @@ wilder#python_fruzzy_filter([{limit}, [{fruzzy_path}]])
             |wilder#python_fruzzy_filt()| as options.
 
             {fruzzy_path} can be provided to set the path for `fruzzy.py`.
-            It is inferred by Neovim otherwise.
+            It is inferred by Neovim/Vim otherwise.
 
 
                                     *wilder#python_cpsm_filt()*
 wilder#python_cpsm_filt({ctx}, {opts}, {candidates}, {query})
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
                                     cpsm plugin required~
             Takes a list of candidates and fuzzily filters and sorts the
@@ -2328,7 +2501,7 @@ wilder#python_cpsm_filt({ctx}, {opts}, {candidates}, {query})
 
                                     *wilder#python_cpsm_filter()*
 wilder#python_cpsm_filter([{cpsm_path}])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     cpsm plugin required~
             Returns a fuzzy filter that filters and sorts the candidates using
             |wilder#python_cpsm_filt()|. Can be used as the `fuzzy_filter`
@@ -2338,7 +2511,7 @@ wilder#python_cpsm_filter([{cpsm_path}])
             as an option.
 
             {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
-            is inferred by Neovim otherwise.
+            is inferred by Neovim/Vim otherwise.
 
                                     *wilder#lua_fzy_filt()*
 wilder#lua_fzy_filt({ctx}, {opts}, {candidates}, {query})
@@ -2373,14 +2546,14 @@ wilder#lexical_sorter()             *wilder#lexical_sorter()*
 
                                     *wilder#python_lexical_sort()*
 wilder#python_lexical_sort({ctx}, {opts}, {candidates}[, {query}])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
             Takes a list and returns a copy of the list sorted by lexical
             order. {opts} and {query} are ignored.
 
 wilder#python_lexical_sorter()      *wilder#python_lexical_sorter()*
                                     Pipe~
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
             Returns a sorter which uses |wilder#python_lexical_sort()| to sort
             the candidates. Can be used as the `sorter` option in
@@ -2389,7 +2562,7 @@ wilder#python_lexical_sorter()      *wilder#python_lexical_sorter()*
 
                                     *wilder#python_difflib_sort()*
 wilder#python_difflib_sort({ctx}, {opts}, {candidates}, {query})
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
             Takes a list of candidates and a query and returns a
             |wilder-pipeline-thunk| which sorts the candidates using
             `difflib.SequenceMatcher`.
@@ -2417,7 +2590,7 @@ wilder#python_difflib_sort({ctx}, {opts}, {candidates}, {query})
 
                                     *wilder#python_difflib_sorter()*
 wilder#python_difflib_sorter([{quick}, [{case_sensitive}]])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
             Returns a sorter which uses |wilder#python_difflib_sort()| to sort
             the candidates. Can be used as the `sorter` option in
             |wilder#cmdline_pipeline()|.
@@ -2427,7 +2600,7 @@ wilder#python_difflib_sorter([{quick}, [{case_sensitive}]])
 
                                     *wilder#python_fuzzywuzzy_sort()*
 wilder#python_fuzzywuzzy_sort({ctx}, {opts}, {candidates}, {query})
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Async~
                                     Python 3 fuzzywuzzy module required~
             Takes a list of candidates and a query and returns a
@@ -2452,7 +2625,7 @@ wilder#python_fuzzywuzzy_sort({ctx}, {opts}, {candidates}, {query})
 
                                     *wilder#python_fuzzywuzzy_sorter()*
 wilder#python_fuzzywuzzy_sorter([{partial}])
-                                    Neovim only~
+                                    Neovim or Vim with `yarp` enabled only~
                                     Python 3 fuzzywuzzy module required~
             Returns a sorter which uses |wilder#python_fuzzywuzzy_sort()| to
             sort the candidates. Can be used as the `sorter` option in
@@ -2462,7 +2635,9 @@ wilder#python_fuzzywuzzy_sorter([{partial}])
             |wilder#python_fuzzywuzzy_sort()| as an option.
 
 wilder#basic_highlighter([{opts}])  *wilder#basic_highlighter()*
-                                    python option only for Neovim~
+                                    Highlighter~
+                                    python option only for Neovim or~
+                                    Vim with `yarp` enabled~
             Helper function which returns a function for the
             `highlighter` option for |wilder#wildmenu_renderer()| or
             |wilder#popupmenu_renderer()|.
@@ -2499,7 +2674,9 @@ wilder#python_basic_highlighter([{opts}])
             option set to `vim` and `python` respectively.
 
 wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
-                                    Neovim only~
+                                    Highlighter~
+                                    Neovim or Vim with `yarp` enabled only~
+                                    lua option only for Neovim~
                                     pcre2 package required for lua option~
             Helper function which returns a function for the `highlighter`
             option for |wilder#wildmenu_renderer()| or
@@ -2543,7 +2720,8 @@ wilder#lua_pcre2_highlighter([{opts}])
 wilder#cpsm_highlighter([{opts}])   *wilder#cpsm_highlighter()*
                                     *wilder#python_cpsm_highlighter()*
 wilder#python_cpsm_highlighter([{opts}])
-                                    Neovim only~
+                                    Highlighter~
+                                    Neovim or Vim with `yarp` enabled only~
                                     cpsm plugin required~
             Helper function which returns a function for the `highlighter`
             option for |wilder#wildmenu_renderer()| or
@@ -2563,7 +2741,7 @@ wilder#python_cpsm_highlighter([{opts}])
             Optional~
             The parent directory of the `cpsm_py.so` file.
 
-            Default: Inferred by Neovim.
+            Default: Inferred by Neovim/Vim.
 
             `highlight_mode`
             Optional~
@@ -2573,6 +2751,7 @@ wilder#python_cpsm_highlighter([{opts}])
             Default: 'basic'
 
 wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
+                                    Highlighter~
                                     Neovim only~
                                     fzy-lua-native plugin required~
             Helper function which returns a function for the `highlighter`
@@ -2589,6 +2768,48 @@ wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
             https://github.com/romgrk/fzy-lua-native.
 
             Note: This may not handle multibyte characters properly.
+
+                                    *wilder#highlighter_with_gradient()*
+wilder#highlighter_with_gradient({highlighter})
+                                    Highlighter~
+                                    Experimental~
+            Helper function which wraps {highlighter} and returns a
+            highlighter that applies a gradient highlight to the original
+            highlights.
+
+            {highlighter} can be a highlighter or a list of highlighters.
+
+            Requires the `gradient` key to be set in the renderer's
+            `highlights` option. `gradient` should be a list of highlight
+            groups. For each accented character returned by {highlighter}, the
+            next element in the `gradient` list is used as the highlight. If
+            there are no more elements in the list, the last element is used.
+
+            If the `selected_gradient` key is set in the renderer's
+            `highlights` option, the highlights will be applied when the
+            candidate is selected. Otherwise, the `selected_hl` key will be
+            used.
+
+            Note: Adding gradient highlights will affect rendering
+            performance.
+
+            Example:
+>
+            let s:scale = ['#e1524a','#ec6449','#f3784c','#f88e53','#fba35e']
+            let s:gradient = map(s:scale, {i, fg -> wilder#make_hl(
+                  \ 'Accent' . i, 'StatusLine',
+                  \ [{}, {}, {'foreground': fg}]
+                  \ )})
+
+            call wilder#set_option('renderer', wilder#wildmenu_renderer({
+                  \ 'highlights': {
+                  \   'gradient': s:gradient,
+                  \ },
+                  \ 'highlighter': wilder#highlighter_with_gradient([
+                  \   wilder#basic_highlighter(),
+                  \ ]),
+                  \ }))
+<
 
                                     *wilder#project_root()*
 wilder#project_root([{root_markers}])
@@ -2850,19 +3071,23 @@ Here are some example configurations:
 
 Minimal Configuration~
 >
-    call wilder#enable_cmdline_enter()
-
-    set wildcharm=<Tab>
-    cmap <expr> <Tab> wilder#in_context() ? wilder#next() : "\<Tab>"
-    cmap <expr> <S-Tab> wilder#in_context() ? wilder#previous() : "\<S-Tab>"
-
-    " only / and ? are enabled by default
-    call wilder#set_option('modes', ['/', '?', ':'])
+    " Enable wilder for : cmdline
+    call wilder#setup({'modes': [':', '/', '?']})
 <
 
-Fuzzy pipelines (Neovim only)~
+Yarp Configuration~
 >
-    " add minimal configuration
+    " using vim-plug as an example
+    Plug 'roxma/vim-hug-neovim-rpc'
+    Plug 'roxma/nvim-yarp'
+
+    call wilder#setup({'modes': [':', '/', '?']})
+<
+
+Fuzzy pipelines (Neovim or Vim with yarp only)~
+>
+    call wilder#setup({'modes': [':', '/', '?']})
+
     call wilder#set_option('pipeline', [
           \   wilder#branch(
           \     [

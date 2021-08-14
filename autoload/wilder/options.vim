@@ -7,11 +7,24 @@ call extend(s:opts, {
       \ 'interval': 100,
       \ 'before_cursor': 0,
       \ 'num_workers': 2,
+      \ 'noselect': 1,
       \ })
+
+if !has('python3')
+  let s:opts.use_python_remote_plugin = 0
+elseif has('nvim')
+  let s:opts.use_python_remote_plugin = 1
+endif
 
 function! wilder#options#get(...) abort
   if !a:0
     return s:opts
+  endif
+
+  if a:1 ==# 'use_python_remote_plugin' &&
+        \ !has_key(s:opts, 'use_python_remote_plugin')
+    let l:file = findfile('autoload/yarp.vim', &rtp)
+    let s:opts.use_python_remote_plugin = !empty(l:file)
   endif
 
   return s:opts[a:1]

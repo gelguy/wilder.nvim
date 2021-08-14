@@ -1,6 +1,4 @@
-let s:index = 0
-
-function! s:prepare_state(opts) abort
+function! wilder#renderer#popupmenu#(opts) abort
   let l:highlights = copy(get(a:opts, 'highlights', {}))
   let l:state = {
         \ 'highlights': extend(l:highlights, {
@@ -9,7 +7,6 @@ function! s:prepare_state(opts) abort
         \   'error': get(a:opts, 'error_hl', 'ErrorMsg'),
         \ }, 'keep'),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
-        \ 'winblend': get(a:opts, 'winblend', 0),
         \ 'page': [-1, -1],
         \ 'buf': -1,
         \ 'win': -1,
@@ -17,10 +14,10 @@ function! s:prepare_state(opts) abort
         \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ 'longest_line_width': 0,
-        \ 'ns_id': nvim_create_namespace(''),
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
-        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', 1),
+        \ 'render_id': -1,
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')
@@ -109,12 +106,13 @@ function! s:prepare_state(opts) abort
   endif
 
   let l:state.highlighter = l:Highlighter
+  let l:state.winblend = get(a:opts, 'winblend', 0)
 
-  return l:state
-endfunction
-
-function! wilder#renderer#popupmenu#make(args) abort
-  let l:state = s:prepare_state(a:args)
+  if a:opts.mode ==# 'float'
+    let l:state.api = wilder#renderer#nvim_api#()
+  else
+    let l:state.api = wilder#renderer#vim_api#()
+  endif
 
   return {
         \ 'render': {ctx, result -> s:render(l:state, ctx, result)},
@@ -148,20 +146,17 @@ function! s:render(state, ctx, result) abort
   let a:ctx.page = l:page
   let a:state.page = l:page
 
-  call nvim_buf_clear_namespace(a:state.buf, a:state.ns_id, 0, -1)
-
   let a:ctx.highlights = a:state.highlights
 
-  let l:in_sandbox = 0
-  try
-    call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [])
-  catch /E523/
-    " might be in sandbox due to expr mapping
-    let l:in_sandbox = 1
-  endtry
+  if a:state.page == [-1, -1] && !has_key(a:ctx, 'error')
+    call a:state.api.hide()
+    return
+  endif
+
+  let l:need_timer = a:state.api.need_timer()
 
   if has_key(a:ctx, 'error')
-    if l:in_sandbox
+    if l:need_timer
       call timer_start(0, {-> s:draw_error(a:state, a:ctx)})
     else
       call s:draw_error(a:state, a:ctx)
@@ -169,18 +164,197 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  if l:page == [-1, -1]
-    call s:close_win(a:state)
-    return
-  endif
-
   if !a:ctx.done && !a:state.dynamic
     return
   endif
 
+  let a:state.render_id += 1
+
+  if l:need_timer
+    let l:render_id = a:state.render_id
+    call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
+  else
+    call s:render_lines(a:state, a:ctx, a:result)
+  endif
+endfunction
+
+function! s:make_page(state, ctx, result) abort
+  if empty(a:result.value)
+    return [-1, -1]
+  endif
+
+  let l:page = a:state.page
+  let l:selected = a:ctx.selected
+  " Adjust -1 (unselected) to show the top of the list.
+  let l:selected = l:selected == -1 ? 0 : l:selected
+
+  if l:page != [-1, -1]
+    " Selected is within current page, reuse the page.
+    if l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
+      return l:page
+    endif
+
+    " Scroll the page forward.
+    if a:ctx.direction >= 0 && l:page[1] < l:selected
+      " calculate distance moved.
+      let l:moved = l:selected - l:page[1]
+      return [l:page[0] + l:moved, l:selected]
+    endif
+
+    " Scroll the page backward.
+    if a:ctx.direction < 0 && l:page[0] > l:selected
+      " calculate distance moved.
+      let l:moved = l:page[0] - l:selected
+      return [l:selected, l:page[1] - l:moved]
+    endif
+  endif
+
+  " Otherwise make a new page.
+
+  " Assume the worst case scenario that the cursor is on the top row of the
+  " cmdline.
+  let l:max_height = a:state.get_max_height()
+  let l:max_height = min([l:max_height, &lines - &cmdheight]) - 1
+
+  " Page starts at selected.
+  if a:ctx.direction >= 0
+    let l:start = l:selected
+
+    " Try to include all candidates after selected.
+    let l:height = len(a:result.value) - l:selected - 1
+
+    if l:height > l:max_height
+      let l:height = l:max_height
+    endif
+
+    return [l:start, l:start + l:height]
+  endif
+
+  " Page ends at selected.
+  let l:end = l:selected
+
+  " Try to include all candidates before selected.
+  let l:height = l:selected - 1
+
+  if l:height > l:max_height
+    let l:height = l:max_height
+  endif
+
+  return [l:end - l:height, l:end]
+endfunction
+
+function! s:render_lines_from_timer(render_id, state, ctx, result)
+  " Multiple renders might be queued, skip if there is a newer render
+  if a:render_id != a:state.render_id
+    return
+  endif
+
+  call s:render_lines(a:state, a:ctx, a:result)
+endfunction
+
+function! s:render_lines(state, ctx, result) abort
+  " +1 to account for the cmdline prompt.
+  " -1 to shift left by 1 column for the added padding.
+  let l:pos = get(a:result, 'pos', 0)
+  let l:selected = a:ctx.selected
+  let l:reverse = a:state.reverse
+
+  let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
+  let l:lines = l:reverse ? reverse(l:lines) : l:lines
+  let [l:page_start, l:page_end] = a:state.page
+  let l:height = l:page_end - l:page_start + 1
+
+  call a:state.api.show()
+
+  let l:col = l:pos % &columns
+
+  if !has('nvim')
+    if l:col + l:width > &columns
+      let l:col = &columns - l:width
+    endif
+    if l:col < 0
+      let l:col = 0
+    endif
+  endif
+
+  let l:cmdheight = wilder#renderer#get_cmdheight()
+  let l:row = &lines - l:cmdheight - l:height
+
+  call a:state.api.move(l:row, l:col, l:height, l:width)
+  call a:state.api.set_option('wrap', v:false)
+  call a:state.api.clear_all_highlights()
+  call a:state.api.delete_all_lines()
+
+  let l:default_hl = a:state.highlights['default']
+  let l:selected_hl = a:state.highlights['selected']
+
+  let l:i = 0
+  while l:i < len(l:lines)
+    let l:chunks = l:lines[l:i]
+
+    let l:text = ''
+    for l:chunk in l:chunks
+      let l:text .= l:chunk[0]
+    endfor
+
+    call a:state.api.set_line(l:i, l:text)
+
+    let l:is_selected = l:reverse ? 
+          \ l:page_start + (len(l:lines) - l:i - 1) == l:selected :
+          \ l:page_start + l:i == l:selected
+
+    let l:start = 0
+    for l:chunk in l:chunks
+      let l:end = l:start + len(l:chunk[0])
+
+      if l:is_selected
+        if len(l:chunk) == 1
+          let l:hl = l:selected_hl
+        elseif len(l:chunk) == 2
+          let l:hl = l:chunk[1]
+        else
+          let l:hl = l:chunk[2]
+        endif
+      else
+        let l:hl = get(l:chunk, 1, l:default_hl)
+      endif
+
+      if l:hl !=# l:default_hl
+        call a:state.api.add_highlight(l:hl, l:i, l:start, l:end)
+      endif
+
+      let l:start = l:end
+    endfor
+
+    let l:i += 1
+  endwhile
+
+  call a:state.api.set_firstline(1)
+  call wilder#renderer#redraw(a:state.apply_incsearch_fix)
+endfunction
+
+function! s:get_error_dimensions(state, error)
+  let l:width = strdisplaywidth(a:error)
+  let l:height = 1
+
+  let l:max_width = a:state.get_max_width()
+  if l:width > l:max_width
+    let l:height = float2nr(ceil(1.0 * l:width / l:max_width))
+    let l:width = l:max_width
+  endif
+
+  let l:max_height = a:state.get_max_height()
+  if l:height > l:max_height
+    let l:height = l:max_height
+  endif
+
+  return [l:height, l:width]
+endfunction
+
+function! s:make_lines(state, ctx, result) abort
   let l:Highlighter = get(a:state, 'highlighter', [])
 
-  let [l:start, l:end] = l:page
+  let [l:start, l:end] = a:state.page
   let l:height = l:end - l:start + 1
 
   " Add 1 column of padding.
@@ -268,245 +442,7 @@ function! s:render(state, ctx, result) abort
     let l:i += 1
   endwhile
 
-  " +1 to account for the cmdline prompt.
-  " -1 to shift left by 1 column for the added padding.
-  let l:pos = get(a:result, 'pos', 0)
-
-  let l:reverse = a:state.reverse
-
-  if l:in_sandbox
-    call timer_start(0, {-> s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected, l:reverse)})
-  else
-    call s:render_lines(a:state, l:lines, l:expected_width, l:pos, a:ctx.selected, l:reverse)
-  endif
-endfunction
-
-function! s:render_lines(state, lines, width, pos, selected, reverse) abort
-  if a:state.win == -1
-    call s:open_win(a:state)
-  endif
-
-  let l:lines = a:reverse ? reverse(a:lines) : a:lines
-
-  let [l:page_start, l:page_end] = a:state.page
-
-  let l:height = l:page_end - l:page_start + 1
-
-  let l:col = a:pos % &columns
-
-  " Always show the pum above the cmdline.
-  let l:cmdheight = s:get_cmdheight()
-  let l:row = &lines - l:cmdheight - l:height
-
-  call nvim_win_set_config(a:state.win, {
-        \ 'relative': 'editor',
-        \ 'row': l:row,
-        \ 'col': l:col,
-        \ 'height': l:height,
-        \ 'width': a:width,
-        \ })
-
-  call nvim_win_set_option(a:state.win, 'wrap', v:false)
-
-  let l:default_hl = a:state.highlights['default']
-  let l:selected_hl = a:state.highlights['selected']
-
-  let l:i = 0
-  while l:i < len(l:lines)
-    let l:chunks = l:lines[l:i]
-
-    let l:text = ''
-    for l:chunk in l:chunks
-      let l:text .= l:chunk[0]
-    endfor
-
-    call nvim_buf_set_lines(a:state.buf, l:i, l:i, v:true, [l:text])
-
-    let l:is_selected = a:reverse ? 
-          \ l:page_start + (len(l:lines) - l:i - 1) == a:selected :
-          \ l:page_start + l:i == a:selected
-
-    let l:start = 0
-    for l:chunk in l:chunks
-      let l:end = l:start + len(l:chunk[0])
-
-      if l:is_selected
-        if len(l:chunk) == 1
-          let l:hl = l:selected_hl
-        elseif len(l:chunk) == 2
-          let l:hl = l:chunk[1]
-        else
-          let l:hl = l:chunk[2]
-        endif
-      else
-        let l:hl = get(l:chunk, 1, l:default_hl)
-      endif
-
-      if l:hl !=# l:default_hl
-        call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, l:i, l:start, l:end)
-      endif
-
-      let l:start = l:end
-    endfor
-
-    let l:i += 1
-  endwhile
-
-  call wilder#renderer#redraw(a:state.apply_incsearch_fix)
-endfunction
-
-function! s:pre_hook(state, ctx) abort
-  if a:state.buf == -1 || !bufexists(a:state.buf)
-    let a:state.buf = nvim_create_buf(v:false, v:true)
-    call nvim_buf_set_name(a:state.buf, '[Wilder Popupmenu ' . s:index . ']')
-    let s:index += 1
-  endif
-
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'pre_hook')
-      call l:Column['pre_hook'](a:ctx)
-    endif
-  endfor
-endfunction
-
-function! s:post_hook(state, ctx) abort
-  if a:state.buf != -1
-    call nvim_buf_clear_namespace(a:state.buf, a:state.ns_id, 0, -1)
-  endif
-
-  if a:state.win != -1
-    call s:close_win(a:state)
-  endif
-
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'post_hook')
-      call l:Column['post_hook'](a:ctx)
-    endif
-  endfor
-endfunction
-
-function! s:make_page(state, ctx, result) abort
-  if empty(a:result.value)
-    return [-1, -1]
-  endif
-
-  let l:page = a:state.page
-  let l:selected = a:ctx.selected
-  " Adjust -1 (unselected) to show the top of the list.
-  let l:selected = l:selected == -1 ? 0 : l:selected
-
-  if l:page != [-1, -1]
-    " Selected is within current page, reuse the page.
-    if l:selected != -1 && l:selected >= l:page[0] && l:selected <= l:page[1]
-      return l:page
-    endif
-
-    " Scroll the page forward.
-    if a:ctx.direction >= 0 && l:page[1] < l:selected
-      " calculate distance moved.
-      let l:moved = l:selected - l:page[1]
-      return [l:page[0] + l:moved, l:selected]
-    endif
-
-    " Scroll the page backward.
-    if a:ctx.direction < 0 && l:page[0] > l:selected
-      " calculate distance moved.
-      let l:moved = l:page[0] - l:selected
-      return [l:selected, l:page[1] - l:moved]
-    endif
-  endif
-
-  " Otherwise make a new page.
-
-  " Assume the worst case scenario that the cursor is on the top row of the
-  " cmdline.
-  let l:max_height = a:state.get_max_height()
-  let l:max_height = min([l:max_height, &lines - &cmdheight]) - 1
-
-  " Page starts at selected.
-  if a:ctx.direction >= 0
-    let l:start = l:selected
-
-    " Try to include all candidates after selected.
-    let l:height = len(a:result.value) - l:selected - 1
-
-    if l:height > l:max_height
-      let l:height = l:max_height
-    endif
-
-    return [l:start, l:start + l:height]
-  endif
-
-  " Page ends at selected.
-  let l:end = l:selected
-
-  " Try to include all candidates before selected.
-  let l:height = l:selected - 1
-
-  if l:height > l:max_height
-    let l:height = l:max_height
-  endif
-
-  return [l:end - l:height, l:end]
-endfunction
-
-function! s:draw_error(state, ctx) abort
-  if a:state.win == -1
-    call s:open_win(a:state)
-  endif
-
-  let l:error = wilder#render#to_printable(a:ctx.error)
-  let l:width = strdisplaywidth(l:error)
-  let l:height = 1
-
-  let l:max_width = a:state.get_max_width()
-  if l:width > l:max_width
-    let l:height = float2nr(ceil(1.0 * l:width / l:max_width))
-    let l:width = l:max_width
-  endif
-
-  let l:max_height = a:state.get_max_height()
-  if l:height > l:max_height
-    let l:height = l:max_height
-  endif
-
-  " Always show the pum above the cmdline.
-  let l:cmdheight = s:get_cmdheight()
-  let l:row = &lines - l:cmdheight - l:height
-
-  call nvim_win_set_config(a:state.win, {
-        \ 'relative': 'editor',
-        \ 'row': l:row,
-        \ 'col': 0,
-        \ 'height': l:height,
-        \ 'width': l:width,
-        \ })
-
-  call nvim_win_set_option(a:state.win, 'wrap', v:true)
-
-  let l:hl = a:ctx.highlights['error']
-
-  call nvim_buf_set_lines(a:state.buf, 0, -1, v:true, [l:error])
-  call nvim_buf_add_highlight(a:state.buf, a:state.ns_id, l:hl, 0, 0, -1)
-
-  redraw
-endfunction
-
-function! s:draw_x(state, ctx, result, i) abort
-  let l:use_cache = a:ctx.selected == a:i
-  if l:use_cache && a:state.draw_cache.has_key(a:i)
-    return a:state.draw_cache.get(a:i)
-  endif
-
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
-
-  if l:use_cache
-    call a:state.draw_cache.set(a:i, l:x)
-  endif
-
-  return l:x
+  return [l:lines, l:expected_width]
 endfunction
 
 function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
@@ -556,37 +492,53 @@ function! s:draw_line(state, ctx, result, i) abort
   let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)
 
   let l:Highlighter = a:state.highlighter
-  if l:Highlighter isnot 0
-    if !l:is_selected &&
-          \ a:state.highlight_cache.has_key(l:str)
-      return a:state.highlight_cache.get(l:str)
-    endif
 
-    let l:data = get(a:result, 'data', {})
-    let l:spans = l:Highlighter(a:ctx, l:str, l:data)
-
-    if l:spans is 0
-      return [[l:str]]
-    endif
-
-    if a:state.highlight_mode ==# 'basic'
-      let l:spans = s:merge_spans(l:spans)
-    endif
-
-    let l:chunks = wilder#render#spans_to_chunks(
-          \ l:str,
-          \ l:spans,
-          \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-          \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
-
-    if !l:is_selected
-      call a:state.highlight_cache.set(l:str, l:chunks)
-    endif
-
-    return l:chunks
+  if l:Highlighter is 0
+    return [[l:str]]
   endif
 
-  return [[l:str]]
+  if !l:is_selected &&
+        \ a:state.highlight_cache.has_key(l:str)
+    return a:state.highlight_cache.get(l:str)
+  endif
+
+  let l:data = get(a:result, 'data', {})
+  let l:spans = l:Highlighter(a:ctx, l:str, l:data)
+
+  if l:spans is 0
+    return [[l:str]]
+  endif
+
+  if a:state.highlight_mode ==# 'basic'
+    let l:spans = s:merge_spans(l:spans)
+  endif
+
+  let l:chunks = wilder#render#spans_to_chunks(
+        \ l:str,
+        \ l:spans,
+        \ l:is_selected,
+        \ a:ctx.highlights)
+
+  if !l:is_selected
+    call a:state.highlight_cache.set(l:str, l:chunks)
+  endif
+
+  return l:chunks
+endfunction
+
+function! s:draw_x(state, ctx, result, i) abort
+  let l:use_cache = a:ctx.selected == a:i
+  if l:use_cache && a:state.draw_cache.has_key(a:i)
+    return a:state.draw_cache.get(a:i)
+  endif
+
+  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
+
+  if l:use_cache
+    call a:state.draw_cache.set(a:i, l:x)
+  endif
+
+  return l:x
 endfunction
 
 function! s:merge_spans(spans) abort
@@ -597,59 +549,7 @@ function! s:merge_spans(spans) abort
   let l:start_byte = a:spans[0][0]
   let l:end_byte = a:spans[-1][0] + a:spans[-1][1]
 
-  return [[l:start_byte, l:end_byte]]
-endfunction
-
-function! s:close_win(state) abort
-  if a:state.win == -1
-    return
-  endif
-
-  let l:win = a:state.win
-  let a:state.win = -1
-  " cannot call nvim_win_close() while cmdline-window is open
-  if getcmdwintype() ==# ''
-    call nvim_win_close(l:win, 1)
-    call timer_start(0, {-> execute('redraw')})
-  else
-    execute 'autocmd CmdWinLeave * ++once call timer_start(0, {-> nvim_win_close(' . l:win . ', 0)})'
-  endif
-endfunction
-
-function! s:open_win(state) abort
-  " Dimensions and position will be updated later.
-  let l:win = nvim_open_win(a:state.buf, 0, {
-        \ 'relative': 'editor',
-        \ 'height': 1,
-        \ 'width': 1,
-        \ 'row': &lines - 1,
-        \ 'col': 0,
-        \ 'focusable': 0,
-        \ 'style': 'minimal',
-        \ })
-
-  call nvim_win_set_option(l:win, 'winblend', a:state.winblend)
-  call nvim_win_set_option(l:win, 'winhighlight',
-        \ 'Search:None,IncSearch:None,Normal:' . a:state.highlights['default'])
-
-  let a:state.win = l:win
-endfunction
-
-function! s:get_cmdheight() abort
-  " Always show the pum above the cmdline.
-  let l:cmdheight = (strdisplaywidth(getcmdline()) + 1) / &columns + 1
-  if l:cmdheight < &cmdheight
-    let l:cmdheight = &cmdheight
-  elseif l:cmdheight > 1
-    " Show the pum above the msgsep.
-    let l:has_msgsep = stridx(&display, 'msgsep') >= 0
-
-    if l:has_msgsep
-      let l:cmdheight += 1
-    endif
-  endif
-
-  return l:cmdheight
+  return [[l:start_byte, l:end_byte - l:start_byte]]
 endfunction
 
 function! s:has_dynamic_column(state) abort
@@ -662,4 +562,80 @@ function! s:has_dynamic_column(state) abort
   endfor
 
   return 0
+endfunction
+
+function! s:pre_hook(state, ctx) abort
+  call a:state.api.new({
+        \ 'normal_highlight': a:state.highlights.default,
+        \ 'winblend': get(a:state, 'winblend', 0)
+        \ })
+
+  for l:Column in a:state.left + a:state.right
+    if type(l:Column) is v:t_dict &&
+          \ has_key(l:Column, 'pre_hook')
+      call l:Column['pre_hook'](a:ctx)
+    endif
+  endfor
+endfunction
+
+function! s:post_hook(state, ctx) abort
+  call a:state.api.hide()
+
+  for l:Column in a:state.left + a:state.right
+    if type(l:Column) is v:t_dict &&
+          \ has_key(l:Column, 'post_hook')
+      call l:Column['post_hook'](a:ctx)
+    endif
+  endfor
+endfunction
+
+function! s:draw_error(state, ctx) abort
+  call a:state.api.show()
+
+  let l:error = wilder#render#to_printable(a:ctx.error)
+  let [l:height, l:width] = s:get_error_dimensions(a:state, l:error)
+
+  let l:cmdheight = wilder#renderer#get_cmdheight()
+  let l:row = &lines - l:cmdheight - l:height
+
+  call a:state.api.move(l:row, 0, l:height, l:width)
+  call a:state.api.set_option('wrap', v:true)
+  call a:state.api.clear_all_highlights()
+  call a:state.api.delete_all_lines()
+
+  let l:hl = a:ctx.highlights['error']
+
+  call a:state.api.set_line(0, l:error)
+  call a:state.api.add_highlight(l:hl, 0, 0, len(l:error))
+
+  redraw
+endfunction
+
+function! s:iterate_column(f) abort
+  return {ctx, result -> s:iterate_column(a:f, ctx, result)}
+endfunction
+
+function! s:iterate_column(f, ctx, result)
+  let [l:start, l:end] = a:ctx.page
+  let l:data = get(a:result, 'data', v:null)
+
+  let l:lines = repeat([0], l:end - l:start + 1)
+
+  let l:i = l:start
+  while l:i <= l:end
+    let l:index = l:i - l:start
+
+    let l:x = a:result.value[l:i]
+    let l:line = a:f(a:ctx, l:x, l:data)
+
+    if l:line is v:false
+      return []
+    endif
+
+    let l:lines[l:index] = l:line
+
+    let l:i += 1
+  endwhile
+
+  return l:lines
 endfunction

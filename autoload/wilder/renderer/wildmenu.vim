@@ -1,28 +1,28 @@
-function! wilder#renderer#wildmenu#prepare_state(args) abort
-  let l:highlights = copy(get(a:args, 'highlights', {}))
+function! wilder#renderer#wildmenu#prepare_state(opts) abort
+  let l:highlights = copy(get(a:opts, 'highlights', {}))
   let l:state = {
         \ 'highlights': extend(l:highlights, {
-        \   'default': get(a:args, 'hl', 'StatusLine'),
-        \   'selected': get(a:args, 'selected_hl', 'WildMenu'),
-        \   'error': get(a:args, 'error_hl', 'ErrorMsg'),
+        \   'default': get(a:opts, 'hl', 'StatusLine'),
+        \   'selected': get(a:opts, 'selected_hl', 'WildMenu'),
+        \   'error': get(a:opts, 'error_hl', 'ErrorMsg'),
         \ }, 'keep'),
-        \ 'separator': wilder#render#to_printable(get(a:args, 'separator', '  ')),
-        \ 'ellipsis': wilder#render#to_printable(get(a:args, 'ellipsis', '...')),
+        \ 'separator': wilder#render#to_printable(get(a:opts, 'separator', '  ')),
+        \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
         \ 'page': [-1, -1],
         \ 'columns': -1,
         \ 'cmdheight': -1,
         \ 'draw_cache': wilder#cache#cache(),
         \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
-        \ 'apply_incsearch_fix': get(a:args, 'apply_incsearch_fix', has('nvim')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', 1),
         \ }
 
-  if !has_key(a:args, 'left') && !has_key(a:args, 'right')
+  if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:state.left = [wilder#previous_arrow()]
     let l:state.right = [wilder#next_arrow()]
   else
-    let l:state.left = get(a:args, 'left', [])
-    let l:state.right = get(a:args, 'right', [])
+    let l:state.left = get(a:opts, 'left', [])
+    let l:state.right = get(a:opts, 'right', [])
   endif
 
   let l:state.dynamic = wilder#renderer#wildmenu#item_is_dynamic(l:state.left) ||
@@ -30,7 +30,7 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
 
   if !has_key(l:state.highlights, 'separator')
     let l:state.highlights.separator =
-          \ get(a:args, 'separator_hl', l:state.highlights['default'])
+          \ get(a:opts, 'separator_hl', l:state.highlights['default'])
   endif
 
   if !has_key(l:state.highlights, 'accent')
@@ -49,10 +49,10 @@ function! wilder#renderer#wildmenu#prepare_state(args) abort
           \ 'underline', 'bold')
   endif
 
-  if has_key(a:args, 'highlighter')
-    let l:Highlighter = a:args['highlighter']
-  elseif has_key(a:args, 'apply_highlights')
-    let l:Highlighter = a:args['apply_highlights']
+  if has_key(a:opts, 'highlighter')
+    let l:Highlighter = a:opts['highlighter']
+  elseif has_key(a:opts, 'apply_highlights')
+    let l:Highlighter = a:opts['apply_highlights']
   else
     let l:Highlighter = 0
   endif
@@ -446,8 +446,8 @@ function! s:draw_xs(state, ctx, result) abort
         let l:chunks = wilder#render#spans_to_chunks(
               \ l:x,
               \ a:state.highlight_cache.get(l:x),
-              \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-              \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+              \ l:is_selected,
+              \ a:ctx.highlights)
         let l:res += wilder#render#truncate_chunks(l:space_minus_ellipsis, l:chunks)
       else
         let l:x = wilder#render#truncate(l:space_minus_ellipsis, l:x)
@@ -479,8 +479,8 @@ function! s:draw_xs(state, ctx, result) abort
       let l:chunks = wilder#render#spans_to_chunks(
             \ l:x,
             \ a:state.highlight_cache.get(l:x),
-            \ a:ctx.highlights[l:is_selected ? 'selected' : 'default'],
-            \ a:ctx.highlights[l:is_selected ? 'selected_accent' : 'accent'])
+            \ l:is_selected,
+            \ a:ctx.highlights)
       let l:res += chunks
     else
       call add(l:res, [l:x, a:ctx.highlights[l:is_selected ? 'selected' : 'default']])
