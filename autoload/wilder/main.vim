@@ -42,6 +42,8 @@ let s:clear_previous_renderer_state = 0
 " completion from reject_completion (set so that the new completion won't be
 " treated as overriding the previous cmdline, which triggers a new pipeline)
 let s:completion_from_reject_completion = v:null
+" tracks if wilder#next() has been called (used by noselect == 0)
+let s:selection_was_made = 0
 
 " stack of cmdlines used by accept_completion and reject_completion
 let s:completion_stack = []
@@ -201,6 +203,7 @@ function! wilder#main#stop() abort
   let s:active = 0
   let s:result = {'value': []}
   let s:selected = -1
+  let s:selection_was_made = 0
   let s:clear_previous_renderer_state = 0
   let s:completion_stack = []
   let s:previous_cmdline = v:null
@@ -343,6 +346,7 @@ function! wilder#main#on_finish(ctx, x) abort
   endif
 
   let s:selected = -1
+  let s:selection_was_made = 0
   let s:clear_previous_renderer_state = 1
   " keep previous completion
 
@@ -395,6 +399,7 @@ function! wilder#main#on_error(ctx, x) abort
 
   let s:result = {'value': []}
   let s:selected = -1
+  let s:selection_was_made = 0
   " keep previous completion
 
   let s:error = a:x
@@ -427,9 +432,18 @@ function! s:draw(...) abort
   try
       let l:direction = a:0 >= 1 ? a:1 : 0
 
+      if s:selected == -1 &&
+            \ !s:opts.noselect &&
+            \ !s:selection_was_made &&
+            \ !empty(s:result.value)
+        let l:selected = 0
+      else
+        let l:selected = s:selected
+      endif
+
       let l:ctx = {
             \ 'clear_previous': get(s:, 'clear_previous_renderer_state', 0),
-            \ 'selected': s:selected,
+            \ 'selected': l:selected,
             \ 'direction': l:direction,
             \ 'run_id': s:result_run_id,
             \ 'done': s:run_id == s:result_run_id,
@@ -503,6 +517,14 @@ function! wilder#main#step(num_steps) abort
   let l:previous_selected = s:selected
 
   let l:len = len(s:result.value)
+
+  if s:selected == -1 &&
+        \ !s:opts.noselect &&
+        \ !s:selection_was_made
+    let s:selected = 0
+  endif
+
+  let s:selection_was_made = 1
 
   if a:num_steps == 0
     " pass
@@ -645,7 +667,12 @@ function! s:feedkeys_cmdline(cmdline) abort
 endfunction
 
 function! wilder#main#can_accept_completion() abort
-  return wilder#main#in_context() && s:selected >=0
+  return wilder#main#in_context() &&
+        \ (s:selected >= 0 ||
+        \ (!s:opts.noselect &&
+        \ s:selected == -1 &&
+        \ !s:selection_was_made &&
+        \ !empty(s:result.value)))
 endfunction
 
 function! wilder#main#accept_completion(auto_select) abort
@@ -663,6 +690,7 @@ function! wilder#main#accept_completion(auto_select) abort
     let s:replaced_cmdline = v:null
     let s:result = {'value': []}
     let s:selected = -1
+    let s:selection_was_made = 0
     let s:clear_previous_renderer_state = 1
 
     " add the entry to the completion stack
@@ -670,6 +698,25 @@ function! wilder#main#accept_completion(auto_select) abort
 
     let l:auto_select = s:opts.noselect ? a:auto_select : 0
     call s:run_pipeline(l:cmdline, {'auto_select': l:auto_select})
+  elseif !s:opts.noselect &&
+        \ s:selected == -1 &&
+        \ !s:selection_was_made &&
+        \ !empty(s:result.value)
+    " simulate wilder#next()
+    " can perhaps be generalised to handle a noinsert == 1 option
+    let l:cmdline = getcmdline()
+
+    if s:replaced_cmdline is v:null
+      let s:replaced_cmdline = l:cmdline
+    endif
+
+    call s:push_completion_stack(l:cmdline)
+
+    let l:new_cmdline = s:get_cmdline_from_candidate(0)
+
+    let s:selected = 0
+    let s:completion = l:new_cmdline
+    call s:feedkeys_cmdline(l:new_cmdline)
   endif
 
   return "\<Insert>\<Insert>"
@@ -691,6 +738,7 @@ function! wilder#main#reject_completion() abort
     let s:completion_from_reject_completion = l:cmdline
     let s:result = {'value': []}
     let s:selected = -1
+    let s:selection_was_made = 0
     let s:clear_previous_renderer_state = 1
 
     call s:feedkeys_cmdline(l:cmdline)

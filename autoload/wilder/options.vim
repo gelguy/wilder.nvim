@@ -7,6 +7,7 @@ call extend(s:opts, {
       \ 'interval': 100,
       \ 'before_cursor': 0,
       \ 'num_workers': 2,
+      \ 'noselect': 1,
       \ })
 
 if !has('python3')
