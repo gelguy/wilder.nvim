@@ -24,12 +24,19 @@ function! wilder#setup#(...)
       continue
     endif
 
+    if type(l:mapping) is v:t_list
+      let l:fallback_mapping = l:mapping[1]
+      let l:mapping = l:mapping[0]
+    else
+      let l:fallback_mapping = l:mapping
+    endif
+
     if l:key ==# 'accept_key' &&
           \ !get(l:config, 'accept_completion_auto_select', 1)
       let l:command = 'wilder#can_accept_completion() ? wilder#accept_completion(0) :'
     endif
 
-    execute 'cmap <expr>' l:mapping l:command string(l:mapping)
+    execute 'cmap <expr>' l:mapping l:command string(l:fallback_mapping)
   endfor
 
 endfunction

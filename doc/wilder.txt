@@ -2081,30 +2081,38 @@ wilder#setup([{config}])            *wilder#setup()*
             Default: &wildchar
 
             `next_key`
-            Mapping to bind to |wilder#next()|. Special keys do not need to be
-            escaped e.g. <Tab> should be passed as '<Tab>' and not "\<Tab>".
-            Can be set to |v:false| to disable the mapping.
+            A string or a list of 2 strings representing the mapping to bind
+            to |wilder#next()|. If a string {key}, it is implicitly converted
+            to [{key}, {key}].
+
+            The list represents [{mapping}, {fallback}], where
+            {mapping} is the |cmap| used to bind to |wilder#next()|.
+            {fallback} is the mapping used if |wilder#in_context()| is
+            false.
+
+            This essentially calls
+>
+         cmap <expr> {mapping} wilder#in_context() ? wilder#next() : {fallback}
+<
+
+            For a no-op, set <fallback> to ''.
 
             Default: '<Tab>'
 
             `previous_key`
-            Mapping to bind to |wilder#previous()|. Special keys do not need
-            to be escaped e.g. <Tab> should be passed as '<Tab>' and not
-            "\<Tab>". Can be set to |v:false| to disable the mapping.
+            Mapping to bind to |wilder#previous()|. See the `next_key` option.
 
             Default: '<S-Tab>'
 
             `accept_key`
-            Mapping to bind to |wilder#accept_completion()|. Special keys do
-            not need to be escaped e.g. <Tab> should be passed as '<Tab>' and
-            not "\<Tab>". Can be set to |v:false| to disable the mapping.
+            Mapping to bind to |wilder#accept_completion()|. See the
+            `next_key` option.
 
             Default: '<Down>'
 
             `reject_key`
-            Mapping to bind to |wilder#reject_completion()|. Special keys do
-            not need to be escaped e.g. <Tab> should be passed as '<Tab>' and
-            not "\<Tab>". Can be set to |v:false| to disable the mapping.
+            Mapping to bind to |wilder#reject_completion()|. See the
+            `next_key` option.
 
             Default: '<Up>'
 
