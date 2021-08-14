@@ -80,15 +80,20 @@ function! s:hide() dict abort
     return
   endif
 
-  let l:win = self.state.win
-  let self.state.win = -1
-  " cannot call nvim_win_close() while cmdline-window is open
   if getcmdwintype() ==# ''
-    call nvim_win_close(l:win, 1)
+    call nvim_win_close(self.state.win, 1)
     call timer_start(0, {-> execute('redraw')})
   else
+    " cannot call nvim_win_close() while cmdline-window is open
+    " make the window as small as possible and hide it with winblend = 100
+    let l:win = self.state.win
+    call self.delete_all_lines()
+    call self.move(&lines, &columns, 1, 1)
+    call self.set_option('winblend', 100)
     execute 'autocmd CmdWinLeave * ++once call timer_start(0, {-> nvim_win_close(' . l:win . ', 0)})'
   endif
+
+  let self.state.win = -1
 endfunction
 
 function! s:move(row, col, height, width) dict abort

@@ -132,6 +132,7 @@ function! s:start() abort
     augroup WilderCmdlineLeave
       autocmd!
       autocmd CmdlineLeave * call wilder#main#stop()
+      autocmd CmdwinEnter * call wilder#main#stop()
     augroup END
   endif
 
