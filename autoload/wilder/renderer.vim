@@ -10,7 +10,7 @@ function! s:redraw(apply_incsearch_fix, is_redrawstatus) abort
   if a:apply_incsearch_fix &&
         \ &incsearch &&
         \ (getcmdtype() ==# '/' || getcmdtype() ==# '?')
-    call feedkeys(" \<BS>", 'n')
+    call feedkeys("\<C-R>\<BS>", 'n')
     return
   endif
 
