@@ -1343,6 +1343,9 @@ wilder#wildmenu_renderer([{options}])
             Fixes incsearch highlighting disappearing. Might introduce higher
             latency when typing in the cmdline.
 
+            Note: This will prevent using <Up>, <Down> and similar keys to
+            move through the /-cmdline history.
+
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
             Default: 1

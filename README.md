@@ -622,6 +622,19 @@ Alternatively, define a mapping in your `init.vim` or `.vimrc`
 nnoremap <Leader>w :call wilder#toggle()<CR>
 ```
 
+### Cannot scroll through `/`-search history with `<Up>` or `<Down>`
+
+A workaround was added for https://github.com/gelguy/wilder.nvim/issues/30.
+This workaround breaks the `/` history when using the `wilder#wildmenu_renderer()`.
+
+The workaround can be disabled by setting:
+```vim
+call wilder#set_option('renderer', wilder#wildmenu_renderer({
+      \ 'apply_incsearch_fix': 0,
+      \ ... other options ...
+      \ }))
+```
+
 ### `dein.vim` lazy loading remote plugins
 
 If you have `g:dein#lazy_rplugins` set to true, the remote plugin will not load until the plugin is sourced.
