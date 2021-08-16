@@ -82,7 +82,6 @@ function! s:hide() dict abort
 
   if getcmdwintype() ==# ''
     call nvim_win_close(self.state.win, 1)
-    call timer_start(0, {-> execute('redraw')})
   else
     " cannot call nvim_win_close() while cmdline-window is open
     " make the window as small as possible and hide it with winblend = 100
