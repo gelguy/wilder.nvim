@@ -77,9 +77,12 @@ function! wilder#main#disable_cmdline_enter() abort
 endfunction
 
 function! wilder#main#start() abort
-  " use timer_start so statusline does not flicker
-  " when using mappings which performs a command
-  call timer_start(0, {-> s:start()})
+  " Workaround for https://github.com/neovim/neovim/issues/15403
+  if wilder#main#in_mode() && s:enabled
+    " use timer_start so statusline does not flicker
+    " when using mappings which performs a command
+    call timer_start(0, {-> s:start()})
+  endif
 
   return "\<Insert>\<Insert>"
 endfunction
