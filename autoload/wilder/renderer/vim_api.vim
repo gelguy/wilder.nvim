@@ -110,6 +110,10 @@ function! s:set_line(line, str) dict abort
 endfunction
 
 function! s:add_highlight(hl, line, col_start, col_end) dict abort
+  if !bufexists(self.state.buf)
+    return
+  endif
+
   let l:prop_type = 'WilderProp_' . a:hl
 
   if !has_key(self.state.prop_types, a:hl)
