@@ -1780,7 +1780,10 @@ wilder#popupmenu_renderer([{options}])
 
             `winblend`
             Optional~
-            'winblend' to apply to the popupmenu. Only for Neovim.
+            Neovim only~
+            'winblend' to apply to the popupmenu. Only for Neovim. This
+            applies pseudo-transparency for the popupmenu. See |winblend| for
+            more details.
 
             Default: 0
 
@@ -1821,7 +1824,7 @@ wilder#popupmenu_renderer([{options}])
 
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
-            Default: 1
+            Default: has('nvim')
 
 
                                     *wilder#popupmenu_renderer()-column*
