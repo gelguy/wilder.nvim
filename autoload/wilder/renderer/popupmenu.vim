@@ -18,6 +18,7 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
         \ 'render_id': -1,
+        \ 'active': 0,
         \ }
 
   let l:max_width = get(a:opts, 'max_width', '50%')
@@ -242,7 +243,8 @@ endfunction
 
 function! s:render_lines_from_timer(render_id, state, ctx, result)
   " Multiple renders might be queued, skip if there is a newer render
-  if a:render_id != a:state.render_id
+  if a:render_id != a:state.render_id ||
+        \ !a:state.active
     return
   endif
 
@@ -573,6 +575,8 @@ function! s:pre_hook(state, ctx) abort
       call l:Column['pre_hook'](a:ctx)
     endif
   endfor
+
+  let a:state.active = 1
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -584,6 +588,8 @@ function! s:post_hook(state, ctx) abort
       call l:Column['post_hook'](a:ctx)
     endif
   endfor
+
+  let a:state.active = 0
 endfunction
 
 function! s:draw_error(state, ctx) abort

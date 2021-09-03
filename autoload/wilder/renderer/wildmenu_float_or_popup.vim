@@ -1,5 +1,6 @@
 function! wilder#renderer#wildmenu_float_or_popup#(opts) abort
   let l:state = wilder#renderer#wildmenu#prepare_state(a:opts)
+  let l:state.active = 0
 
   if a:opts.mode ==# 'float'
     let l:state.api = wilder#renderer#nvim_api#()
@@ -30,6 +31,10 @@ function! s:render(state, ctx, result) abort
 endfunction
 
 function! s:render_chunks(state, chunks) abort
+  if !a:state.active
+    return
+  endif
+
   call a:state.api.show()
 
   let a:state.columns = &columns
@@ -78,6 +83,8 @@ function! s:pre_hook(state, ctx) abort
 
   call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
   call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
+
+  let a:state.active = 1
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -85,4 +92,6 @@ function! s:post_hook(state, ctx) abort
 
   call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
   call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
+
+  let a:state.active = 0
 endfunction
