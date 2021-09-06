@@ -1376,8 +1376,8 @@ wilder#wildmenu_airline_theme([{options}])
 wilder#wildmenu_lightline_theme([{options}])
                                     Wildmenu renderer theme~
             Returns an object which can be passed to
-            |wilder#wildmenu_renderer()| to styles the renderer to look like
-            Airline or Lightline.
+            |wilder#wildmenu_renderer()| which adds styling to make the
+            wildmenu to look like Airline or Lightline.
 
             The theme will use the highlight groups from Airline or Lightline
             and consists of 3 items - the current mode and
@@ -1971,6 +1971,70 @@ wilder#popupmenu_renderer([{options}])
 
             Default: has('nvim')
 
+                                    *wilder#popupmenu_border_theme()*
+wilder#popupmenu_border_theme([{options}])
+                                    Popupmenu renderer theme~
+                                    Experimental~
+            Returns an object which can be passed to
+            |wilder#popupmenu_renderer()| to apply a border around the
+            popupmenu.
+
+            {options} is identical to the argument of
+            |wilder#popupmenu_renderer()| with the following differences:
+
+            `border`
+            A list containing 8 characters. These will be used to draw the
+            border around the popupmenu.
+
+            The list is better represented as
+>
+                ['┌', '─', '┐',
+                 '│',      '│',
+                 '└', '─', '┘']
+<
+            which makes it clearer what each character corresponds to.
+
+            If the top row consists entirely of empty strings, the top border
+            is not drawn. The same applies to the bottom row for the bottom
+            border.
+            The side borders can be empty strings which would omit the left or
+            right border respectively. Note that this does not omit the corner
+            characters.
+
+            To fully omit the left border, use
+>
+                ['', '─', '┐',
+                 '',      '│',
+                 '', '─', '┘']
+<
+            The same applies to the right border.
+
+            The special string values 'single', 'rounded', 'double' and
+            'solid' provide in-built borders similar to the `border` option in
+            |nvim_open_win()|. The 'shadow' value is not supported.
+
+            Default: 'single'
+
+            The `highlight` object accepts 2 new keys:
+                `border`
+                The highlight group for the border.
+
+                Default: 'Pmenu'
+
+                `bottom_border`
+                The highlight group for the bottom border. This is useful for
+                some colorschemes where the default border highlight causes
+                the bottom border to stand out.
+
+                Default: the `border` highlight
+
+            Example:
+>
+            call wilder#set_option('renderer', wilder#popupmenu_renderer(
+                  \ wilder#popupmenu_border_theme({
+                  \   'highlights': {'border': 'FloatBorder'},
+                  \ })))
+<
 
                                     *wilder#popupmenu_renderer()-column*
 For |wilder#popupmenu_renderer()|, columns can be of the following types:

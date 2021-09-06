@@ -725,6 +725,11 @@ function! wilder#wildmenu_lightline_theme(...)
   return wilder#renderer#wildmenu_theme#lightline_theme(l:args)
 endfunction
 
+function! wilder#popupmenu_border_theme(...)
+  let l:args = get(a:, 1, {})
+  return wilder#renderer#popupmenu_border_theme#(l:args)
+endfunction
+
 function! s:find_function_script_file(f)
   try
     " ensure function is autoloaded
