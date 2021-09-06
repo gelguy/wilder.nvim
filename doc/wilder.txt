@@ -1292,7 +1292,7 @@ wilder#wildmenu_renderer([{options}])
 
             The returned list should be a list of lists containing 2, 3 or 4
             elements, in the form of 
-            [{start}, {len} <{accent_hl}, <{selected_accent_hl}>>], where
+            [{start}, {len}, <{accent_hl}, <{selected_accent_hl}>>], where
             {accent_hl} and {selected_accent_hl} are optional.
 
             {start} and {len} define the byte start and byte length of the
@@ -1750,6 +1750,12 @@ wilder#popupmenu_renderer([{options}])
 
                 Default: The `selected` highlight with |underline| and |bold|
 
+                `empty_message`
+                Optional~
+                The highlight group used for the `empty_message` option.
+
+                Default: 'WarningMsg'
+
             `ellipsis`
             Optional~
             The string to appended to a candidate if it is too long. The
@@ -1771,12 +1777,151 @@ wilder#popupmenu_renderer([{options}])
 
             Default: [' ', wilder#popupmenu_scrollbar()]
 
+            `top`
+            Optional~
+            A list of components to show on the top of the popupmenu. Each
+            component represents a line to be drawn. A component can be either
+            a String, Function or Dictionary.
+
+            If the component is a String, it is drawn as it is and either
+            truncated or padded to reach the popupmenu width. The `default`
+            highlight in the `highlights` option will be used.
+            Returning an empty string will cause the line to be omitted.
+
+            If the component is a Function, it should take a {ctx} and
+            {result} and return either a String or a list of
+            |wilder-renderer-highlight-chunk|s. {result} is the
+            |wilder-pipeline-result| passed to the renderer.
+
+            The keys of {ctx} are the same as the ones in the `render`
+            key of |wilder-renderer|, with two additional keys:
+
+                `page`
+                A 2 element array [{start}, {end}] indicating the start and
+                end of the candidates currently being drawn. [-1, -1]
+                indicates that there are no candidates.
+
+                `width`
+                The width of the popupmenu.
+
+            If returning a list, the function has to ensure the sum of the
+            |strdisplaywidth()| of the <string>s in the highlight chunks is
+            equal to `width`.
+            Returning an empty list will cause the line to be omitted.
+
+            If the component is a Dictionary, it should contain the following
+            keys:
+
+                `value`
+                Mandatory~
+                A string or a function. See above String and Function types
+                for more details.
+
+                `pre_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder starts, or when wilder becomes unhidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `post_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder stops, or when wilder becomes hidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `dynamic`
+                Optional~
+                Whether the item needs to update even when pipeline is not
+                done.
+
+                Default: 0
+
+            Default: []
+
+            `bottom`
+            Optional~
+            A list of components to show on the bottom of the popupmenu.
+            See the `top` option for more details.
+
+            Default: []
+
             `highlighter`
             Optional~
 
             See the `highlighter` key of |wilder#wildmenu_renderer()|.
 
             Default: []
+
+            `empty_message`
+            Optional~
+            A String, Function, Dictionary or 0. Used to show a message in the
+            popupmenu when there are no candidates. If 0, the popupmenu is
+            closed instead.
+
+            If a String, the string is drawn as it is and either truncated or
+            padded to reach the popupmenu width. The `empty_message` highlight
+            in the `highlights` option will be used.
+
+            If a Function, it should take a {ctx} and return either a String
+            or a list of |wilder-renderer-highlight-chunk|s.
+
+            The keys of {ctx} are the same as the ones in the `render`
+            key of |wilder-renderer|, with two additional keys:
+
+                `min_width`
+                The minimum width of the popupmenu.
+
+                `max_width`
+                The maximum width of the popupmenu.
+
+            If returning a list, the function has to ensure the sum of the
+            |strdisplaywidth()| of the <string>s in the highlight chunks fits
+            within `min_width` and `max_width` inclusive.
+
+            If the component is a Dictionary, it should contain the following
+            keys:
+
+                `value`
+                Mandatory~
+                A string or a function. See above String and Function types
+                for more details.
+
+                `pre_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder starts, or when wilder becomes unhidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `post_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder stops, or when wilder becomes hidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `dynamic`
+                Optional~
+                Whether the item needs to update even when pipeline is not
+                done.
+
+                Default: 0
+
+            Default: 0
 
             `winblend`
             Optional~
@@ -1838,18 +1983,12 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
             right of the popupmenu.
 
             List:
-            A list of highlight chunks.
-
-            A highlight chunk can be in the form of [{text}], [{text}, {hl}]
-            or [{text}, {default_hl}, {selected_hl}]. For [{text}], the
-            default and selected highlights of the renderer will be used. For
-            [{text}, {hl}], {hl} will be used for both default and selected
-            states.
+            A list of |wilder-renderer-highlight-chunk|s.
 
             Function:
             A function which takes a {ctx} and the pipeline result {result}
-            and returns a string or a list of highlight chunks. See the List
-            section above for the structure of highlight chunks.
+            and returns a string or a list of
+            |wilder-renderer-highlight-chunk|s.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a
@@ -2081,6 +2220,27 @@ wilder#popupmenu_buffer_flags([{options}])
 
             Default: The `selected` highlight of the renderer
 
+
+                                    *wilder-renderer-highlight-chunk*
+To represent strings with highlights, renderers use a highlight chunk. A
+highlight chunk can be in the form of:
+
+A single element list [<string>]. The string will be highlighted using the
+`default` highlight from the renderer's `highlight` option by default, and
+using the `selected` highlight if the associated line or string is selected.
+
+A two element list [<string>, <highlight>]. The string will be highlighted
+with <highlight>.
+
+A three element list [<string>, <highlight>, <selected_highlight>]. The string
+will be highlighted with <highlight> by default, and using
+<selected_highlight> if the associated line or string is selected.
+
+Note that it is possible for a highlight chunk to be used where the line
+cannot be selected, meaning <selected_highlight> highlight will not be used.
+
+|wilder#wildmenu_renderer()-item|s do not use highlight chunks since its API
+was created before highlight chunks were added.
 
 ==============================================================================
 6. API                              *wilder-API*

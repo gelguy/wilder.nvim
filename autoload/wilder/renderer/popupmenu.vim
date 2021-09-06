@@ -5,8 +5,18 @@ function! wilder#renderer#popupmenu#(opts) abort
         \   'default': get(a:opts, 'hl', 'Pmenu'),
         \   'selected': get(a:opts, 'selected_hl', 'PmenuSel'),
         \   'error': get(a:opts, 'error_hl', 'ErrorMsg'),
+        \   'empty_message': get(a:opts, 'empty_message_hl', 'WarningMsg'),
         \ }, 'keep'),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
+        \ 'reverse': get(a:opts, 'reverse', 0),
+        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
+        \ 'left_offset': get(a:opts, 'left_offset', 1),
+        \ 'winblend': get(a:opts, 'winblend', 0),
+        \ 'top': get(a:opts, 'top', []),
+        \ 'bottom': get(a:opts, 'bottom', []),
+        \ 'empty_message': get(a:opts, 'empty_message', 0),
+        \
         \ 'page': [-1, -1],
         \ 'buf': -1,
         \ 'win': -1,
@@ -14,9 +24,6 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ 'longest_line_width': 0,
-        \ 'reverse': get(a:opts, 'reverse', 0),
-        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
-        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
         \ 'render_id': -1,
         \ 'active': 0,
         \ }
@@ -76,7 +83,7 @@ function! wilder#renderer#popupmenu#(opts) abort
     let l:state.right = get(a:opts, 'right', [])
   endif
 
-  let l:state.dynamic = s:has_dynamic_column(l:state)
+  let l:state.dynamic = s:has_dynamic_component(l:state)
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
@@ -94,6 +101,10 @@ function! wilder#renderer#popupmenu#(opts) abort
           \ 'underline', 'bold')
   endif
 
+  if !has_key(l:state.highlights, 'empty_message')
+    let l:state.highlights.empty_message = 'WarningMsg'
+  endif
+
   if has_key(a:opts, 'highlighter')
     let l:Highlighter = a:opts['highlighter']
   elseif has_key(a:opts, 'apply_highlights')
@@ -107,7 +118,6 @@ function! wilder#renderer#popupmenu#(opts) abort
   endif
 
   let l:state.highlighter = l:Highlighter
-  let l:state.winblend = get(a:opts, 'winblend', 0)
 
   if a:opts.mode ==# 'float'
     let l:state.api = wilder#renderer#nvim_api#()
@@ -149,7 +159,9 @@ function! s:render(state, ctx, result) abort
 
   let a:ctx.highlights = a:state.highlights
 
-  if a:state.page == [-1, -1] && !has_key(a:ctx, 'error')
+  if a:state.page == [-1, -1] &&
+        \ !has_key(a:ctx, 'error') &&
+        \ a:state.empty_message is 0
     call a:state.api.hide()
     return
   endif
@@ -165,7 +177,9 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  if !a:ctx.done && !a:state.dynamic
+  if !a:ctx.done &&
+        \ !a:state.dynamic &&
+        \ a:state.empty_message is 0
     return
   endif
 
@@ -217,6 +231,9 @@ function! s:make_page(state, ctx, result) abort
   let l:max_height = a:state.get_max_height()
   let l:max_height = min([l:max_height, &lines - &cmdheight]) - 1
 
+  let l:max_height -= len(a:state.top)
+  let l:max_height -= len(a:state.bottom)
+
   " Page starts at selected.
   if a:ctx.direction >= 0
     let l:start = l:selected
@@ -256,15 +273,70 @@ endfunction
 
 function! s:render_lines(state, ctx, result) abort
   " +1 to account for the cmdline prompt.
-  " -1 to shift left by 1 column for the added padding.
-  let l:pos = get(a:result, 'pos', 0)
+  let l:pos = get(a:result, 'pos', 0) + 1
+  let l:pos -= a:state.left_offset
+  if l:pos < 0
+    let l:pos = 0
+  endif
+
   let l:selected = a:ctx.selected
   let l:reverse = a:state.reverse
 
-  let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
-  let l:lines = l:reverse ? reverse(l:lines) : l:lines
   let [l:page_start, l:page_end] = a:state.page
-  let l:height = l:page_end - l:page_start + 1
+
+  if a:state.page != [-1, -1]
+    let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
+    let l:lines = l:reverse ? reverse(l:lines) : l:lines
+    let l:height = l:page_end - l:page_start + 1
+  else
+    " Handle empty message.
+    let l:ctx = copy(a:ctx)
+    let l:min_width = a:state.get_min_width()
+    let l:max_width = a:state.get_max_width()
+    let l:ctx.min_width = l:min_width
+    let l:ctx.max_width = l:max_width
+
+    let l:Empty_message = a:state.empty_message
+    if type(l:Empty_message) is v:t_dict
+      let l:Empty_message = l:Empty_message.value(l:ctx)
+    endif
+
+    if type(l:Empty_message) is v:t_func
+      let l:Empty_message = l:Empty_message(l:ctx)
+    endif
+
+    if type(l:Empty_message) is v:t_string
+      let l:hl = get(a:ctx.highlights, 'empty_message', 'WarningMsg')
+      let l:Empty_message = s:make_empty_message_from_string(l:Empty_message, l:min_width, l:max_width, l:hl)
+    endif
+
+    let l:lines = [l:Empty_message]
+    let l:width = wilder#render#chunks_displaywidth(l:Empty_message)
+  endif
+
+  let l:ctx = extend({'width': l:width}, a:ctx)
+
+  let l:top_lines = []
+  for l:Top in a:state.top
+    let l:line = s:get_top_or_bottom_line(l:Top, l:ctx, a:result)
+
+    if empty(l:line)
+      continue
+    endif
+
+    call add(l:top_lines, l:line)
+  endfor
+  let l:lines = l:top_lines + l:lines
+
+  for l:Bottom in a:state.bottom
+    let l:line = s:get_top_or_bottom_line(l:Bottom, l:ctx, a:result)
+
+    if empty(l:line)
+      continue
+    endif
+
+    call add(l:lines, l:line)
+  endfor
 
   call a:state.api.show()
 
@@ -280,7 +352,10 @@ function! s:render_lines(state, ctx, result) abort
   endif
 
   let l:cmdheight = wilder#renderer#get_cmdheight()
+  let l:height = len(l:lines)
   let l:row = &lines - l:cmdheight - l:height
+
+  let l:top_len = len(l:top_lines)
 
   call a:state.api.move(l:row, l:col, l:height, l:width)
   call a:state.api.set_option('wrap', v:false)
@@ -301,9 +376,14 @@ function! s:render_lines(state, ctx, result) abort
 
     call a:state.api.set_line(l:i, l:text)
 
-    let l:is_selected = l:reverse ? 
-          \ l:page_start + (len(l:lines) - l:i - 1) == l:selected :
-          \ l:page_start + l:i == l:selected
+    " Don't apply selected for top lines or empty message.
+    if l:i < l:top_len || l:page_start == -1
+      let l:is_selected = 0
+    else
+      let l:is_selected = l:reverse ? 
+            \ l:page_start + (l:height - l:i - l:top_len - 1) == l:selected :
+            \ l:page_start + l:i - l:top_len == l:selected
+    endif
 
     let l:start = 0
     for l:chunk in l:chunks
@@ -416,8 +496,6 @@ function! s:make_lines(state, ctx, result) abort
   while l:i < len(l:raw_lines)
     let [l:left_column, l:chunks, l:right_column] = l:raw_lines[l:i]
     let [l:chunks_width, l:total_width] = l:widths[l:i]
-
-    let l:is_selected = a:ctx.selected == l:i + l:start
 
     " Truncate or pad if necessary
     if l:total_width > l:expected_width
@@ -554,11 +632,12 @@ function! s:merge_spans(spans) abort
   return [[l:start_byte, l:end_byte - l:start_byte]]
 endfunction
 
-function! s:has_dynamic_column(state) abort
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'dynamic') &&
-          \ l:Column['dynamic']
+function! s:has_dynamic_component(state) abort
+  for l:Component in [a:state.empty_message] +
+        \ a:state.left + a:state.right + a:state.top + a:state.bottom
+    if type(l:Component) is v:t_dict &&
+          \ has_key(l:Component, 'dynamic') &&
+          \ l:Component['dynamic']
       return 1
     endif
   endfor
@@ -572,10 +651,11 @@ function! s:pre_hook(state, ctx) abort
         \ 'winblend': get(a:state, 'winblend', 0)
         \ })
 
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'pre_hook')
-      call l:Column['pre_hook'](a:ctx)
+  for l:Component in [a:state.empty_message] +
+        \ a:state.left + a:state.right + a:state.top + a:state.bottom
+    if type(l:Component) is v:t_dict &&
+          \ has_key(l:Component, 'pre_hook')
+      call l:Component['pre_hook'](a:ctx)
     endif
   endfor
 
@@ -585,10 +665,11 @@ endfunction
 function! s:post_hook(state, ctx) abort
   call a:state.api.hide()
 
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'post_hook')
-      call l:Column['post_hook'](a:ctx)
+  for l:Component in [a:state.empty_message] +
+        \ a:state.left + a:state.right + a:state.top + a:state.bottom
+    if type(l:Component) is v:t_dict &&
+          \ has_key(l:Component, 'post_hook')
+      call l:Component['post_hook'](a:ctx)
     endif
   endfor
 
@@ -615,6 +696,46 @@ function! s:draw_error(state, ctx) abort
   call a:state.api.add_highlight(l:hl, 0, 0, len(l:error))
 
   redraw
+endfunction
+
+function! s:make_empty_message_from_string(message, min_width, max_width, hl) abort
+  let l:message = a:message
+  let l:width = strdisplaywidth(l:message)
+
+  if l:width > a:max_width
+    let l:message = wilder#render#truncate_and_pad(a:max_width, l:message)
+  elseif l:width < a:min_width
+    let l:message .= repeat(' ', a:min_width - l:width)
+  endif
+
+  return [[l:message,  a:hl]]
+endfunction
+
+function! s:get_top_or_bottom_line(line, ctx, result) abort
+  let l:width = a:ctx.width
+
+  let l:Line = a:line
+  if type(l:Line) is v:t_dict
+    let l:Line = l:Line.value
+  endif
+
+  if type(l:Line) is v:t_func
+    let l:Line = l:Line(a:ctx, a:result)
+  endif
+
+  if type(l:Line) is v:t_string
+    if empty(a:line)
+      return ''
+    endif
+
+    let l:Line = [[wilder#render#truncate_and_pad(a:ctx.width, l:Line)]]
+  endif
+
+  if empty(l:Line)
+    return []
+  endif
+
+  return l:Line
 endfunction
 
 function! s:iterate_column(f) abort
