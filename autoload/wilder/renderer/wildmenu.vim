@@ -456,7 +456,7 @@ function! s:draw_xs(state, ctx, result) abort
       endif
 
       call add(l:res, [l:ellipsis, a:ctx.highlights['default']])
-      let l:padding = repeat(' ', l:space - strdisplaywidth(l:x))
+      let l:padding = repeat(' ', l:space - wilder#render#chunks_displaywidth(l:res))
       call add(l:res, [l:padding, a:ctx.highlights['default']])
       return l:res
     endif

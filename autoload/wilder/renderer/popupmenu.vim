@@ -428,6 +428,7 @@ function! s:make_lines(state, ctx, result) abort
       let l:chunks = wilder#render#truncate_chunks(l:chunks_width, l:chunks)
 
       call add(l:chunks, [l:ellipsis])
+      call add(l:chunks, [repeat(' ', l:chunks_width - wilder#render#chunks_displaywidth(l:chunks))])
     elseif l:total_width < l:expected_width
       let l:to_pad = l:expected_width - l:total_width
 
