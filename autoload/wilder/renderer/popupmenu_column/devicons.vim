@@ -6,6 +6,7 @@ function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
         \ 'created_hls': {},
         \ 'left_padding': repeat(' ', l:padding[0]),
         \ 'right_padding': repeat(' ', l:padding[1]),
+        \ 'combine_selected_hl': get(a:opts, 'combine_selected_hl', 0),
         \ }
 
   if has_key(a:opts, 'get_icon')
@@ -84,7 +85,13 @@ function! s:devicons(state, ctx, result) abort
       if !has_key(a:state.created_hls, l:hl)
         let l:guifg = s:get_guifg(l:hl)
         let l:default_hl = s:make_temp_hl(l:hl, a:ctx.highlights['default'], l:guifg)
-        let l:selected_hl = a:ctx.highlights['selected']
+
+        if a:state.combine_selected_hl
+          let l:selected_hl = s:make_temp_hl(l:hl . '_Selected', a:ctx.highlights['selected'], l:guifg)
+        else
+          let l:selected_hl = a:ctx.highlights['selected']
+        endif
+
         let a:state.created_hls[l:hl] = [l:default_hl, l:selected_hl]
       endif
 

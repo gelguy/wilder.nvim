@@ -2008,6 +2008,18 @@ wilder#popupmenu_devicons([{options}])
 
             Default: [0, 1]
 
+            `combine_selected_hl`
+            Optional~
+            If true, `get_hl` is used to create highlights for the icons when
+            the respective candidate is selected. If this is false, the
+            `selected` highlight passed to the renderer's `highlight` option
+            is used.
+
+            By default this is false since for some colorschemes, the
+            |hl-PmenuSel| highlight might conflict with the icon highlight.
+
+            Default: 0
+
                                     *wilder#popupmenu_buffer_flags()*
 wilder#popupmenu_buffer_flags([{options}])
                                     wilder#popupmenu_renderer() column~
