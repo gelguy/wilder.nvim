@@ -6,8 +6,10 @@ function! wilder#renderer#popupmenu_column#scrollbar#make(opts) abort
   let l:scrollbar_char = get(a:opts, 'scrollbar_char', ' ')
   let l:scrollbar_hl = get(a:opts, 'scrollbar_hl', 'PmenuSbar')
 
-  let l:state['thumb_chunk'] = [l:thumb_char, l:thumb_hl]
-  let l:state['scrollbar_chunk'] = [l:scrollbar_char, l:scrollbar_hl]
+  let l:state.thumb_chunk = [l:thumb_char, l:thumb_hl]
+  let l:state.scrollbar_chunk = [l:scrollbar_char, l:scrollbar_hl]
+
+  let l:state.collapse = get(a:opts, 'collapse', 1)
 
   return {ctx, result -> s:scrollbar(l:state, ctx, result)}
 endfunction
@@ -18,7 +20,11 @@ function! s:scrollbar(state, ctx, result) abort
   let l:pum_height = l:end - l:start + 1
 
   if l:pum_height == l:num_candidates
-    return []
+    if a:state.collapse
+      return []
+    else
+      return repeat([[a:state.scrollbar_chunk]], l:pum_height)
+    endif
   endif
 
   let l:thumb_start = float2nr(1.0 * l:start * l:pum_height / l:num_candidates)
@@ -45,8 +51,8 @@ function! s:scrollbar(state, ctx, result) abort
     endif
   endif
 
-  let l:thumb_chunk = a:state['thumb_chunk']
-  let l:scrollbar_chunk = a:state['scrollbar_chunk']
+  let l:thumb_chunk = a:state.thumb_chunk
+  let l:scrollbar_chunk = a:state.scrollbar_chunk
 
   let l:before_thumb_chunks = repeat([[l:scrollbar_chunk]], l:thumb_start)
   let l:thumb_chunks = repeat([[l:thumb_chunk]], l:thumb_size)

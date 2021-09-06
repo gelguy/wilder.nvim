@@ -1922,6 +1922,13 @@ wilder#popupmenu_scrollbar([{options}]
 
             Default: 'PmenuSbar'
 
+            `collapse`
+            Optional~
+            If true, the scrollbar is hidden when the candidates fit in the
+            popupmenu. Otherwise the scrollbar will always be visible.
+
+            Default: 1
+
                                     *wilder#popupmenu_spinner()*
 wilder#popupmenu_spinner([{options}])
                                     wilder#popupmenu_renderer() column~
