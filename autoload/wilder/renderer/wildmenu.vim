@@ -8,13 +8,14 @@ function! wilder#renderer#wildmenu#prepare_state(opts) abort
         \ }, 'keep'),
         \ 'separator': wilder#render#to_printable(get(a:opts, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
+        \
         \ 'page': [-1, -1],
         \ 'columns': -1,
         \ 'cmdheight': -1,
         \ 'draw_cache': wilder#cache#cache(),
         \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
-        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
         \ }
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')

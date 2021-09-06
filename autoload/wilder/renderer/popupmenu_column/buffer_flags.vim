@@ -48,6 +48,10 @@ function! wilder#renderer#popupmenu_column#buffer_flags#make(opts) abort
 endfunction
 
 function! s:buffer_status(state, ctx, result) abort
+  if !has_key(a:result, 'data')
+    return ''
+  endif
+
   let l:expand = get(a:result.data, 'cmdline.expand', '')
 
   if l:expand !=# 'buffer' && l:expand !=# 'file'

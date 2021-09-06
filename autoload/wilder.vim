@@ -711,7 +711,7 @@ function! wilder#airline_theme(...)
 endfunction
 
 function! wilder#wildmenu_airline_theme(...)
-  let l:args = get(a:000, 0, {})
+  let l:args = get(a:, 1, {})
   return wilder#renderer#wildmenu_theme#airline_theme(l:args)
 endfunction
 
@@ -721,7 +721,7 @@ function! wilder#lightline_theme(...)
 endfunction
 
 function! wilder#wildmenu_lightline_theme(...)
-  let l:args = get(a:000, 0, {})
+  let l:args = get(a:, 1, {})
   return wilder#renderer#wildmenu_theme#lightline_theme(l:args)
 endfunction
 

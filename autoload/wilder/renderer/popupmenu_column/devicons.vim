@@ -21,6 +21,10 @@ function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
 endfunction
 
 function! s:devicons(state, ctx, result) abort
+  if !has_key(a:result, 'data')
+    return ''
+  endif
+
   let l:expand = get(a:result.data, 'cmdline.expand', '')
 
   if l:expand !=# 'file' &&
