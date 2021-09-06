@@ -649,6 +649,8 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:function_name = l:user_command.complete_arg
       if l:function_name[:1] ==# 's:'
         let l:function_name = '<SNR>' . l:user_command.script_id . '_' . l:function_name[2:]
+      elseif l:function_name[:4] ==? '<SID>'
+        let l:function_name = '<SNR>' . l:user_command.script_id . '_' . l:function_name[5:]
       endif
 
       let l:Completion_func = function(l:function_name)
