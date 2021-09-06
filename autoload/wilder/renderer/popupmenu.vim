@@ -171,9 +171,12 @@ function! s:render(state, ctx, result) abort
 
   let a:state.render_id += 1
 
-  " Always redraw from timer since popupmenu rendering is typically slow
-  let l:render_id = a:state.render_id
-  call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
+  if a:state.api.need_timer()
+    let l:render_id = a:state.render_id
+    call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
+  else
+    call s:render_lines(a:state, a:ctx, a:result)
+  endif
 endfunction
 
 function! s:make_page(state, ctx, result) abort
