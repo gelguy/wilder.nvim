@@ -1762,7 +1762,7 @@ wilder#popupmenu_renderer([{options}])
             A list of columns to show on the left side of the popupmenu.
             See |wilder#popupmenu_renderer()-column|s.
 
-            Default: []
+            Default: [' ']
 
             `right`
             Optional~

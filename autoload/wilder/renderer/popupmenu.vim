@@ -69,7 +69,7 @@ function! wilder#renderer#popupmenu#(opts) abort
   endif
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
-    let l:state.left = []
+    let l:state.left = [' ']
     let l:state.right = [' ', wilder#popupmenu_scrollbar()]
   else
     let l:state.left = get(a:opts, 'left', [])
@@ -359,8 +359,7 @@ function! s:make_lines(state, ctx, result) abort
   let [l:start, l:end] = a:state.page
   let l:height = l:end - l:start + 1
 
-  " Add 1 column of padding.
-  let l:left_column_chunks = map(repeat([0], l:height), {-> [[' ']]})
+  let l:left_column_chunks = map(repeat([0], l:height), {-> []})
   call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result, l:height)
 
   let l:right_column_chunks = map(repeat([0], l:height), {-> []})
