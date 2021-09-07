@@ -1,4 +1,4 @@
-function! wilder#renderer#popupmenu_column#scrollbar#make(opts) abort
+function! wilder#renderer#component#popupmenu_scrollbar#(opts) abort
   let l:state = {}
 
   let l:thumb_char = get(a:opts, 'thumb_char', '█')

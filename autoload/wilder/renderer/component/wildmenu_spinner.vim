@@ -1,4 +1,4 @@
-function! wilder#renderer#wildmenu_item#spinner#(args) abort
+function! wilder#renderer#component#wildmenu_spinner#(args) abort
   let l:frames = get(a:args, 'frames', ['-', '\', '|', '/'])
   if type(l:frames) is v:t_string
     let l:frames = split(l:frames, '\zs')
@@ -6,7 +6,7 @@ function! wilder#renderer#wildmenu_item#spinner#(args) abort
 
   let l:Done = get(a:args, 'done', '·')
 
-  let l:Spinner = wilder#renderer#spinner#({
+  let l:Spinner = wilder#renderer#component#spinner#({
         \ 'num_frames': len(l:frames),
         \ 'delay': get(a:args, 'delay', 100),
         \ 'interval': get(a:args, 'interval', 100),

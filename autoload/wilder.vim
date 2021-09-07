@@ -569,7 +569,7 @@ endfunction
 
 function! wilder#wildmenu_index(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#wildmenu_item#index#make(l:args)
+  return wilder#renderer#component#wildmenu_index#(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_string()
@@ -588,7 +588,7 @@ endfunction
 
 function! wilder#wildmenu_previous_arrow(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#wildmenu_item#arrows#make_previous(l:args)
+  return wilder#renderer#component#wildmenu_arrows#previous(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_next_arrow()
@@ -598,7 +598,7 @@ endfunction
 
 function! wilder#wildmenu_next_arrow(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#wildmenu_item#arrows#make_next(l:args)
+  return wilder#renderer#component#wildmenu_arrows#next(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_powerline_separator()
@@ -613,9 +613,9 @@ endfunction
 
 function! wilder#wildmenu_powerline_separator(str, from, to, ...) abort
   if a:0
-    return wilder#renderer#wildmenu_item#separator#make(a:str, a:from, a:to, a:1)
+    return wilder#renderer#component#wildmenu_separator#(a:str, a:from, a:to, a:1)
   else
-    return wilder#renderer#wildmenu_item#separator#make(a:str, a:from, a:to)
+    return wilder#renderer#component#wildmenu_separator#(a:str, a:from, a:to)
   endif
 endfunction
 
@@ -626,7 +626,7 @@ endfunction
 
 function! wilder#wildmenu_spinner(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#wildmenu_item#spinner#(l:args)
+  return wilder#renderer#component#wildmenu_spinner#(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_condition()
@@ -636,27 +636,27 @@ endfunction
 
 function! wilder#wildmenu_condition(predicate, if_true, ...) abort
   let l:if_false = a:0 > 0 ? a:1 : []
-  return wilder#renderer#wildmenu_item#condition#make(a:predicate, a:if_true, l:if_false)
+  return wilder#renderer#component#wildmenu_condition#(a:predicate, a:if_true, l:if_false)
 endfunction
 
 function! wilder#popupmenu_scrollbar(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu_column#scrollbar#make(l:args)
+  return wilder#renderer#component#popupmenu_scrollbar#(l:args)
 endfunction
 
 function! wilder#popupmenu_spinner(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu_column#spinner#(l:args)
+  return wilder#renderer#component#popupmenu_spinner#(l:args)
 endfunction
 
 function! wilder#popupmenu_devicons(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu_column#devicons#make(l:args)
+  return wilder#renderer#component#popupmenu_devicons#(l:args)
 endfunction
 
 function! wilder#popupmenu_buffer_flags(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu_column#buffer_flags#make(l:args)
+  return wilder#renderer#component#popupmenu_buffer_flags#(l:args)
 endfunction
 
 " renderers
@@ -871,26 +871,26 @@ function! wilder#draw_devicons(ctx, x, data) abort
 endfunction
 
 function! wilder#devicons_get_icon_from_vim_devicons()
-  return wilder#renderer#popupmenu_column#devicons#get_icon_from_vim_devicons()
+  return wilder#renderer#component#popupmenu_devicons#get_icon_from_vim_devicons()
 endfunction
 
 function! wilder#devicons_get_icon_from_nerdfont_vim()
-  return wilder#renderer#popupmenu_column#devicons#get_icon_from_nerdfont_vim()
+  return wilder#renderer#component#popupmenu_devicons#get_icon_from_nerdfont_vim()
 endfunction
 
 function! wilder#devicons_get_icon_from_nvim_web_devicons(...)
   let l:opts = a:0 ? a:1 : {}
-  return wilder#renderer#popupmenu_column#devicons#get_icon_from_nvim_web_devicons(l:opts)
+  return wilder#renderer#component#popupmenu_devicons#get_icon_from_nvim_web_devicons(l:opts)
 endfunction
 
 function! wilder#devicons_get_hl_from_glyph_palette_vim(...)
   let l:opts = a:0 ? a:1 : {}
-  return wilder#renderer#popupmenu_column#devicons#get_hl_from_glyph_palette_vim(l:opts)
+  return wilder#renderer#component#popupmenu_devicons#get_hl_from_glyph_palette_vim(l:opts)
 endfunction
 
 function! wilder#devicons_get_hl_from_nvim_web_devicons(...)
   let l:opts = a:0 ? a:1 : {}
-  return wilder#renderer#popupmenu_column#devicons#get_hl_from_nvim_web_devicons(l:opts)
+  return wilder#renderer#component#popupmenu_devicons#get_hl_from_nvim_web_devicons(l:opts)
 endfunction
 
 function! s:extract_keys(obj, ...)

@@ -1,4 +1,4 @@
-function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
+function! wilder#renderer#component#popupmenu_devicons#(opts) abort
   let l:padding = get(a:opts, 'padding', [0, 1])
   let l:state = {
         \ 'session_id': -1,
@@ -169,15 +169,15 @@ function! s:get_hl_func()
   return v:null
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_icon_from_vim_devicons()
+function! wilder#renderer#component#popupmenu_devicons#get_icon_from_vim_devicons()
   return {ctx, name, is_dir -> WebDevIconsGetFileTypeSymbol(name, is_dir)}
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_icon_from_nerdfont_vim()
+function! wilder#renderer#component#popupmenu_devicons#get_icon_from_nerdfont_vim()
   return {ctx, name -> nerdfont#find(name)}
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_icon_from_nvim_web_devicons(opts)
+function! wilder#renderer#component#popupmenu_devicons#get_icon_from_nvim_web_devicons(opts)
   return {ctx, name, is_dir -> s:get_icon_from_nvim_web_devicons(a:opts, name, is_dir)}
 endfunction
 
@@ -192,7 +192,7 @@ function! s:get_icon_from_nvim_web_devicons(opts, name, is_dir)
   return l:icon is v:null ? get(a:opts, 'default_icon', '') : l:icon
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_hl_from_nvim_web_devicons(opts)
+function! wilder#renderer#component#popupmenu_devicons#get_hl_from_nvim_web_devicons(opts)
   if !luaeval("require'nvim-web-devicons'.has_loaded()")
     call luaeval("require'nvim-web-devicons'.setup()")
   endif
@@ -210,7 +210,7 @@ function! s:hl_from_nvim_web_devicons(opts, name, is_dir)
   return hlexists(l:hl) ? l:hl : get(a:opts, 'default_hl', 'DevIconDefault')
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_hl_from_glyph_palette_vim(opts)
+function! wilder#renderer#component#popupmenu_devicons#get_hl_from_glyph_palette_vim(opts)
   return {ctx, name, is_dir, icon -> s:get_hl_from_glyph_palette_vim(a:opts, ctx, icon)}
 endfunction
 

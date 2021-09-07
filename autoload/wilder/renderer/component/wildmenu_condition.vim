@@ -1,4 +1,4 @@
-function! wilder#renderer#wildmenu_item#condition#make(predicate, if_true, if_false) abort
+function! wilder#renderer#component#wildmenu_condition#(predicate, if_true, if_false) abort
   let l:state = {
         \ 'predicate': a:predicate,
         \ 'if_true': a:if_true,
