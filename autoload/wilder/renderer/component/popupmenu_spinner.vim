@@ -22,10 +22,6 @@ function! wilder#renderer#component#popupmenu_spinner#(opts) abort
     let l:state.hl = a:opts.hl
   endif
 
-  if has_key(a:opts, 'selected_hl')
-    let l:state.selected_hl = a:opts.selected_hl
-  endif
-
   return {
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
         \ 'dynamic': 1,
@@ -56,10 +52,11 @@ function! s:spinner(state, ctx, result) abort
 
   let l:column_chunks = repeat([[[l:spaces]]], l:height)
 
+  let l:hl = get(a:state, 'hl', a:ctx.highlights.default)
   if a:state.align ==# 'bottom'
-    let l:column_chunks[-1] = [[l:frame]]
+    let l:column_chunks[-1] = [[l:frame, l:hl]]
   else
-    let l:column_chunks[0] = [[l:frame]]
+    let l:column_chunks[0] = [[l:frame, l:hl]]
   endif
 
   return l:column_chunks
