@@ -1,10 +1,10 @@
-function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
+function! wilder#renderer#popupmenu_column#spinner#(opts) abort
   let l:frames = get(a:opts, 'frames', ['-', '\', '|', '/'])
   if type(l:frames) is v:t_string
     let l:frames = split(l:frames, '\zs')
   endif
 
-  let l:spinner = wilder#renderer#spinner#make({
+  let l:Spinner = wilder#renderer#spinner#({
         \ 'num_frames': len(l:frames),
         \ 'delay': get(a:opts, 'delay', 50),
         \ 'interval': get(a:opts, 'interval', 100),
@@ -13,8 +13,9 @@ function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
   let l:state = {
         \ 'frames': l:frames,
         \ 'done': get(a:opts, 'done', ' '),
-        \ 'spinner': l:spinner,
+        \ 'spinner': l:Spinner,
         \ 'align': get(a:opts, 'align', 'bottom'),
+        \ 'timer': -1,
         \ }
 
   if has_key(a:opts, 'hl')
@@ -32,10 +33,16 @@ function! wilder#renderer#popupmenu_column#spinner#make(opts) abort
 endfunction
 
 function! s:spinner(state, ctx, result) abort
+  call timer_stop(a:state.timer)
+
   let [l:start, l:end] = a:ctx.page
   let l:height = l:end - l:start + 1
 
-  let l:frame_number = a:state.spinner.spin(a:ctx, a:result)
+  let [l:frame_number, l:wait_time] = a:state.spinner(a:ctx.done)
+
+  if l:wait_time >= 0
+    let a:state.timer = timer_start(l:wait_time, {-> wilder#main#draw()})
+  endif
 
   if l:frame_number == -1
     let l:frame = a:state.done

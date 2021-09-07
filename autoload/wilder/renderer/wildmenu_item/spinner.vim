@@ -1,4 +1,4 @@
-function! wilder#renderer#wildmenu_item#spinner#make(args) abort
+function! wilder#renderer#wildmenu_item#spinner#(args) abort
   let l:frames = get(a:args, 'frames', ['-', '\', '|', '/'])
   if type(l:frames) is v:t_string
     let l:frames = split(l:frames, '\zs')
@@ -6,7 +6,7 @@ function! wilder#renderer#wildmenu_item#spinner#make(args) abort
 
   let l:Done = get(a:args, 'done', '·')
 
-  let l:spinner = wilder#renderer#spinner#make({
+  let l:Spinner = wilder#renderer#spinner#({
         \ 'num_frames': len(l:frames),
         \ 'delay': get(a:args, 'delay', 100),
         \ 'interval': get(a:args, 'interval', 100),
@@ -16,7 +16,8 @@ function! wilder#renderer#wildmenu_item#spinner#make(args) abort
         \ 'frames': l:frames,
         \ 'current_frame': l:Done,
         \ 'done': l:Done,
-        \ 'spinner': l:spinner,
+        \ 'spinner': l:Spinner,
+        \ 'timer': -1,
         \ }
 
   return {
@@ -44,7 +45,13 @@ endfunction
 " char. Due to reltime(), the char might be changed since len is called
 " earlier
 function! s:get_char(state, ctx, result) abort
-  let l:frame_index = a:state.spinner.spin(a:ctx, a:result)
+  call timer_stop(a:state.timer)
+
+  let [l:frame_index, l:wait_time] = a:state.spinner(a:ctx.done)
+
+  if l:wait_time >= 0
+    let a:state.timer = timer_start(l:wait_time, {-> wilder#main#draw()})
+  endif
 
   if l:frame_index == -1
     let a:state.current_frame = a:state.done

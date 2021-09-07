@@ -626,7 +626,7 @@ endfunction
 
 function! wilder#wildmenu_spinner(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#renderer#wildmenu_item#spinner#make(l:args)
+  return wilder#renderer#wildmenu_item#spinner#(l:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_condition()
@@ -646,7 +646,7 @@ endfunction
 
 function! wilder#popupmenu_spinner(...) abort
   let l:args = get(a:, 1, {})
-  return wilder#renderer#popupmenu_column#spinner#make(l:args)
+  return wilder#renderer#popupmenu_column#spinner#(l:args)
 endfunction
 
 function! wilder#popupmenu_devicons(...) abort
