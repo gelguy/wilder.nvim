@@ -293,6 +293,14 @@ function! s:render_lines(state, ctx, result) abort
     let l:ctx = copy(a:ctx)
     let l:min_width = a:state.get_min_width()
     let l:max_width = a:state.get_max_width()
+
+    if l:min_width > l:max_width
+      let l:min_width = l:max_width
+    endif
+    if l:max_width < l:min_width
+      let l:max_width = l:min_width
+    endif
+
     let l:ctx.min_width = l:min_width
     let l:ctx.max_width = l:max_width
 
