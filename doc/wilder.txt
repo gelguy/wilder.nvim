@@ -1921,6 +1921,9 @@ wilder#popupmenu_renderer([{options}])
 
                 Default: 0
 
+            The helper method |wilder#popupmenu_empty_message_with_spinner()|
+            can be used here.
+
             Default: 0
 
             `winblend`
@@ -2284,6 +2287,77 @@ wilder#popupmenu_buffer_flags([{options}])
 
             Default: The `selected` highlight of the renderer
 
+                                *wilder#popupmenu_empty_message_with_spinner()*
+wilder#popupmenu_empty_message_with_spinner([{options}])
+            Returns an object which can be passed to the `empty_message`
+            option of |wilder#popupmenu_renderer()|.
+
+            {options} is a dictionary with keys:
+            `message`
+            Optional~
+            A String or a Function which represents the message to show.
+
+            If it is a String, the message will be shown with the spinner
+            added to the left or right depending on the `align` option.
+
+            If it is a Function, it should take a {ctx}, {spinner_char} and
+            {spinner_hl} and return a list of
+            |wilder-renderer-highlight-chunk|s. {spinner_char} is the current
+            frame of the spinner and {spinner_hl} is the highlight to use for
+            the spinner.
+
+            {ctx} is the same as the one passed to the `empty_message` option
+            in |wilder#popupmenu_renderer()|.
+
+            Note that the `min_width` and `max_width` keys are not adjusted by
+            the width of {spinner_char}, so the function has to take that into
+            account accordingly.
+
+            Default: ' No candidates found '
+
+            `spinner_hl`
+            Optional~
+            The highlight group to use for the spinner.
+
+            Default: The `empty_message` highlight passed to renderer's
+                     `highlights` option`
+
+            `align`
+            Optional~
+            'left' or 'right' depending on where the spinner will be added to
+            the message.
+
+            Only used if the `message` option is a String.
+
+            Default: 'right'
+
+            `frames`
+            Optional~
+            The frames to use for the spinner. Can be either a string or a
+            list of items. If it is a string, the string is split into
+            characters and each character is a frame.
+
+            Default: ['-', '\', '|', '/'']
+
+            `done`
+            Optional~
+            The item to display when the pipeline is done, or when there is no
+            pipeline running, or when the `delay` timeout has not been
+            reached.
+
+            Default: '·'
+
+            `delay`
+            Optional~
+            The time in milliseconds before the spinner should show.
+
+            Default: 100
+
+            `interval`
+            Optional~
+            The time in milliseconds for each frame.
+
+            Default: 100
 
                                     *wilder-renderer-highlight-chunk*
 To represent strings with highlights, renderers use a highlight chunk. A
