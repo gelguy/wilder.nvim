@@ -569,7 +569,7 @@ endfunction
 function! s:draw_line(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
-  let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)
+  let l:str = s:draw_candidate(a:state, a:ctx, a:result, a:i)
 
   let l:Highlighter = a:state.highlighter
 
@@ -606,13 +606,13 @@ function! s:draw_line(state, ctx, result, i) abort
   return l:chunks
 endfunction
 
-function! s:draw_x(state, ctx, result, i) abort
+function! s:draw_candidate(state, ctx, result, i) abort
   let l:use_cache = a:ctx.selected == a:i
   if l:use_cache && a:state.draw_cache.has_key(a:i)
     return a:state.draw_cache.get(a:i)
   endif
 
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
+  let l:x = wilder#render#draw_candidate(a:ctx, a:result, a:i)
 
   if l:use_cache
     call a:state.draw_cache.set(a:i, l:x)
@@ -752,7 +752,7 @@ function! s:iterate_column(f, ctx, result)
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:x = a:result.value[l:i]
+    let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
     let l:line = a:f(a:ctx, l:x, l:data)
 
     if l:line is v:false

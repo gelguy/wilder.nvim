@@ -79,7 +79,7 @@ function! s:buffer_status(state, ctx, result) abort
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:key = a:result.value[l:i]
+    let l:key = wilder#main#get_candidate(a:ctx, a:result, l:i)
 
     if a:state.cache.has_key(l:key)
       let l:buffer_status[l:index] = a:state.cache.get(l:key)

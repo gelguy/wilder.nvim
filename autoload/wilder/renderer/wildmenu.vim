@@ -206,12 +206,12 @@ function! s:make_page(state, ctx, result) abort
 
     let l:i = l:page[0]
     let l:separator_width = strdisplaywidth(a:ctx.separator)
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:i))
+    let l:width = strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:i))
     let l:i += 1
 
     while l:i <= l:page[1]
       let l:width += l:separator_width
-      let l:width += strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:i))
+      let l:width += strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:i))
 
       " cannot fit in current page
       if l:width > a:ctx.space
@@ -241,13 +241,13 @@ function! s:make_page(state, ctx, result) abort
   return s:make_page_from_start(a:state, a:ctx, a:result, l:selected)
 endfunction
 
-function! s:draw_x(state, ctx, result, i) abort
+function! s:draw_candidate(state, ctx, result, i) abort
   let l:use_cache = a:ctx.selected == a:i
   if l:use_cache && a:state.draw_cache.has_key(a:i)
     return a:state.draw_cache.get(a:i)
   endif
 
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
+  let l:x = wilder#render#draw_candidate(a:ctx, a:result, a:i)
 
   if l:use_cache
     call a:state.draw_cache.set(a:i, l:x)
@@ -261,7 +261,7 @@ function! s:make_page_from_start(state, ctx, result, start) abort
   let l:start = a:start
   let l:end = l:start
 
-  let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -270,7 +270,7 @@ function! s:make_page_from_start(state, ctx, result, start) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -288,7 +288,7 @@ function! s:make_page_from_end(state, ctx, result, end) abort
   let l:end = a:end
   let l:start = l:end
 
-  let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:start))
+  let l:width = strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:start))
   let l:space = l:space - l:width
   let l:separator_width = strdisplaywidth(a:ctx.separator)
 
@@ -297,7 +297,7 @@ function! s:make_page_from_end(state, ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:start - 1))
+    let l:width = strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:start - 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -315,7 +315,7 @@ function! s:make_page_from_end(state, ctx, result, end) abort
       break
     endif
 
-    let l:width = strdisplaywidth(s:draw_x(a:state, a:ctx, a:result, l:end + 1))
+    let l:width = strdisplaywidth(s:draw_candidate(a:state, a:ctx, a:result, l:end + 1))
 
     if l:width + l:separator_width > l:space
       break
@@ -335,7 +335,7 @@ function! s:make_hl_chunks(state, ctx, result) abort
   if has_key(a:ctx, 'error')
     let l:chunks += s:draw_error(a:ctx.highlights['error'], a:ctx, a:ctx.error)
   else
-    let l:chunks += s:draw_xs(a:state, a:ctx, a:result)
+    let l:chunks += s:draw_candidates(a:state, a:ctx, a:result)
   endif
 
   let l:chunks += s:draw_item(a:state.right, a:ctx.highlights['default'], a:ctx, a:result)
@@ -396,7 +396,7 @@ function! s:draw_error(hl, ctx, error) abort
   return [[l:error, a:hl], [repeat(' ', l:space - strdisplaywidth(l:error))]]
 endfunction
 
-function! s:draw_xs(state, ctx, result) abort
+function! s:draw_candidates(state, ctx, result) abort
   let l:selected = a:ctx.selected
   let l:space = a:ctx.space
   let l:page = a:ctx.page
@@ -417,7 +417,7 @@ function! s:draw_xs(state, ctx, result) abort
   let l:i = 0
   while l:i < l:len
     let l:current = l:i + l:start
-    let l:x = s:draw_x(a:state, a:ctx, a:result, l:current)
+    let l:x = s:draw_candidate(a:state, a:ctx, a:result, l:current)
 
     if !a:state.highlight_cache.has_key(l:x) &&
           \ l:Highlighter isnot 0

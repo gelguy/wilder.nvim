@@ -2,8 +2,13 @@ scriptencoding utf-8
 
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
+" DEPRECATED: use wilder#render#draw_candidate()
 function! wilder#render#draw_x(ctx, result, i) abort
-  let l:x = a:result.value[a:i]
+  return wilder#render#draw_candidate(a:ctx, a:result, a:i)
+endfunction
+
+function! wilder#render#draw_candidate(ctx, result, i) abort
+  let l:x = wilder#main#get_candidate(a:ctx, a:result, a:i)
 
   if has_key(a:result, 'draw')
     let l:ctx = {

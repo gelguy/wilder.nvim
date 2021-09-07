@@ -68,7 +68,7 @@ function! s:devicons(state, ctx, result) abort
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:x = a:result.value[l:i]
+    let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
 
     if a:state.cache.has_key(l:x)
       let l:icons[l:index] = a:state.cache.get(l:x)

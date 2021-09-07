@@ -598,8 +598,12 @@ function! wilder#main#step(num_steps) abort
   return "\<Insert>\<Insert>"
 endfunction
 
+function! wilder#main#get_candidate(ctx, result, index) abort
+  return a:result.value[a:index]
+endfunction
+
 function! s:get_cmdline_from_candidate(index) abort
-  let l:candidate = s:result.value[a:index]
+  let l:candidate = wilder#main#get_candidate({}, s:result, a:index)
 
   let l:output = l:candidate
 
