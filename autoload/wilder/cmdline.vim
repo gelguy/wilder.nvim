@@ -129,15 +129,6 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     let l:rest = l:arg[len(l:part_to_fnamemodify) :]
     let l:arg = expand(l:part_to_fnamemodify) . l:rest
 
-    " The full path was expanded, show the expanded path here.
-    if empty(l:rest)
-      let l:res.fuzzy_char = ''
-      let l:res.expand_arg = ''
-      let l:res.completions = [l:arg]
-
-      return l:res
-    endif
-
     " Adjust current directory to empty string.
     if l:arg ==# '.'
       let l:arg = ''
