@@ -439,24 +439,7 @@ function! wilder#cmdline#main#do(ctx) abort
     " vim assumes for XFILE, we can ignore arguments other than the last one but
     " this is not necessarily true, we should not do this for NOSPC
     if !and(l:flags, s:NOSPC)
-      let l:last_arg = a:ctx.pos
-
-      " find start of last argument
-      while a:ctx.pos < len(a:ctx.cmdline)
-        let l:char = a:ctx.cmdline[a:ctx.pos]
-
-        if l:char ==# ' ' || l:char ==# "\t"
-          let a:ctx.pos += 1
-          let l:last_arg = a:ctx.pos
-        else
-          if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
-            let a:ctx.pos += 1
-          endif
-          let a:ctx.pos += 1
-        endif
-      endwhile
-
-      let a:ctx.pos = l:last_arg
+      call s:move_pos_to_last_arg(a:ctx)
     endif
   endif
 
@@ -645,6 +628,7 @@ function! wilder#cmdline#main#do(ctx) abort
     return
   elseif a:ctx.cmd ==# 'checkhealth'
     let a:ctx.expand = 'checkhealth'
+    call s:move_pos_to_last_arg(a:ctx)
     return
   elseif a:ctx.cmd ==# 'behave'
     let a:ctx.expand = 'behave'
@@ -720,6 +704,27 @@ function! wilder#cmdline#main#find_last_whitespace(ctx) abort
     endif
     let a:ctx.pos -= 1
   endwhile
+endfunction
+
+function! s:move_pos_to_last_arg(ctx) abort
+  let l:last_arg = a:ctx.pos
+
+  " find start of last argument
+  while a:ctx.pos < len(a:ctx.cmdline)
+    let l:char = a:ctx.cmdline[a:ctx.pos]
+
+    if l:char ==# ' ' || l:char ==# "\t"
+      let a:ctx.pos += 1
+      let l:last_arg = a:ctx.pos
+    else
+      if l:char ==# '\' && a:ctx.pos + 1 < len(a:ctx.cmdline)
+        let a:ctx.pos += 1
+      endif
+      let a:ctx.pos += 1
+    endif
+  endwhile
+
+  let a:ctx.pos = l:last_arg
 endfunction
 
 function! s:is_filec(c) abort
