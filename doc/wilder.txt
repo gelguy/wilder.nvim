@@ -2019,7 +2019,7 @@ wilder#popupmenu_border_theme([{options}])
                 `border`
                 The highlight group for the border.
 
-                Default: 'Pmenu'
+                Default: 'Normal'
 
                 `bottom_border`
                 The highlight group for the bottom border. This is useful for

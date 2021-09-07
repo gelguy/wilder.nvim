@@ -53,7 +53,11 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
   endif
 
   if !has_key(l:with_border.highlights, 'border')
-    let l:with_border.highlights.border = 'Pmenu'
+    let l:with_border.highlights.border = 'Normal'
+  endif
+
+  if !has_key(l:with_border.highlights, 'bottom_border')
+    let l:with_border.highlights.bottom_border = l:with_border.highlights.border
   endif
 
   let l:border_hl = l:with_border.highlights.border
@@ -171,7 +175,7 @@ function! s:make_top_or_bottom_border(ctx, is_top, border_chars) abort
   endif
 
   let l:border_hl = a:ctx.highlights.border
-  let l:middle_hl = a:is_top ? l:border_hl : get(a:ctx.highlights, 'bottom_border', l:border_hl)
+  let l:middle_hl = a:is_top ? l:border_hl : a:ctx.highlights.bottom_border
 
   return [[l:left, l:border_hl], [l:middle_str, l:middle_hl], [l:right, l:border_hl]]
 endfunction
