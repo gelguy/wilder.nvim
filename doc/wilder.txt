@@ -1862,6 +1862,7 @@ wilder#popupmenu_renderer([{options}])
 
             `empty_message`
             Optional~
+            Experimental~
             A String, Function, Dictionary or 0. Used to show a message in the
             popupmenu when there are no candidates. If 0, the popupmenu is
             closed instead.
@@ -2054,8 +2055,14 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
 
             Function:
             A function which takes a {ctx} and the pipeline result {result}
-            and returns a string or a list of
-            |wilder-renderer-highlight-chunk|s.
+            and returns a string or a list of list of
+            |wilder-renderer-highlight-chunk|s e.g.
+            [[['column1', 'hl']], [['column2', 'hl']]], where list[i]
+            represents the i-th row and list[i][j] represents j-th highlight
+            chunk.
+            The function has to ensure the sum of the
+            |strdisplaywidth()| of the <string>s in the highlight chunks is
+            the same across each row.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a
@@ -2289,6 +2296,7 @@ wilder#popupmenu_buffer_flags([{options}])
 
                                 *wilder#popupmenu_empty_message_with_spinner()*
 wilder#popupmenu_empty_message_with_spinner([{options}])
+                                Experimental~
             Returns an object which can be passed to the `empty_message`
             option of |wilder#popupmenu_renderer()|.
 
