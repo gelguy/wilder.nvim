@@ -40,15 +40,18 @@ function! s:new(opts) dict abort
     let self.state.dummy_buf = s:new_buf()
   endif
 
-  let self.state.win = popup_create(self.state.buf, {
-        \ 'line': 1,
-        \ 'col': 1,
-        \ 'fixed': 1,
-        \ 'wrap': 0,
-        \ 'scrollbar': 0,
-        \ 'cursorline': 0,
-        \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
-        \ })
+  if index(popup_list(), self.state.win) == -1
+    let self.state.win = popup_create(self.state.buf, {
+          \ 'line': 1,
+          \ 'col': 1,
+          \ 'fixed': 1,
+          \ 'wrap': 0,
+          \ 'scrollbar': 0,
+          \ 'cursorline': 0,
+          \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
+          \ })
+    call popup_hide(self.state.win)
+  endif
 endfunction
 
 function! s:new_buf() abort
