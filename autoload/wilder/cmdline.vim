@@ -202,10 +202,17 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   endif
 
   " Append / back to l:head.
-  if !empty(l:head) && l:head !=# l:slash
-    let l:old_len = len(l:head)
+  if !empty(l:head)
+    " Expand env vars.
+    let l:head = expand(l:head)
 
-    let l:head = expand(l:head) . l:slash
+    " Don't add / if there is already an existing / since // is not
+    " simplified - see :h simplify()).
+    if l:head[-1:] !=# l:slash
+      let l:head .= l:slash
+    endif
+
+    let l:head = simplify(l:head)
   endif
 
   let l:res.match_arg = l:tail
