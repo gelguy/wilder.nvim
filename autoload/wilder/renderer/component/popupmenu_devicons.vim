@@ -50,7 +50,7 @@ function! s:devicons(state, ctx, result) abort
 
   let [l:start, l:end] = a:ctx.page
 
-  let l:icons = repeat([0], l:end - l:start + 1)
+  let l:rows = repeat([0], l:end - l:start + 1)
 
   if !has_key(a:state, 'get_icon')
     let a:state.get_icon = s:get_icon_func()
@@ -71,7 +71,7 @@ function! s:devicons(state, ctx, result) abort
     let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
 
     if a:state.cache.has_key(l:x)
-      let l:icons[l:index] = a:state.cache.get(l:x)
+      let l:rows[l:index] = a:state.cache.get(l:x)
 
       let l:i += 1
       continue
@@ -105,12 +105,17 @@ function! s:devicons(state, ctx, result) abort
 
     call a:state.cache.set(l:x, l:chunks)
 
-    let l:icons[l:index] = l:chunks
+    let l:rows[l:index] = l:chunks
 
     let l:i += 1
   endwhile
 
-  return l:icons
+  let l:height = a:ctx.height
+  let l:width = empty(l:rows) ? 0 : wilder#render#chunks_displaywidth(l:rows[0])
+  let l:empty_row = [[repeat(' ', l:width)]]
+  let l:rows += repeat([l:empty_row], l:height - len(l:rows))
+
+  return l:rows
 endfunction
 
 function! s:get_guifg(hl) abort

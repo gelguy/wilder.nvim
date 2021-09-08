@@ -31,8 +31,7 @@ endfunction
 function! s:spinner(state, ctx, result) abort
   call timer_stop(a:state.timer)
 
-  let [l:start, l:end] = a:ctx.page
-  let l:height = l:end - l:start + 1
+  let l:height = a:ctx.height
 
   let [l:frame_number, l:wait_time] = a:state.spinner(a:ctx.done)
 
@@ -53,10 +52,11 @@ function! s:spinner(state, ctx, result) abort
   let l:column_chunks = repeat([[[l:spaces]]], l:height)
 
   let l:hl = get(a:state, 'hl', a:ctx.highlights.default)
+  let l:selected_hl = a:ctx.highlights.selected
   if a:state.align ==# 'bottom'
-    let l:column_chunks[-1] = [[l:frame, l:hl]]
+    let l:column_chunks[-1] = [[l:frame, l:hl, l:selected_hl]]
   else
-    let l:column_chunks[0] = [[l:frame, l:hl]]
+    let l:column_chunks[0] = [[l:frame, l:hl, l:selected_hl]]
   endif
 
   return l:column_chunks

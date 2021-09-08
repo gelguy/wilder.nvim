@@ -2,9 +2,9 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
   let l:border_chars = get(a:opts, 'border', 'single')
   if type(l:border_chars) is v:t_string
     if l:border_chars ==# 'solid'
-      let l:border_chars = [' ', ' ', ' ',
-            \               ' ',      ' ',
-            \               ' ', ' ', ' ']
+      let l:border_chars = ['█', '█', '█',
+            \               '█',      '█',
+            \               '█', '█', '█']
     elseif l:border_chars ==# 'rounded'
       let l:border_chars = ['╭', '─', '╮',
             \               '│',      '│',
@@ -38,9 +38,11 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
     if type(a:opts.empty_message) is v:t_dict
       let l:with_border.empty_message = copy(a:opts.empty_message)
       let l:Value = a:opts.empty_message.value
-      let l:with_border.empty_message.value = {ctx -> s:wrap_empty_message(ctx, l:Value, l:border_chars)}
+      let l:with_border.empty_message.value = {ctx ->
+            \ s:wrap_empty_message(ctx, l:Value, l:border_chars)}
     else
-      let l:with_border.empty_message = {ctx -> s:wrap_empty_message(ctx, a:opts.empty_message, l:border_chars)}
+      let l:with_border.empty_message = {ctx ->
+            \ s:wrap_empty_message(ctx, a:opts.empty_message, l:border_chars)}
     endif
   endif
 
@@ -119,7 +121,7 @@ function! s:wrap_string_or_func_with_border(ctx, result, line, left, right) abor
     let l:result = a:line(l:ctx, a:result)
 
     if empty(l:result)
-      return []
+      return l:result
     endif
 
     if type(l:result) is v:t_string
@@ -129,7 +131,7 @@ function! s:wrap_string_or_func_with_border(ctx, result, line, left, right) abor
     endif
   else
     if empty(a:line)
-      return ''
+      return a:line
     endif
 
     let l:chunks = [[wilder#render#truncate_and_pad(l:width, a:line)]]
@@ -188,27 +190,36 @@ function! s:wrap_empty_message(ctx, message, border_chars) abort
 
   let l:min_width = a:ctx.min_width - l:left_width - l:right_width
   let l:max_width = a:ctx.max_width - l:left_width - l:right_width
+  " min_height and max_height have already accounted for the top and bottom
+  " lines, so we don't have to adjust them.
+  let l:max_height = a:ctx.max_height
+  let l:min_height = a:ctx.min_height
 
-  if type(a:message) is v:t_string
-    let l:message_str = a:message
-    let l:width = strdisplaywidth(l:message_str)
-
-    if l:width > l:max_width
-      let l:message_str = wilder#render#truncate_and_pad(l:max_width, l:message_str)
-    elseif l:width < l:min_width
-      let l:message_str .= repeat(' ', l:min_width - l:width)
-    endif
-
-    let l:empty_message_hl = get(a:ctx.highlights, 'empty_message', 'WarningMsg')
-    let l:chunks = [[l:message_str, l:empty_message_hl]]
-  else
+  let l:Message = a:message
+  if type(l:Message) is v:t_func
     let l:ctx = copy(a:ctx)
     let l:ctx.min_width = l:min_width
     let l:ctx.max_width = l:max_width
+    let l:ctx.min_height = l:min_height
+    let l:ctx.max_height = l:max_height
 
-    let l:chunks = a:message(l:ctx)
+    let l:Message = copy(a:message(l:ctx))
+  endif
+
+  if type(l:Message) is v:t_string
+    let l:message = l:Message
+    let l:message = wilder#render#truncate(l:max_width, l:message)
+    let l:message .= repeat(' ', l:min_width - strdisplaywidth(l:message))
+
+    let l:empty_message_hl = get(a:ctx.highlights, 'empty_message', 'WarningMsg')
+    let l:Message = [[[l:message, l:empty_message_hl]]]
+
+    if l:min_height > 1
+      let l:width = strdisplaywidth(l:message)
+      let l:Message += repeat([[[repeat(' ', l:width)]]], l:min_height - 1)
+    endif
   endif
 
   let l:border_hl = a:ctx.highlights.border
-  return [[l:left, l:border_hl]] + l:chunks + [[l:right, l:border_hl]]
+  return map(l:Message, {_, row -> [[l:left, l:border_hl]] + row + [[l:right, l:border_hl]]})
 endfunction

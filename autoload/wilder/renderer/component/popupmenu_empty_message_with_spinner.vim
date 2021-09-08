@@ -7,10 +7,13 @@ function! wilder#renderer#component#popupmenu_empty_message_with_spinner#(opts) 
   let l:Message = get(a:opts, 'message', ' No candidates found ')
 
   if type(l:Message) is v:t_string
-    let l:align = get(a:opts, 'align', 'right') ==# 'left'
+    let l:align = split(get(a:opts, 'align', 'middle-middle'), '-')
+    let l:vertical = l:align[0]
+    let l:horizontal = l:align[1]
     let l:message = l:Message
 
-    let l:Message = {ctx, spinner_char, spinner_hl -> s:make_empty_message(ctx, l:align, l:message, spinner_char, spinner_hl)}
+    let l:Message = {ctx, spinner_char, spinner_hl ->
+          \ s:make_empty_message(ctx, l:vertical, l:horizontal, l:message, spinner_char, spinner_hl)}
   endif
 
   let l:Spinner = wilder#renderer#component#spinner#({
@@ -58,24 +61,48 @@ function s:message(state, ctx) abort
   return a:state.message(a:ctx, l:frame, l:spinner_hl)
 endfunction
 
-function! s:make_empty_message(ctx, is_left_align, message, spinner_char, spinner_hl) abort
+function! s:make_empty_message(ctx, vertical, horizontal, message, spinner_char, spinner_hl) abort
   let l:min_width = a:ctx.min_width
   let l:max_width = a:ctx.max_width
-
+  let l:min_height = a:ctx.min_height
   let l:spinner_width = strdisplaywidth(a:spinner_char)
-  let l:message = wilder#render#truncate(l:max_width - l:spinner_width - 2, a:message)
-  let l:message .= repeat(' ', l:min_width - strdisplaywidth(l:message) - l:spinner_width - 2)
+
+  let l:message = wilder#render#truncate(l:max_width - l:spinner_width, a:message)
 
   let l:empty_message_hl = a:ctx.highlights.empty_message
-  let l:chunks = [[l:message, l:empty_message_hl]]
+  let l:chunks = [[a:spinner_char, a:spinner_hl], [l:message, l:empty_message_hl]]
 
-  if a:is_left_align
-    call insert(l:chunks, [a:spinner_char, a:spinner_hl])
-    call insert(l:chunks, [' ', l:empty_message_hl])
-  else
-    call add(l:chunks, [a:spinner_char, a:spinner_hl])
-    call add(l:chunks, [' ', l:empty_message_hl])
+  let l:remaining_width = l:min_width - strdisplaywidth(l:message) - l:spinner_width
+  if l:remaining_width > 0
+    if a:horizontal ==# 'middle'
+      let l:chunks = [[repeat(' ', l:remaining_width / 2)]] + l:chunks
+      let l:chunks += [[repeat(' ', (l:remaining_width + 1) / 2)]]
+    elseif a:horizontal ==# 'left'
+      let l:chunks += [[repeat(' ', l:remaining_width)]]
+    else
+      " right
+      let l:chunks = [[repeat(' ', l:remaining_width)]] + l:chunks
+    endif
   endif
 
-  return l:chunks
+  let l:rows = [l:chunks]
+
+  if l:min_height > 1
+    " + 1 for the added space.
+    let l:width = wilder#render#chunks_displaywidth(l:chunks)
+    let l:padding_chunks = [[repeat(' ', l:width)]]
+    let l:min_height_rows = repeat([l:padding_chunks], l:min_height - 1)
+
+    if a:vertical ==# 'middle'
+      let l:rows = repeat([l:padding_chunks], (l:min_height - 1) / 2) + l:rows
+      let l:rows += repeat([l:padding_chunks], l:min_height / 2)
+    elseif a:vertical ==# 'bottom'
+      let l:rows = repeat([l:padding_chunks], l:min_height - 1) + l:rows
+    else
+      " bottom
+      let l:rows += repeat([l:padding_chunks], l:min_height - 1)
+    endif
+  endif
+
+  return l:rows
 endfunction

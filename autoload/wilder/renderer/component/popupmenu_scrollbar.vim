@@ -17,31 +17,31 @@ endfunction
 function! s:scrollbar(state, ctx, result) abort
   let [l:start, l:end] = a:ctx.page
   let l:num_candidates = len(a:result.value)
-  let l:pum_height = l:end - l:start + 1
+  let l:height = a:ctx.height
 
-  if l:pum_height == l:num_candidates
+  if l:num_candidates <= l:height
     if a:state.collapse
       return []
     else
-      return repeat([[a:state.scrollbar_chunk]], l:pum_height)
+      return repeat([[a:state.scrollbar_chunk]], l:height)
     endif
   endif
 
-  let l:thumb_start = float2nr(1.0 * l:start * l:pum_height / l:num_candidates)
-  let l:thumb_size = float2nr(1.0 * l:pum_height * l:pum_height / l:num_candidates) + 1
+  let l:thumb_start = float2nr(1.0 * l:start * l:height / l:num_candidates)
+  let l:thumb_size = float2nr(1.0 * l:height * l:height / l:num_candidates) + 1
   let l:thumb_end = l:thumb_start + l:thumb_size
 
-  " Due to floating point rounding, thumb can exceed pum_height.
+  " Due to floating point rounding, thumb can exceed height.
   " Adjust the thumb back 1 row so that visually the thumb size remains fixed.
   " The position of the thumb will be wrong but the fixed thumb size is more
   " important.
-  if l:thumb_end > l:pum_height
+  if l:thumb_end > l:height
     let l:thumb_start -= 1
     let l:thumb_end -= 1
   endif
 
-  " Adjust case where rounding causes l:thumb_size to equal l:pum_height.
-  if l:thumb_size == l:pum_height
+  " Adjust case where rounding causes l:thumb_size to equal l:height.
+  if l:thumb_size == l:height
     let l:thumb_size -= 1
 
     if l:end < l:num_candidates - 1
@@ -56,7 +56,7 @@ function! s:scrollbar(state, ctx, result) abort
 
   let l:before_thumb_chunks = repeat([[l:scrollbar_chunk]], l:thumb_start)
   let l:thumb_chunks = repeat([[l:thumb_chunk]], l:thumb_size)
-  let l:after_thumb_chunks = repeat([[l:scrollbar_chunk]], l:pum_height - l:thumb_end)
+  let l:after_thumb_chunks = repeat([[l:scrollbar_chunk]], l:height - l:thumb_end)
 
   return l:before_thumb_chunks + l:thumb_chunks + l:after_thumb_chunks
 endfunction

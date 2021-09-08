@@ -67,7 +67,7 @@ function! s:buffer_status(state, ctx, result) abort
   endif
 
   let [l:start, l:end] = a:ctx.page
-  let l:buffer_status = repeat([0], l:end - l:start + 1)
+  let l:rows = repeat([0], l:end - l:start + 1)
 
   let l:hl = get(a:state, 'hl', a:ctx.highlights['default'])
   let l:selected_hl = get(a:state, 'selected_hl', a:ctx.highlights['selected'])
@@ -82,7 +82,7 @@ function! s:buffer_status(state, ctx, result) abort
     let l:key = wilder#main#get_candidate(a:ctx, a:result, l:i)
 
     if a:state.cache.has_key(l:key)
-      let l:buffer_status[l:index] = a:state.cache.get(l:key)
+      let l:rows[l:index] = a:state.cache.get(l:key)
       let l:i += 1
       continue
     endif
@@ -93,7 +93,7 @@ function! s:buffer_status(state, ctx, result) abort
 
     if l:bufnr == -1
       call a:state.cache.set(l:key, l:empty_chunks)
-      let l:buffer_status[l:index] = l:empty_chunks
+      let l:rows[l:index] = l:empty_chunks
       let l:i += 1
       continue
     endif
@@ -111,7 +111,7 @@ function! s:buffer_status(state, ctx, result) abort
       let l:status .= s:get_str(l:flag, l:bufnr, a:state.icons, a:state.spacing)
 
       let l:chunks = [[l:status, l:hl, l:selected_hl]]
-      let l:buffer_status[l:index] = l:chunks
+      let l:rows[l:index] = l:chunks
 
       let l:j += 1
     endwhile
@@ -121,7 +121,12 @@ function! s:buffer_status(state, ctx, result) abort
     let l:i += 1
   endwhile
 
-  return l:buffer_status
+  let l:height = a:ctx.height
+  let l:width = empty(l:rows) ? 0 : wilder#render#chunks_displaywidth(l:rows[0])
+  let l:empty_row = [[repeat(' ', l:width)]]
+  let l:rows += repeat([l:empty_row], l:height - len(l:rows))
+
+  return l:rows
 endfunction
 
 function! s:get_strdisplaywidth(flags, icon_width) abort
