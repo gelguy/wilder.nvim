@@ -1872,10 +1872,11 @@ wilder#popupmenu_renderer([{options}])
             in the `highlights` option will be used.
 
             If a Function, it should take a {ctx} and return either a String
-            or a list of |wilder-renderer-highlight-chunk|s.
+            or a list of list of |wilder-renderer-highlight-chunk|s. Each
+            entry in the list represents a line to be drawn.
 
             The keys of {ctx} are the same as the ones in the `render`
-            key of |wilder-renderer|, with two additional keys:
+            key of |wilder-renderer|, with four additional keys:
 
                 `min_width`
                 The minimum width of the popupmenu.
@@ -1883,9 +1884,17 @@ wilder#popupmenu_renderer([{options}])
                 `max_width`
                 The maximum width of the popupmenu.
 
-            If returning a list, the function has to ensure the sum of the
-            |strdisplaywidth()| of the <string>s in the highlight chunks fits
-            within `min_width` and `max_width` inclusive.
+                `max_height`
+                The maximum height of the popupmenu.
+
+                `min_height`
+                The minimum height of the popupmenu.
+
+            If returning a list, the function has to ensure that the number of
+            rows is less than or equal to `max_height`, and that for each row,
+            the sum of the |strdisplaywidth()| of the <string>s in the
+            highlight chunks fits within `min_width` and `max_width`
+            inclusive.
 
             If the component is a Dictionary, it should contain the following
             keys:
@@ -1914,13 +1923,6 @@ wilder#popupmenu_renderer([{options}])
                 {ctx} contains no keys.
 
                 Default: None
-
-                `dynamic`
-                Optional~
-                Whether the item needs to update even when pipeline is not
-                done.
-
-                Default: 0
 
             The helper method |wilder#popupmenu_empty_message_with_spinner()|
             can be used here.
@@ -2065,10 +2067,19 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
             the same across each row.
 
             The keys of {ctx} are the same as the ones in the `render`
-            key of |wilder-renderer|, with an additional `page` key which is a
-            2 element array [{start}, {end}] indicating the start and end of
-            the candidates currently being drawn. It can be assumed that if
-            this function is called, there is at least 1 candidate.
+            key of |wilder-renderer|, with two additional keys:
+                `page`
+                A 2 element array [{start}, {end}] indicating the start and
+                end of the candidates currently being drawn.
+                The special value [-1, -1] indicates that there are no
+                candidates.
+
+                `height`
+                The number of rows to draw. `height` can exceed the number of
+                candidates shown due to the `min_height` option in the
+                renderer. The function would typically add empty spaces as
+                padding e.g. [[repeat(' ', {width})]] to the rows which are
+                not drawn.
 
             Dictionary:
             A dictionary with the following keys:
@@ -2305,8 +2316,8 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
             Optional~
             A String or a Function which represents the message to show.
 
-            If it is a String, the message will be shown with the spinner
-            added to the left or right depending on the `align` option.
+            If it is a String, the message will be shown with a spinner added
+            to the left.
 
             If it is a Function, it should take a {ctx}, {spinner_char} and
             {spinner_hl} and return a list of
@@ -2332,12 +2343,15 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
 
             `align`
             Optional~
-            'left' or 'right' depending on where the spinner will be added to
-            the message.
+            A string in the form of '{vertical}-{horizontal}' which represents
+            where the message will be aligned in the renderer.
+
+            {vertical} can either be 'top', 'middle' or 'horizontal'.
+            {horizontal} can either be 'left', 'middle' or 'right'.
 
             Only used if the `message` option is a String.
 
-            Default: 'right'
+            Default: 'middle-middle'
 
             `frames`
             Optional~

@@ -569,17 +569,16 @@ call wilder#set_option('pipeline', [
 
 ### Faster Startup time
 
-Define the pipeline and renderer in an `autocmd` so the initialisation is deferred to the first `CmdlineEnter`.
+Set up a `autocmd` so the initialisation is deferred to the first `CmdlineEnter`:
 
 ```vim
-" Other options should be set outside
-call wilder#setup(...)
-call wilder#set_option(..., ...)
-
 " ++once supported in Nvim 0.4+ and Vim 8.1+
-autocmd CmdlineEnter * ++once call s:wilder_init()
+autocmd CmdlineEnter * ++once call s:wilder_init() | call s:wilder#main#start()
 
 function! s:wilder_init() abort
+  call wilder#setup(...)
+  call wilder#set_option(..., ...)
+
   call wilder#set_option('pipeline', ...)
   call wilder#set_option('renderer', ...)
 endfunction
