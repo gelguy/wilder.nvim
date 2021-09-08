@@ -1,8 +1,23 @@
 function! wilder#setup#(...)
   let l:config = get(a:, 1, {})
 
+  " Duplicate wilder#main#enable_cmdline_enter() and
+  " wilder#main#disable_cmdline_enter() here so we don't have to autoload
+  " autoload/wilder/main.vim.
   if get(l:config, 'enable_cmdline_enter', 1)
-    call wilder#enable_cmdline_enter()
+    if !exists('#WilderCmdlineEnter')
+      augroup WilderCmdlineEnter
+        autocmd!
+        autocmd CmdlineEnter * call wilder#main#start()
+      augroup END
+    endif
+  else
+    if exists('#WilderCmdlineEnter')
+      augroup WilderCmdlineEnter
+        autocmd!
+      augroup END
+      augroup! WilderCmdlineEnter
+    endif
   endif
 
   let l:wildcharm = get(l:config, 'wildcharm', &wildchar)
@@ -11,7 +26,7 @@ function! wilder#setup#(...)
   endif
 
   let l:modes = get(l:config, 'modes', ['/', '?'])
-  call wilder#set_option('modes', l:modes)
+  call wilder#options#set('modes', l:modes)
 
   for [l:key, l:default_mapping, l:command] in [
         \ ['next_key', '<Tab>', 'wilder#in_context() ? wilder#next() :'],

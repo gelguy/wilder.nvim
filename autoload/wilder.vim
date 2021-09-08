@@ -763,9 +763,11 @@ function! s:find_function_script_file(f)
   return l:matches[1]
 endfunction
 
-let s:module_path_cache = wilder#cache#cache()
-
 function! s:get_module_path(file, use_cached)
+  if !exists('s:module_path_cache')
+    let s:module_path_cache = wilder#cache#cache()
+  endif
+
   if !a:use_cached || !s:module_path_cache.has_key(a:file)
     if exists('*nvim_get_runtime_file')
       let l:runtime_files = nvim_get_runtime_file(a:file, 0)
@@ -791,12 +793,18 @@ function! wilder#cpsm_path(...) abort
 endfunction
 
 function! wilder#clear_module_path_cache()
+  if !exists('s:module_path_cache')
+    let s:module_path_cache = wilder#cache#cache()
+  endif
+
   call s:module_path_cache.clear()
 endfunction
 
-let s:project_root_cache = wilder#cache#cache()
-
 function! wilder#project_root(...) abort
+  if !exists('s:project_root_cache')
+    let s:project_root_cache = wilder#cache#cache()
+  endif
+
   if a:0
     let l:root_markers = a:1
   else
@@ -807,6 +815,10 @@ function! wilder#project_root(...) abort
 endfunction
 
 function! wilder#clear_project_root_cache() abort
+  if !exists('s:project_root_cache')
+    let s:project_root_cache = wilder#cache#cache()
+  endif
+
   call s:project_root_cache.clear()
 endfunction
 
