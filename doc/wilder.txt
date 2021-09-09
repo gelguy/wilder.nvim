@@ -1981,6 +1981,7 @@ wilder#popupmenu_renderer([{options}])
 
             Setting `min_width` and `max_width` to the same value will result
             in a fixed width for the popupmenu.
+            `min_width` takes precedence over `max_width`.
 
             Default: '50%'
 
@@ -2002,6 +2003,7 @@ wilder#popupmenu_renderer([{options}])
 
             Setting `min_height` and `max_height` to the same value will
             result in a fixed height for the popupmenu.
+            `min_height` takes precedence over `max_height`.
 
             Default: '50%'
 

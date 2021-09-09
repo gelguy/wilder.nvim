@@ -37,27 +37,19 @@ function! wilder#renderer#popupmenu#(opts) abort
   if type(l:Max_height) is v:t_number && l:Max_height <= 0
     let l:Max_height = 10000
   endif
-  let l:state.get_max_height = type(l:Max_height) is v:t_func ?
-        \ l:Max_height :
-        \ s:get_height_or_width_from_option(l:Max_height, &lines, 10000)
+  let l:state.get_max_height = s:get_height_or_width_from_option(l:Max_height, 10000, 1)
 
   let l:Min_height = get(a:opts, 'min_height', 0)
-  let l:state.get_min_height = type(l:Min_height) is v:t_func ?
-        \ l:Min_height :
-        \ s:get_height_or_width_from_option(l:Min_height, &lines, 0)
+  let l:state.get_min_height = s:get_height_or_width_from_option(l:Min_height, 0, 1)
 
   let l:Max_width = get(a:opts, 'max_width', '50%')
   if type(l:Max_width) is v:t_number && l:Max_width <= 0
     let l:Max_width = 10000
   endif
-  let l:state.get_max_width = type(l:Max_width) is v:t_func ?
-        \ l:Max_width :
-        \ s:get_height_or_width_from_option(l:Max_width, &columns, 10000)
+  let l:state.get_max_width = s:get_height_or_width_from_option(l:Max_width, 10000, 0)
 
   let l:Min_width = get(a:opts, 'min_width', 16)
-  let l:state.get_min_width = type(l:Min_width) is v:t_func ?
-        \ l:Min_width :
-        \ s:get_height_or_width_from_option(l:Min_width, &columns, 0)
+  let l:state.get_min_width = s:get_height_or_width_from_option(l:Min_width, 16, 0)
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:state.left = [' ']
@@ -239,6 +231,10 @@ function! s:make_page(state, ctx, result) abort
   " Otherwise make a new page.
 
   let l:max_height = a:state.get_max_height(a:ctx, a:result)
+  let l:min_height = a:state.get_min_height(a:ctx, a:result)
+  if l:max_height < l:min_height
+    let l:max_height = l:min_height
+  endif
   let l:max_height -= len(a:state.top)
   let l:max_height -= len(a:state.bottom)
   " Assume the worst case scenario that the cursor is on the top row of the
@@ -728,10 +724,9 @@ function! s:make_empty_message(state, ctx, result, empty_essage) abort
   let l:min_height = a:state.get_min_height(a:ctx, a:result)
   let l:max_height = a:state.get_max_height(a:ctx, a:result)
 
-  let l:max_height -= len(a:state.top)
-  let l:max_height -= len(a:state.bottom)
-  let l:min_height -= len(a:state.top)
-  let l:min_height -= len(a:state.bottom)
+  let l:height_used = len(a:state.top) + len(a:state.bottom)
+  let l:max_height -= l:height_used
+  let l:min_height -= l:height_used
 
   if l:max_width < l:min_width
     let l:max_width = l:min_width
@@ -798,18 +793,42 @@ function! s:draw_top_or_bottom_line(line, ctx, result) abort
   return l:Line
 endfunction
 
-function! s:get_height_or_width_from_option(opt, base, default) abort
+function! s:clamp(value, is_height) abort
+  if a:value < 1
+    return 1
+  endif
+
+  let l:max = a:is_height ? (&lines - 1) : &columns
+  if a:value > l:max
+    return l:max
+  endif
+
+  return a:value
+endfunction
+
+function! s:get_height_or_width_from_option(opt, default, is_height) abort
   if type(a:opt) is v:t_number
-    return {-> a:opt}
+    return {-> s:clamp(a:opt, a:is_height)}
+  endif
+
+  if type(a:opt) is v:t_func
+    return {ctx, result -> s:clamp(a:opt(ctx, result), a:is_height)}
   endif
 
   let l:matches = matchlist(a:opt, '^\(\d\+%\)$')
   if len(l:matches) >= 2
     let l:percent = 0.01 * str2nr(l:matches[1])
-    return {-> float2nr(l:percent * a:base)}
+    if a:is_height
+      return {-> s:clamp(float2nr(l:percent * (&lines - 1)), a:is_height)}
+    else
+      return {-> s:clamp(float2nr(l:percent * &columns), a:is_height)}
+    endif
   endif
 
-  return {-> a:default}
+  return {-> s:clamp(a:default, a:is_height)}
+endfunction
+
+function! s:get_width_from_option(opt, default) abort
 endfunction
 
 function! s:iterate_column(f) abort

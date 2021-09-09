@@ -1,5 +1,5 @@
 function! wilder#renderer#component#popupmenu_empty_message#(opts) abort
-  let l:Message = get(a:opts, 'message', 'No candidates found')
+  let l:Message = get(a:opts, 'message', ' No candidates found ')
   if type(l:Message) is v:t_string
     let l:message = l:Message
     let l:Message = {-> l:message}
@@ -23,7 +23,6 @@ function! s:empty_message(state, ctx, result) abort
   let l:min_width = a:ctx.min_width
   let l:max_width = a:ctx.max_width
   let l:min_height = a:ctx.min_height
-
 
   let l:message = a:state.message(a:ctx, a:result)
   if type(l:message) is v:t_string

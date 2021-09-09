@@ -222,5 +222,17 @@ function! s:wrap_empty_message(ctx, result, message, border_chars) abort
   endif
 
   let l:border_hl = a:ctx.highlights.border
-  return map(l:Message, {_, row -> [[l:left, l:border_hl]] + row + [[l:right, l:border_hl]]})
+  if l:left_width && l:right_width
+    return map(l:Message, {_, row -> [[l:left, l:border_hl]] + row + [[l:right, l:border_hl]]})
+  endif
+
+  if l:left_width
+    return map(l:Message, {_, row -> [[l:left, l:border_hl]] + row})
+  endif
+
+  if l:right_width
+    return map(l:Message, {_, row -> row + [[l:right, l:border_hl]]})
+  endif
+
+  return l:Message
 endfunction
