@@ -10,7 +10,7 @@
   - customisable look and appearance
 - Async - uses Python 3 remote plugin for faster and non-blocking searches
 
-![wilder](https://i.imgur.com/FcDnVai.gif)
+![wilder](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/da974d48008b08843d13efb2345fe56d11226023/border.gif)
 
 # Requirements
 
@@ -255,6 +255,37 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }))
 ```
 
+##### Popupmenu borders
+
+Use `wilder#popupmenu_border_theme()` to add a border around the popup menu.
+
+```vim
+call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_border_theme({
+      \ 'highlights': {
+      \   'border': 'Normal',
+      \ },
+      \ 'border': 'rounded',
+      \ })))
+```
+
+##### Fill up entire width like Emacs helm
+
+Set the `min_width` option to `100%`. Set the `min_height` option as you prefer.
+To make the candidates show from top to bottom instead of bottom to top, set `reverse` to `1`.
+
+Note this is temporary, a `wilder#ivy/helm_renderer()` will be added in the future.
+
+```vim
+" Works with or without borders.
+call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_border_theme({
+      \ 'min_width': '100%',
+      \ 'min_height': '50%',
+      \ 'reverse': 0,
+      \ })))
+```
+
+![Helm](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/da974d48008b08843d13efb2345fe56d11226023/helm.png)
+
 ##### Devicons for popupmenu
 
 Uses `ryanoasis/vim-devicons` by default. To use other plugins, the `get_icon` option can be changed.
@@ -411,6 +442,7 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ ':': wilder#popupmenu_renderer({
       \   'highlighter': wilder#lua_fzy_highlighter(),
       \   'left': [
+      \     ' ',
       \     wilder#popupmenu_devicons(),
       \   ],
       \   'right': [
@@ -467,9 +499,12 @@ let s:highlighters = [
       \ has('nvim') ? wilder#lua_fzy_highlighter() : wilder#cpsm_highlighter(),
       \ ]
 
-let s:popupmenu_renderer = wilder#popupmenu_renderer({
+let s:popupmenu_renderer = wilder#popupmenu_renderer(wilder#popupmenu_border_theme({
+      \ 'border': 'rounded',
+      \ 'empty_message': wilder#popupmenu_empty_message_with_spinner(),
       \ 'highlighter': s:highlighters,
       \ 'left': [
+      \   ' ',
       \   wilder#popupmenu_devicons(),
       \   wilder#popupmenu_buffer_flags(),
       \ ],
@@ -477,7 +512,7 @@ let s:popupmenu_renderer = wilder#popupmenu_renderer({
       \   ' ',
       \   wilder#popupmenu_scrollbar(),
       \ ],
-      \ })
+      \ }))
 
 let s:wildmenu_renderer = wilder#wildmenu_renderer({
       \ 'highlighter': s:highlighters,

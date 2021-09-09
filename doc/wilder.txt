@@ -3527,6 +3527,14 @@ Airline/Lightline Theme for Wildmenu Renderer~
           \ })))
 <
 
+Border for Popupmenu Renderer~
+>
+    call wilder#set_option('renderer', wilder#popupmenu_renderer(
+          \ wilder#popupmenu_border_theme({
+          \   'highlighter': wilder#basic_highlighter(),
+          \ })))
+<
+
 Use Popupmenu for : and Wildmenu for /~
 >
     " use wilder#wildmenu_lightline_theme() for Lightline
