@@ -221,7 +221,10 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:path_prefix = l:head ==# l:slash ? '' : l:head
 
   " If arg starts with ~/, show paths relative to ~.
-  if l:arg[0] ==# '~' && match(l:arg[1], l:dir_sep) == 0
+  " head might no longer be under ~ e.g. simplify('~/../..')
+  if l:arg[0] ==# '~' &&
+        \ fnamemodify(l:head, ':~')[0] ==# '~' &&
+        \ match(l:arg[1], l:dir_sep) == 0
     let l:res.relative_to_home_dir = 1
     let l:res.path_prefix = fnamemodify(l:path_prefix, ':~')
   else
