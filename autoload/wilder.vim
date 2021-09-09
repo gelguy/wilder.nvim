@@ -659,6 +659,11 @@ function! wilder#popupmenu_buffer_flags(...) abort
   return wilder#renderer#component#popupmenu_buffer_flags#(l:args)
 endfunction
 
+function! wilder#popupmenu_empty_message(...) abort
+  let l:args = get(a:, 1, {})
+  return wilder#renderer#component#popupmenu_empty_message#(l:args)
+endfunction
+
 function! wilder#popupmenu_empty_message_with_spinner(...) abort
   let l:args = get(a:, 1, {})
   return wilder#renderer#component#popupmenu_empty_message_with_spinner#(l:args)

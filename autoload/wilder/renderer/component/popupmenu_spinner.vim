@@ -6,7 +6,7 @@ function! wilder#renderer#component#popupmenu_spinner#(opts) abort
 
   let l:Spinner = wilder#renderer#component#spinner#({
         \ 'num_frames': len(l:frames),
-        \ 'delay': get(a:opts, 'delay', 50),
+        \ 'delay': get(a:opts, 'delay', 100),
         \ 'interval': get(a:opts, 'interval', 100),
         \ })
 

@@ -1,3 +1,5 @@
+let s:empty_result = {'value': [], 'data': {}}
+
 function! wilder#renderer#popupmenu#(opts) abort
   let l:highlights = copy(get(a:opts, 'highlights', {}))
   let l:state = {
@@ -31,20 +33,31 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'empty_message_first_draw_timer': -1,
         \ }
 
-  let l:max_height = get(a:opts, 'max_height', '50%')
-  if type(l:max_height) is v:t_number && l:max_height <= 0
-    let l:max_height = 10000
+  let l:Max_height = get(a:opts, 'max_height', '50%')
+  if type(l:Max_height) is v:t_number && l:Max_height <= 0
+    let l:Max_height = 10000
   endif
-  let l:state.get_max_height = s:get_height_or_width_from_option(l:max_height, &lines, 10000)
+  let l:state.get_max_height = type(l:Max_height) is v:t_func ?
+        \ l:Max_height :
+        \ s:get_height_or_width_from_option(l:Max_height, &lines, 10000)
 
-  let l:min_height = get(a:opts, 'min_height', 0)
-  let l:state.get_min_height = s:get_height_or_width_from_option(l:min_height, &lines, 0)
+  let l:Min_height = get(a:opts, 'min_height', 0)
+  let l:state.get_min_height = type(l:Min_height) is v:t_func ?
+        \ l:Min_height :
+        \ s:get_height_or_width_from_option(l:Min_height, &lines, 0)
 
-  let l:max_width = get(a:opts, 'max_width', '50%')
-  let l:state.get_max_width = s:get_height_or_width_from_option(l:max_width, &columns, 10000)
+  let l:Max_width = get(a:opts, 'max_width', '50%')
+  if type(l:Max_width) is v:t_number && l:Max_width <= 0
+    let l:Max_width = 10000
+  endif
+  let l:state.get_max_width = type(l:Max_width) is v:t_func ?
+        \ l:Max_width :
+        \ s:get_height_or_width_from_option(l:Max_width, &columns, 10000)
 
-  let l:min_width = get(a:opts, 'min_width', 16)
-  let l:state.get_min_width = s:get_height_or_width_from_option(l:min_width, &columns, 0)
+  let l:Min_width = get(a:opts, 'min_width', 16)
+  let l:state.get_min_width = type(l:Min_width) is v:t_func ?
+        \ l:Min_width :
+        \ s:get_height_or_width_from_option(l:Min_width, &columns, 0)
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:state.left = [' ']
@@ -126,7 +139,7 @@ function! s:render(state, ctx, result) abort
         \ 0 :
         \ l:page[1] - l:page[0] + 1
 
-  let l:min_height = a:state.get_min_height()
+  let l:min_height = a:state.get_min_height(a:ctx, a:result)
   let l:min_height -= len(a:state.top)
   let l:min_height -= len(a:state.bottom)
   if l:height < l:min_height
@@ -225,7 +238,7 @@ function! s:make_page(state, ctx, result) abort
 
   " Otherwise make a new page.
 
-  let l:max_height = a:state.get_max_height()
+  let l:max_height = a:state.get_max_height(a:ctx, a:result)
   let l:max_height -= len(a:state.top)
   let l:max_height -= len(a:state.bottom)
   " Assume the worst case scenario that the cursor is on the top row of the
@@ -286,9 +299,9 @@ function! s:render_lines(state, ctx, result) abort
     let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
     let l:lines = l:reverse ? reverse(l:lines) : l:lines
   else
-    let l:lines = s:make_empty_message(a:state, a:ctx, a:state.empty_message)
+    let l:lines = s:make_empty_message(a:state, a:ctx, a:result, a:state.empty_message)
     let l:width = empty(l:lines) ?
-          \ a:state.get_min_width() - len(a:state.top) - len(a:state.bottom) :
+          \ a:state.get_min_width(a:ctx, a:result) :
           \ wilder#render#chunks_displaywidth(l:lines[0])
   endif
 
@@ -405,17 +418,17 @@ function! s:render_lines(state, ctx, result) abort
   call wilder#renderer#redraw(a:state.apply_incsearch_fix)
 endfunction
 
-function! s:get_error_dimensions(state, error)
+function! s:get_error_dimensions(state, ctx, error)
   let l:width = strdisplaywidth(a:error)
   let l:height = 1
 
-  let l:max_width = a:state.get_max_width()
+  let l:max_width = a:state.get_max_width(a:ctx, s:empty_result)
   if l:width > l:max_width
     let l:height = float2nr(ceil(1.0 * l:width / l:max_width))
     let l:width = l:max_width
   endif
 
-  let l:max_height = a:state.get_max_height()
+  let l:max_height = a:state.get_max_height(a:ctx, s:empty_result)
   if l:height > l:max_height
     let l:height = l:max_height
   endif
@@ -470,8 +483,8 @@ function! s:make_lines(state, ctx, result) abort
     let l:i += 1
   endwhile
 
-  let l:max_width = a:state.get_max_width()
-  let l:min_width = a:state.get_min_width()
+  let l:max_width = a:state.get_max_width(a:ctx, a:result)
+  let l:min_width = a:state.get_min_width(a:ctx, a:result)
 
   " Try to fit the longest line seen so far, if possible.
   let l:expected_width = min([
@@ -497,9 +510,7 @@ function! s:make_lines(state, ctx, result) abort
       let l:ellipsis = a:state.ellipsis
       let l:ellipsis_width = strdisplaywidth(l:ellipsis)
 
-      let l:to_truncate = l:total_width - l:expected_width + l:ellipsis_width
-
-      let l:chunks_width -= l:to_truncate
+      let l:chunks_width = l:expected_width - l:ellipsis_width
       let l:chunks = wilder#render#truncate_chunks(l:chunks_width, l:chunks)
 
       call add(l:chunks, [l:ellipsis])
@@ -688,7 +699,7 @@ function! s:draw_error(state, ctx) abort
   call a:state.api.show()
 
   let l:error = wilder#render#to_printable(a:ctx.error)
-  let [l:height, l:width] = s:get_error_dimensions(a:state, l:error)
+  let [l:height, l:width] = s:get_error_dimensions(a:state, a:ctx, l:error)
 
   let l:cmdheight = wilder#renderer#get_cmdheight()
   let l:row = &lines - l:cmdheight - l:height
@@ -706,16 +717,16 @@ function! s:draw_error(state, ctx) abort
   redraw
 endfunction
 
-function! s:make_empty_message(state, ctx, empty_essage) abort
+function! s:make_empty_message(state, ctx, result, empty_essage) abort
   let l:Empty_message = a:state.empty_message
   if type(l:Empty_message) is v:t_dict
     let l:Empty_message = l:Empty_message.value
   endif
 
-  let l:min_width = a:state.get_min_width()
-  let l:max_width = a:state.get_max_width()
-  let l:min_height = a:state.get_min_height()
-  let l:max_height = a:state.get_max_height()
+  let l:min_width = a:state.get_min_width(a:ctx, a:result)
+  let l:max_width = a:state.get_max_width(a:ctx, a:result)
+  let l:min_height = a:state.get_min_height(a:ctx, a:result)
+  let l:max_height = a:state.get_max_height(a:ctx, a:result)
 
   let l:max_height -= len(a:state.top)
   let l:max_height -= len(a:state.bottom)
@@ -737,7 +748,7 @@ function! s:make_empty_message(state, ctx, empty_essage) abort
     let l:ctx.min_height = l:min_height
     let l:ctx.max_height = l:max_height
 
-    let l:Empty_message = l:Empty_message(l:ctx)
+    let l:Empty_message = l:Empty_message(l:ctx, a:result)
   endif
 
   if type(l:Empty_message) is v:t_string

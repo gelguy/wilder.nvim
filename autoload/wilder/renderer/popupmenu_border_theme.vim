@@ -38,11 +38,11 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
     if type(a:opts.empty_message) is v:t_dict
       let l:with_border.empty_message = copy(a:opts.empty_message)
       let l:Value = a:opts.empty_message.value
-      let l:with_border.empty_message.value = {ctx ->
-            \ s:wrap_empty_message(ctx, l:Value, l:border_chars)}
+      let l:with_border.empty_message.value = {ctx, result ->
+            \ s:wrap_empty_message(ctx, result, l:Value, l:border_chars)}
     else
-      let l:with_border.empty_message = {ctx ->
-            \ s:wrap_empty_message(ctx, a:opts.empty_message, l:border_chars)}
+      let l:with_border.empty_message = {ctx, result ->
+            \ s:wrap_empty_message(ctx, result, a:opts.empty_message, l:border_chars)}
     endif
   endif
 
@@ -182,7 +182,7 @@ function! s:make_top_or_bottom_border(ctx, is_top, border_chars) abort
   return [[l:left, l:border_hl], [l:middle_str, l:middle_hl], [l:right, l:border_hl]]
 endfunction
 
-function! s:wrap_empty_message(ctx, message, border_chars) abort
+function! s:wrap_empty_message(ctx, result, message, border_chars) abort
   let l:left = a:border_chars[3]
   let l:right = a:border_chars[4]
   let l:left_width = strdisplaywidth(l:left)
@@ -203,7 +203,7 @@ function! s:wrap_empty_message(ctx, message, border_chars) abort
     let l:ctx.min_height = l:min_height
     let l:ctx.max_height = l:max_height
 
-    let l:Message = copy(a:message(l:ctx))
+    let l:Message = copy(a:message(l:ctx, a:result))
   endif
 
   if type(l:Message) is v:t_string

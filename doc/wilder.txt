@@ -1871,13 +1871,13 @@ wilder#popupmenu_renderer([{options}])
             padded to reach the popupmenu width. The `empty_message` highlight
             in the `highlights` option will be used.
 
-            If a Function, it should take a {ctx} and return either a String
-            or a list of list of |wilder-renderer-highlight-chunk|s. Each
-            entry in the list represents a line to be drawn.
+            If a Function, it should take a {ctx} and {result} and return
+            either a String or a list of list of
+            |wilder-renderer-highlight-chunk|s. Each entry in the list
+            represents a line to be drawn. {ctx} and {result} are the
+            arguments passed to the `render` function of |wilder-renderer|.
 
-            The keys of {ctx} are the same as the ones in the `render`
-            key of |wilder-renderer|, with four additional keys:
-
+            {ctx} has four additional keys:
                 `min_width`
                 The minimum width of the popupmenu.
 
@@ -1924,8 +1924,8 @@ wilder#popupmenu_renderer([{options}])
 
                 Default: None
 
-            The helper method |wilder#popupmenu_empty_message_with_spinner()|
-            can be used here.
+            The helper methods |wilder#popupmenu_empty_message()| and
+            |wilder#popupmenu_empty_message_with_spinner()| can be used here.
 
             Default: 0
 
@@ -1938,35 +1938,82 @@ wilder#popupmenu_renderer([{options}])
 
             Default: 0
 
-            `max_height`
+            `min_width`
             Optional~
-            The maximum height of the popupmenu. Can be a number or a string.
+            A String, Number or Function representing the minimum width of
+            the popupmenu.
+
             If it is a String, it should be in the form of '{percent}%', where
             the value used is the height of the editor * {percent} / 100.
 
-            Setting to 0 indicates no maximum height.
+            If it is a Function, it should take a {ctx} and {result} and
+            return the height as a Number. {ctx} and {result} are the
+            arguments passed to the `render` function of |wilder-renderer|. To
+            check if there is an error from the pipeline, use
+            has_key(ctx,'error').
 
-            Default: '50%'
+            Example:
+>
+            function! s:should_use_full_width(ctx, result)
+              let l:expand = get(a:result.data, 'cmdline.expand', '')
+              return l:expand ==# 'buffer' ||
+                    \ l:expand ==# 'file' ||
+                    \ l:expand ==# 'dir'
+            endfunction
+
+            call wilder#set_option('renderer', wilder#popupmenu_renderer({
+                  \ 'min_width': {ctx, result ->
+                  \     s:should_use_full_width(ctx, result) ? &columns : 16},
+                  \ }))
+<
+            This sets the popupmenu to use the full window width when
+            completing files, directories or buffers.
+
+            Default: 16
 
             `max_width`
             Optional~
-            The maximum width of the popupmenu. Can be a number or a string.
-            If it is a String, it should be in the form of '{percent}%', where
-            the value used is the width of the editor * {percent} / 100.
+            A String, Number or Function representing the maximum width of the
+            popupmenu. See the `min_width` option for more details on how the
+            values are used.
 
             Setting to 0 indicates no maximum width.
 
+            Setting `min_width` and `max_width` to the same value will result
+            in a fixed width for the popupmenu.
+
             Default: '50%'
 
-            `min_width`
+            `min_height`
             Optional~
-            The minimum width of the popupmenu. Can be a number or a string.
-            If it is a String, it should be in the form of '{percent}%', where
-            the value used is the width of the editor * {percent} / 100.
+            A String, Number or Function representing the minimum height of
+            the popupmenu. See the `min_width` option for more details on how
+            the values are used.
 
-            Setting to 0 indicates no minimum width.
+            Default: 0
 
-            Default: 16
+            `max_height`
+            Optional~
+            A String, Number or Function representing the maximum height of
+            the popupmenu. See the `min_width` option for more details on how
+            the values are used.
+
+            Setting to 0 indicates no maximum height.
+
+            Setting `min_height` and `max_height` to the same value will
+            result in a fixed height for the popupmenu.
+
+            Default: '50%'
+
+            `reverse`
+            Optional~
+            If true, the order of the candidates shown is reversed. This means
+            the first candidate will appear at the bottom of the popupmenu.
+
+            Note: This does not affect the lines created by the `top` and
+            `bottom` options - the `top` lines will still be drawn on the top.
+
+            Default: 0
 
             `apply_incsearch_fix`
             Optional~
@@ -2305,8 +2352,8 @@ wilder#popupmenu_buffer_flags([{options}])
 
             Default: The `selected` highlight of the renderer
 
-                                *wilder#popupmenu_empty_message_with_spinner()*
-wilder#popupmenu_empty_message_with_spinner([{options}])
+                                    *wilder#popupmenu_empty_message()*
+wilder#popupmenu_empty_message([{options}])
                                 Experimental~
             Returns an object which can be passed to the `empty_message`
             option of |wilder#popupmenu_renderer()|.
@@ -2316,21 +2363,49 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
             Optional~
             A String or a Function which represents the message to show.
 
-            If it is a String, the message will be shown with a spinner added
-            to the left.
+            If it is a String, the message will be used.
 
-            If it is a Function, it should take a {ctx}, {spinner_char} and
-            {spinner_hl} and return a list of
-            |wilder-renderer-highlight-chunk|s. {spinner_char} is the current
-            frame of the spinner and {spinner_hl} is the highlight to use for
-            the spinner.
+            If it is a Function, it should take a {ctx} and {result} and
+            return a list of |wilder-renderer-highlight-chunk|s which is then
+            used to draw the message.
 
-            {ctx} is the same as the one passed to the `empty_message` option
-            in |wilder#popupmenu_renderer()|.
+            {ctx} and {result} are the same as the one passed to the
+            `empty_message` option in |wilder#popupmenu_renderer()|.
 
-            Note that the `min_width` and `max_width` keys are not adjusted by
-            the width of {spinner_char}, so the function has to take that into
-            account accordingly.
+            Default: ' No candidates found '
+
+            `align`
+            Optional~
+            A String in the form '{vertical}-{horizontal}'. Represents how the
+            message will be aligned in the popupmenu.
+
+            Default: 'middle-middle'
+
+                                *wilder#popupmenu_empty_message_with_spinner()*
+wilder#popupmenu_empty_message_with_spinner([{options}])
+                                Experimental~
+            Returns an object which can be passed to the `empty_message`
+            option of |wilder#popupmenu_renderer()|.
+
+            {options} is the same as the options passed to
+            |wilder#popupmenu_empty_message|, except the `message` option is
+            changed and there are additional keys:
+            `message`
+            Optional~
+            A String or a Function which represents the message to show.
+
+            If it is a String, the message will be shown with the spinner
+            added to the left.
+
+            If it is a Function, it should take a {ctx}, {result},
+            {spinner_char} and {spinner_hl} and return a list of
+            |wilder-renderer-highlight-chunk|s which is then used to draw the
+            message.
+            {spinner_char} is the current frame of the spinner and
+            {spinner_hl} is the highlight to use for the spinner.
+
+            {ctx} and {result} are the same as the one passed to the
+            `empty_message` option in |wilder#popupmenu_renderer()|.
 
             Default: ' No candidates found '
 
@@ -2341,25 +2416,15 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
             Default: The `empty_message` highlight passed to renderer's
                      `highlights` option`
 
-            `align`
-            Optional~
-            A string in the form of '{vertical}-{horizontal}' which represents
-            where the message will be aligned in the renderer.
-
-            {vertical} can either be 'top', 'middle' or 'horizontal'.
-            {horizontal} can either be 'left', 'middle' or 'right'.
-
-            Only used if the `message` option is a String.
-
-            Default: 'middle-middle'
-
             `frames`
             Optional~
             The frames to use for the spinner. Can be either a string or a
             list of items. If it is a string, the string is split into
             characters and each character is a frame.
 
-            Default: ['-', '\', '|', '/'']
+            Note the additional space on the left.
+
+            Default: [' -', ' \', ' |', ' /']
 
             `done`
             Optional~
@@ -2367,7 +2432,9 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
             pipeline running, or when the `delay` timeout has not been
             reached.
 
-            Default: '·'
+            Note the additional space on the left.
+
+            Default: ' ·'
 
             `delay`
             Optional~
