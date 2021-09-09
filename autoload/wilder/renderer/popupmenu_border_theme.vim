@@ -34,6 +34,7 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
   let l:with_border.bottom = s:wrap_top_or_bottom(0, l:bottom, l:border_chars)
 
   if has_key(a:opts, 'empty_message') &&
+        \ a:opts.empty_message isnot 0 &&
         \ (!empty(l:border_chars[3]) || !empty(l:border_chars[4]))
     if type(a:opts.empty_message) is v:t_dict
       let l:with_border.empty_message = copy(a:opts.empty_message)
