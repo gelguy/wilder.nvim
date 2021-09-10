@@ -143,7 +143,7 @@ function! s:get_strdisplaywidth(flags, icon_width) abort
       let a:icon_width['1'] = l:bufnr_width
     elseif l:flag ==# ' '
       let l:width += 1
-    else
+    elseif has_key(a:icon_width, l:flag)
       let l:width += a:icon_width[l:flag]
     endif
 
