@@ -485,7 +485,6 @@ function! s:make_lines(state, ctx, result) abort
   " Try to fit the longest line seen so far, if possible.
   let l:expected_width = min([
         \ l:max_width,
-        \ &columns - 1,
         \ a:state.longest_line_width,
         \ ])
   if l:expected_width < l:min_width
@@ -506,17 +505,15 @@ function! s:make_lines(state, ctx, result) abort
       let l:ellipsis = a:state.ellipsis
       let l:ellipsis_width = strdisplaywidth(l:ellipsis)
 
-      let l:chunks_width = l:expected_width - l:ellipsis_width
-      let l:chunks = wilder#render#truncate_chunks(l:chunks_width, l:chunks)
+      let l:left_right_width = l:total_width - l:chunks_width
+      let l:truncated_width = l:expected_width - l:left_right_width - l:ellipsis_width
+      let l:chunks = wilder#render#truncate_chunks(l:truncated_width, l:chunks)
 
       call add(l:chunks, [l:ellipsis])
-      call add(l:chunks, [repeat(' ', l:chunks_width - wilder#render#chunks_displaywidth(l:chunks))])
+      call add(l:chunks, [repeat(' ', l:truncated_width - wilder#render#chunks_displaywidth(l:chunks))])
     elseif l:total_width < l:expected_width
       let l:to_pad = l:expected_width - l:total_width
-
-      " l:chunks might point to the cached version
-      let l:chunks = copy(l:chunks)
-      call add(l:chunks, [repeat(' ', l:to_pad)])
+      let l:chunks += [[repeat(' ', l:to_pad)]]
     endif
 
     let l:lines[l:i] = l:left_column + l:chunks + l:right_column
