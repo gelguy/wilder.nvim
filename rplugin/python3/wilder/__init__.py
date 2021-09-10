@@ -893,7 +893,7 @@ class Wilder(object):
         match = re.search(pattern, string)
 
         if not match or not match.lastindex:
-            return  []
+            return 0
 
         captures = []
         for i in range(1, match.lastindex + 1):

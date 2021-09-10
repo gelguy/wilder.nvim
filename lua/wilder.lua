@@ -35,7 +35,7 @@ local function pcre2_highlight(pattern, str)
 
   local head, tail, err = re:match(str)
   if err or not head then
-    return {}
+    return 0
   end
 
   local chunks = {}
