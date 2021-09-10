@@ -1929,6 +1929,22 @@ wilder#popupmenu_renderer([{options}])
 
             Default: 0
 
+            `empty_message_first_draw_delay`
+            Optional~
+            Experimental~
+            A Number representing the time in milliseconds before drawing the
+            first empty message. When using an async pipeline, the pipline
+            will always return an initial empty result before the actual
+            candidates, which causes a flicker. Delaying the first draw
+            prevents this flicker.
+
+            Note this only delays drawing the empty message, so the drawing of
+            actual results will not be delayed.
+
+            Setting this to 0 causes no delay.
+
+            Default: 100
+
             `winblend`
             Optional~
             Neovim only~
