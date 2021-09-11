@@ -588,7 +588,7 @@ function! s:draw_line(state, ctx, result, i) abort
 
   if !l:is_selected &&
         \ a:state.highlight_cache.has_key(l:str)
-    return a:state.highlight_cache.get(l:str)
+    return copy(a:state.highlight_cache.get(l:str))
   endif
 
   let l:data = get(a:result, 'data', {})
