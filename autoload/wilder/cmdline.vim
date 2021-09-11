@@ -129,15 +129,6 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
     let l:rest = l:arg[len(l:part_to_fnamemodify) :]
     let l:arg = expand(l:part_to_fnamemodify) . l:rest
 
-    " The full path was expanded, show the expanded path here.
-    if empty(l:rest)
-      let l:res.fuzzy_char = ''
-      let l:res.expand_arg = ''
-      let l:res.completions = [l:arg]
-
-      return l:res
-    endif
-
     " Adjust current directory to empty string.
     if l:arg ==# '.'
       let l:arg = ''
@@ -211,10 +202,17 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   endif
 
   " Append / back to l:head.
-  if !empty(l:head) && l:head !=# l:slash
-    let l:old_len = len(l:head)
+  if !empty(l:head)
+    " Expand env vars.
+    let l:head = expand(l:head)
 
-    let l:head = expand(l:head) . l:slash
+    " Don't add / if there is already an existing / since // is not
+    " simplified - see :h simplify()).
+    if l:head[-1:] !=# l:slash
+      let l:head .= l:slash
+    endif
+
+    let l:head = simplify(l:head)
   endif
 
   let l:res.match_arg = l:tail
@@ -223,7 +221,10 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:path_prefix = l:head ==# l:slash ? '' : l:head
 
   " If arg starts with ~/, show paths relative to ~.
-  if l:arg[0] ==# '~' && match(l:arg[1], l:dir_sep) == 0
+  " head might no longer be under ~ e.g. simplify('~/../..')
+  if l:arg[0] ==# '~' &&
+        \ fnamemodify(l:head, ':~')[0] ==# '~' &&
+        \ match(l:arg[1], l:dir_sep) == 0
     let l:res.relative_to_home_dir = 1
     let l:res.path_prefix = fnamemodify(l:path_prefix, ':~')
   else
@@ -649,6 +650,8 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
       let l:function_name = l:user_command.complete_arg
       if l:function_name[:1] ==# 's:'
         let l:function_name = '<SNR>' . l:user_command.script_id . '_' . l:function_name[2:]
+      elseif l:function_name[:4] ==? '<SID>'
+        let l:function_name = '<SNR>' . l:user_command.script_id . '_' . l:function_name[5:]
       endif
 
       let l:Completion_func = function(l:function_name)

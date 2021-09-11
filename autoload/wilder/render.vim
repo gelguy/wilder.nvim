@@ -2,8 +2,13 @@ scriptencoding utf-8
 
 let s:has_strtrans_issue = strdisplaywidth('') != strdisplaywidth(strtrans(''))
 
+" DEPRECATED: use wilder#render#draw_candidate()
 function! wilder#render#draw_x(ctx, result, i) abort
-  let l:x = a:result.value[a:i]
+  return wilder#render#draw_candidate(a:ctx, a:result, a:i)
+endfunction
+
+function! wilder#render#draw_candidate(ctx, result, i) abort
+  let l:x = wilder#main#get_candidate(a:ctx, a:result, a:i)
 
   if has_key(a:result, 'draw')
     let l:ctx = {
@@ -173,21 +178,39 @@ function! wilder#render#to_printable(x) abort
 endfunction
 
 function! wilder#render#truncate(len, x) abort
+  return s:truncate_and_maybe_pad(a:len, a:x, 0)
+endfunction
+
+function! wilder#render#truncate_and_pad(len, x) abort
+  return s:truncate_and_maybe_pad(a:len, a:x, 1)
+endfunction
+
+function! s:truncate_and_maybe_pad(len, x, should_pad) abort
   if a:len <= 0
     return ''
   endif
 
   let l:width = strdisplaywidth(a:x)
-  let l:chars = split(a:x, '\zs')
-  let l:index = len(l:chars) - 1
+  if l:width > a:len
+    let l:chars = split(a:x, '\zs')
+    let l:index = len(l:chars) - 1
 
-  while l:width > a:len && l:index >= 0
-    let l:width -= strdisplaywidth(l:chars[l:index])
+    while l:width > a:len && l:index >= 0
+      let l:width -= strdisplaywidth(l:chars[l:index])
 
-    let l:index -= 1
-  endwhile
+      let l:index -= 1
+    endwhile
 
-  return join(l:chars[:l:index], '')
+    let l:str = join(l:chars[:l:index], '')
+  else
+    let l:str = a:x
+  endif
+
+  if a:should_pad
+    let l:str .= repeat(' ', a:len - l:width)
+  endif
+
+  return l:str
 endfunction
 
 function! wilder#render#truncate_chunks(len, xs) abort

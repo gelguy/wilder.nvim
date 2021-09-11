@@ -1292,7 +1292,7 @@ wilder#wildmenu_renderer([{options}])
 
             The returned list should be a list of lists containing 2, 3 or 4
             elements, in the form of 
-            [{start}, {len} <{accent_hl}, <{selected_accent_hl}>>], where
+            [{start}, {len}, <{accent_hl}, <{selected_accent_hl}>>], where
             {accent_hl} and {selected_accent_hl} are optional.
 
             {start} and {len} define the byte start and byte length of the
@@ -1376,8 +1376,8 @@ wilder#wildmenu_airline_theme([{options}])
 wilder#wildmenu_lightline_theme([{options}])
                                     Wildmenu renderer theme~
             Returns an object which can be passed to
-            |wilder#wildmenu_renderer()| to styles the renderer to look like
-            Airline or Lightline.
+            |wilder#wildmenu_renderer()| which adds styling to make the
+            wildmenu to look like Airline or Lightline.
 
             The theme will use the highlight groups from Airline or Lightline
             and consists of 3 items - the current mode and
@@ -1750,6 +1750,12 @@ wilder#popupmenu_renderer([{options}])
 
                 Default: The `selected` highlight with |underline| and |bold|
 
+                `empty_message`
+                Optional~
+                The highlight group used for the `empty_message` option.
+
+                Default: 'WarningMsg'
+
             `ellipsis`
             Optional~
             The string to appended to a candidate if it is too long. The
@@ -1762,7 +1768,7 @@ wilder#popupmenu_renderer([{options}])
             A list of columns to show on the left side of the popupmenu.
             See |wilder#popupmenu_renderer()-column|s.
 
-            Default: []
+            Default: [' ']
 
             `right`
             Optional~
@@ -1771,12 +1777,173 @@ wilder#popupmenu_renderer([{options}])
 
             Default: [' ', wilder#popupmenu_scrollbar()]
 
+            `top`
+            Optional~
+            A list of components to show on the top of the popupmenu. Each
+            component represents a line to be drawn. A component can be either
+            a String, Function or Dictionary.
+
+            If the component is a String, it is drawn as it is and either
+            truncated or padded to reach the popupmenu width. The `default`
+            highlight in the `highlights` option will be used.
+            Returning an empty string will cause the line to be omitted.
+
+            If the component is a Function, it should take a {ctx} and
+            {result} and return either a String or a list of
+            |wilder-renderer-highlight-chunk|s. {result} is the
+            |wilder-pipeline-result| passed to the renderer.
+
+            The keys of {ctx} are the same as the ones in the `render`
+            key of |wilder-renderer|, with two additional keys:
+
+                `page`
+                A 2 element array [{start}, {end}] indicating the start and
+                end of the candidates currently being drawn. [-1, -1]
+                indicates that there are no candidates.
+
+                `width`
+                The width of the popupmenu.
+
+            If returning a list, the function has to ensure the sum of the
+            |strdisplaywidth()| of the <string>s in the highlight chunks is
+            equal to `width`.
+            Returning an empty list will cause the line to be omitted.
+
+            If the component is a Dictionary, it should contain the following
+            keys:
+
+                `value`
+                Mandatory~
+                A string or a function. See above String and Function types
+                for more details.
+
+                `pre_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder starts, or when wilder becomes unhidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `post_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder stops, or when wilder becomes hidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `dynamic`
+                Optional~
+                Whether the item needs to update even when pipeline is not
+                done.
+
+                Default: 0
+
+            Default: []
+
+            `bottom`
+            Optional~
+            A list of components to show on the bottom of the popupmenu.
+            See the `top` option for more details.
+
+            Default: []
+
             `highlighter`
             Optional~
 
             See the `highlighter` key of |wilder#wildmenu_renderer()|.
 
             Default: []
+
+            `empty_message`
+            Optional~
+            Experimental~
+            A String, Function, Dictionary or 0. Used to show a message in the
+            popupmenu when there are no candidates. If 0, the popupmenu is
+            closed instead.
+
+            If a String, the string is drawn as it is and either truncated or
+            padded to reach the popupmenu width. The `empty_message` highlight
+            in the `highlights` option will be used.
+
+            If a Function, it should take a {ctx} and {result} and return
+            either a String or a list of list of
+            |wilder-renderer-highlight-chunk|s. Each entry in the list
+            represents a line to be drawn. {ctx} and {result} are the
+            arguments passed to the `render` function of |wilder-renderer|.
+
+            {ctx} has four additional keys:
+                `min_width`
+                The minimum width of the popupmenu.
+
+                `max_width`
+                The maximum width of the popupmenu.
+
+                `max_height`
+                The maximum height of the popupmenu.
+
+                `min_height`
+                The minimum height of the popupmenu.
+
+            If returning a list, the function has to ensure that the number of
+            rows is less than or equal to `max_height`, and that for each row,
+            the sum of the |strdisplaywidth()| of the <string>s in the
+            highlight chunks fits within `min_width` and `max_width`
+            inclusive.
+
+            If the component is a Dictionary, it should contain the following
+            keys:
+
+                `value`
+                Mandatory~
+                A string or a function. See above String and Function types
+                for more details.
+
+                `pre_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder starts, or when wilder becomes unhidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+                `post_hook`
+                Optional~
+                A function which takes a {ctx}. This function is called when
+                wilder stops, or when wilder becomes hidden. See
+                |wilder-hidden|.
+
+                {ctx} contains no keys.
+
+                Default: None
+
+            The helper methods |wilder#popupmenu_empty_message()| and
+            |wilder#popupmenu_empty_message_with_spinner()| can be used here.
+
+            Default: 0
+
+            `empty_message_first_draw_delay`
+            Optional~
+            Experimental~
+            A Number representing the time in milliseconds before drawing the
+            first empty message. When using an async pipeline, the pipline
+            will always return an initial empty result before the actual
+            candidates, which causes a flicker. Delaying the first draw
+            prevents this flicker.
+
+            Note this only delays drawing the empty message, so the drawing of
+            actual results will not be delayed.
+
+            Setting this to 0 causes no delay.
+
+            Default: 100
 
             `winblend`
             Optional~
@@ -1787,35 +1954,84 @@ wilder#popupmenu_renderer([{options}])
 
             Default: 0
 
-            `max_height`
+            `min_width`
             Optional~
-            The maximum height of the popupmenu. Can be a number or a string.
+            A String, Number or Function representing the minimum width of
+            the popupmenu.
+
             If it is a String, it should be in the form of '{percent}%', where
             the value used is the height of the editor * {percent} / 100.
 
-            Setting to 0 indicates no maximum height.
+            If it is a Function, it should take a {ctx} and {result} and
+            return the height as a Number. {ctx} and {result} are the
+            arguments passed to the `render` function of |wilder-renderer|. To
+            check if there is an error from the pipeline, use
+            has_key(ctx,'error').
 
-            Default: '50%'
+            Example:
+>
+            function! s:should_use_full_width(ctx, result)
+              let l:expand = get(a:result.data, 'cmdline.expand', '')
+              return l:expand ==# 'buffer' ||
+                    \ l:expand ==# 'file' ||
+                    \ l:expand ==# 'dir'
+            endfunction
+
+            call wilder#set_option('renderer', wilder#popupmenu_renderer({
+                  \ 'min_width': {ctx, result ->
+                  \     s:should_use_full_width(ctx, result) ? &columns : 16},
+                  \ }))
+<
+            This sets the popupmenu to use the full window width when
+            completing files, directories or buffers.
+
+            Default: 16
 
             `max_width`
             Optional~
-            The maximum width of the popupmenu. Can be a number or a string.
-            If it is a String, it should be in the form of '{percent}%', where
-            the value used is the width of the editor * {percent} / 100.
+            A String, Number or Function representing the maximum width of the
+            popupmenu. See the `min_width` option for more details on how the
+            values are used.
 
             Setting to 0 indicates no maximum width.
 
+            Setting `min_width` and `max_width` to the same value will result
+            in a fixed width for the popupmenu.
+            `min_width` takes precedence over `max_width`.
+
             Default: '50%'
 
-            `min_width`
+            `min_height`
             Optional~
-            The minimum width of the popupmenu. Can be a number or a string.
-            If it is a String, it should be in the form of '{percent}%', where
-            the value used is the width of the editor * {percent} / 100.
+            A String, Number or Function representing the minimum height of
+            the popupmenu. See the `min_width` option for more details on how
+            the values are used.
 
-            Setting to 0 indicates no minimum width.
+            Default: 0
 
-            Default: 16
+            `max_height`
+            Optional~
+            A String, Number or Function representing the maximum height of
+            the popupmenu. See the `min_width` option for more details on how
+            the values are used.
+
+            Setting to 0 indicates no maximum height.
+
+            Setting `min_height` and `max_height` to the same value will
+            result in a fixed height for the popupmenu.
+            `min_height` takes precedence over `max_height`.
+
+            Default: '50%'
+
+            `reverse`
+            Optional~
+            If true, the order of the candidates shown is reversed. This means
+            the first candidate will appear at the bottom of the popupmenu.
+
+            Note: This does not affect the lines created by the `top` and
+            `bottom` options - the `top` lines will still be drawn on the top.
+
+            Default: 0
 
             `apply_incsearch_fix`
             Optional~
@@ -1826,6 +2042,70 @@ wilder#popupmenu_renderer([{options}])
 
             Default: has('nvim')
 
+                                    *wilder#popupmenu_border_theme()*
+wilder#popupmenu_border_theme([{options}])
+                                    Popupmenu renderer theme~
+                                    Experimental~
+            Returns an object which can be passed to
+            |wilder#popupmenu_renderer()| to apply a border around the
+            popupmenu.
+
+            {options} is identical to the argument of
+            |wilder#popupmenu_renderer()| with the following differences:
+
+            `border`
+            A list containing 8 characters. These will be used to draw the
+            border around the popupmenu.
+
+            The list is better represented as
+>
+                ['┌', '─', '┐',
+                 '│',      '│',
+                 '└', '─', '┘']
+<
+            which makes it clearer what each character corresponds to.
+
+            If the top row consists entirely of empty strings, the top border
+            is not drawn. The same applies to the bottom row for the bottom
+            border.
+            The side borders can be empty strings which would omit the left or
+            right border respectively. Note that this does not omit the corner
+            characters.
+
+            To fully omit the left border, use
+>
+                ['', '─', '┐',
+                 '',      '│',
+                 '', '─', '┘']
+<
+            The same applies to the right border.
+
+            The special string values 'single', 'rounded', 'double' and
+            'solid' provide in-built borders similar to the `border` option in
+            |nvim_open_win()|. The 'shadow' value is not supported.
+
+            Default: 'single'
+
+            The `highlight` object accepts 2 new keys:
+                `border`
+                The highlight group for the border.
+
+                Default: 'Normal'
+
+                `bottom_border`
+                The highlight group for the bottom border. This is useful for
+                some colorschemes where the default border highlight causes
+                the bottom border to stand out.
+
+                Default: the `border` highlight
+
+            Example:
+>
+            call wilder#set_option('renderer', wilder#popupmenu_renderer(
+                  \ wilder#popupmenu_border_theme({
+                  \   'highlights': {'border': 'FloatBorder'},
+                  \ })))
+<
 
                                     *wilder#popupmenu_renderer()-column*
 For |wilder#popupmenu_renderer()|, columns can be of the following types:
@@ -1838,24 +2118,33 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
             right of the popupmenu.
 
             List:
-            A list of highlight chunks.
-
-            A highlight chunk can be in the form of [{text}], [{text}, {hl}]
-            or [{text}, {default_hl}, {selected_hl}]. For [{text}], the
-            default and selected highlights of the renderer will be used. For
-            [{text}, {hl}], {hl} will be used for both default and selected
-            states.
+            A list of |wilder-renderer-highlight-chunk|s.
 
             Function:
             A function which takes a {ctx} and the pipeline result {result}
-            and returns a string or a list of highlight chunks. See the List
-            section above for the structure of highlight chunks.
+            and returns a string or a list of list of
+            |wilder-renderer-highlight-chunk|s e.g.
+            [[['column1', 'hl']], [['column2', 'hl']]], where list[i]
+            represents the i-th row and list[i][j] represents j-th highlight
+            chunk.
+            The function has to ensure the sum of the
+            |strdisplaywidth()| of the <string>s in the highlight chunks is
+            the same across each row.
 
             The keys of {ctx} are the same as the ones in the `render`
-            key of |wilder-renderer|, with an additional `page` key which is a
-            2 element array [{start}, {end}] indicating the start and end of
-            the candidates currently being drawn. It can be assumed that if
-            this function is called, there is at least 1 candidate.
+            key of |wilder-renderer|, with two additional keys:
+                `page`
+                A 2 element array [{start}, {end}] indicating the start and
+                end of the candidates currently being drawn.
+                The special value [-1, -1] indicates that there are no
+                candidates.
+
+                `height`
+                The number of rows to draw. `height` can exceed the number of
+                candidates shown due to the `min_height` option in the
+                renderer. The function would typically add empty spaces as
+                padding e.g. [[repeat(' ', {width})]] to the rows which are
+                not drawn.
 
             Dictionary:
             A dictionary with the following keys:
@@ -1921,6 +2210,13 @@ wilder#popupmenu_scrollbar([{options}]
             The highlight to use for the scrollbar.
 
             Default: 'PmenuSbar'
+
+            `collapse`
+            Optional~
+            If true, the scrollbar is hidden when the candidates fit in the
+            popupmenu. Otherwise the scrollbar will always be visible.
+
+            Default: 1
 
                                     *wilder#popupmenu_spinner()*
 wilder#popupmenu_spinner([{options}])
@@ -2001,6 +2297,18 @@ wilder#popupmenu_devicons([{options}])
 
             Default: [0, 1]
 
+            `combine_selected_hl`
+            Optional~
+            If true, `get_hl` is used to create highlights for the icons when
+            the respective candidate is selected. If this is false, the
+            `selected` highlight passed to the renderer's `highlight` option
+            is used.
+
+            By default this is false since for some colorschemes, the
+            |hl-PmenuSel| highlight might conflict with the icon highlight.
+
+            Default: 0
+
                                     *wilder#popupmenu_buffer_flags()*
 wilder#popupmenu_buffer_flags([{options}])
                                     wilder#popupmenu_renderer() column~
@@ -2062,6 +2370,122 @@ wilder#popupmenu_buffer_flags([{options}])
 
             Default: The `selected` highlight of the renderer
 
+                                    *wilder#popupmenu_empty_message()*
+wilder#popupmenu_empty_message([{options}])
+                                Experimental~
+            Returns an object which can be passed to the `empty_message`
+            option of |wilder#popupmenu_renderer()|.
+
+            {options} is a dictionary with keys:
+            `message`
+            Optional~
+            A String or a Function which represents the message to show.
+
+            If it is a String, the message will be used.
+
+            If it is a Function, it should take a {ctx} and {result} and
+            return a list of |wilder-renderer-highlight-chunk|s which is then
+            used to draw the message.
+
+            {ctx} and {result} are the same as the one passed to the
+            `empty_message` option in |wilder#popupmenu_renderer()|.
+
+            Default: ' No candidates found '
+
+            `align`
+            Optional~
+            A String in the form '{vertical}-{horizontal}'. Represents how the
+            message will be aligned in the popupmenu.
+
+            Default: 'middle-middle'
+
+                                *wilder#popupmenu_empty_message_with_spinner()*
+wilder#popupmenu_empty_message_with_spinner([{options}])
+                                Experimental~
+            Returns an object which can be passed to the `empty_message`
+            option of |wilder#popupmenu_renderer()|.
+
+            {options} is the same as the options passed to
+            |wilder#popupmenu_empty_message|, except the `message` option is
+            changed and there are additional keys:
+            `message`
+            Optional~
+            A String or a Function which represents the message to show.
+
+            If it is a String, the message will be shown with the spinner
+            added to the left.
+
+            If it is a Function, it should take a {ctx}, {result},
+            {spinner_char} and {spinner_hl} and return a list of
+            |wilder-renderer-highlight-chunk|s which is then used to draw the
+            message.
+            {spinner_char} is the current frame of the spinner and
+            {spinner_hl} is the highlight to use for the spinner.
+
+            {ctx} and {result} are the same as the one passed to the
+            `empty_message` option in |wilder#popupmenu_renderer()|.
+
+            Default: ' No candidates found '
+
+            `spinner_hl`
+            Optional~
+            The highlight group to use for the spinner.
+
+            Default: The `empty_message` highlight passed to renderer's
+                     `highlights` option`
+
+            `frames`
+            Optional~
+            The frames to use for the spinner. Can be either a string or a
+            list of items. If it is a string, the string is split into
+            characters and each character is a frame.
+
+            Note the additional space on the left.
+
+            Default: [' -', ' \', ' |', ' /']
+
+            `done`
+            Optional~
+            The item to display when the pipeline is done, or when there is no
+            pipeline running, or when the `delay` timeout has not been
+            reached.
+
+            Note the additional space on the left.
+
+            Default: ' ·'
+
+            `delay`
+            Optional~
+            The time in milliseconds before the spinner should show.
+
+            Default: 100
+
+            `interval`
+            Optional~
+            The time in milliseconds for each frame.
+
+            Default: 100
+
+                                    *wilder-renderer-highlight-chunk*
+To represent strings with highlights, renderers use a highlight chunk. A
+highlight chunk can be in the form of:
+
+A single element list [<string>]. The string will be highlighted using the
+`default` highlight from the renderer's `highlight` option by default, and
+using the `selected` highlight if the associated line or string is selected.
+
+A two element list [<string>, <highlight>]. The string will be highlighted
+with <highlight>.
+
+A three element list [<string>, <highlight>, <selected_highlight>]. The string
+will be highlighted with <highlight> by default, and using
+<selected_highlight> if the associated line or string is selected.
+
+Note that it is possible for a highlight chunk to be used where the line
+cannot be selected, meaning <selected_highlight> highlight will not be used.
+
+|wilder#wildmenu_renderer()-item|s do not use highlight chunks since its API
+was created before highlight chunks were added.
 
 ==============================================================================
 6. API                              *wilder-API*
@@ -2102,6 +2526,13 @@ wilder#setup([{config}])            *wilder#setup()*
 <
 
             For a no-op, set <fallback> to ''.
+
+            For Neovim 0.3+ and Vim with patchh 8.2.1978, the fallback
+            mappings can be disabled by setting {fallback} to 0.
+
+            Disabling the fallback mapping allows a |<Cmd>| mapping to be used
+            which improves rendering performance slightly as the mappings to
+            be called outside the sandbox (see |:map-expression|).
 
             Default: '<Tab>'
 
@@ -3118,6 +3549,14 @@ Airline/Lightline Theme for Wildmenu Renderer~
           \ wilder#wildmenu_airline_theme({
           \   'highlighter': wilder#basic_highlighter(),
           \   'separator': ' · ',
+          \ })))
+<
+
+Border for Popupmenu Renderer~
+>
+    call wilder#set_option('renderer', wilder#popupmenu_renderer(
+          \ wilder#popupmenu_border_theme({
+          \   'highlighter': wilder#basic_highlighter(),
           \ })))
 <
 

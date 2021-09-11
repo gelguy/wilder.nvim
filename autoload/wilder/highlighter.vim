@@ -255,3 +255,30 @@ function! wilder#highlighter#tag_regexp_highlight(ctx, x, data)
   let l:len = strlen(l:matches[0])
   return [[l:start, l:len]]
 endfunction
+
+function! wilder#highlighter#file_wildcard_highlighter(...) abort
+  if !a:0
+    let l:Highlighter = wilder#basic_highlighter()
+  elseif type(a:1) is v:t_list
+    let l:Highlighter = wilder#highlighter#apply_first(a:1)
+  else
+    let l:Highlighter = a:1
+  endif
+
+  let l:opts = {'highlighter': l:Highlighter}
+
+  return {ctx, x, data -> wilder#highlighter#file_wildcard_highlight(ctx, l:opts, x, data)}
+endfunction
+
+function! wilder#highlighter#file_wildcard_highlight(ctx, opts, x, data) abort
+  if !get(a:data, 'cmdline.has_wildcard', 0) ||
+        \ !has_key(a:data, 'cmdline.arg')
+    return 0
+  endif
+
+  let l:query = substitute(a:data['cmdline.arg'], '*', '', 'g')
+  let l:data = copy(a:data)
+  let l:data.query = l:query
+
+  return a:opts.highlighter(a:ctx, a:x, l:data)
+endfunction

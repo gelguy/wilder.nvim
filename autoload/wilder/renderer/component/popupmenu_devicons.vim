@@ -1,4 +1,4 @@
-function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
+function! wilder#renderer#component#popupmenu_devicons#(opts) abort
   let l:padding = get(a:opts, 'padding', [0, 1])
   let l:state = {
         \ 'session_id': -1,
@@ -6,6 +6,7 @@ function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
         \ 'created_hls': {},
         \ 'left_padding': repeat(' ', l:padding[0]),
         \ 'right_padding': repeat(' ', l:padding[1]),
+        \ 'combine_selected_hl': get(a:opts, 'combine_selected_hl', 0),
         \ }
 
   if has_key(a:opts, 'get_icon')
@@ -20,6 +21,10 @@ function! wilder#renderer#popupmenu_column#devicons#make(opts) abort
 endfunction
 
 function! s:devicons(state, ctx, result) abort
+  if !has_key(a:result, 'data')
+    return ''
+  endif
+
   let l:expand = get(a:result.data, 'cmdline.expand', '')
 
   if l:expand !=# 'file' &&
@@ -45,7 +50,7 @@ function! s:devicons(state, ctx, result) abort
 
   let [l:start, l:end] = a:ctx.page
 
-  let l:icons = repeat([0], l:end - l:start + 1)
+  let l:rows = repeat([0], l:end - l:start + 1)
 
   if !has_key(a:state, 'get_icon')
     let a:state.get_icon = s:get_icon_func()
@@ -63,10 +68,10 @@ function! s:devicons(state, ctx, result) abort
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:x = a:result.value[l:i]
+    let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
 
     if a:state.cache.has_key(l:x)
-      let l:icons[l:index] = a:state.cache.get(l:x)
+      let l:rows[l:index] = a:state.cache.get(l:x)
 
       let l:i += 1
       continue
@@ -84,7 +89,13 @@ function! s:devicons(state, ctx, result) abort
       if !has_key(a:state.created_hls, l:hl)
         let l:guifg = s:get_guifg(l:hl)
         let l:default_hl = s:make_temp_hl(l:hl, a:ctx.highlights['default'], l:guifg)
-        let l:selected_hl = a:ctx.highlights['selected']
+
+        if a:state.combine_selected_hl
+          let l:selected_hl = s:make_temp_hl(l:hl . '_Selected', a:ctx.highlights['selected'], l:guifg)
+        else
+          let l:selected_hl = a:ctx.highlights['selected']
+        endif
+
         let a:state.created_hls[l:hl] = [l:default_hl, l:selected_hl]
       endif
 
@@ -94,12 +105,17 @@ function! s:devicons(state, ctx, result) abort
 
     call a:state.cache.set(l:x, l:chunks)
 
-    let l:icons[l:index] = l:chunks
+    let l:rows[l:index] = l:chunks
 
     let l:i += 1
   endwhile
 
-  return l:icons
+  let l:height = a:ctx.height
+  let l:width = empty(l:rows) ? 0 : wilder#render#chunks_displaywidth(l:rows[0])
+  let l:empty_row = [[repeat(' ', l:width)]]
+  let l:rows += repeat([l:empty_row], l:height - len(l:rows))
+
+  return l:rows
 endfunction
 
 function! s:get_guifg(hl) abort
@@ -158,15 +174,15 @@ function! s:get_hl_func()
   return v:null
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_icon_from_vim_devicons()
+function! wilder#renderer#component#popupmenu_devicons#get_icon_from_vim_devicons()
   return {ctx, name, is_dir -> WebDevIconsGetFileTypeSymbol(name, is_dir)}
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_icon_from_nerdfont_vim()
+function! wilder#renderer#component#popupmenu_devicons#get_icon_from_nerdfont_vim()
   return {ctx, name -> nerdfont#find(name)}
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_icon_from_nvim_web_devicons(opts)
+function! wilder#renderer#component#popupmenu_devicons#get_icon_from_nvim_web_devicons(opts)
   return {ctx, name, is_dir -> s:get_icon_from_nvim_web_devicons(a:opts, name, is_dir)}
 endfunction
 
@@ -181,7 +197,7 @@ function! s:get_icon_from_nvim_web_devicons(opts, name, is_dir)
   return l:icon is v:null ? get(a:opts, 'default_icon', '') : l:icon
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_hl_from_nvim_web_devicons(opts)
+function! wilder#renderer#component#popupmenu_devicons#get_hl_from_nvim_web_devicons(opts)
   if !luaeval("require'nvim-web-devicons'.has_loaded()")
     call luaeval("require'nvim-web-devicons'.setup()")
   endif
@@ -199,7 +215,7 @@ function! s:hl_from_nvim_web_devicons(opts, name, is_dir)
   return hlexists(l:hl) ? l:hl : get(a:opts, 'default_hl', 'DevIconDefault')
 endfunction
 
-function! wilder#renderer#popupmenu_column#devicons#get_hl_from_glyph_palette_vim(opts)
+function! wilder#renderer#component#popupmenu_devicons#get_hl_from_glyph_palette_vim(opts)
   return {ctx, name, is_dir, icon -> s:get_hl_from_glyph_palette_vim(a:opts, ctx, icon)}
 endfunction
 

@@ -1,3 +1,5 @@
+let s:empty_result = {'value': [], 'data': {}}
+
 function! wilder#renderer#popupmenu#(opts) abort
   let l:highlights = copy(get(a:opts, 'highlights', {}))
   let l:state = {
@@ -5,8 +7,19 @@ function! wilder#renderer#popupmenu#(opts) abort
         \   'default': get(a:opts, 'hl', 'Pmenu'),
         \   'selected': get(a:opts, 'selected_hl', 'PmenuSel'),
         \   'error': get(a:opts, 'error_hl', 'ErrorMsg'),
+        \   'empty_message': get(a:opts, 'empty_message_hl', 'WarningMsg'),
         \ }, 'keep'),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
+        \ 'reverse': get(a:opts, 'reverse', 0),
+        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
+        \ 'left_offset': get(a:opts, 'left_offset', 1),
+        \ 'winblend': get(a:opts, 'winblend', 0),
+        \ 'top': get(a:opts, 'top', []),
+        \ 'bottom': get(a:opts, 'bottom', []),
+        \ 'empty_message': get(a:opts, 'empty_message', 0),
+        \ 'empty_message_first_draw_delay': get(a:opts, 'empty_message_first_draw_delay', 100),
+        \
         \ 'page': [-1, -1],
         \ 'buf': -1,
         \ 'win': -1,
@@ -14,69 +27,39 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'highlight_cache': wilder#cache#cache(),
         \ 'run_id': -1,
         \ 'longest_line_width': 0,
-        \ 'reverse': get(a:opts, 'reverse', 0),
-        \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
-        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
         \ 'render_id': -1,
         \ 'active': 0,
+        \ 'is_first_draw': 0,
+        \ 'empty_message_first_draw_timer': -1,
         \ }
 
-  let l:max_width = get(a:opts, 'max_width', '50%')
-  if type(l:max_width) is v:t_number
-    if l:max_width <= 0
-      let l:max_width = 10000
-    endif
-
-    let l:state.get_max_width = {-> l:max_width}
-  else
-    let l:matches = matchlist(l:max_width, '^\(\d\+%\)$')
-    if len(l:matches) >= 2
-      let l:max_width_percent = 0.01 * str2nr(l:matches[1])
-      let l:state.get_max_width = {-> float2nr(l:max_width_percent * &columns)}
-    else
-      let l:state.get_max_width = {-> 10000}
-    endif
+  let l:Max_height = get(a:opts, 'max_height', '50%')
+  if type(l:Max_height) is v:t_number && l:Max_height <= 0
+    let l:Max_height = 10000
   endif
+  let l:state.get_max_height = s:get_height_or_width_from_option(l:Max_height, 10000, 1)
 
-  let l:max_height = get(a:opts, 'max_height', '50%')
-  if type(l:max_height) is v:t_number
-    if l:max_height <= 0
-      let l:max_height = 10000
-    endif
+  let l:Min_height = get(a:opts, 'min_height', 0)
+  let l:state.get_min_height = s:get_height_or_width_from_option(l:Min_height, 0, 1)
 
-    let l:state.get_max_height = {-> l:max_height}
-  else
-    let l:matches = matchlist(l:max_height, '^\(\d\+%\)$')
-    if len(l:matches) >= 2
-      let l:max_height_percent = 0.01 * str2nr(l:matches[1])
-      let l:state.get_max_height = {-> float2nr(l:max_height_percent * &lines)}
-    else
-      let l:state.get_max_height = {-> 10000}
-    endif
+  let l:Max_width = get(a:opts, 'max_width', '50%')
+  if type(l:Max_width) is v:t_number && l:Max_width <= 0
+    let l:Max_width = 10000
   endif
+  let l:state.get_max_width = s:get_height_or_width_from_option(l:Max_width, 10000, 0)
 
-  let l:min_width = get(a:opts, 'min_width', 16)
-  if type(l:min_width) is v:t_number
-    let l:state.get_min_width = {-> l:min_width}
-  else
-    let l:matches = matchlist(l:min_width, '^\(\d\+%\)$')
-    if len(l:matches) >= 2
-      let l:min_width_percent = 0.01 * str2nr(l:matches[1])
-      let l:state.get_min_width = {-> float2nr(l:min_width_percent * &columns)}
-    else
-      let l:state.get_min_width = {-> 0}
-    endif
-  endif
+  let l:Min_width = get(a:opts, 'min_width', 16)
+  let l:state.get_min_width = s:get_height_or_width_from_option(l:Min_width, 16, 0)
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
-    let l:state.left = []
+    let l:state.left = [' ']
     let l:state.right = [' ', wilder#popupmenu_scrollbar()]
   else
     let l:state.left = get(a:opts, 'left', [])
     let l:state.right = get(a:opts, 'right', [])
   endif
 
-  let l:state.dynamic = s:has_dynamic_column(l:state)
+  let l:state.dynamic = s:has_dynamic_component(l:state)
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
@@ -94,6 +77,10 @@ function! wilder#renderer#popupmenu#(opts) abort
           \ 'underline', 'bold')
   endif
 
+  if !has_key(l:state.highlights, 'empty_message')
+    let l:state.highlights.empty_message = 'WarningMsg'
+  endif
+
   if has_key(a:opts, 'highlighter')
     let l:Highlighter = a:opts['highlighter']
   elseif has_key(a:opts, 'apply_highlights')
@@ -107,7 +94,6 @@ function! wilder#renderer#popupmenu#(opts) abort
   endif
 
   let l:state.highlighter = l:Highlighter
-  let l:state.winblend = get(a:opts, 'winblend', 0)
 
   if a:opts.mode ==# 'float'
     let l:state.api = wilder#renderer#nvim_api#()
@@ -123,6 +109,8 @@ function! wilder#renderer#popupmenu#(opts) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
+  call timer_stop(a:state.empty_message_first_draw_timer)
+
   if a:state.run_id != a:ctx.run_id
     let a:state.longest_line_width = 0
     call a:state.draw_cache.clear()
@@ -135,24 +123,23 @@ function! s:render(state, ctx, result) abort
     let a:state.page = [-1, -1]
   endif
 
-  if a:state.page != [-1, -1]
-    if a:state.page[0] > len(a:result.value)
-      let a:state.page = [-1, -1]
-    elseif a:state.page[1] > len(a:result.value)
-      let a:state.page[1] = len(a:result.value) - 1
-    endif
-  endif
-
   let l:page = s:make_page(a:state, a:ctx, a:result)
   let a:ctx.page = l:page
   let a:state.page = l:page
 
-  let a:ctx.highlights = a:state.highlights
+  let l:height = l:page == [-1, -1] ?
+        \ 0 :
+        \ l:page[1] - l:page[0] + 1
 
-  if a:state.page == [-1, -1] && !has_key(a:ctx, 'error')
-    call a:state.api.hide()
-    return
+  let l:min_height = a:state.get_min_height(a:ctx, a:result)
+  let l:min_height -= len(a:state.top)
+  let l:min_height -= len(a:state.bottom)
+  if l:height < l:min_height
+    let l:height = l:min_height
   endif
+
+  let a:ctx.height = l:height
+  let a:ctx.highlights = a:state.highlights
 
   let l:need_timer = a:state.api.need_timer()
 
@@ -165,15 +152,40 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  if !a:ctx.done && !a:state.dynamic
+  if a:state.page == [-1, -1] && a:state.empty_message is 0
+    call a:state.api.hide()
+    return
+  endif
+
+  let l:was_first_draw = a:state.is_first_draw
+  let a:state.is_first_draw = 0
+
+  " Rough hack to prevent empty message from showing for the first draw.
+  " If the pipeline is async, the first draw will always have an empty result.
+  " This delays the empty message from showing to prevent flicker.
+  if l:was_first_draw &&
+        \ a:state.page == [-1, -1] &&
+        \ a:state.empty_message isnot 0 &&
+        \ !a:ctx.done &&
+        \ a:state.empty_message_first_draw_delay > 0
+    let a:state.empty_message_first_draw_timer =
+          \ timer_start(a:state.empty_message_first_draw_delay, {-> wilder#main#draw()})
+    return
+  endif
+
+  " If pipeline is not done and there are no dynamic components, skip drawing.
+  if !a:ctx.done && a:state.page != [-1, -1] && !a:state.dynamic
     return
   endif
 
   let a:state.render_id += 1
 
-  " Always redraw from timer since popupmenu rendering is typically slow
-  let l:render_id = a:state.render_id
-  call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
+  if l:need_timer
+    let l:render_id = a:state.render_id
+    call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
+  else
+    call s:render_lines(a:state, a:ctx, a:result)
+  endif
 endfunction
 
 function! s:make_page(state, ctx, result) abort
@@ -185,6 +197,15 @@ function! s:make_page(state, ctx, result) abort
   let l:selected = a:ctx.selected
   " Adjust -1 (unselected) to show the top of the list.
   let l:selected = l:selected == -1 ? 0 : l:selected
+
+  " Adjust previous page.
+  if l:page != [-1, -1]
+    if l:page[0] > len(a:result.value)
+      let l:page = [-1, -1]
+    elseif l:page[1] > len(a:result.value)
+      let l:page[1] = len(a:result.value) - 1
+    endif
+  endif
 
   if l:page != [-1, -1]
     " Selected is within current page, reuse the page.
@@ -209,36 +230,42 @@ function! s:make_page(state, ctx, result) abort
 
   " Otherwise make a new page.
 
+  let l:max_height = a:state.get_max_height(a:ctx, a:result)
+  let l:min_height = a:state.get_min_height(a:ctx, a:result)
+  if l:max_height < l:min_height
+    let l:max_height = l:min_height
+  endif
+  let l:max_height -= len(a:state.top)
+  let l:max_height -= len(a:state.bottom)
   " Assume the worst case scenario that the cursor is on the top row of the
   " cmdline.
-  let l:max_height = a:state.get_max_height()
-  let l:max_height = min([l:max_height, &lines - &cmdheight]) - 1
+  let l:max_height = min([l:max_height, &lines - &cmdheight - 1])
 
   " Page starts at selected.
   if a:ctx.direction >= 0
     let l:start = l:selected
 
     " Try to include all candidates after selected.
-    let l:height = len(a:result.value) - l:selected - 1
+    let l:height = len(a:result.value) - l:selected
 
     if l:height > l:max_height
       let l:height = l:max_height
     endif
 
-    return [l:start, l:start + l:height]
+    return [l:start, l:start + l:height - 1]
   endif
 
   " Page ends at selected.
   let l:end = l:selected
 
   " Try to include all candidates before selected.
-  let l:height = l:selected - 1
+  let l:height = l:selected
 
   if l:height > l:max_height
     let l:height = l:max_height
   endif
 
-  return [l:end - l:height, l:end]
+  return [l:end - l:height + 1, l:end]
 endfunction
 
 function! s:render_lines_from_timer(render_id, state, ctx, result)
@@ -253,15 +280,62 @@ endfunction
 
 function! s:render_lines(state, ctx, result) abort
   " +1 to account for the cmdline prompt.
-  " -1 to shift left by 1 column for the added padding.
-  let l:pos = get(a:result, 'pos', 0)
+  let l:pos = get(a:result, 'pos', 0) + 1
+  let l:pos -= a:state.left_offset
+  if l:pos < 0
+    let l:pos = 0
+  endif
+
   let l:selected = a:ctx.selected
   let l:reverse = a:state.reverse
 
-  let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
-  let l:lines = l:reverse ? reverse(l:lines) : l:lines
   let [l:page_start, l:page_end] = a:state.page
-  let l:height = l:page_end - l:page_start + 1
+
+  if a:state.page != [-1, -1]
+    let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
+    let l:lines = l:reverse ? reverse(l:lines) : l:lines
+  else
+    let l:lines = s:make_empty_message(a:state, a:ctx, a:result, a:state.empty_message)
+    let l:width = empty(l:lines) ?
+          \ a:state.get_min_width(a:ctx, a:result) :
+          \ wilder#render#chunks_displaywidth(l:lines[0])
+  endif
+
+  let l:ctx = extend({'width': l:width}, a:ctx)
+
+  " height excluding top and bottom
+  let l:lines_height = len(l:lines)
+
+  let l:top_lines = []
+  let l:top_height = 0
+  for l:Top in a:state.top
+    let l:line = s:draw_top_or_bottom_line(l:Top, l:ctx, a:result)
+
+    if empty(l:line)
+      continue
+    endif
+
+    call add(l:top_lines, l:line)
+    let l:top_height += 1
+  endfor
+  let l:lines = l:top_lines + l:lines
+
+  let l:bottom_height = 0
+  for l:Bottom in a:state.bottom
+    let l:line = s:draw_top_or_bottom_line(l:Bottom, l:ctx, a:result)
+
+    if empty(l:line)
+      continue
+    endif
+
+    call add(l:lines, l:line)
+    let l:bottom_height += 1
+  endfor
+
+  if empty(l:lines)
+    call a:state.api.hide()
+    return
+  endif
 
   call a:state.api.show()
 
@@ -277,6 +351,7 @@ function! s:render_lines(state, ctx, result) abort
   endif
 
   let l:cmdheight = wilder#renderer#get_cmdheight()
+  let l:height = len(l:lines)
   let l:row = &lines - l:cmdheight - l:height
 
   call a:state.api.move(l:row, l:col, l:height, l:width)
@@ -298,9 +373,16 @@ function! s:render_lines(state, ctx, result) abort
 
     call a:state.api.set_line(l:i, l:text)
 
-    let l:is_selected = l:reverse ? 
-          \ l:page_start + (len(l:lines) - l:i - 1) == l:selected :
-          \ l:page_start + l:i == l:selected
+    " Don't apply selected for top lines or empty message.
+    if l:page_start == -1 ||
+          \ (!l:reverse && l:i < l:top_height) ||
+          \ (l:reverse && l:i >= l:top_height + l:lines_height)
+      let l:is_selected = 0
+    else
+      let l:is_selected = l:reverse ? 
+            \ l:page_start + (l:height - l:i - l:bottom_height - 1) == l:selected :
+            \ l:page_start + l:i - l:top_height == l:selected
+    endif
 
     let l:start = 0
     for l:chunk in l:chunks
@@ -332,17 +414,17 @@ function! s:render_lines(state, ctx, result) abort
   call wilder#renderer#redraw(a:state.apply_incsearch_fix)
 endfunction
 
-function! s:get_error_dimensions(state, error)
+function! s:get_error_dimensions(state, ctx, error)
   let l:width = strdisplaywidth(a:error)
   let l:height = 1
 
-  let l:max_width = a:state.get_max_width()
+  let l:max_width = a:state.get_max_width(a:ctx, s:empty_result)
   if l:width > l:max_width
     let l:height = float2nr(ceil(1.0 * l:width / l:max_width))
     let l:width = l:max_width
   endif
 
-  let l:max_height = a:state.get_max_height()
+  let l:max_height = a:state.get_max_height(a:ctx, s:empty_result)
   if l:height > l:max_height
     let l:height = l:max_height
   endif
@@ -353,11 +435,9 @@ endfunction
 function! s:make_lines(state, ctx, result) abort
   let l:Highlighter = get(a:state, 'highlighter', [])
 
-  let [l:start, l:end] = a:state.page
-  let l:height = l:end - l:start + 1
+  let l:height = a:ctx.height
 
-  " Add 1 column of padding.
-  let l:left_column_chunks = map(repeat([0], l:height), {-> [[' ']]})
+  let l:left_column_chunks = map(repeat([0], l:height), {-> []})
   call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result, l:height)
 
   let l:right_column_chunks = map(repeat([0], l:height), {-> []})
@@ -369,11 +449,17 @@ function! s:make_lines(state, ctx, result) abort
   let l:widths = repeat([0], l:height)
 
   " Draw each line and calculate the width taken by the chunks.
-  let l:i = l:start
-  while l:i <= l:end
-    let l:line = s:draw_line(a:state, a:ctx, a:result, l:i)
-    let l:left_column = l:left_column_chunks[l:i - l:start]
-    let l:right_column = l:right_column_chunks[l:i - l:start]
+  let [l:start, l:end] = a:state.page
+  let l:i = 0
+  while l:i < l:height
+    let l:index = l:start + l:i
+    if l:index <= l:end
+      let l:line = s:draw_line(a:state, a:ctx, a:result, l:index)
+    else
+      let l:line = []
+    endif
+    let l:left_column = l:left_column_chunks[l:i]
+    let l:right_column = l:right_column_chunks[l:i]
 
     let l:left_width = wilder#render#chunks_displaywidth(l:left_column)
     let l:chunks_width = wilder#render#chunks_displaywidth(l:line)
@@ -387,19 +473,18 @@ function! s:make_lines(state, ctx, result) abort
     endif
 
     let l:index = l:i - l:start
-    let l:raw_lines[l:index] = [l:left_column, l:line, l:right_column]
-    let l:widths[l:index] = [l:chunks_width, l:total_width]
+    let l:raw_lines[l:i] = [l:left_column, l:line, l:right_column]
+    let l:widths[l:i] = [l:chunks_width, l:total_width]
 
     let l:i += 1
   endwhile
 
-  let l:max_width = a:state.get_max_width()
-  let l:min_width = a:state.get_min_width()
+  let l:max_width = a:state.get_max_width(a:ctx, a:result)
+  let l:min_width = a:state.get_min_width(a:ctx, a:result)
 
   " Try to fit the longest line seen so far, if possible.
   let l:expected_width = min([
         \ l:max_width,
-        \ &columns - 1,
         \ a:state.longest_line_width,
         \ ])
   if l:expected_width < l:min_width
@@ -415,25 +500,20 @@ function! s:make_lines(state, ctx, result) abort
     let [l:left_column, l:chunks, l:right_column] = l:raw_lines[l:i]
     let [l:chunks_width, l:total_width] = l:widths[l:i]
 
-    let l:is_selected = a:ctx.selected == l:i + l:start
-
     " Truncate or pad if necessary
     if l:total_width > l:expected_width
       let l:ellipsis = a:state.ellipsis
       let l:ellipsis_width = strdisplaywidth(l:ellipsis)
 
-      let l:to_truncate = l:total_width - l:expected_width + l:ellipsis_width
-
-      let l:chunks_width -= l:to_truncate
-      let l:chunks = wilder#render#truncate_chunks(l:chunks_width, l:chunks)
+      let l:left_right_width = l:total_width - l:chunks_width
+      let l:truncated_width = l:expected_width - l:left_right_width - l:ellipsis_width
+      let l:chunks = wilder#render#truncate_chunks(l:truncated_width, l:chunks)
 
       call add(l:chunks, [l:ellipsis])
+      call add(l:chunks, [repeat(' ', l:truncated_width - wilder#render#chunks_displaywidth(l:chunks))])
     elseif l:total_width < l:expected_width
       let l:to_pad = l:expected_width - l:total_width
-
-      " l:chunks might point to the cached version
-      let l:chunks = copy(l:chunks)
-      call add(l:chunks, [repeat(' ', l:to_pad)])
+      let l:chunks += [[repeat(' ', l:to_pad)]]
     endif
 
     let l:lines[l:i] = l:left_column + l:chunks + l:right_column
@@ -453,11 +533,21 @@ function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
     endif
 
     let l:i = 0
-    while l:i < a:height
+    while l:i < len(l:column)
       let a:column_chunks[l:i] += l:column[l:i]
 
       let l:i += 1
     endwhile
+
+    if l:i < a:height
+      let l:width = wilder#render#chunks_displaywidth(l:column[0])
+
+      while l:i < a:height
+        let a:column_chunks[l:i] += [[repeat(' ', l:width)]]
+
+        let l:i += 1
+      endwhile
+    endif
   endfor
 endfunction
 
@@ -488,7 +578,7 @@ endfunction
 function! s:draw_line(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
-  let l:str = s:draw_x(a:state, a:ctx, a:result, a:i)
+  let l:str = s:draw_candidate(a:state, a:ctx, a:result, a:i)
 
   let l:Highlighter = a:state.highlighter
 
@@ -498,7 +588,7 @@ function! s:draw_line(state, ctx, result, i) abort
 
   if !l:is_selected &&
         \ a:state.highlight_cache.has_key(l:str)
-    return a:state.highlight_cache.get(l:str)
+    return copy(a:state.highlight_cache.get(l:str))
   endif
 
   let l:data = get(a:result, 'data', {})
@@ -525,13 +615,13 @@ function! s:draw_line(state, ctx, result, i) abort
   return l:chunks
 endfunction
 
-function! s:draw_x(state, ctx, result, i) abort
+function! s:draw_candidate(state, ctx, result, i) abort
   let l:use_cache = a:ctx.selected == a:i
   if l:use_cache && a:state.draw_cache.has_key(a:i)
     return a:state.draw_cache.get(a:i)
   endif
 
-  let l:x = wilder#render#draw_x(a:ctx, a:result, a:i)
+  let l:x = wilder#render#draw_candidate(a:ctx, a:result, a:i)
 
   if l:use_cache
     call a:state.draw_cache.set(a:i, l:x)
@@ -551,11 +641,12 @@ function! s:merge_spans(spans) abort
   return [[l:start_byte, l:end_byte - l:start_byte]]
 endfunction
 
-function! s:has_dynamic_column(state) abort
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'dynamic') &&
-          \ l:Column['dynamic']
+function! s:has_dynamic_component(state) abort
+  for l:Component in
+        \ a:state.left + a:state.right + a:state.top + a:state.bottom
+    if type(l:Component) is v:t_dict &&
+          \ has_key(l:Component, 'dynamic') &&
+          \ l:Component['dynamic']
       return 1
     endif
   endfor
@@ -569,25 +660,30 @@ function! s:pre_hook(state, ctx) abort
         \ 'winblend': get(a:state, 'winblend', 0)
         \ })
 
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'pre_hook')
-      call l:Column['pre_hook'](a:ctx)
+  for l:Component in [a:state.empty_message] +
+        \ a:state.left + a:state.right + a:state.top + a:state.bottom
+    if type(l:Component) is v:t_dict &&
+          \ has_key(l:Component, 'pre_hook')
+      call l:Component['pre_hook'](a:ctx)
     endif
   endfor
 
   let a:state.active = 1
+  let a:state.is_first_draw = 1
 endfunction
 
 function! s:post_hook(state, ctx) abort
   call a:state.api.hide()
 
-  for l:Column in a:state.left + a:state.right
-    if type(l:Column) is v:t_dict &&
-          \ has_key(l:Column, 'post_hook')
-      call l:Column['post_hook'](a:ctx)
+  for l:Component in [a:state.empty_message] +
+        \ a:state.left + a:state.right + a:state.top + a:state.bottom
+    if type(l:Component) is v:t_dict &&
+          \ has_key(l:Component, 'post_hook')
+      call l:Component['post_hook'](a:ctx)
     endif
   endfor
+
+  call timer_stop(a:state.empty_message_first_draw_timer)
 
   let a:state.active = 0
 endfunction
@@ -596,7 +692,7 @@ function! s:draw_error(state, ctx) abort
   call a:state.api.show()
 
   let l:error = wilder#render#to_printable(a:ctx.error)
-  let [l:height, l:width] = s:get_error_dimensions(a:state, l:error)
+  let [l:height, l:width] = s:get_error_dimensions(a:state, a:ctx, l:error)
 
   let l:cmdheight = wilder#renderer#get_cmdheight()
   let l:row = &lines - l:cmdheight - l:height
@@ -614,6 +710,124 @@ function! s:draw_error(state, ctx) abort
   redraw
 endfunction
 
+function! s:make_empty_message(state, ctx, result, empty_essage) abort
+  let l:Empty_message = a:state.empty_message
+  if type(l:Empty_message) is v:t_dict
+    let l:Empty_message = l:Empty_message.value
+  endif
+
+  let l:min_width = a:state.get_min_width(a:ctx, a:result)
+  let l:max_width = a:state.get_max_width(a:ctx, a:result)
+  let l:min_height = a:state.get_min_height(a:ctx, a:result)
+  let l:max_height = a:state.get_max_height(a:ctx, a:result)
+
+  let l:height_used = len(a:state.top) + len(a:state.bottom)
+  let l:max_height -= l:height_used
+  let l:min_height -= l:height_used
+
+  if l:max_width < l:min_width
+    let l:max_width = l:min_width
+  endif
+  if l:max_height < l:min_height
+    let l:max_height = l:min_height
+  endif
+
+  if type(l:Empty_message) is v:t_func
+    let l:ctx = copy(a:ctx)
+
+    let l:ctx.min_width = l:min_width
+    let l:ctx.max_width = l:max_width
+    let l:ctx.min_height = l:min_height
+    let l:ctx.max_height = l:max_height
+
+    let l:Empty_message = l:Empty_message(l:ctx, a:result)
+  endif
+
+  if type(l:Empty_message) is v:t_string
+    let l:hl = a:ctx.highlights.empty_message
+    let l:Empty_message = s:make_empty_message_from_string(l:Empty_message, l:min_width, l:max_width, l:min_height, l:hl)
+  endif
+
+  return l:Empty_message
+endfunction
+
+function! s:make_empty_message_from_string(message, min_width, max_width, min_height, hl) abort
+  let l:message = a:message
+
+  let l:message = wilder#render#truncate(a:max_width, l:message)
+  let l:message .= repeat(' ', a:min_width - strdisplaywidth(l:message))
+
+  let l:rows = [[[l:message, a:hl]]]
+
+  if a:min_height > 1
+    let l:width = strdisplaywidth(l:message)
+    let l:rows += repeat([[[repeat(' ', l:width)]]], a:min_height - 1)
+  endif
+
+  return l:rows
+endfunction
+
+function! s:draw_top_or_bottom_line(line, ctx, result) abort
+  let l:width = a:ctx.width
+
+  let l:Line = a:line
+  if type(l:Line) is v:t_dict
+    let l:Line = l:Line.value
+  endif
+
+  if type(l:Line) is v:t_func
+    let l:Line = l:Line(a:ctx, a:result)
+  endif
+
+  if type(l:Line) is v:t_string
+    if empty(l:Line)
+      return l:Line
+    endif
+
+    let l:Line = [[wilder#render#truncate_and_pad(a:ctx.width, l:Line)]]
+  endif
+
+  return l:Line
+endfunction
+
+function! s:clamp(value, is_height) abort
+  if a:value < 1
+    return 1
+  endif
+
+  let l:max = a:is_height ? (&lines - 1) : &columns
+  if a:value > l:max
+    return l:max
+  endif
+
+  return a:value
+endfunction
+
+function! s:get_height_or_width_from_option(opt, default, is_height) abort
+  if type(a:opt) is v:t_number
+    return {-> s:clamp(a:opt, a:is_height)}
+  endif
+
+  if type(a:opt) is v:t_func
+    return {ctx, result -> s:clamp(a:opt(ctx, result), a:is_height)}
+  endif
+
+  let l:matches = matchlist(a:opt, '^\(\d\+%\)$')
+  if len(l:matches) >= 2
+    let l:percent = 0.01 * str2nr(l:matches[1])
+    if a:is_height
+      return {-> s:clamp(float2nr(l:percent * (&lines - 1)), a:is_height)}
+    else
+      return {-> s:clamp(float2nr(l:percent * &columns), a:is_height)}
+    endif
+  endif
+
+  return {-> s:clamp(a:default, a:is_height)}
+endfunction
+
+function! s:get_width_from_option(opt, default) abort
+endfunction
+
 function! s:iterate_column(f) abort
   return {ctx, result -> s:iterate_column(a:f, ctx, result)}
 endfunction
@@ -628,7 +842,7 @@ function! s:iterate_column(f, ctx, result)
   while l:i <= l:end
     let l:index = l:i - l:start
 
-    let l:x = a:result.value[l:i]
+    let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
     let l:line = a:f(a:ctx, l:x, l:data)
 
     if l:line is v:false

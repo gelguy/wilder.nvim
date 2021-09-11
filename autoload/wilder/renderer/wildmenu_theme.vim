@@ -120,34 +120,33 @@ function! s:theme(opts, namespace, hls) abort
           \ ]
   endif
 
-  let l:theme = {
-        \ 'left': [
-        \   {
-        \     'value': [
-        \       wilder#condition(
-        \         {-> getcmdtype() ==# ':'},
-        \         ' COMMAND ',
-        \         ' SEARCH ',
-        \       ),
-        \       wilder#condition(
-        \         {ctx, x -> has_key(ctx, 'error')},
-        \         '!',
-        \         wilder#wildmenu_spinner()
-        \       ), ' '],
-        \     'hl': l:highlights['mode'],
-        \     'dynamic': 1,
-        \   },
-        \   l:separators[0],
-        \   l:separators[1],
-        \   ' ', 
-        \ ],
-        \ 'right': [
-        \   ' ',
-        \   l:separators[2],
-        \   l:separators[3],
-        \   wilder#index({'hl': l:highlights['index']}),
-        \ ],
-        \ }
+  let l:theme = copy(a:opts)
+  let l:theme.left = [
+        \ {
+        \   'value': [
+        \     wilder#condition(
+        \       {-> getcmdtype() ==# ':'},
+        \       ' COMMAND ',
+        \       ' SEARCH ',
+        \     ),
+        \     wilder#condition(
+        \       {ctx, x -> has_key(ctx, 'error')},
+        \       '!',
+        \       wilder#wildmenu_spinner()
+        \     ), ' '],
+        \   'hl': l:highlights['mode'],
+        \   'dynamic': 1,
+        \ },
+        \ l:separators[0],
+        \ l:separators[1],
+        \ ' ', 
+        \ ] + get(a:opts, 'left', [])
+  let l:theme.right = get(a:opts, 'right', []) + [
+        \ ' ',
+        \ l:separators[2],
+        \ l:separators[3],
+        \ wilder#index({'hl': l:highlights['index']}),
+        \ ]
 
-  return extend(l:theme, a:opts)
+  return l:theme
 endfunction

@@ -10,12 +10,6 @@ call extend(s:opts, {
       \ 'noselect': 1,
       \ })
 
-if !has('python3')
-  let s:opts.use_python_remote_plugin = 0
-elseif has('nvim')
-  let s:opts.use_python_remote_plugin = 1
-endif
-
 function! wilder#options#get(...) abort
   if !a:0
     return s:opts
@@ -23,8 +17,14 @@ function! wilder#options#get(...) abort
 
   if a:1 ==# 'use_python_remote_plugin' &&
         \ !has_key(s:opts, 'use_python_remote_plugin')
-    let l:file = findfile('autoload/yarp.vim', &rtp)
-    let s:opts.use_python_remote_plugin = !empty(l:file)
+    if !has('python3')
+      let s:opts.use_python_remote_plugin = 0
+    elseif has('nvim')
+      let s:opts.use_python_remote_plugin = 1
+    else
+      let l:file = findfile('autoload/yarp.vim', &rtp)
+      let s:opts.use_python_remote_plugin = !empty(l:file)
+    endif
   endif
 
   return s:opts[a:1]

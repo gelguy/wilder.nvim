@@ -1,30 +1,23 @@
-function! wilder#renderer#spinner#make(opts) abort
+function! wilder#renderer#component#spinner#(opts) abort
   let l:state = {
         \ 'num_frames': a:opts.num_frames,
         \ 'delay': a:opts.delay,
         \ 'interval': a:opts.interval,
         \ 'index': -1,
         \ 'was_done': 1,
-        \ 'timer': 0,
         \ 'start_time': reltime(),
         \ }
 
-  return {
-        \ 'spin': {ctx, result -> s:spin(l:state, ctx, result)},
-        \ }
+  return {done -> s:spin(l:state, done)}
 endfunction
 
-function! s:spin(state, ctx, result) abort
-  if a:state.timer
-    call timer_stop(a:state.timer)
-    let a:state.timer = 0
-  endif
-
+" Returns [frame_index, wait_time]
+function! s:spin(state, done) abort
   " Result has finished.
-  if a:ctx.done
+  if a:done
     let a:state.was_done = 1
     let a:state.index = -1
-    return a:state.index
+    return [a:state.index, -1]
   endif
 
   " Previous result was finished. Start spinner again.
@@ -45,16 +38,16 @@ function! s:spin(state, ctx, result) abort
     let l:wait_time = a:state.interval - fmod(l:elapsed_minus_delay, a:state.interval) + 1
   endif
 
-  let a:state.timer = timer_start(float2nr(l:wait_time), {-> wilder#main#draw()})
+  let l:wait_time = float2nr(l:wait_time)
 
   if a:state.delay > 0 && l:elapsed < a:state.delay
     let a:state.index = -1
-    return a:state.index
+    return [a:state.index, l:wait_time]
   endif
 
   let l:elapsed_minus_delay = l:elapsed - a:state.delay
   let a:state.index = l:elapsed_minus_delay / a:state.interval
 
   let a:state.index = float2nr(fmod(a:state.index, a:state.num_frames))
-  return a:state.index
+  return [a:state.index, l:wait_time]
 endfunction

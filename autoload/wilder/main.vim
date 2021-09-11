@@ -32,7 +32,7 @@ let s:previous_cmdline = v:null
 " cmdline back to the original one when selected goes back to -1)
 let s:replaced_cmdline = v:null
 " the result from the pipeline
-let s:result = {'value': []}
+let s:result = {'value': [], 'data': {}}
 " the error returned from the pipeline, if any
 let s:error = v:null
 " the index of selection (-1 represents no selection)
@@ -205,7 +205,7 @@ function! wilder#main#stop() abort
   endif
 
   let s:active = 0
-  let s:result = {'value': []}
+  let s:result = {'value': [], 'data': {}}
   let s:selected = -1
   let s:selection_was_made = 0
   let s:clear_previous_renderer_state = 0
@@ -401,7 +401,7 @@ function! wilder#main#on_error(ctx, x) abort
 
   let s:result_run_id = a:ctx.run_id
 
-  let s:result = {'value': []}
+  let s:result = {'value': [], 'data': {}}
   let s:selected = -1
   let s:selection_was_made = 0
   " keep previous completion
@@ -598,8 +598,12 @@ function! wilder#main#step(num_steps) abort
   return "\<Insert>\<Insert>"
 endfunction
 
+function! wilder#main#get_candidate(ctx, result, index) abort
+  return a:result.value[a:index]
+endfunction
+
 function! s:get_cmdline_from_candidate(index) abort
-  let l:candidate = s:result.value[a:index]
+  let l:candidate = wilder#main#get_candidate({}, s:result, a:index)
 
   let l:output = l:candidate
 
@@ -692,7 +696,7 @@ function! wilder#main#accept_completion(auto_select) abort
     " Reset state as we are running a new pipeline
     let s:completion = v:null
     let s:replaced_cmdline = v:null
-    let s:result = {'value': []}
+    let s:result = {'value': [], 'data': {}}
     let s:selected = -1
     let s:selection_was_made = 0
     let s:clear_previous_renderer_state = 1
@@ -740,7 +744,7 @@ function! wilder#main#reject_completion() abort
 
     let s:previous_cmdline = l:cmdline
     let s:completion_from_reject_completion = l:cmdline
-    let s:result = {'value': []}
+    let s:result = {'value': [], 'data': {}}
     let s:selected = -1
     let s:selection_was_made = 0
     let s:clear_previous_renderer_state = 1
