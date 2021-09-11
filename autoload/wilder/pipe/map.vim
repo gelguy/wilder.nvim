@@ -1,4 +1,4 @@
-function! wilder#pipe#map#make(args) abort
+function! wilder#pipe#map#(args) abort
   if len(a:args) == 0
     return {_, x -> []}
   endif

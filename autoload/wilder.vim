@@ -179,19 +179,19 @@ function! wilder#_sleep(t) abort
 endfunction
 
 function! wilder#branch(...) abort
-  return wilder#pipe#branch#make(a:000)
+  return wilder#pipe#branch#(a:000)
 endfunction
 
 function! wilder#map(...) abort
-  return wilder#pipe#map#make(a:000)
+  return wilder#pipe#map#(a:000)
 endfunction
 
 function! wilder#subpipeline(f) abort
-  return wilder#pipe#subpipeline#make(a:f)
+  return wilder#pipe#subpipeline#(a:f)
 endfunction
 
 function! wilder#check(...) abort
-  return wilder#pipe#check#make(a:000)
+  return wilder#pipe#check#(a:000)
 endfunction
 
 function! wilder#if(condition, p) abort
@@ -203,14 +203,14 @@ function! wilder#if(condition, p) abort
 endfunction
 
 function! wilder#debounce(t) abort
-  return wilder#pipe#debounce#make(a:t)
+  return wilder#pipe#debounce#(a:t)
 endfunction
 
 function! wilder#result(...) abort
   if !a:0
-    return wilder#pipe#result#make()
+    return wilder#pipe#result#()
   else
-    return wilder#pipe#result#make(a:1)
+    return wilder#pipe#result#(a:1)
   endif
 endfunction
 
@@ -231,7 +231,7 @@ endfunction
 
 function! wilder#vim_search(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipe#vim_search#make(l:args)
+  return wilder#pipe#vim_search#(l:args)
 endfunction
 
 function! wilder#escape_python(str, ...) abort
@@ -279,7 +279,7 @@ endfunction
 
 function! wilder#python_fuzzy_pattern(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipe#python_fuzzy_match#make(l:args)
+  return wilder#pipe#python_fuzzy_match#(l:args)
 endfunction
 
 " DEPRECATED: Use wilder#python_fuzzy_delimiter_pattern()
@@ -289,7 +289,7 @@ endfunction
 
 function! wilder#python_fuzzy_delimiter_pattern(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipe#python_fuzzy_delimiter#make(l:args)
+  return wilder#pipe#python_fuzzy_delimiter#(l:args)
 endfunction
 
 function! wilder#python_search(...) abort
@@ -303,11 +303,11 @@ endfunction
 
 function! wilder#history(...) abort
   if !a:0
-    return wilder#pipe#history#make()
+    return wilder#pipe#history#()
   elseif a:0 == 1
-    return wilder#pipe#history#make(a:1)
+    return wilder#pipe#history#(a:1)
   else
-    return wilder#pipe#history#make(a:1, a:2)
+    return wilder#pipe#history#(a:1, a:2)
   endif
 endfunction
 
@@ -672,7 +672,7 @@ endfunction
 " renderers
 
 function! wilder#renderer_mux(args)
-  return wilder#renderer#mux#make(a:args)
+  return wilder#renderer#mux#(a:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_renderer()

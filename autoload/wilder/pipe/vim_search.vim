@@ -1,4 +1,4 @@
-function! wilder#pipe#vim_search#make(opts) abort
+function! wilder#pipe#vim_search#(opts) abort
   return {ctx, x -> s:search(a:opts, ctx, x)}
 endfunction
 

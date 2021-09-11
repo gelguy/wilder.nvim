@@ -1,4 +1,4 @@
-function! wilder#pipe#branch#make(args) abort
+function! wilder#pipe#branch#(args) abort
   if len(a:args) == 0
     return {_, x -> v:false}
   endif

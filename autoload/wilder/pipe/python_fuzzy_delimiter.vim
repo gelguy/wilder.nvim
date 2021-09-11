@@ -1,4 +1,4 @@
-function! wilder#pipe#python_fuzzy_delimiter#make(args) abort
+function! wilder#pipe#python_fuzzy_delimiter#(args) abort
   return {ctx, x -> s:fuzzy_delimiter(a:args, ctx, x)}
 endfunction
 
