@@ -7,6 +7,7 @@ function! wilder#renderer#component#popupmenu_devicons#(opts) abort
         \ 'left_padding': repeat(' ', l:padding[0]),
         \ 'right_padding': repeat(' ', l:padding[1]),
         \ 'combine_selected_hl': get(a:opts, 'combine_selected_hl', 0),
+        \ 'min_width': get(a:opts, 'min_width', 1),
         \ }
 
   if has_key(a:opts, 'get_icon')
@@ -80,6 +81,10 @@ function! s:devicons(state, ctx, result) abort
     let l:is_dir = l:x[-1:] ==# l:slash || l:x[-1:] ==# '/'
 
     let l:icon = a:state.get_icon(a:ctx, l:x, l:is_dir)
+    let l:icon_width = strdisplaywidth(l:icon)
+    if l:icon_width < a:state.min_width
+      let l:icon .= repeat(' ', a:state.min_width - l:icon_width)
+    endif
 
     if a:state.get_hl is v:null
       let l:chunks = [[a:state.left_padding . l:icon . a:state.right_padding]]

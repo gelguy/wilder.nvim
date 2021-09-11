@@ -2325,6 +2325,16 @@ wilder#popupmenu_devicons([{options}])
 
             Default: 0
 
+            `min_width`
+            Optional~
+            The minimum width for an icon. An icon with shorter than the
+            minimum width will be padded with spaces on the right.
+
+            This is useful when there are issues with icons not being of the
+            same |strdisplaywidth()|.
+
+            Default: 1
+
                                     *wilder#popupmenu_buffer_flags()*
 wilder#popupmenu_buffer_flags([{options}])
                                     wilder#popupmenu_renderer() column~
