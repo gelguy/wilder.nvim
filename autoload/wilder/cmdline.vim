@@ -909,6 +909,18 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         let l:filter_opts['cpsm_path'] = wilder#cpsm_path()
       endif
 
+      if l:filter['name'] ==# 'clap_filter'
+        if !has_key(l:filter_opts, 'clap_path')
+          let l:filter_opts['clap_path'] = wilder#clap_path()
+        endif
+
+        if !has_key(l:filter_opts, 'use_rust')
+          let l:has_binary = !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.so')) ||
+                \ !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.dyn'))
+          let l:filter_opts['use_rust'] = l:has_binary
+        endif
+      endif
+
       call add(l:checked_filters, l:filter)
     endfor
 

@@ -768,19 +768,22 @@ function! s:find_function_script_file(f)
   return l:matches[1]
 endfunction
 
+function! wilder#findfile(file) abort
+  if exists('*nvim_get_runtime_file')
+    let l:runtime_files = nvim_get_runtime_file(a:file, 0)
+    return get(l:runtime_files, 0, '')
+  endif
+
+  return findfile(a:file, &rtp)
+endfunction
+
 function! s:get_module_path(file, use_cached)
   if !exists('s:module_path_cache')
     let s:module_path_cache = wilder#cache#cache()
   endif
 
   if !a:use_cached || !s:module_path_cache.has_key(a:file)
-    if exists('*nvim_get_runtime_file')
-      let l:runtime_files = nvim_get_runtime_file(a:file, 0)
-      let l:file = get(l:runtime_files, 0, '')
-    else
-      let l:file = findfile(a:file, &rtp)
-    endif
-
+    let l:file = wilder#findfile(a:file)
     let l:path = fnamemodify(l:file, ':h')
 
     call s:module_path_cache.set(a:file, l:path)
@@ -795,6 +798,10 @@ endfunction
 
 function! wilder#cpsm_path(...) abort
   return s:get_module_path('autoload/cpsm.py', get(a:, 1, 1))
+endfunction
+
+function! wilder#clap_path(...) abort
+  return s:get_module_path('pythonx/clap/scorer.py', get(a:, 1, 1))
 endfunction
 
 function! wilder#clear_module_path_cache()
