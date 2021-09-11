@@ -455,15 +455,15 @@ function! s:make_lines(state, ctx, result) abort
   while l:i < l:height
     let l:index = l:start + l:i
     if l:index <= l:end
-      let l:line = s:draw_line(a:state, a:ctx, a:result, l:index)
+      let l:chunks = s:draw_candidates_chunks(a:state, a:ctx, a:result, l:index)
     else
-      let l:line = []
+      let l:chunks = []
     endif
     let l:left_column = l:left_column_chunks[l:i]
     let l:right_column = l:right_column_chunks[l:i]
 
     let l:left_width = wilder#render#chunks_displaywidth(l:left_column)
-    let l:chunks_width = wilder#render#chunks_displaywidth(l:line)
+    let l:chunks_width = wilder#render#chunks_displaywidth(l:chunks)
     let l:right_width = wilder#render#chunks_displaywidth(l:right_column)
 
     let l:total_width = l:left_width + l:chunks_width + l:right_width
@@ -474,7 +474,7 @@ function! s:make_lines(state, ctx, result) abort
     endif
 
     let l:index = l:i - l:start
-    let l:raw_lines[l:i] = [l:left_column, l:line, l:right_column]
+    let l:raw_lines[l:i] = [l:left_column, l:chunks, l:right_column]
     let l:widths[l:i] = [l:chunks_width, l:total_width]
 
     let l:i += 1
@@ -576,7 +576,7 @@ function! s:draw_column(column, ctx, result, height) abort
   return repeat([[[l:result]]], a:height)
 endfunction
 
-function! s:draw_line(state, ctx, result, i) abort
+function! s:draw_candidates_chunks(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
   let l:str = s:draw_candidate(a:state, a:ctx, a:result, a:i)
@@ -611,6 +611,7 @@ function! s:draw_line(state, ctx, result, i) abort
 
   if !l:is_selected
     call a:state.highlight_cache.set(l:str, l:chunks)
+    let l:chunks = copy(l:chunks)
   endif
 
   return l:chunks
