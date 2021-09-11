@@ -2527,6 +2527,13 @@ wilder#setup([{config}])            *wilder#setup()*
 
             For a no-op, set <fallback> to ''.
 
+            For Neovim 0.3+ and Vim with patchh 8.2.1978, the fallback
+            mappings can be disabled by setting {fallback} to 0.
+
+            Disabling the fallback mapping allows a |<Cmd>| mapping to be used
+            which improves rendering performance slightly as the mappings to
+            be called outside the sandbox (see |:map-expression|).
+
             Default: '<Tab>'
 
             `previous_key`
