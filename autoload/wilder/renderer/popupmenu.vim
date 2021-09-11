@@ -439,10 +439,10 @@ function! s:make_lines(state, ctx, result) abort
   let l:height = a:ctx.height
 
   let l:left_column_chunks = map(repeat([0], l:height), {-> []})
-  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result, l:height)
+  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result)
 
   let l:right_column_chunks = map(repeat([0], l:height), {-> []})
-  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result, l:height)
+  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result)
 
   " [[left_column, chunks, right_column]]
   let l:raw_lines = repeat([0], l:height)
@@ -525,9 +525,11 @@ function! s:make_lines(state, ctx, result) abort
   return [l:lines, l:expected_width]
 endfunction
 
-function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
+function! s:draw_columns(column_chunks, columns, ctx, result) abort
+  let l:height = a:ctx.height
+
   for l:Column in a:columns
-    let l:column = s:draw_column(l:Column, a:ctx, a:result, a:height)
+    let l:column = wilder#renderer#popupmenu#draw_column(a:ctx, a:result, l:Column)
 
     if empty(l:column)
       continue
@@ -540,10 +542,10 @@ function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
       let l:i += 1
     endwhile
 
-    if l:i < a:height
+    if l:i < l:height
       let l:width = wilder#render#chunks_displaywidth(l:column[0])
 
-      while l:i < a:height
+      while l:i < l:height
         let a:column_chunks[l:i] += [[repeat(' ', l:width)]]
 
         let l:i += 1
@@ -552,28 +554,29 @@ function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
   endfor
 endfunction
 
-function! s:draw_column(column, ctx, result, height) abort
+function! wilder#renderer#popupmenu#draw_column(ctx, result, column) abort
   let l:Column = a:column
+  let l:height = a:ctx.height
 
   if type(l:Column) is v:t_dict
     let l:Column = l:Column.value
   endif
 
   if type(l:Column) is v:t_list
-    return repeat([[l:Column]], a:height)
+    return repeat([[l:Column]], l:height)
   endif
 
   if type(l:Column) is v:t_string
-    return repeat([[[l:Column]]], a:height)
+    return repeat([[[l:Column]]], l:height)
   endif
 
-  let l:result = l:Column(a:ctx, a:result)
+  let l:lines = l:Column(a:ctx, a:result)
 
-  if type(l:result) is v:t_list
-    return l:result
+  if type(l:lines) is v:t_list
+    return l:lines
   endif
 
-  return repeat([[[l:result]]], a:height)
+  return repeat([[[l:lines]]], l:height)
 endfunction
 
 function! s:draw_candidates_chunks(state, ctx, result, i) abort
@@ -646,9 +649,7 @@ endfunction
 function! s:has_dynamic_component(state) abort
   for l:Component in
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if type(l:Component) is v:t_dict &&
-          \ has_key(l:Component, 'dynamic') &&
-          \ l:Component['dynamic']
+    if wilder#renderer#is_dynamic_component(l:Component)
       return 1
     endif
   endfor
@@ -665,10 +666,7 @@ function! s:pre_hook(state, ctx) abort
 
   for l:Component in [a:state.empty_message] +
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if type(l:Component) is v:t_dict &&
-          \ has_key(l:Component, 'pre_hook')
-      call l:Component['pre_hook'](a:ctx)
-    endif
+    call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
   endfor
 
   let a:state.active = 1
@@ -680,10 +678,7 @@ function! s:post_hook(state, ctx) abort
 
   for l:Component in [a:state.empty_message] +
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if type(l:Component) is v:t_dict &&
-          \ has_key(l:Component, 'post_hook')
-      call l:Component['post_hook'](a:ctx)
-    endif
+    call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
   endfor
 
   call timer_stop(a:state.empty_message_first_draw_timer)
