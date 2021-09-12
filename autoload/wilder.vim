@@ -586,7 +586,11 @@ function! wilder#string(str, ...) abort
 endfunction
 
 function! wilder#wildmenu_string(str, ...) abort
-  return {'value': a:str, 'hl': get(a:000, 0, '')}
+  if a:0
+    return [a:str, a:1]
+  endif
+
+  return a:str
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_previous_arrow()

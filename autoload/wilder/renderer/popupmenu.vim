@@ -60,7 +60,14 @@ function! wilder#renderer#popupmenu#(opts) abort
     let l:state.right = get(a:opts, 'right', [])
   endif
 
-  let l:state.dynamic = s:has_dynamic_component(l:state)
+  let l:dynamic = 0
+  for l:Component in l:state.left + l:state.right + l:state.top + l:state.bottom
+    if wilder#renderer#is_dynamic_component(l:Component)
+      let l:dynamic = 1
+      break
+    endif
+  endfor
+  let l:state.dynamic = l:dynamic
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
@@ -562,21 +569,39 @@ function! wilder#renderer#popupmenu#draw_column(ctx, result, column) abort
     let l:Column = l:Column.value
   endif
 
-  if type(l:Column) is v:t_list
-    return repeat([[l:Column]], l:height)
+  if type(l:Column) is v:t_func
+    let l:Column = l:Column(a:ctx, a:result)
   endif
 
   if type(l:Column) is v:t_string
+    if empty(l:Column)
+      return ''
+    endif
+
     return repeat([[[l:Column]]], l:height)
   endif
 
-  let l:lines = l:Column(a:ctx, a:result)
-
-  if type(l:lines) is v:t_list
-    return l:lines
+  " v:t_list
+  if empty(l:Column)
+    return ''
   endif
 
-  return repeat([[[l:lines]]], l:height)
+  if empty(l:Column[0])
+    return ''
+  endif
+
+  " highlight chunk
+  if type(l:Column[0]) is v:t_string
+    return repeat([[l:Column]], l:height)
+  endif
+
+  " list of highlight chunks
+  if type(l:Column[0][0]) is v:t_string
+    return repeat([l:Column], l:height)
+  endif
+
+  " list of list of highlight chunks
+  return l:Column
 endfunction
 
 function! s:draw_candidates_chunks(state, ctx, result, i) abort
@@ -644,17 +669,6 @@ function! s:merge_spans(spans) abort
   let l:end_byte = a:spans[-1][0] + a:spans[-1][1]
 
   return [[l:start_byte, l:end_byte - l:start_byte]]
-endfunction
-
-function! s:has_dynamic_component(state) abort
-  for l:Component in
-        \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if wilder#renderer#is_dynamic_component(l:Component)
-      return 1
-    endif
-  endfor
-
-  return 0
 endfunction
 
 function! s:pre_hook(state, ctx) abort

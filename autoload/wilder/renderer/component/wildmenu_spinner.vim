@@ -18,27 +18,15 @@ function! wilder#renderer#component#wildmenu_spinner#(args) abort
         \ 'done': l:Done,
         \ 'spinner': l:Spinner,
         \ 'timer': -1,
+        \ 'hl': get(a:args, 'hl', 0),
         \ }
 
   return {
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
-        \ 'len': {ctx, result -> wilder#renderer#wildmenu#item_len(
+        \ 'len': {ctx, result -> wilder#renderer#wildmenu#get_item_len(
         \   s:get_char(l:state, ctx, result), ctx, result)},
-        \ 'hl': get(a:args, 'hl', ''),
-        \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
-        \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
         \ 'dynamic': 1,
         \ }
-endfunction
-
-function! s:pre_hook(state, ctx) abort
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.frames, a:ctx)
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.done, a:ctx)
-endfunction
-
-function! s:post_hook(state, ctx) abort
-  call wilder#renderer#wildmenu#item_post_hook(a:state.frames, a:ctx)
-  call wilder#renderer#wildmenu#item_post_hook(a:state.done, a:ctx)
 endfunction
 
 " Set current_char in here so it is consistent with the actual rendered
@@ -63,5 +51,9 @@ function! s:get_char(state, ctx, result) abort
 endfunction
 
 function! s:spinner(state, ctx, result) abort
-  return a:state.current_frame
+  if a:state.hl is 0
+    return a:state.current_frame
+  endif
+
+  return [a:state.current_frame, a:state.hl]
 endfunction

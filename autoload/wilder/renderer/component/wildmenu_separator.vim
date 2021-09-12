@@ -11,13 +11,12 @@ function! wilder#renderer#component#wildmenu_separator#(str, fg, bg, ...) abort
   let l:name = 'WilderSeparator_' . l:key
 
   return {
-        \ 'value': a:str,
-        \ 'pre_hook': {ctx -> s:hl(l:name, a:fg, a:bg)},
-        \ 'hl': l:name,
+        \ 'value': [a:str, l:name],
+        \ 'pre_hook': {ctx -> s:pre_hook(l:name, a:fg, a:bg)},
         \ }
 endfunction
 
-function! s:hl(name, from, to) abort
+function! s:pre_hook(name, from, to) abort
   let l:from_hl = wilder#highlight#get_hl(a:from)
   let l:to_hl = wilder#highlight#get_hl(a:to)
 

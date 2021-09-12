@@ -28,36 +28,6 @@ function! wilder#render#draw_candidate(ctx, result, i) abort
   return wilder#render#to_printable(l:x)
 endfunction
 
-function! wilder#render#normalise_chunks(hl, chunks) abort
-  if empty(a:chunks)
-    return []
-  endif
-
-  let l:res = []
-
-  let l:text = ''
-  let l:hl = a:hl
-
-  for l:chunk in a:chunks
-    let l:chunk_hl = get(l:chunk, 1, a:hl)
-
-    if l:chunk_hl ==# l:hl
-      let l:text .= l:chunk[0]
-    else
-      if !empty(l:text)
-        call add(l:res, [l:text, l:hl])
-      endif
-
-      let l:text = l:chunk[0]
-      let l:hl = l:chunk_hl
-    endif
-  endfor
-
-  call add(l:res, [l:text, l:hl])
-
-  return l:res
-endfunction
-
 function! wilder#render#spans_to_chunks(str, spans, is_selected, highlights) abort
   let l:res = []
 

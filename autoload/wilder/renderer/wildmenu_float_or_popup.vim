@@ -83,8 +83,9 @@ function! s:pre_hook(state, ctx) abort
   let l:row = &lines - l:cmdheight - 1
   call a:state.api.move(l:row, 0, 1, &columns)
 
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
+  endfor
 
   let a:state.active = 1
 endfunction
@@ -92,8 +93,9 @@ endfunction
 function! s:post_hook(state, ctx) abort
   call a:state.api.hide()
 
-  call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
+  endfor
 
   let a:state.active = 0
 endfunction
