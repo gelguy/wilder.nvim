@@ -458,6 +458,14 @@ function! wilder#python_cpsm_filt(...) abort
   return call('wilder#transform#python_cpsm_filt', a:000)
 endfunction
 
+function! wilder#python_clap_filter(...) abort
+  return call('wilder#transform#python_clap_filter', a:000)
+endfunction
+
+function! wilder#python_clap_filt(...) abort
+  return call('wilder#transform#python_clap_filt', a:000)
+endfunction
+
 function! wilder#lua_fzy_filter() abort
   return call('wilder#transform#lua_fzy_filter', [])
 endfunction

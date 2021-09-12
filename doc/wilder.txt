@@ -2976,6 +2976,53 @@ wilder#python_cpsm_filter([{cpsm_path}])
             {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
             is inferred by Neovim/Vim otherwise.
 
+                                    *wilder#python_clap_filt()*
+wilder#python_clap_filt({ctx}, {opts}, {candidates}, {query})
+                                    Neovim or Vim with `yarp` enabled only~
+                                    Async~
+                                    vim-clap plugin required~
+            Takes a list of candidates and fuzzily filters and sorts the
+            candidates using `vim-clap`.
+
+            The `vim-clap` Vim plugin is required and can be found at
+            https://github.com/liuchengxu/vim-clap.
+
+            {opts} can contain the following keys:
+            `clap_path`
+            Optional~
+            The path to `clap/scorer.py`. If left empty, Python will not
+            attempt to add the path.
+
+            Default: None
+
+            `use_rust`
+            Optional~
+            If true, use the Rust binary built by `vim-clap` for fuzzy
+            matching.
+
+            Default: 0
+
+                                    *wilder#python_clap_filter()*
+wilder#python_clap_filter([{opts}])
+                                    Neovim or Vim with `yarp` enabled only~
+                                    vim-clap plugin required~
+            Returns a fuzzy filter that filters and sorts the candidates using
+            |wilder#python_clap_filt()|. Can be used as the `fuzzy_filter`
+            option in |wilder#cmdline_pipeline()|.
+
+            {opts} is a Dictionary with the following keys:
+            `clap_path`
+            Optional~
+            The path to `clap/scorer.py`.
+
+            Default: Inferred by Neovim/Vim.
+
+            {use_rust}
+            Optional~
+            Whether to use the Rust binary built by `vim-clap`.
+
+            Default: Inferred by Neovim/Vim.
+
                                     *wilder#lua_fzy_filt()*
 wilder#lua_fzy_filt({ctx}, {opts}, {candidates}, {query})
                                     Neovim only~

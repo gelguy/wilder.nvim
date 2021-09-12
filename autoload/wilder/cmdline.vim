@@ -915,9 +915,9 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         endif
 
         if !has_key(l:filter_opts, 'use_rust')
-          let l:has_binary = !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.so')) ||
+          let l:use_rust = !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.so')) ||
                 \ !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.dyn'))
-          let l:filter_opts['use_rust'] = l:has_binary
+          let l:filter_opts['use_rust'] = l:use_rust
         endif
       endif
 
