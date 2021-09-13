@@ -8,6 +8,10 @@ function! wilder#renderer#nvim_api#() abort
         \ 'ns_id': nvim_create_namespace(''),
         \ 'normal_highlight': 'Normal',
         \ 'winblend': 0,
+        \ 'window_state': 'hidden',
+        \ 'dimensions': -1,
+        \ 'firstline': -1,
+        \ 'options': {},
         \ }
 
   let l:api = {
@@ -26,6 +30,8 @@ function! wilder#renderer#nvim_api#() abort
         \ 'add_highlight',
         \ 'clear_all_highlights',
         \ 'need_timer',
+        \ '_open_win',
+        \ '_set_buf',
         \ ]
     execute 'let l:api.' . l:f . ' = funcref("s:' . l:f . '")'
   endfor
@@ -55,11 +61,30 @@ function! s:new_buf() abort
 endfunction
 
 function! s:show() dict abort
-  if self.state.win != -1
+  if self.state.win != -1 ||
+        \ self.state.window_state !=# 'hidden'
     return
   endif
 
-  let self.state.win = nvim_open_win(self.state.buf, 0, {
+  let self.state.window_state = 'pending'
+
+  try
+    call self._open_win()
+  catch
+    call timer_start(0, {-> self._open_win()})
+  endtry
+endfunction
+
+function! s:_open_win() dict abort
+  " window might have been open or closed already.
+  if self.state.window_state !=# 'pending'
+    return
+  endif
+
+  " Fix E5555 when re-showing wilder when inccommand is cancelled.
+  let l:buf = has('nvim-0.6') ? 0 : self.state.buf
+
+  let self.state.win = nvim_open_win(l:buf, 0, {
         \ 'relative': 'editor',
         \ 'height': 1,
         \ 'width': 1,
@@ -69,19 +94,73 @@ function! s:show() dict abort
         \ 'style': 'minimal',
         \ })
 
+  if has('nvim-0.6')
+    try
+      call nvim_win_set_buf(self.state.win, self.state.buf)
+    catch
+      call timer_start(0, {-> self._set_buf()})
+    endtry
+  endif
+
   call self.set_option('winhighlight',
         \ 'Search:None,IncSearch:None,Normal:' . self.state.normal_highlight)
   call self.set_option('winblend', self.state.winblend)
+
+  if self.state.firstline isnot -1
+    call nvim_win_set_cursor(self.state.win, [self.state.firstline, 0])
+  endif
+
+  if self.state.dimensions isnot -1
+    let [l:row, l:col, l:height, l:width] = self.state.dimensions
+    call nvim_win_set_config(self.state.win, {
+          \ 'relative': 'editor',
+          \ 'row': l:row,
+          \ 'col': l:col,
+          \ 'height': l:height,
+          \ 'width': l:width,
+          \ })
+  endif
+
+  for l:option in keys(self.state.options)
+    let l:value = self.state.options[l:option]
+    call nvim_win_set_option(self.state.win, l:option, l:value)
+  endfor
+
+  let self.state.firstline = -1
+  let self.state.dimensions = -1
+  let self.state.options = {}
+
+  let self.state.window_state = 'showing'
+endfunction
+
+function! s:_set_buf() dict abort
+  if self.state.window_state !=# 'showing'
+    return
+  endif
+
+  call nvim_win_set_buf(self.state.win, self.state.buf)
 endfunction
 
 " Floating windows can't be hidden so we close the window.
 function! s:hide() dict abort
-  if self.state.win == -1
+  if self.state.win == -1 ||
+        \ self.state.window_state ==# 'hidden'
+    return
+  endif
+
+  if self.state.window_state ==# 'pending'
+    let self.state.win = -1
+    let self.state.window_state = 'hidden'
     return
   endif
 
   if getcmdwintype() ==# ''
-    call nvim_win_close(self.state.win, 1)
+    try
+      call nvim_win_close(self.state.win, 1)
+    catch
+      let l:win = self.state.win
+      call timer_start(0, {-> nvim_win_close(l:win, 1)})
+    endtry
   else
     " cannot call nvim_win_close() while cmdline-window is open
     " make the window as small as possible and hide it with winblend = 100
@@ -93,9 +172,19 @@ function! s:hide() dict abort
   endif
 
   let self.state.win = -1
+  let self.state.window_state = 'hidden'
 endfunction
 
 function! s:move(row, col, height, width) dict abort
+  if self.state.window_state ==# 'hidden'
+    return
+  endif
+
+  if self.state.window_state ==# 'pending'
+    let self.state.dimensions = [a:row, a:col, a:height, a:width]
+    return
+  endif
+
   call nvim_win_set_config(self.state.win, {
         \ 'relative': 'editor',
         \ 'row': a:row,
@@ -106,10 +195,28 @@ function! s:move(row, col, height, width) dict abort
 endfunction
 
 function! s:set_firstline(line) dict abort
+  if self.state.window_state ==# 'hidden'
+    return
+  endif
+
+  if self.state.window_state ==# 'pending'
+    let self.state.firstline = a:line
+    return
+  endif
+
   call nvim_win_set_cursor(self.state.win, [a:line, 0])
 endfunction
 
 function! s:set_option(option, value) dict abort
+  if self.state.window_state ==# 'hidden'
+    return
+  endif
+
+  if self.state.window_state ==# 'pending'
+    let self.state.options[a:option] = a:value
+    return
+  endif
+
   call nvim_win_set_option(self.state.win, a:option, a:value)
 endfunction
 
