@@ -1116,9 +1116,9 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \     ctx, data, xs, get(data, 'cmdline.path_prefix', '') . get(data, 'cmdline.match_arg', ''))},
         \ })),
         \ wilder#result({
-        \   'output': [{_, x -> escape(x, ' ')}],
         \   'draw': ['wilder#cmdline#draw_path'],
         \ }),
+        \ wilder#result_output_escape(' '),
         \ ]
 
   " parsed cmdline
@@ -1265,14 +1265,14 @@ function! s:set_pcre2_pattern(data, fuzzy) abort
     let l:pcre2_pattern = '('. escape(l:match_arg, '\.^$*+?|(){}[]') . ')'
   endif
 
-  return extend(a:data, {'pcre2.pattern': l:pcre2_pattern})
+  return extend(l:data, {'pcre2.pattern': l:pcre2_pattern})
 endfunction
 
 function! s:set_query(data) abort
   let l:data = a:data is v:null ? {} : a:data
   let l:match_arg = get(l:data, 'cmdline.match_arg', '')
 
-  return extend(a:data, {'query': l:match_arg})
+  return extend(l:data, {'query': l:match_arg})
 endfunction
 
 function! s:is_prefix(str, q) abort

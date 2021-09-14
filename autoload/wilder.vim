@@ -215,12 +215,10 @@ function! wilder#result(...) abort
 endfunction
 
 function! wilder#result_output_escape(chars) abort
-  return wilder#result({
-        \'output': [{ctx, x -> escape(x, a:chars)}],
-        \ })
+  return wilder#pipe#result#escape_output_result(a:chars)
 endfunction
 
-" DEPRECATED: Use wilder#vim_substring()
+" DEPRECATED: Use wilder#vim_substring_pattern()
 function! wilder#vim_substring() abort
   return call('wilder#vim_substring_pattern', [])
 endfunction

@@ -257,5 +257,5 @@ function! wilder#transform#lua_fzy_filt(ctx, opts, candidates, query) abort
     return a:candidates
   endif
 
-  return luaeval('require("wilder").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
+  return luaeval('require("wilder.internal").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
 endfunction

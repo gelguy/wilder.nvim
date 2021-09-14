@@ -177,7 +177,7 @@ function! wilder#highlighter#lua_pcre2_highlight(ctx, opts, x, data)
   let l:pattern = a:data['pcre2.pattern']
 
   return luaeval(
-        \ 'require("wilder").pcre2_highlight(_A[1], _A[2])',
+        \ 'require("wilder.internal").pcre2_highlight(_A[1], _A[2])',
         \ [l:pattern, a:x])
 endfunction
 
@@ -219,7 +219,7 @@ function! wilder#highlighter#lua_fzy_highlight(ctx, opts, x, data)
   endif
 
   return luaeval(
-        \ 'require("wilder").fzy_highlight(_A[1], _A[2])',
+        \ 'require("wilder.internal").fzy_highlight(_A[1], _A[2])',
         \ [a:data.query, a:x])
 endfunction
 
