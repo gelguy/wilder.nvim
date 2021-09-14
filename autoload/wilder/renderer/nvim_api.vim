@@ -40,11 +40,13 @@ function! wilder#renderer#nvim_api#() abort
 endfunction
 
 function! s:new(opts) dict abort
-  if !bufexists(self.state.buf)
+  " If the buffer is somehow unloaded, bufload(self.state.buf) doesn't restore
+  " it so we have to create a new one
+  if !bufexists(self.state.buf) || !bufloaded(self.state.buf)
     let self.state.buf = s:new_buf()
   endif
 
-  if !bufexists(self.state.dummy_buf)
+  if !bufexists(self.state.dummy_buf) || !bufloaded(self.state.dummy_buf)
     let self.state.dummy_buf = s:new_buf()
   endif
 
