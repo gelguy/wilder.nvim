@@ -416,7 +416,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
   elseif a:res.expand ==# 'locale'
     return getcompletion(l:expand_arg, 'locale')
   elseif a:res.expand ==# 'lua'
-    " Lua completion not supported
+    " Lua completion handled by s:get_lua_completion()
     return []
   elseif a:res.expand ==# 'mapping'
     let l:map_args = get(a:res, 'map_args', {})
@@ -1117,6 +1117,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ })),
         \ wilder#result({
         \   'draw': ['wilder#cmdline#draw_path'],
+        \   'replace': ['wilder#cmdline#replace'],
         \ }),
         \ wilder#result_output_escape(' '),
         \ ]
@@ -1137,6 +1138,23 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \   'value': {ctx, xs, data -> l:Filter(
         \     ctx, data, xs, get(data, 'cmdline.match_arg', ''))},
         \ })),
+        \ wilder#result({
+        \   'replace': ['wilder#cmdline#replace'],
+        \ }),
+        \ ]
+
+  let l:lua_completion_subpipeline = [
+        \ wilder#check({_, res -> res.expand ==# 'lua'}),
+        \ {ctx, res -> !has('nvim') ? v:false : has('nvim-0.5') ? res : v:true},
+        \ {ctx, res -> s:get_lua_completion(ctx, res, l:fuzzy)},
+        \ wilder#if(l:fuzzy && !l:with_data, wilder#result({
+        \   'value': {ctx, xs, data -> l:Filter(
+        \     ctx, xs, get(data, 'cmdline.match_arg', ''))},
+        \ })),
+        \ wilder#if(l:fuzzy && l:with_data, wilder#result({
+        \   'value': {ctx, xs, data -> l:Filter(
+        \     ctx, data, xs, get(data, 'cmdline.match_arg', ''))},
+        \ })),
         \ ]
 
   " parsed cmdline
@@ -1145,14 +1163,81 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
   " └--> completion_pipeline
   return [
         \ wilder#branch(
-        \   [{_, res -> res.expand ==# 'lua' ? v:true : v:false}],
+        \   l:lua_completion_subpipeline,
         \   l:file_completion_subpipeline,
         \   l:completion_subpipeline,
         \ ),
-        \ wilder#result({
-        \   'replace': ['wilder#cmdline#replace'],
-        \ }),
         \ ]
+endfunction
+
+function! s:get_lua_completion(ctx, res, fuzzy) abort
+  let l:last_char = a:res.arg[-1 :]
+  if !empty(l:last_char) &&
+        \ l:last_char !~# '\w' &&
+        \ l:last_char !=# '_' &&
+        \ l:last_char !=# '.'
+    " _expand_arg fails when arg ends with non-identifier
+    let l:candidates = luaeval('{vim._expand_pat("")}')[0]
+    let l:arg_pos = len(a:res.arg)
+  else
+    let [l:candidates, l:arg_pos] = luaeval('{vim._expand_pat("^" .. _A[1])}', [a:res.arg])
+
+    if a:fuzzy
+      let l:last_char = a:res.arg[-1 :]
+
+      " use arg_pos to calculate where arg starts
+      let l:arg = l:arg_pos > 0 ?
+            \ a:res.arg[: l:arg_pos - 1] :
+            \ ''
+
+      let l:last_char = l:arg[-1 :]
+      if !empty(l:last_char) &&
+            \ l:last_char !~# '\w' &&
+            \ l:last_char !=# '_' &&
+            \ l:last_char !=# '.'
+        let l:candidates = luaeval('{vim._expand_pat("")}')[0]
+      else
+        let l:candidates = luaeval('{vim._expand_pat("^" .. _A[1])}', [l:arg])[0]
+      endif
+    endif
+  endif
+
+  if l:arg_pos > 0
+    let l:prefix = a:res.arg[: l:arg_pos - 1]
+    let l:match_arg = a:res.arg[l:arg_pos :]
+    let l:pos = a:res.pos + l:arg_pos - 1
+  else
+    let l:prefix = ''
+    let l:match_arg = a:res.arg
+    let l:pos = a:res.pos
+  endif
+
+  if a:fuzzy == 1 && !empty(l:match_arg)
+    let l:char = l:match_arg[0]
+    let l:candidates = filter(l:candidates, {_, x -> x[0] ==# tolower(l:char) || x[0] ==# toupper(l:char)})
+  endif
+
+  return {
+        \ 'value': l:candidates,
+        \ 'pos': l:pos,
+        \ 'replace': ['wilder#cmdline#replace_lua'],
+        \ 'data': {
+        \   'cmdline.match_arg': l:match_arg,
+        \   'cmdline.lua_prefix': l:prefix,
+        \ },
+        \ }
+endfunction
+
+function! wilder#cmdline#replace_lua(ctx, x, data)
+  let l:result = wilder#cmdline#parse(a:ctx.cmdline)
+
+  if l:result.pos > 0
+    let l:cmdline = l:result.cmdline[: l:result.pos - 1]
+  else
+    let l:cmdline = ''
+  endif
+
+  return l:cmdline . get(a:data, 'cmdline.lua_prefix', '') . a:x
 endfunction
 
 function! wilder#cmdline#pipeline(opts) abort
