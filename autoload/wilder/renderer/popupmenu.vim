@@ -575,7 +575,7 @@ function! wilder#renderer#popupmenu#draw_column(ctx, result, column) abort
 
   if type(l:Column) is v:t_string
     if empty(l:Column)
-      return ''
+      return []
     endif
 
     return repeat([[[l:Column]]], l:height)
@@ -583,11 +583,11 @@ function! wilder#renderer#popupmenu#draw_column(ctx, result, column) abort
 
   " v:t_list
   if empty(l:Column)
-    return ''
+    return []
   endif
 
   if empty(l:Column[0])
-    return ''
+    return []
   endif
 
   " highlight chunk
@@ -840,28 +840,34 @@ endfunction
 function! s:get_width_from_option(opt, default) abort
 endfunction
 
-function! s:iterate_column(f) abort
-  return {ctx, result -> s:iterate_column(a:f, ctx, result)}
-endfunction
+function! wilder#renderer#popupmenu#iterate_candidates(ctx, result, f) abort
+  let l:page = a:ctx.page
+  if l:page == [-1, -1]
+    return []
+  endif
 
-function! s:iterate_column(f, ctx, result)
-  let [l:start, l:end] = a:ctx.page
-  let l:data = get(a:result, 'data', v:null)
+  let l:lines = []
 
-  let l:lines = repeat([0], l:end - l:start + 1)
+  let l:i = l:page[0]
+  while l:i <= l:page[1]
+    let l:candidate = wilder#main#get_candidate(a:ctx, a:result, l:i)
+    let l:ctx = copy(a:ctx)
+    let l:ctx.original = a:result.value[l:i]
+    let l:ctx.i = l:i
 
-  let l:i = l:start
-  while l:i <= l:end
-    let l:index = l:i - l:start
-
-    let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
-    let l:line = a:f(a:ctx, l:x, l:data)
-
-    if l:line is v:false
-      return []
+    let l:result = a:f(l:ctx, l:candidate, a:result.data)
+    if type(l:result) is v:t_string
+      call add(l:lines, [[l:result]])
+    elseif empty(l:result)
+      " empty v:t_list
+      call add(l:lines, [])
+    elseif type(l:result[0]) is v:t_string
+      " highlight chunk
+      call add(l:lines, [l:result])
+    else
+      " list of highhlight chunks
+      call add(l:lines, l:result)
     endif
-
-    let l:lines[l:index] = l:line
 
     let l:i += 1
   endwhile

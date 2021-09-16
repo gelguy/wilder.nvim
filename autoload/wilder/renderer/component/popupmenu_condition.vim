@@ -1,14 +1,12 @@
 function! wilder#renderer#component#popupmenu_condition#(predicate, if_true, ...) abort
-  let l:if_false = get(a:, 1, '')
-
   let l:state = {
         \ 'predicate': a:predicate,
         \ 'if_true': a:if_true,
-        \ 'if_false': l:if_false,
+        \ 'if_false': get(a:, 1, ''),
         \ }
 
-  let l:dynamic = wilder#renderer#is_dynamic_component(a:if_true) ||
-        \ wilder#renderer#is_dynamic_component(l:if_false)
+  let l:dynamic = wilder#renderer#is_dynamic_component(l:state.if_true) ||
+        \ wilder#renderer#is_dynamic_component(l:state.if_false)
 
   return {
         \ 'value': {ctx, result -> s:value(l:state, ctx, result)},
