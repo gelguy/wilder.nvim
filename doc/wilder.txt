@@ -3098,7 +3098,7 @@ wilder#basic_highlighter([{opts}])  *wilder#basic_highlighter()*
 
             `case_sensitive`
             Optional~
-            If true, the matching is case insensitive, and case insensitive
+            If true, the matching is case insensitive, and case sensitive
             otherwise.
 
             Default: 0
