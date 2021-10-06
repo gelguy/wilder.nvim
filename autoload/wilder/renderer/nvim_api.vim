@@ -83,6 +83,8 @@ function! s:_open_win() dict abort
     return
   endif
 
+  let self.state.window_state = 'showing'
+
   " Fix E5555 when re-showing wilder when inccommand is cancelled.
   let l:buf = has('nvim-0.6') ? 0 : self.state.buf
 
@@ -93,15 +95,18 @@ function! s:_open_win() dict abort
         \ 'row': &lines - 1,
         \ 'col': 0,
         \ 'focusable': 0,
-        \ 'style': 'minimal',
         \ })
 
   if has('nvim-0.6')
     try
-      call nvim_win_set_buf(self.state.win, self.state.buf)
+      call self._set_buf()
     catch
       call timer_start(0, {-> self._set_buf()})
     endtry
+  else
+    call nvim_win_set_config(self.state.win, {
+          \ 'style': 'minimal',
+          \ })
   endif
 
   call self.set_option('winhighlight',
@@ -131,8 +136,6 @@ function! s:_open_win() dict abort
   let self.state.firstline = -1
   let self.state.dimensions = -1
   let self.state.options = {}
-
-  let self.state.window_state = 'showing'
 endfunction
 
 function! s:_set_buf() dict abort
@@ -141,6 +144,9 @@ function! s:_set_buf() dict abort
   endif
 
   call nvim_win_set_buf(self.state.win, self.state.buf)
+  call nvim_win_set_config(self.state.win, {
+        \ 'style': 'minimal',
+        \ })
 endfunction
 
 " Floating windows can't be hidden so we close the window.
