@@ -674,6 +674,10 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     let l:res = copy(a:res)
     let l:res.pos = l:pos
     let l:res.match_arg = l:arg
+    if !l:is_custom_list
+      let l:res.arg = l:arg
+    endif
+
     return [1, l:result, l:res, !l:is_custom_list]
   endif
 
