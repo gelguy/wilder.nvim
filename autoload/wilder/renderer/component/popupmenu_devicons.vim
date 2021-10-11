@@ -192,7 +192,7 @@ function! s:get_icon_from_nvim_web_devicons(opts, name, is_dir)
   endif
 
   let l:ext = fnamemodify(a:name, ':e')
-  let l:icon = luaeval("require'nvim-web-devicons'.get_icon")(l:ext)
+  let l:icon = luaeval("require'nvim-web-devicons'.get_icon")(a:name, l:ext)
 
   return l:icon is v:null ? get(a:opts, 'default_icon', '') : l:icon
 endfunction
