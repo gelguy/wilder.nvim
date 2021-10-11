@@ -191,10 +191,9 @@ function! s:get_icon_from_nvim_web_devicons(opts, name, is_dir)
     return get(a:opts, 'dir_icon', '')
   endif
 
-  let l:ext = fnamemodify(a:name, ':e')
-  let l:icon = luaeval("require'nvim-web-devicons'.get_icon")(a:name, l:ext)
+  let l:data = s:get_data_from_nvim_web_devicons(a:name)
 
-  return l:icon is v:null ? get(a:opts, 'default_icon', '') : l:icon
+  return empty(l:data) ? get(a:opts, 'default_icon', '') : l:data[0]
 endfunction
 
 function! wilder#renderer#component#popupmenu_devicons#get_hl_from_nvim_web_devicons(opts)
@@ -202,17 +201,24 @@ function! wilder#renderer#component#popupmenu_devicons#get_hl_from_nvim_web_devi
     call luaeval("require'nvim-web-devicons'.setup()")
   endif
 
-  return {ctx, name, is_dir, icon -> s:hl_from_nvim_web_devicons(a:opts, name, is_dir)}
+  return {ctx, name, is_dir, icon -> s:get_hl_from_nvim_web_devicons(a:opts, name, is_dir)}
 endfunction
 
-function! s:hl_from_nvim_web_devicons(opts, name, is_dir)
+function! s:get_hl_from_nvim_web_devicons(opts, name, is_dir)
   if a:is_dir
     return get(a:opts, 'dir_hl', 'Directory')
   endif
 
-  let l:hl = 'DevIcon' . fnamemodify(a:name, ':e')
+  let l:data = s:get_data_from_nvim_web_devicons(a:name)
+  let l:hl = get(l:data, 1, '')
 
   return hlexists(l:hl) ? l:hl : get(a:opts, 'default_hl', 'DevIconDefault')
+endfunction
+
+function! s:get_data_from_nvim_web_devicons(name)
+  let l:name = fnamemodify(a:name, ':t')
+  let l:ext = fnamemodify(l:name, ':e')
+  return luaeval("{require'nvim-web-devicons'.get_icon(_A[1], _A[2])}", [l:name, l:ext])
 endfunction
 
 function! wilder#renderer#component#popupmenu_devicons#get_hl_from_glyph_palette_vim(opts)
