@@ -83,8 +83,6 @@ function! s:_open_win() dict abort
     return
   endif
 
-  let self.state.window_state = 'showing'
-
   " Fix E5555 when re-showing wilder when inccommand is cancelled.
   let l:buf = has('nvim-0.6') ? 0 : self.state.buf
 
@@ -96,6 +94,8 @@ function! s:_open_win() dict abort
         \ 'col': 0,
         \ 'focusable': 0,
         \ })
+
+  let self.state.window_state = 'showing'
 
   if has('nvim-0.6')
     try
