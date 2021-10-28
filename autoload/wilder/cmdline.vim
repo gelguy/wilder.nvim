@@ -796,10 +796,13 @@ function wilder#cmdline#should_use_file_finder(res) abort
 
   let l:path = a:res.expand_arg
 
-  " Prevent scanning of filesystem accidentally.
+  " For a path argument for absolute path, current/parent directory,
+  " or hidden files, do not use file finder.
+  " (this may also help prevent scanning of filesystem accidentally)
   if l:path ==# '~' ||
         \ l:path[0] ==# '/' ||
         \ l:path[0] ==# '\' ||
+        \ l:path[0] ==# '.' ||
         \ l:path[0:1] ==# '..'
     return 0
   endif
