@@ -1338,6 +1338,14 @@ wilder#wildmenu_renderer([{options}])
 
             Default: []
 
+            `zindex`
+            Optional~
+            Vim or Neovim 0.5.1+ only~
+            'zindex' to apply to the popupmenu. See |nvim_open_win()| for
+            Neovim and |popup_create-arguments| for Vim.
+
+            Default: 250
+
             `apply_incsearch_fix`
             Optional~
             Fixes incsearch highlighting disappearing. Might introduce higher
@@ -1953,6 +1961,14 @@ wilder#popupmenu_renderer([{options}])
             more details.
 
             Default: 0
+
+            `zindex`
+            Optional~
+            Vim or Neovim 0.5.1+ only~
+            'zindex' to apply to the popupmenu. See |nvim_open_win()| for
+            Neovim and |popup_create-arguments| for Vim.
+
+            Default: 250
 
             `min_width`
             Optional~

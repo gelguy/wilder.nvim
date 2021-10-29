@@ -1,6 +1,7 @@
 function! wilder#renderer#wildmenu_float_or_popup#(opts) abort
   let l:state = wilder#renderer#wildmenu#prepare_state(a:opts)
   let l:state.active = 0
+  let l:state.zindex = get(a:opts, 'zindex', 250)
 
   if a:opts.mode ==# 'float'
     let l:state.api = wilder#renderer#nvim_api#()
@@ -74,6 +75,7 @@ endfunction
 function! s:pre_hook(state, ctx) abort
   call a:state.api.new({
         \ 'normal_highlight': a:state.highlights.default,
+        \ 'zindex': a:state.zindex,
         \ })
   call a:state.api.show()
 
