@@ -15,6 +15,7 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ 'left_offset': get(a:opts, 'left_offset', 1),
         \ 'winblend': get(a:opts, 'winblend', 0),
+        \ 'zindex': get(a:opts, 'zindex', 250),
         \ 'top': get(a:opts, 'top', []),
         \ 'bottom': get(a:opts, 'bottom', []),
         \ 'empty_message': get(a:opts, 'empty_message', 0),
@@ -657,6 +658,7 @@ endfunction
 function! s:pre_hook(state, ctx) abort
   call a:state.api.new({
         \ 'normal_highlight': a:state.highlights.default,
+        \ 'zindex': get(a:state, 'zindex', 0),
         \ 'winblend': get(a:state, 'winblend', 0)
         \ })
 

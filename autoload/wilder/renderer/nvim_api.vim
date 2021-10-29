@@ -8,6 +8,7 @@ function! wilder#renderer#nvim_api#() abort
         \ 'ns_id': nvim_create_namespace(''),
         \ 'normal_highlight': 'Normal',
         \ 'winblend': 0,
+        \ 'zindex': 0,
         \ 'window_state': 'hidden',
         \ 'dimensions': -1,
         \ 'firstline': -1,
@@ -52,6 +53,7 @@ function! s:new(opts) dict abort
 
   let self.state.normal_highlight = get(a:opts, 'normal_highlight', 'Normal')
   let self.state.winblend = get(a:opts, 'winblend', 0)
+  let self.state.zindex = get(a:opts, 'zindex', 0)
 endfunction
 
 function! s:new_buf() abort
@@ -86,14 +88,20 @@ function! s:_open_win() dict abort
   " Fix E5555 when re-showing wilder when inccommand is cancelled.
   let l:buf = has('nvim-0.6') ? 0 : self.state.buf
 
-  let self.state.win = nvim_open_win(l:buf, 0, {
+  let l:win_opts = {
         \ 'relative': 'editor',
         \ 'height': 1,
         \ 'width': 1,
         \ 'row': &lines - 1,
         \ 'col': 0,
         \ 'focusable': 0,
-        \ })
+        \ }
+
+  if has('nvim-0.5.1')
+    let l:win_opts.zindex = self.state.zindex
+  endif
+
+  let self.state.win = nvim_open_win(l:buf, 0, l:win_opts)
 
   let self.state.window_state = 'showing'
 

@@ -46,6 +46,7 @@ function! s:new(opts) dict abort
           \ 'col': 1,
           \ 'fixed': 1,
           \ 'wrap': 0,
+          \ 'zindex': get(a:opts, 'zindex', 0),
           \ 'scrollbar': 0,
           \ 'cursorline': 0,
           \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
