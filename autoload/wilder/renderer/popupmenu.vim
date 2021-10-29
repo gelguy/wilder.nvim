@@ -10,7 +10,7 @@ function! wilder#renderer#popupmenu#(opts) abort
         \   'empty_message': get(a:opts, 'empty_message_hl', 'WarningMsg'),
         \ }, 'keep'),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
-        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim')),
+        \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim') && !has('nvim-0.5.1')),
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ 'left_offset': get(a:opts, 'left_offset', 1),
