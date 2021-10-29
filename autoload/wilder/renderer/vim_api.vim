@@ -41,16 +41,22 @@ function! s:new(opts) dict abort
   endif
 
   if index(popup_list(), self.state.win) == -1
-    let self.state.win = popup_create(self.state.buf, {
+    let l:popup_opts = {
           \ 'line': 1,
           \ 'col': 1,
           \ 'fixed': 1,
           \ 'wrap': 0,
-          \ 'zindex': get(a:opts, 'zindex', 0),
           \ 'scrollbar': 0,
           \ 'cursorline': 0,
           \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
-          \ })
+          \ }
+
+    let l:zindex = get(a:opts, 'zindex', v:null)
+    if a:opts.zindex != v:null
+      let l:popup_opts.zindex = l:zindex
+    endif
+
+    let self.state.win = popup_create(self.state.buf, l:popup_opts)
     call popup_hide(self.state.win)
   endif
 endfunction

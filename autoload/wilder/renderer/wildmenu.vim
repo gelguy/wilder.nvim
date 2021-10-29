@@ -9,6 +9,7 @@ function! wilder#renderer#wildmenu#prepare_state(opts) abort
         \ 'separator': wilder#render#to_printable(get(a:opts, 'separator', '  ')),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
         \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim') && !has('nvim-0.5.1')),
+        \ 'zindex': get(a:opts, 'zindex', v:null),
         \
         \ 'page': [-1, -1],
         \ 'columns': -1,

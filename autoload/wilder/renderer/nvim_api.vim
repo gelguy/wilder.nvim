@@ -53,7 +53,7 @@ function! s:new(opts) dict abort
 
   let self.state.normal_highlight = get(a:opts, 'normal_highlight', 'Normal')
   let self.state.winblend = get(a:opts, 'winblend', 0)
-  let self.state.zindex = get(a:opts, 'zindex', 0)
+  let self.state.zindex = get(a:opts, 'zindex', v:null)
 endfunction
 
 function! s:new_buf() abort
@@ -97,7 +97,7 @@ function! s:_open_win() dict abort
         \ 'focusable': 0,
         \ }
 
-  if has('nvim-0.5.1')
+  if has('nvim-0.5.1') && self.state.zindex != v:null
     let l:win_opts.zindex = self.state.zindex
   endif
 

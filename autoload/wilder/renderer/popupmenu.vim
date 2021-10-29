@@ -658,7 +658,7 @@ endfunction
 function! s:pre_hook(state, ctx) abort
   call a:state.api.new({
         \ 'normal_highlight': a:state.highlights.default,
-        \ 'zindex': get(a:state, 'zindex', 0),
+        \ 'zindex': get(a:state, 'zindex', v:null),
         \ 'winblend': get(a:state, 'winblend', 0)
         \ })
 
