@@ -60,15 +60,6 @@ function! wilder#renderer#popupmenu#(opts) abort
     let l:state.right = get(a:opts, 'right', [])
   endif
 
-  let l:dynamic = 0
-  for l:Component in l:state.left + l:state.right + l:state.top + l:state.bottom
-    if wilder#renderer#is_dynamic_component(l:Component)
-      let l:dynamic = 1
-      break
-    endif
-  endfor
-  let l:state.dynamic = l:dynamic
-
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
           \ wilder#hl_with_attr(
@@ -181,8 +172,9 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  " If pipeline is not done and there are no dynamic components, skip drawing.
-  if !a:ctx.done && a:state.page != [-1, -1] && !a:state.dynamic
+  " If pipeline is not done, check if we need to draw when result is not done.
+  if !a:ctx.done && a:state.page != [-1, -1] &&
+        \ !wilder#renderer#should_draw_not_done(a:state.left + a:state.right + a:state.top + a:state.bottom, a:ctx, a:result)
     return
   endif
 

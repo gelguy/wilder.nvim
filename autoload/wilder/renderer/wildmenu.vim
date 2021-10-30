@@ -26,15 +26,6 @@ function! wilder#renderer#wildmenu#prepare_state(opts) abort
     let l:state.right = get(a:opts, 'right', [])
   endif
 
-  let l:dynamic = 0
-  for l:Component in l:state.left + l:state.right
-    if wilder#renderer#is_dynamic_component(l:Component)
-      let l:dynamic = 1
-      break
-    endif
-  endfor
-  let l:state.dynamic = l:dynamic
-
   if !has_key(l:state.highlights, 'separator')
     let l:state.highlights.separator =
           \ get(a:opts, 'separator_hl', l:state.highlights.default)
@@ -71,17 +62,6 @@ function! wilder#renderer#wildmenu#prepare_state(opts) abort
   let l:state.highlighter = l:Highlighter
 
   return l:state
-endfunction
-
-function! s:has_dynamic_component(state) abort
-  for l:Component in
-        \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if wilder#renderer#is_dynamic_component(l:Component)
-      return 1
-    endif
-  endfor
-
-  return 0
 endfunction
 
 function! wilder#renderer#wildmenu#make_hl_chunks(state, width, ctx, result) abort
