@@ -83,8 +83,6 @@ function! wilder#main#start() abort
     " when using mappings which performs a command
     call timer_start(0, {-> s:start()})
   endif
-
-  return "\<Insert>\<Insert>"
 endfunction
 
 function! wilder#main#start_from_normal_mode() abort
