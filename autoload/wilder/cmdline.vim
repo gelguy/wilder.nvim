@@ -204,7 +204,7 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   " Append / back to l:head.
   if !empty(l:head)
     " Expand env vars.
-    let l:head = s:expand_env_vars(l:head)
+    let l:head = s:expand_user_and_env_vars(l:head)
 
     " Don't add / if there is already an existing / since // is not
     " simplified - see :h simplify()).
@@ -960,13 +960,13 @@ function! wilder#cmdline#python_file_finder_pipeline(opts) abort
         \   wilder#result({
         \     'pos': res.pos,
         \     'replace': ['wilder#cmdline#replace'],
-        \     'data': extend(s:convert_result_to_data(res), {'query': s:expand_env_vars(res.arg)}),
+        \     'data': extend(s:convert_result_to_data(res), {'query': s:expand_user_and_env_vars(res.arg)}),
         \   }),
         \ ]}),
         \ ]
 endfunction
 
-function! s:expand_env_vars(arg)
+function! s:expand_user_and_env_vars(arg)
   let l:slash = !has('win32') && !has('win64')
         \ ? '/'
         \ : &shellslash
@@ -974,13 +974,23 @@ function! s:expand_env_vars(arg)
         \ : '\'
 
   let l:path_segments = split(a:arg, l:slash, 1)
+
+  if empty(l:path_segments)
+    return a:arg
+  endif
+
   call map(l:path_segments, {_, p -> p[0] ==# '$' ? eval(p) : p})
+
+  if l:path_segments[0][0] ==# '~'
+    let l:path_segments[0] = expand(l:path_segments[0])
+  endif
+
   return join(l:path_segments, l:slash)
 endfunction
 
 function! s:file_finder(ctx, opts, res) abort
   let l:cwd = getcwd()
-  let l:match_arg = s:expand_env_vars(a:res.arg)
+  let l:match_arg = s:expand_user_and_env_vars(a:res.arg)
   let l:is_dir = a:res.expand ==# 'dir'
 
   if !l:is_dir
