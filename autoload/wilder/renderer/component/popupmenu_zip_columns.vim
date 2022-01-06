@@ -9,7 +9,7 @@ function! wilder#renderer#component#popupmenu_zip_columns#(f, c1, c2) abort
         \ 'value': {ctx, result -> s:value(l:state, ctx, result)},
         \ 'pre_hook': {ctx -> s:pre_hook(l:state, ctx)},
         \ 'post_hook': {ctx -> s:post_hook(l:state, ctx)},
-        \ 'should_draw_not_done': {ctx, result -> s:should_draw_not_done(l:state, ctx, result)}
+        \ 'pre_draw': {ctx, result -> s:pre_draw(l:state, ctx, result)}
         \ }
 endfunction
 
@@ -23,8 +23,8 @@ function! s:post_hook(state, ctx) abort
   call wilder#renderer#call_component_post_hook(a:ctx, a:state.c2)
 endfunction
 
-function! s:should_draw_not_done(state, ctx, result) abort
-  return wilder#renderer#should_draw_not_done([a:state.c1, a:state.c2], a:ctx, a:result)
+function! s:pre_draw(state, ctx, result) abort
+  return wilder#renderer#pre_draw([a:state.c1, a:state.c2], a:ctx, a:result)
 endfunction
 
 function! s:value(state, ctx, result) abort

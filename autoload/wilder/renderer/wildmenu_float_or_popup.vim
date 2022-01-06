@@ -18,7 +18,7 @@ endfunction
 
 function! s:render(state, ctx, result) abort
   if !a:ctx.done &&
-        \ !wilder#renderer#should_draw_not_done(a:state.left + a:state.right, a:ctx, a:result)
+        \ !wilder#renderer#pre_draw(a:state.left + a:state.right, a:ctx, a:result)
     return
   endif
 

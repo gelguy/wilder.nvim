@@ -25,7 +25,7 @@ function! wilder#renderer#component#wildmenu_spinner#(args) abort
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
         \ 'len': {ctx, result -> wilder#renderer#wildmenu#get_item_len(
         \   s:get_char(l:state, ctx, result), ctx, result)},
-        \ 'should_draw_not_done': {-> 1},
+        \ 'pre_draw': {-> 1},
         \ }
 endfunction
 

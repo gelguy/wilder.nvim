@@ -14,7 +14,6 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ 'left_offset': get(a:opts, 'left_offset', 1),
-        \ 'winblend': get(a:opts, 'winblend', 0),
         \ 'zindex': get(a:opts, 'zindex', 250),
         \ 'top': get(a:opts, 'top', []),
         \ 'bottom': get(a:opts, 'bottom', []),
@@ -51,6 +50,20 @@ function! wilder#renderer#popupmenu#(opts) abort
 
   let l:Min_width = get(a:opts, 'min_width', 16)
   let l:state.get_min_width = s:get_height_or_width_from_option(l:Min_width, 16, 0)
+
+  if exists('+pumblend')
+    if has_key(a:opts, 'pumblend')
+      let l:state.pumblend = a:opts.pumblend
+    elseif has_key(a:opts, 'winblend')
+      " DEPRECATED: Use 'pumblend'
+      let l:state.pumblend = a:opts.winblend
+    else
+      " -1 to indicate unset
+      let l:state.pumblend = -1
+    endif
+  else
+    let l:state.pumblend = -1
+  endif
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:state.left = [' ']
@@ -172,9 +185,9 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  " If pipeline is not done, check if we need to draw when result is not done.
-  if !a:ctx.done && a:state.page != [-1, -1] &&
-        \ !wilder#renderer#should_draw_not_done(a:state.left + a:state.right + a:state.top + a:state.bottom, a:ctx, a:result)
+  " If empty message is not showing, check if we need to draw.
+  if a:state.page != [-1, -1] &&
+        \ !wilder#renderer#pre_draw(a:state.left + a:state.right + a:state.top + a:state.bottom, a:ctx, a:result)
     return
   endif
 
@@ -667,7 +680,7 @@ function! s:pre_hook(state, ctx) abort
   call a:state.api.new({
         \ 'normal_highlight': a:state.highlights.default,
         \ 'zindex': get(a:state, 'zindex', 0),
-        \ 'winblend': get(a:state, 'winblend', 0)
+        \ 'pumblend': get(a:state, 'pumblend', -1)
         \ })
 
   for l:Component in [a:state.empty_message] +

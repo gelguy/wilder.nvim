@@ -33,11 +33,11 @@ function! wilder#renderer#component#popupmenu_spinner#(opts) abort
 
   return {
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
-        \ 'should_draw_not_done': {ctx, result -> s:should_draw_not_done(l:state, ctx, result)},
+        \ 'pre_draw': {ctx, result -> s:pre_draw(l:state, ctx, result)},
         \ }
 endfunction
 
-function! s:should_draw_not_done(state, ctx, result) abort
+function! s:pre_draw(state, ctx, result) abort
   if a:ctx.run_id == a:state.run_id
     return 1
   endif

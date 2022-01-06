@@ -128,7 +128,7 @@ function! s:theme(opts, namespace, hls) abort
         \ ),
         \ wilder#condition(
         \   {ctx, x -> has_key(ctx, 'error')},
-        \   '!',
+        \   ['!', l:highlights.mode],
         \   wilder#wildmenu_spinner({'hl': l:highlights.mode})
         \ ),
         \ [' ', l:highlights.mode],

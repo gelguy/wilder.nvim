@@ -902,6 +902,9 @@ wilder#python_file_finder_pipeline([{options}])
             completion argument {arg} and return the command as a list of
             strings.
 
+            If the function returns |v:false|, the pipeline will return also
+            |v:false|.
+
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
 
@@ -917,6 +920,9 @@ wilder#python_file_finder_pipeline([{options}])
             search for directories. The function should take a {ctx} and the
             directory completion argument {arg} and return the command as a
             list of strings.
+
+            If the function returns |v:false|, the pipeline will return also
+            |v:false|.
 
             To use `fd`, set to this option to ['fd', '-td'].
 
@@ -1341,8 +1347,10 @@ wilder#wildmenu_renderer([{options}])
             `zindex`
             Optional~
             Vim or Neovim 0.5.1+ only~
-            'zindex' to apply to the popupmenu. See |nvim_open_win()| for
-            Neovim and |popup_create-arguments| for Vim.
+            'zindex' to apply to the wildmenu float or popup. Only applied
+            when `mode` is 'float' or 'popup'. See |nvim_open_win()| for
+            Neovim and |popup_create-arguments| for Vim on how 'zindex' is
+            used.
 
             Default: 250
 
@@ -1953,14 +1961,14 @@ wilder#popupmenu_renderer([{options}])
 
             Default: 100
 
-            `winblend`
+            `pumblend`
             Optional~
             Neovim only~
-            'winblend' to apply to the popupmenu. Only for Neovim. This
-            applies pseudo-transparency for the popupmenu. See |winblend| for
-            more details.
+            Blend level to apply to the popupmenu. Only for Neovim. This
+            applies pseudo-transparency for the popupmenu. See |winblend| and
+            |pumblend| for more details.
 
-            Default: 0
+            Default: &pumblend
 
             `zindex`
             Optional~
@@ -2057,6 +2065,10 @@ wilder#popupmenu_renderer([{options}])
             See https://github.com/gelguy/wilder.nvim/issues/30.
 
             Default: has('nvim')
+
+            `winblend`
+            Deprecated~
+            Use `pumblend`.
 
                                     *wilder#popupmenu_border_theme()*
 wilder#popupmenu_border_theme([{options}])
