@@ -17,7 +17,8 @@ function! wilder#renderer#wildmenu_float_or_popup#(opts) abort
 endfunction
 
 function! s:render(state, ctx, result) abort
-  if !a:ctx.done && !a:state.dynamic
+  if !a:ctx.done &&
+        \ !wilder#renderer#pre_draw(a:state.left + a:state.right, a:ctx, a:result)
     return
   endif
 
@@ -83,8 +84,9 @@ function! s:pre_hook(state, ctx) abort
   let l:row = &lines - l:cmdheight - 1
   call a:state.api.move(l:row, 0, 1, &columns)
 
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
+  endfor
 
   let a:state.active = 1
 endfunction
@@ -92,8 +94,9 @@ endfunction
 function! s:post_hook(state, ctx) abort
   call a:state.api.hide()
 
-  call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
+  endfor
 
   let a:state.active = 0
 endfunction

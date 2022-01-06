@@ -1,4 +1,4 @@
-function! wilder#renderer#mux#make(opts) abort
+function! wilder#renderer#mux#(opts) abort
   " convert from dict to list
   " e.g. {':': R1, '/': R2} to [[':', R1], ['/': R2]]
   if type(a:opts) is v:t_dict

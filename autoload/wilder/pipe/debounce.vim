@@ -1,4 +1,4 @@
-function! wilder#pipe#debounce#make(t) abort
+function! wilder#pipe#debounce#(t) abort
   let l:state = {
         \ 'timer': 0,
         \ 'interval': a:t,

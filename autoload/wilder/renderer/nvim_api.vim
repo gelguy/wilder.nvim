@@ -7,7 +7,7 @@ function! wilder#renderer#nvim_api#() abort
         \ 'win': -1,
         \ 'ns_id': nvim_create_namespace(''),
         \ 'normal_highlight': 'Normal',
-        \ 'winblend': 0,
+        \ 'pumblend': -1,
         \ 'zindex': 0,
         \ 'window_state': 'hidden',
         \ 'dimensions': -1,
@@ -52,7 +52,7 @@ function! s:new(opts) dict abort
   endif
 
   let self.state.normal_highlight = get(a:opts, 'normal_highlight', 'Normal')
-  let self.state.winblend = get(a:opts, 'winblend', 0)
+  let self.state.pumblend = get(a:opts, 'pumblend', -1)
   let self.state.zindex = get(a:opts, 'zindex', 0)
 endfunction
 
@@ -119,7 +119,11 @@ function! s:_open_win() dict abort
 
   call self.set_option('winhighlight',
         \ 'Search:None,IncSearch:None,Normal:' . self.state.normal_highlight)
-  call self.set_option('winblend', self.state.winblend)
+  if self.state.pumblend != -1
+    call self.set_option('winblend', self.state.pumblend)
+  else
+    call self.set_option('winblend', &pumblend)
+  endif
 
   if self.state.firstline isnot -1
     call nvim_win_set_cursor(self.state.win, [self.state.firstline, 0])

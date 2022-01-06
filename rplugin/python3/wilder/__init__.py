@@ -161,6 +161,9 @@ class Wilder(object):
                         filter_opts['ispath'] = True
                         candidates = self.cpsm_filt(event, filter_opts, candidates, query)
 
+                    elif filter_name == 'clap_filter':
+                        candidates = self.clap_filt(event, filter_opts, candidates, query)
+
                     elif filter_name == 'fruzzy_filter':
                         candidates = self.fruzzy_filt(event, filter_opts, candidates, query)
 
@@ -777,6 +780,52 @@ class Wilder(object):
 
         cpsm = importlib.import_module('cpsm_py')
         return cpsm.ctrlp_match(candidates, query, ispath=ispath)[0]
+
+    @neovim.function('_wilder_python_clap_filt', sync=False, allow_nested=True)
+    def _clap_filt(self, args):
+        self.run_in_background(self.clap_filt_handler, args)
+
+    def clap_filt_handler(self, event, ctx, *args):
+        try:
+            candidates = list(self.clap_filt(event, *args))
+
+            if event.is_set():
+                return
+
+            self.resolve(ctx, candidates)
+        except Exception as e:
+            self.reject(ctx, 'python_clap_filt: ' + str(e))
+
+    def clap_filt(self, event, opts, candidates, query):
+        if not candidates:
+            return candidates
+
+        if 'clap_path' in opts:
+            clap_path_head = os.path.split(opts['clap_path'])[0]
+            self.add_sys_path(clap_path_head)
+
+        use_rust = opts['use_rust'] if 'use_rust' in opts else False
+
+        if use_rust:
+            fuzzymatch_rs = importlib.import_module('clap.fuzzymatch_rs')
+            result = fuzzymatch_rs.fuzzy_match(query, candidates, [], {'winwidth': '0'})
+            return result[1]
+        else:
+            scorer = importlib.import_module('clap.scorer')
+
+            result = []
+            NO_MATCH = float("-inf")
+            checker = EventChecker(event)
+            for candidate in candidates:
+                if checker.check():
+                    return
+
+                score, indices = scorer.fzy_scorer(query, candidate)
+                if score != NO_MATCH:
+                    result.append((candidate, score))
+
+            result.sort(key=lambda x: x[1], reverse=True)
+            return map(lambda x: x[0], result)
 
     @neovim.function('_wilder_python_difflib_sort', sync=False, allow_nested=True)
     def _difflib_sort(self, args):

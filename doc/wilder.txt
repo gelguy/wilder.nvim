@@ -902,6 +902,9 @@ wilder#python_file_finder_pipeline([{options}])
             completion argument {arg} and return the command as a list of
             strings.
 
+            If the function returns |v:false|, the pipeline will return also
+            |v:false|.
+
             To use `ripgrep`, set to this option to ['rg', '--files'].
             To use `fd`, set to this option to ['fd', '-tf'].
 
@@ -917,6 +920,9 @@ wilder#python_file_finder_pipeline([{options}])
             search for directories. The function should take a {ctx} and the
             directory completion argument {arg} and return the command as a
             list of strings.
+
+            If the function returns |v:false|, the pipeline will return also
+            |v:false|.
 
             To use `fd`, set to this option to ['fd', '-td'].
 
@@ -1341,8 +1347,10 @@ wilder#wildmenu_renderer([{options}])
             `zindex`
             Optional~
             Vim or Neovim 0.5.1+ only~
-            'zindex' to apply to the popupmenu. See |nvim_open_win()| for
-            Neovim and |popup_create-arguments| for Vim.
+            'zindex' to apply to the wildmenu float or popup. Only applied
+            when `mode` is 'float' or 'popup'. See |nvim_open_win()| for
+            Neovim and |popup_create-arguments| for Vim on how 'zindex' is
+            used.
 
             Default: 250
 
@@ -1471,18 +1479,38 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
 
             String:
             The value of the string will be drawn. To change its highlight
-            group, see the entry for Dictionary.
+            group, see the other options.
 
             List:
-            A list of |wilder#wildmenu_renderer()-item|s. Any item can be in
-            the list, even other nested lists.  Items of the list are drawn in
-            sequence.
+            A |wilder-renderer-highlight-chunk| or a list of chunks. A single
+            chunk is implictly converted into a singleton list.
+
+            A chunk has the form [{str}, {hl}]. The string will be drawn with
+            the {hl} highlight group applied to it.
+
+            Note that {selected_hl} when the chunk is in the form of
+            [{str}, {hl}, {selected_hl}] has no effect since the item cannot
+            be selected.
+
+            Function:
+            A function which takes a {ctx} and the |wilder-pipeline-result|
+            {result} and returns either a String or List. See above on how the
+            String or List is used.
+
+            The keys of {ctx} are the same as the ones in the `render`
+            key of |wilder-renderer|, with two additional keys:
+                `page`
+                A 2 element array [{start}, {end}] indicating the start and
+                end of the candidates currently being drawn.
+                The special value [-1, -1] indicates that there are no
+                candidates.
 
             Dictionary:
             A dictionary with the following keys:
                 `value`
                 Mandatory~
-                A |wilder#wildmenu_renderer()-item|. Can be nested.
+                A String, List or Function. See above on how the values are
+                used.
 
                 `len`
                 Optional~
@@ -1499,14 +1527,10 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
                     The keys of {ctx} are the same as the ones in the `render`
                     key of |wilder-renderer|.
 
+                    Note: `ctx.page` is not available when determining the
+                    `len` of the item.
+
                 Default: None
-
-                `hl`
-                Optional~
-                The highlight group to use when drawing this item. Nested
-                items can override this by defining their own `hl` key.
-
-                Default: The `hl` option for the renderer.
 
                 `pre_hook`
                 Optional~
@@ -1546,38 +1570,22 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
             the candidates currently being drawn. If no candidates are drawn,
             the page is [-1, -1].
 
-            Note: `ctx.page` is not available when determining the `len` of
-            the item. This means items depending on `ctx.page` have to be
-            wrapped in a dictionary and provide the `len` entry.
-
 Before drawing the results, the amount of space available needs to be
 calculated. This is done by calculating the total space taken by the
 items, and then subtracting that from the total space available.
 
 For String items, it is the |strdisplaywidth()| of the string.
-For List items, it is the sum of the space used by the nested items.
-For Dictionary items, if it has no `len` entry, the space taken by the `value`
-entry is calculated. Otherwise, the `len` entry is used if it is a Number, or
-if it is a function, the result of calling the `len` entry is used.
+For List items, it is the sum of the space used by
+|wilder-renderer-highlight-chunk|s.
+For Dictionary items, if it has no `len` key, the space taken by the `value`
+entry is calculated. Otherwise, the `len` key is used if it is a Number, or if
+it is a function, the result of calling the `len` entry is used.
 For Function items, the function is called, and the space used of the result
 is calculated.
 
 This means that when using Dictionary items, the `len` entry has to be
 consistent with the `value` entry, otherwise the rendering will not be
 correct.
-
-When drawing the results, the items are evaluated.
-
-For String items, the string itself is used.
-For List items, each element is evaluated and then drawn in sequence.
-For Dictionary items, the `value` entry is evaluated.
-For Function items, the function is called, and its result evaluated.
-If any of these result in another |wilder#wildmenu_renderer()-item|, it is
-evaluated again.
-
-The default highlight group used for the result is the `hl` option passed to
-the renderer. To change the highlight group, use a Dictionary item together
-with |wilder#make_hl()|.
 
 The following items are provided:
 
@@ -1603,7 +1611,7 @@ wilder#wildmenu_previous_arrow([{options}])
             Default: None
 
                                     *wilder#wildmenu_next_arrow()*
-wilder#wldmnue_next_arrow([{options}])
+wilder#wildmenu_next_arrow([{options}])
                                     wilder#wildmenu_renderer() item~
             Adds an arrow when there are additional candidates to the right
             which do not fit in the current view.
@@ -1953,14 +1961,14 @@ wilder#popupmenu_renderer([{options}])
 
             Default: 100
 
-            `winblend`
+            `pumblend`
             Optional~
             Neovim only~
-            'winblend' to apply to the popupmenu. Only for Neovim. This
-            applies pseudo-transparency for the popupmenu. See |winblend| for
-            more details.
+            Blend level to apply to the popupmenu. Only for Neovim. This
+            applies pseudo-transparency for the popupmenu. See |winblend| and
+            |pumblend| for more details.
 
-            Default: 0
+            Default: &pumblend
 
             `zindex`
             Optional~
@@ -2058,6 +2066,10 @@ wilder#popupmenu_renderer([{options}])
 
             Default: has('nvim')
 
+            `winblend`
+            Deprecated~
+            Use `pumblend`.
+
                                     *wilder#popupmenu_border_theme()*
 wilder#popupmenu_border_theme([{options}])
                                     Popupmenu renderer theme~
@@ -2128,21 +2140,27 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
 
             String:
             The value of the string will be drawn. The `default` or `selected`
-            highlight will be used.
+            highlight will be used. The string will be drawn on each row.
 
             The empty string ' ' can be used to give padding to the left or
             right of the popupmenu.
 
             List:
-            A list of |wilder-renderer-highlight-chunk|s.
+            A |wilder-renderer-highlight-chunk|s or a list of chunks. If it is
+            a single chunk, it is implictly converted to a singleton list.
+
+            The highlight chunks represent what to draw on each row.
 
             Function:
-            A function which takes a {ctx} and the pipeline result {result}
-            and returns a string or a list of list of
-            |wilder-renderer-highlight-chunk|s e.g.
-            [[['column1', 'hl']], [['column2', 'hl']]], where list[i]
-            represents the i-th row and list[i][j] represents j-th highlight
-            chunk.
+            A function which takes a {ctx} and the |wilder-pipeline-result|
+            {result} and returns a String or a List. See above on how the
+            String and List values are used.
+
+            In addition, the List can be nested to 3 levels, e.g.
+            [[['column1', 'hl']], [['column2', 'hl']]]. In this case, list[i]
+            represents the i-th row and the list of highlight chunks are used
+            to draw the row.
+
             The function has to ensure the sum of the
             |strdisplaywidth()| of the <string>s in the highlight chunks is
             the same across each row.
@@ -2325,6 +2343,16 @@ wilder#popupmenu_devicons([{options}])
 
             Default: 0
 
+            `min_width`
+            Optional~
+            The minimum width for an icon. An icon with shorter than the
+            minimum width will be padded with spaces on the right.
+
+            This is useful when there are issues with icons not being of the
+            same |strdisplaywidth()|.
+
+            Default: 1
+
                                     *wilder#popupmenu_buffer_flags()*
 wilder#popupmenu_buffer_flags([{options}])
                                     wilder#popupmenu_renderer() column~
@@ -2499,9 +2527,6 @@ will be highlighted with <highlight> by default, and using
 
 Note that it is possible for a highlight chunk to be used where the line
 cannot be selected, meaning <selected_highlight> highlight will not be used.
-
-|wilder#wildmenu_renderer()-item|s do not use highlight chunks since its API
-was created before highlight chunks were added.
 
 ==============================================================================
 6. API                              *wilder-API*
@@ -2965,6 +2990,53 @@ wilder#python_cpsm_filter([{cpsm_path}])
 
             {cpsm_path} can be provided to set the path for `cpsm_py.so`. It
             is inferred by Neovim/Vim otherwise.
+
+                                    *wilder#python_clap_filt()*
+wilder#python_clap_filt({ctx}, {opts}, {candidates}, {query})
+                                    Neovim or Vim with `yarp` enabled only~
+                                    Async~
+                                    vim-clap plugin required~
+            Takes a list of candidates and fuzzily filters and sorts the
+            candidates using `vim-clap`.
+
+            The `vim-clap` Vim plugin is required and can be found at
+            https://github.com/liuchengxu/vim-clap.
+
+            {opts} can contain the following keys:
+            `clap_path`
+            Optional~
+            The path to `clap/scorer.py`. If left empty, Python will not
+            attempt to add the path.
+
+            Default: None
+
+            `use_rust`
+            Optional~
+            If true, use the Rust binary built by `vim-clap` for fuzzy
+            matching.
+
+            Default: 0
+
+                                    *wilder#python_clap_filter()*
+wilder#python_clap_filter([{opts}])
+                                    Neovim or Vim with `yarp` enabled only~
+                                    vim-clap plugin required~
+            Returns a fuzzy filter that filters and sorts the candidates using
+            |wilder#python_clap_filt()|. Can be used as the `fuzzy_filter`
+            option in |wilder#cmdline_pipeline()|.
+
+            {opts} is a Dictionary with the following keys:
+            `clap_path`
+            Optional~
+            The path to `clap/scorer.py`.
+
+            Default: Inferred by Neovim/Vim.
+
+            {use_rust}
+            Optional~
+            Whether to use the Rust binary built by `vim-clap`.
+
+            Default: Inferred by Neovim/Vim.
 
                                     *wilder#lua_fzy_filt()*
 wilder#lua_fzy_filt({ctx}, {opts}, {candidates}, {query})

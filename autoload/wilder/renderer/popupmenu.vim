@@ -14,7 +14,6 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'reverse': get(a:opts, 'reverse', 0),
         \ 'highlight_mode': get(a:opts, 'highlight_mode', 'detailed'),
         \ 'left_offset': get(a:opts, 'left_offset', 1),
-        \ 'winblend': get(a:opts, 'winblend', 0),
         \ 'zindex': get(a:opts, 'zindex', 250),
         \ 'top': get(a:opts, 'top', []),
         \ 'bottom': get(a:opts, 'bottom', []),
@@ -52,6 +51,20 @@ function! wilder#renderer#popupmenu#(opts) abort
   let l:Min_width = get(a:opts, 'min_width', 16)
   let l:state.get_min_width = s:get_height_or_width_from_option(l:Min_width, 16, 0)
 
+  if exists('+pumblend')
+    if has_key(a:opts, 'pumblend')
+      let l:state.pumblend = a:opts.pumblend
+    elseif has_key(a:opts, 'winblend')
+      " DEPRECATED: Use 'pumblend'
+      let l:state.pumblend = a:opts.winblend
+    else
+      " -1 to indicate unset
+      let l:state.pumblend = -1
+    endif
+  else
+    let l:state.pumblend = -1
+  endif
+
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:state.left = [' ']
     let l:state.right = [' ', wilder#popupmenu_scrollbar()]
@@ -59,8 +72,6 @@ function! wilder#renderer#popupmenu#(opts) abort
     let l:state.left = get(a:opts, 'left', [])
     let l:state.right = get(a:opts, 'right', [])
   endif
-
-  let l:state.dynamic = s:has_dynamic_component(l:state)
 
   if !has_key(l:state.highlights, 'accent')
     let l:state.highlights.accent =
@@ -174,8 +185,9 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  " If pipeline is not done and there are no dynamic components, skip drawing.
-  if !a:ctx.done && a:state.page != [-1, -1] && !a:state.dynamic
+  " If empty message is not showing, check if we need to draw.
+  if a:state.page != [-1, -1] &&
+        \ !wilder#renderer#pre_draw(a:state.left + a:state.right + a:state.top + a:state.bottom, a:ctx, a:result)
     return
   endif
 
@@ -439,10 +451,10 @@ function! s:make_lines(state, ctx, result) abort
   let l:height = a:ctx.height
 
   let l:left_column_chunks = map(repeat([0], l:height), {-> []})
-  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result, l:height)
+  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result)
 
   let l:right_column_chunks = map(repeat([0], l:height), {-> []})
-  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result, l:height)
+  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result)
 
   " [[left_column, chunks, right_column]]
   let l:raw_lines = repeat([0], l:height)
@@ -455,15 +467,15 @@ function! s:make_lines(state, ctx, result) abort
   while l:i < l:height
     let l:index = l:start + l:i
     if l:index <= l:end
-      let l:line = s:draw_line(a:state, a:ctx, a:result, l:index)
+      let l:chunks = s:draw_candidates_chunks(a:state, a:ctx, a:result, l:index)
     else
-      let l:line = []
+      let l:chunks = []
     endif
     let l:left_column = l:left_column_chunks[l:i]
     let l:right_column = l:right_column_chunks[l:i]
 
     let l:left_width = wilder#render#chunks_displaywidth(l:left_column)
-    let l:chunks_width = wilder#render#chunks_displaywidth(l:line)
+    let l:chunks_width = wilder#render#chunks_displaywidth(l:chunks)
     let l:right_width = wilder#render#chunks_displaywidth(l:right_column)
 
     let l:total_width = l:left_width + l:chunks_width + l:right_width
@@ -474,7 +486,7 @@ function! s:make_lines(state, ctx, result) abort
     endif
 
     let l:index = l:i - l:start
-    let l:raw_lines[l:i] = [l:left_column, l:line, l:right_column]
+    let l:raw_lines[l:i] = [l:left_column, l:chunks, l:right_column]
     let l:widths[l:i] = [l:chunks_width, l:total_width]
 
     let l:i += 1
@@ -525,9 +537,11 @@ function! s:make_lines(state, ctx, result) abort
   return [l:lines, l:expected_width]
 endfunction
 
-function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
+function! s:draw_columns(column_chunks, columns, ctx, result) abort
+  let l:height = a:ctx.height
+
   for l:Column in a:columns
-    let l:column = s:draw_column(l:Column, a:ctx, a:result, a:height)
+    let l:column = wilder#renderer#popupmenu#draw_column(a:ctx, a:result, l:Column)
 
     if empty(l:column)
       continue
@@ -540,10 +554,10 @@ function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
       let l:i += 1
     endwhile
 
-    if l:i < a:height
+    if l:i < l:height
       let l:width = wilder#render#chunks_displaywidth(l:column[0])
 
-      while l:i < a:height
+      while l:i < l:height
         let a:column_chunks[l:i] += [[repeat(' ', l:width)]]
 
         let l:i += 1
@@ -552,31 +566,50 @@ function! s:draw_columns(column_chunks, columns, ctx, result, height) abort
   endfor
 endfunction
 
-function! s:draw_column(column, ctx, result, height) abort
+function! wilder#renderer#popupmenu#draw_column(ctx, result, column) abort
   let l:Column = a:column
+  let l:height = a:ctx.height
 
   if type(l:Column) is v:t_dict
     let l:Column = l:Column.value
   endif
 
-  if type(l:Column) is v:t_list
-    return repeat([[l:Column]], a:height)
+  if type(l:Column) is v:t_func
+    let l:Column = l:Column(a:ctx, a:result)
   endif
 
   if type(l:Column) is v:t_string
-    return repeat([[[l:Column]]], a:height)
+    if empty(l:Column)
+      return []
+    endif
+
+    return repeat([[[l:Column]]], l:height)
   endif
 
-  let l:result = l:Column(a:ctx, a:result)
-
-  if type(l:result) is v:t_list
-    return l:result
+  " v:t_list
+  if empty(l:Column)
+    return []
   endif
 
-  return repeat([[[l:result]]], a:height)
+  if empty(l:Column[0])
+    return []
+  endif
+
+  " highlight chunk
+  if type(l:Column[0]) is v:t_string
+    return repeat([[l:Column]], l:height)
+  endif
+
+  " list of highlight chunks
+  if type(l:Column[0][0]) is v:t_string
+    return repeat([l:Column], l:height)
+  endif
+
+  " list of list of highlight chunks
+  return l:Column
 endfunction
 
-function! s:draw_line(state, ctx, result, i) abort
+function! s:draw_candidates_chunks(state, ctx, result, i) abort
   let l:is_selected = a:ctx.selected == a:i
 
   let l:str = s:draw_candidate(a:state, a:ctx, a:result, a:i)
@@ -611,6 +644,7 @@ function! s:draw_line(state, ctx, result, i) abort
 
   if !l:is_selected
     call a:state.highlight_cache.set(l:str, l:chunks)
+    let l:chunks = copy(l:chunks)
   endif
 
   return l:chunks
@@ -642,32 +676,16 @@ function! s:merge_spans(spans) abort
   return [[l:start_byte, l:end_byte - l:start_byte]]
 endfunction
 
-function! s:has_dynamic_component(state) abort
-  for l:Component in
-        \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if type(l:Component) is v:t_dict &&
-          \ has_key(l:Component, 'dynamic') &&
-          \ l:Component['dynamic']
-      return 1
-    endif
-  endfor
-
-  return 0
-endfunction
-
 function! s:pre_hook(state, ctx) abort
   call a:state.api.new({
         \ 'normal_highlight': a:state.highlights.default,
         \ 'zindex': get(a:state, 'zindex', 0),
-        \ 'winblend': get(a:state, 'winblend', 0)
+        \ 'pumblend': get(a:state, 'pumblend', -1)
         \ })
 
   for l:Component in [a:state.empty_message] +
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if type(l:Component) is v:t_dict &&
-          \ has_key(l:Component, 'pre_hook')
-      call l:Component['pre_hook'](a:ctx)
-    endif
+    call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
   endfor
 
   let a:state.active = 1
@@ -679,10 +697,7 @@ function! s:post_hook(state, ctx) abort
 
   for l:Component in [a:state.empty_message] +
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
-    if type(l:Component) is v:t_dict &&
-          \ has_key(l:Component, 'post_hook')
-      call l:Component['post_hook'](a:ctx)
-    endif
+    call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
   endfor
 
   call timer_stop(a:state.empty_message_first_draw_timer)
@@ -830,28 +845,34 @@ endfunction
 function! s:get_width_from_option(opt, default) abort
 endfunction
 
-function! s:iterate_column(f) abort
-  return {ctx, result -> s:iterate_column(a:f, ctx, result)}
-endfunction
+function! wilder#renderer#popupmenu#iterate_candidates(ctx, result, f) abort
+  let l:page = a:ctx.page
+  if l:page == [-1, -1]
+    return []
+  endif
 
-function! s:iterate_column(f, ctx, result)
-  let [l:start, l:end] = a:ctx.page
-  let l:data = get(a:result, 'data', v:null)
+  let l:lines = []
 
-  let l:lines = repeat([0], l:end - l:start + 1)
+  let l:i = l:page[0]
+  while l:i <= l:page[1]
+    let l:candidate = wilder#main#get_candidate(a:ctx, a:result, l:i)
+    let l:ctx = copy(a:ctx)
+    let l:ctx.original = a:result.value[l:i]
+    let l:ctx.i = l:i
 
-  let l:i = l:start
-  while l:i <= l:end
-    let l:index = l:i - l:start
-
-    let l:x = wilder#main#get_candidate(a:ctx, a:result, l:i)
-    let l:line = a:f(a:ctx, l:x, l:data)
-
-    if l:line is v:false
-      return []
+    let l:result = a:f(l:ctx, l:candidate, a:result.data)
+    if type(l:result) is v:t_string
+      call add(l:lines, [[l:result]])
+    elseif empty(l:result)
+      " empty v:t_list
+      call add(l:lines, [])
+    elseif type(l:result[0]) is v:t_string
+      " highlight chunk
+      call add(l:lines, [l:result])
+    else
+      " list of highhlight chunks
+      call add(l:lines, l:result)
     endif
-
-    let l:lines[l:index] = l:line
 
     let l:i += 1
   endwhile

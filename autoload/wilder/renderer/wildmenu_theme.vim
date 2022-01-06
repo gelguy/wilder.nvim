@@ -7,7 +7,7 @@ function! wilder#renderer#wildmenu_theme#airline_theme(opts) abort
         \ 'airline_y',
         \ 'airline_z_bold',
         \ ]
-  return s:theme(a:opts, 'Airline', l:hls)
+  return s:theme(copy(a:opts), 'Airline', l:hls)
 endfunction
 
 function! wilder#renderer#wildmenu_theme#lightline_theme(opts) abort
@@ -19,7 +19,7 @@ function! wilder#renderer#wildmenu_theme#lightline_theme(opts) abort
         \ 'LightlineRight_active_1',
         \ 'LightlineRight_active_0',
         \ ]
-  return s:theme(a:opts, 'Lightline', l:hls)
+  return s:theme(copy(a:opts), 'Lightline', l:hls)
 endfunction
 
 " {hls} is in the form [default_hl, selected_hl, left_hl, left_sub_hl,
@@ -27,45 +27,45 @@ endfunction
 function! s:theme(opts, namespace, hls) abort
   if !has_key(a:opts, 'highlights')
     let l:highlights = {}
-    let a:opts['highlights'] = l:highlights
+    let a:opts.highlights = l:highlights
   else
-    let l:highlights = a:opts['highlights']
+    let l:highlights = a:opts.highlights
   endif
 
   if !has_key(l:highlights, 'default')
-    let l:highlights['default'] = a:hls[0]
+    let l:highlights.default = a:hls[0]
   endif
 
   if !has_key(l:highlights, 'selected')
-    let l:highlights['selected'] = a:hls[1]
+    let l:highlights.selected = a:hls[1]
   endif
 
   if !has_key(l:highlights, 'accent')
-    let l:highlights['accent'] = wilder#hl_with_attr(
+    let l:highlights.accent = wilder#hl_with_attr(
           \ 'Wilder' . a:namespace . 'ThemeSelected',
-          \ l:highlights['default'], 'underline', 'bold')
+          \ l:highlights.default, 'underline', 'bold')
   endif
 
   if !has_key(l:highlights, 'selected_accent')
-    let l:highlights['selected_accent'] = wilder#hl_with_attr(
+    let l:highlights.selected_accent = wilder#hl_with_attr(
           \ 'Wilder' . a:namespace . 'ThemeAccentSelected',
-          \ l:highlights['selected'], 'underline', 'bold')
+          \ l:highlights.selected, 'underline', 'bold')
   endif
 
   if !has_key(l:highlights, 'mode')
-    let l:highlights['mode'] = a:hls[2]
+    let l:highlights.mode = a:hls[2]
   endif
 
   if !has_key(l:highlights, 'left_arrow2')
-    let l:highlights['left_arrow2'] = a:hls[3]
+    let l:highlights.left_arrow2 = a:hls[3]
   endif
 
   if !has_key(l:highlights, 'right_arrow2')
-    let l:highlights['right_arrow2'] = a:hls[4]
+    let l:highlights.right_arrow2 = a:hls[4]
   endif
 
   if !has_key(l:highlights, 'index')
-    let l:highlights['index'] = a:hls[5]
+    let l:highlights.index = a:hls[5]
   endif
 
   let l:is_airline = a:namespace ==# 'Airline'
@@ -100,53 +100,48 @@ function! s:theme(opts, namespace, hls) abort
     let l:separators = ['', '', '', '']
   elseif l:use_powerline_symbols == 1
     let l:separators = [
-          \ wilder#powerline_separator(l:powerline_symbols[0],
-          \   l:highlights['mode'], l:highlights['left_arrow2'],  a:namespace . 'Left'),
-          \ wilder#powerline_separator(l:powerline_symbols[0],
-          \   l:highlights['left_arrow2'], l:highlights['default'],  a:namespace . 'Left2'),
-          \ wilder#powerline_separator(l:powerline_symbols[1],
-          \   l:highlights['right_arrow2'], l:highlights['default'],  a:namespace . 'Right'),
-          \ wilder#powerline_separator(l:powerline_symbols[1],
-          \   l:highlights['index'], l:highlights['right_arrow2'],  a:namespace . 'Right2'),
+          \ wilder#wildmenu_powerline_separator(l:powerline_symbols[0],
+          \   l:highlights.mode, l:highlights.left_arrow2,  a:namespace . 'Left'),
+          \ wilder#wildmenu_powerline_separator(l:powerline_symbols[0],
+          \   l:highlights.left_arrow2, l:highlights.default,  a:namespace . 'Left2'),
+          \ wilder#wildmenu_powerline_separator(l:powerline_symbols[1],
+          \   l:highlights.right_arrow2, l:highlights.default,  a:namespace . 'Right'),
+          \ wilder#wildmenu_powerline_separator(l:powerline_symbols[1],
+          \   l:highlights.index, l:highlights.right_arrow2,  a:namespace . 'Right2'),
           \ ]
   else
     let l:separators = [
-          \ wilder#powerline_separator(l:powerline_symbols[0],
-          \   l:highlights['mode'], l:highlights['default'],  a:namespace . 'Left'),
+          \ wilder#wildmenu_powerline_separator(l:powerline_symbols[0],
+          \   l:highlights.mode, l:highlights.default,  a:namespace . 'Left'),
           \ '',
           \ '',
-          \ wilder#powerline_separator(l:powerline_symbols[1],
-          \   l:highlights['index'], l:highlights['default'],  a:namespace . 'Right2'),
+          \ wilder#wildmenu_powerline_separator(l:powerline_symbols[1],
+          \   l:highlights.index, l:highlights.default,  a:namespace . 'Right2'),
           \ ]
   endif
 
-  let l:theme = copy(a:opts)
-  let l:theme.left = [
-        \ {
-        \   'value': [
-        \     wilder#condition(
-        \       {-> getcmdtype() ==# ':'},
-        \       ' COMMAND ',
-        \       ' SEARCH ',
-        \     ),
-        \     wilder#condition(
-        \       {ctx, x -> has_key(ctx, 'error')},
-        \       '!',
-        \       wilder#wildmenu_spinner()
-        \     ), ' '],
-        \   'hl': l:highlights['mode'],
-        \   'dynamic': 1,
-        \ },
+  let a:opts.left = [
+        \ wilder#condition(
+        \   {-> getcmdtype() ==# ':'},
+        \   [' COMMAND ', l:highlights.mode],
+        \   [' SEARCH ', l:highlights.mode]
+        \ ),
+        \ wilder#condition(
+        \   {ctx, x -> has_key(ctx, 'error')},
+        \   ['!', l:highlights.mode],
+        \   wilder#wildmenu_spinner({'hl': l:highlights.mode})
+        \ ),
+        \ [' ', l:highlights.mode],
         \ l:separators[0],
         \ l:separators[1],
-        \ ' ', 
+        \ ' ',
         \ ] + get(a:opts, 'left', [])
-  let l:theme.right = get(a:opts, 'right', []) + [
+  let a:opts.right = get(a:opts, 'right', []) + [
         \ ' ',
         \ l:separators[2],
         \ l:separators[3],
-        \ wilder#index({'hl': l:highlights['index']}),
+        \ wilder#index({'hl': l:highlights.index}),
         \ ]
 
-  return l:theme
+  return a:opts
 endfunction

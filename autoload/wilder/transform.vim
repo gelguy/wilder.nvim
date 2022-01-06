@@ -225,6 +225,29 @@ function! wilder#transform#python_cpsm_filt(ctx, opts, candidates, query) abort
   return {ctx -> _wilder_python_cpsm_filt(ctx, a:opts, a:candidates, a:query)}
 endfunction
 
+function! wilder#transform#python_clap_filter(...) abort
+  let l:opts = get(a:, 1, {})
+  if !has_key(l:opts, 'clap_path')
+    let l:opts.clap_path = wilder#clap_path()
+  endif
+
+  if !has_key(l:opts, 'use_rust')
+    let l:use_rust = !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.so')) ||
+          \ !empty(wilder#findfile('pythonx/clap/fuzzymatch_rs.dyn'))
+    let l:opts.use_rust = l:use_rust
+  endif
+
+  return {ctx, xs, q -> wilder#transform#python_clap_filt(ctx, l:opts, xs, q)}
+endfunction
+
+function! wilder#transform#python_clap_filt(ctx, opts, candidates, query) abort
+  if empty(a:query)
+    return a:candidates
+  endif
+
+  return {ctx -> _wilder_python_clap_filt(ctx, a:opts, a:candidates, a:query)}
+endfunction
+
 function! wilder#transform#lua_fzy_filter() abort
   return {ctx, xs, q -> wilder#transform#lua_fzy_filt(ctx, 0, xs, q)}
 endfunction
@@ -234,5 +257,5 @@ function! wilder#transform#lua_fzy_filt(ctx, opts, candidates, query) abort
     return a:candidates
   endif
 
-  return luaeval('require("wilder").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
+  return luaeval('require("wilder.internal").fzy_filter(_A[1], _A[2])', [a:candidates, a:query])
 endfunction

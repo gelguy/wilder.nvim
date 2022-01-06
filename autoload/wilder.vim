@@ -179,19 +179,19 @@ function! wilder#_sleep(t) abort
 endfunction
 
 function! wilder#branch(...) abort
-  return wilder#pipe#branch#make(a:000)
+  return wilder#pipe#branch#(a:000)
 endfunction
 
 function! wilder#map(...) abort
-  return wilder#pipe#map#make(a:000)
+  return wilder#pipe#map#(a:000)
 endfunction
 
 function! wilder#subpipeline(f) abort
-  return wilder#pipe#subpipeline#make(a:f)
+  return wilder#pipe#subpipeline#(a:f)
 endfunction
 
 function! wilder#check(...) abort
-  return wilder#pipe#check#make(a:000)
+  return wilder#pipe#check#(a:000)
 endfunction
 
 function! wilder#if(condition, p) abort
@@ -203,24 +203,22 @@ function! wilder#if(condition, p) abort
 endfunction
 
 function! wilder#debounce(t) abort
-  return wilder#pipe#debounce#make(a:t)
+  return wilder#pipe#debounce#(a:t)
 endfunction
 
 function! wilder#result(...) abort
   if !a:0
-    return wilder#pipe#result#make()
+    return wilder#pipe#result#()
   else
-    return wilder#pipe#result#make(a:1)
+    return wilder#pipe#result#(a:1)
   endif
 endfunction
 
 function! wilder#result_output_escape(chars) abort
-  return wilder#result({
-        \'output': [{ctx, x -> escape(x, a:chars)}],
-        \ })
+  return wilder#pipe#result#escape_output_result(a:chars)
 endfunction
 
-" DEPRECATED: Use wilder#vim_substring()
+" DEPRECATED: Use wilder#vim_substring_pattern()
 function! wilder#vim_substring() abort
   return call('wilder#vim_substring_pattern', [])
 endfunction
@@ -231,7 +229,7 @@ endfunction
 
 function! wilder#vim_search(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipe#vim_search#make(l:args)
+  return wilder#pipe#vim_search#(l:args)
 endfunction
 
 function! wilder#escape_python(str, ...) abort
@@ -279,7 +277,7 @@ endfunction
 
 function! wilder#python_fuzzy_pattern(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipe#python_fuzzy_match#make(l:args)
+  return wilder#pipe#python_fuzzy_match#(l:args)
 endfunction
 
 " DEPRECATED: Use wilder#python_fuzzy_delimiter_pattern()
@@ -289,7 +287,7 @@ endfunction
 
 function! wilder#python_fuzzy_delimiter_pattern(...) abort
   let l:args = a:0 > 0 ? a:1 : {}
-  return wilder#pipe#python_fuzzy_delimiter#make(l:args)
+  return wilder#pipe#python_fuzzy_delimiter#(l:args)
 endfunction
 
 function! wilder#python_search(...) abort
@@ -303,11 +301,11 @@ endfunction
 
 function! wilder#history(...) abort
   if !a:0
-    return wilder#pipe#history#make()
+    return wilder#pipe#history#()
   elseif a:0 == 1
-    return wilder#pipe#history#make(a:1)
+    return wilder#pipe#history#(a:1)
   else
-    return wilder#pipe#history#make(a:1, a:2)
+    return wilder#pipe#history#(a:1, a:2)
   endif
 endfunction
 
@@ -458,6 +456,14 @@ function! wilder#python_cpsm_filt(...) abort
   return call('wilder#transform#python_cpsm_filt', a:000)
 endfunction
 
+function! wilder#python_clap_filter(...) abort
+  return call('wilder#transform#python_clap_filter', a:000)
+endfunction
+
+function! wilder#python_clap_filt(...) abort
+  return call('wilder#transform#python_clap_filt', a:000)
+endfunction
+
 function! wilder#lua_fzy_filter() abort
   return call('wilder#transform#lua_fzy_filter', [])
 endfunction
@@ -578,7 +584,11 @@ function! wilder#string(str, ...) abort
 endfunction
 
 function! wilder#wildmenu_string(str, ...) abort
-  return {'value': a:str, 'hl': get(a:000, 0, '')}
+  if a:0
+    return [a:str, a:1]
+  endif
+
+  return a:str
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_previous_arrow()
@@ -672,7 +682,7 @@ endfunction
 " renderers
 
 function! wilder#renderer_mux(args)
-  return wilder#renderer#mux#make(a:args)
+  return wilder#renderer#mux#(a:args)
 endfunction
 
 " DEPRECATED: use wilder#wildmenu_renderer()
@@ -768,19 +778,22 @@ function! s:find_function_script_file(f)
   return l:matches[1]
 endfunction
 
+function! wilder#findfile(file) abort
+  if exists('*nvim_get_runtime_file')
+    let l:runtime_files = nvim_get_runtime_file(a:file, 0)
+    return get(l:runtime_files, 0, '')
+  endif
+
+  return findfile(a:file, &rtp)
+endfunction
+
 function! s:get_module_path(file, use_cached)
   if !exists('s:module_path_cache')
     let s:module_path_cache = wilder#cache#cache()
   endif
 
   if !a:use_cached || !s:module_path_cache.has_key(a:file)
-    if exists('*nvim_get_runtime_file')
-      let l:runtime_files = nvim_get_runtime_file(a:file, 0)
-      let l:file = get(l:runtime_files, 0, '')
-    else
-      let l:file = findfile(a:file, &rtp)
-    endif
-
+    let l:file = wilder#findfile(a:file)
     let l:path = fnamemodify(l:file, ':h')
 
     call s:module_path_cache.set(a:file, l:path)
@@ -795,6 +808,10 @@ endfunction
 
 function! wilder#cpsm_path(...) abort
   return s:get_module_path('autoload/cpsm.py', get(a:, 1, 1))
+endfunction
+
+function! wilder#clap_path(...) abort
+  return s:get_module_path('pythonx/clap/scorer.py', get(a:, 1, 1))
 endfunction
 
 function! wilder#clear_module_path_cache()

@@ -48,3 +48,39 @@ function! wilder#renderer#get_cmdheight() abort
 
   return l:cmdheight
 endfunction
+
+function! wilder#renderer#pre_draw(components, ctx, result) abort
+  let l:should_draw = 0
+
+  for l:Component in a:components
+    let l:should_draw += s:pre_draw(l:Component, a:ctx, a:result)
+  endfor
+
+  return l:should_draw
+endfunction
+
+function! s:pre_draw(component, ctx, result) abort
+  if type(a:component) isnot v:t_dict
+    return a:ctx.done
+  endif
+
+  if has_key(a:component, 'pre_draw')
+    return a:component.pre_draw(a:ctx, a:result)
+  endif
+
+  return a:ctx.done || get(a:component, 'dynamic', 0)
+endfunction
+
+function! wilder#renderer#call_component_pre_hook(ctx, component) abort
+  if type(a:component) is v:t_dict &&
+        \ has_key(a:component, 'pre_hook')
+    call a:component['pre_hook'](a:ctx)
+  endif
+endfunction
+
+function! wilder#renderer#call_component_post_hook(ctx, component) abort
+  if type(a:component) is v:t_dict &&
+        \ has_key(a:component, 'post_hook')
+    call a:component['post_hook'](a:ctx)
+  endif
+endfunction

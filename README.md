@@ -11,12 +11,14 @@
 
 ![wilder](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/border.gif)
 
-# Requirements
+# Getting started
+
+## Requirements
 
 - Vim 8.1+ or Neovim 0.3+
 - To use the optional Python features, Neovim or Vim with `yarp` is needed
 
-# Install
+## Install
 
 With [Shougo/dein.nvim](https://github.com/Shougo/dein.nvim)
 ```vim
@@ -42,9 +44,8 @@ else
 endif
 
 ```
-# Usage
 
-## Getting started
+## Minimal config
 
 Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 
@@ -72,11 +73,24 @@ call wilder#setup({
 Ideally `next_key` should be set to be the same as `&wildchar`.
 Otherwise there might be a conflict when `wildmenu` is active at the same time as `wilder`.
 
+To change the behavior so `wilder` does not activate automatically, set the `enable_cmdline_enter` option in `wilder#setup()` to `0`.
+```vim
+call wilder#setup({
+      \ 'modes': [':', '/', '?'],
+      \ 'enable_cmdline_enter': 0,
+      \ })
+```
+
+Pressing `<Tab>` (or whichever key `next_key` is set to) will activate `wilder`.
+
 ## Customising the pipeline
 
 ![Search](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/search.png)
 
 Use `wilder#set_option('pipeline', <pipeline>)` to customise the pipeline.
+The pipeline is a list of functions (referred to as pipes) which are executed
+in order, passing the result of the previous function to the next one.
+
 For example, in Neovim, to use fuzzy matching instead of substring matching:
 
 ```vim
@@ -103,8 +117,6 @@ call wilder#set_option('pipeline', [
       \ ])
 ```
 
-The pipeline is a list of functions (referred to as pipes) which are executed
-in order, passing the result of the previous function to the next one.
 `wilder#branch()` is a higher-order pipe which is able to provide control flow given its own lists of pipelines.
 
 See the docs at `:h wilder-pipeline` for a more details. 
@@ -216,6 +228,18 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ '/': wilder#wildmenu_renderer({
       \   ... settings ...
       \ }),
+      \ }))
+```
+
+![Popupmenu pumblend](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/22e0a7608df7dfd44bd5f607c41af34d0ac9225d/pumblend.png)
+
+For Neovim, the `pumblend` option can be set to change the transparency of the popupmenu. By default, the value of the `&pumblend` option is used.
+To disable transparency, set the value to `0`.
+
+```vim
+call wilder#set_option('renderer', wilder#popupmenu_renderer({
+      \ 'pumblend': 20,
+      \ ... other options ...
       \ }))
 ```
 
@@ -402,7 +426,7 @@ call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
       \       'fuzzy': 1,
-      \       'set_pcre2_pattern': has('nvim'),
+      \       'set_pcre2_pattern': 1,
       \     }),
       \     wilder#python_search_pipeline({
       \       'pattern': 'fuzzy',

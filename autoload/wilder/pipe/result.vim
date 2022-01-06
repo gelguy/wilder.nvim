@@ -1,4 +1,4 @@
-function! wilder#pipe#result#make(...) abort
+function! wilder#pipe#result#(...) abort
   let l:args = a:0 ? a:1 : {}
   return {ctx, x -> s:result_start(l:args, ctx, x)}
 endfunction
@@ -64,4 +64,21 @@ function! s:add_key(result, key, value)
   let l:result = copy(a:result)
   let l:result[a:key] = a:value
   return l:result
+endfunction
+
+function! wilder#pipe#result#escape_output_result(chars) abort
+  return wilder#result({
+        \ 'output': ['wilder#pipe#result#escape_output'],
+        \ 'data': {ctx, data -> s:set_data(data, a:chars)},
+        \ })
+endfunction
+
+function! wilder#pipe#result#escape_output(ctx, x, data) abort
+  return escape(a:x, get(a:data, 'escape_chars', ''))
+endfunction
+
+function! s:set_data(data, chars) abort
+  let l:data = a:data is v:null ? {} : a:data
+
+  return extend(l:data, {'escape_chars': a:chars})
 endfunction

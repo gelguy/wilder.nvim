@@ -4,18 +4,27 @@ function! wilder#renderer#component#popupmenu_spinner#(opts) abort
     let l:frames = split(l:frames, '\zs')
   endif
 
+  let l:delay = get(a:opts, 'delay', 100)
+
   let l:Spinner = wilder#renderer#component#spinner#({
         \ 'num_frames': len(l:frames),
-        \ 'delay': get(a:opts, 'delay', 100),
+        \ 'delay': l:delay,
         \ 'interval': get(a:opts, 'interval', 100),
         \ })
+
+  let l:first_draw_delay = get(a:opts, 'first_draw_delay', 10)
+  if l:first_draw_delay > l:delay
+    let l:first_draw_delay = l:delay
+  endif
 
   let l:state = {
         \ 'frames': l:frames,
         \ 'done': get(a:opts, 'done', ' '),
         \ 'spinner': l:Spinner,
         \ 'align': get(a:opts, 'align', 'bottom'),
+        \ 'first_draw_delay': l:first_draw_delay,
         \ 'timer': -1,
+        \ 'run_id': -1,
         \ }
 
   if has_key(a:opts, 'hl')
@@ -24,8 +33,21 @@ function! wilder#renderer#component#popupmenu_spinner#(opts) abort
 
   return {
         \ 'value': {ctx, result -> s:spinner(l:state, ctx, result)},
-        \ 'dynamic': 1,
+        \ 'pre_draw': {ctx, result -> s:pre_draw(l:state, ctx, result)},
         \ }
+endfunction
+
+function! s:pre_draw(state, ctx, result) abort
+  if a:ctx.run_id == a:state.run_id
+    return 1
+  endif
+
+  let a:state.run_id = a:ctx.run_id
+
+  call timer_stop(a:state.timer)
+  let a:state.timer = timer_start(a:state.first_draw_delay, {-> wilder#main#draw()})
+
+  return 0
 endfunction
 
 function! s:spinner(state, ctx, result) abort
