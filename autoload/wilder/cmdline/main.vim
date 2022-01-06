@@ -326,11 +326,30 @@ function! wilder#cmdline#main#do(ctx) abort
         endif
       endif
 
-      " remaining part of cmdline is comment, treat as no arguments
+      " Check if " indicates a comment or start of string
       if a:ctx.cmdline[l:lookahead] ==# '"'
-        let a:ctx.pos = len(a:ctx.cmdline)
+        let l:lookahead += 1
 
-        return
+        let l:end_quote_reached = 0
+        " Consume until next char is " or end of cmdline is reached
+        while l:lookahead < len(a:ctx.cmdline)
+          if a:ctx.cmdline[l:lookahead] ==# '\'
+            let l:lookahead += 1
+          elseif a:ctx.cmdline[l:lookahead] ==# '"'
+            let l:end_quote_reached = 1
+            let l:lookahead += 1
+            break
+          endif
+
+          let l:lookahead += 1
+        endwhile
+
+        " remaining part of cmdline is comment, treat as no arguments
+        if !l:end_quote_reached
+          let a:ctx.pos = len(a:ctx.cmdline)
+          return
+        endif
+
       " start of new command
       elseif a:ctx.cmdline[l:lookahead] ==# '|'
         let a:ctx.pos = l:lookahead + 1
