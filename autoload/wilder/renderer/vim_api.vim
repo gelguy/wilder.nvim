@@ -106,11 +106,11 @@ function! s:set_option(option, value) dict abort
 endfunction
 
 function! s:delete_all_lines() dict abort
-  call deletebufline(self.state.buf, 1, '$')
+  keepjumps call deletebufline(self.state.buf, 1, '$')
 endfunction
 
 function! s:set_line(line, str) dict abort
-  call setbufline(self.state.buf, a:line + 1, a:str)
+  keepjumps call setbufline(self.state.buf, a:line + 1, a:str)
 endfunction
 
 function! s:add_highlight(hl, line, col_start, col_end) dict abort
@@ -157,7 +157,7 @@ endfunction
 
 function! s:need_timer() dict abort
   try
-    call setbufline(self.state.dummy_buf, 1, '')
+    keepjumps call setbufline(self.state.dummy_buf, 1, '')
   catch
     return 1
   endtry
