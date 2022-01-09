@@ -102,6 +102,9 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:res = copy(a:res)
   let l:arg = l:res.arg
 
+  " Remove backslash preceding spaces.
+  let l:arg = substitute(l:arg, '\\ ', ' ', 'g')
+
   let l:slash = !has('win32') && !has('win64')
         \ ? '/'
         \ : &shellslash
