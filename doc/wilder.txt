@@ -451,7 +451,7 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
                   \ ),
                   \ ]
 <
-            This pipeline will return completions from the history is {x} is
+            This pipeline will return completions from the history if {x} is
             empty.
 
 wilder#subpipeline({f})             *wilder#subpipeline()*
@@ -895,6 +895,7 @@ wilder#python_file_finder_pipeline([{options}])
             front of |wilder#cmdline_pipeline()| when using |wilder#branch()|.
 
             {options} is a dictionary with keys:
+
             `file_command`
             Optional~
             A function or a list of strings representing the command used to
@@ -910,7 +911,7 @@ wilder#python_file_finder_pipeline([{options}])
 
             To dynamically search hidden directories depending on the
             argument, use (for `fd`)
-            {_, arg -> arg[0] ==# '.' ? ['fd', '-tf', -H'] : ['fd', '-tf']}
+            {_, arg -> arg[0] ==# '.' ? ['fd', '-tf', '-H'] : ['fd', '-tf']}
 
             Default: ['find', '.', '-type', 'f', '-printf', '%P\n']
 
