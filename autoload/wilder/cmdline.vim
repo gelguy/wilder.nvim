@@ -579,6 +579,13 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
   " fallback to cmdline getcompletion
   if has('nvim')
     return getcompletion(a:res.cmdline, 'cmdline')
+  else
+    try
+      " cmdline completion only available in Vim 8.2+
+      return getcompletion(a:res.cmdline, 'cmdline')
+    catch
+      return []
+    endtry
   endif
 
   return []
@@ -631,8 +638,10 @@ function! wilder#cmdline#prepare_user_completion(ctx, res) abort
     let l:matches = getcompletion(a:res.cmd, 'command')
 
     " 2 or more matches indicates command is ambiguous
-    if len(l:matches) != 1
-      return [1, v:false, a:res]
+    if len(l:matches) >= 2
+      throw "Ambiguous use of user-defined command, possible matches: " . string(l:matches)
+    elseif len(l:matches) == 0
+      return [1, [], a:res, 0]
     endif
 
     let l:command = l:matches[0]
