@@ -1163,7 +1163,7 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
 
   let l:lua_completion_subpipeline = [
         \ wilder#check({_, res -> res.expand ==# 'lua'}),
-        \ {ctx, res -> !has('nvim') ? v:false : has('nvim-0.5') ? res : v:true},
+        \ {ctx, res -> has('nvim-0.5') ? res : v:false},
         \ {ctx, res -> s:get_lua_completion(ctx, res, l:fuzzy)},
         \ wilder#if(l:fuzzy && !l:with_data, wilder#result({
         \   'value': {ctx, xs, data -> l:Filter(
