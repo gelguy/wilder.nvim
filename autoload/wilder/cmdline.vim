@@ -508,6 +508,12 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(a:res.cmdline[a:res.subcommand_start :], 'sign')
   elseif a:res.expand ==# 'syntax'
     return getcompletion(l:expand_arg, 'syntax')
+  elseif a:res.expand ==# 'syntax_subcommand'
+    return filter(['case', 'clear', 'cluster', 'conceal',
+          \ 'enable', 'foldlevel', 'include', 'iskeyword',
+          \ 'keyword', 'list', 'manual', 'match', 'off',
+          \ 'on', 'region', 'reset', 'spell', 'sync'], {_, x -> s:is_prefix(x, l:expand_arg)})
+    return getcompletion(l:expand_arg, 'syntax')
   elseif a:res.expand ==# 'syntime'
     return getcompletion(l:expand_arg, 'syntime')
   elseif a:res.expand ==# 'user'

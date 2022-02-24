@@ -13,7 +13,7 @@ function! wilder#cmdline#syntax#do(ctx) abort
 
   if l:in_subcommand
     let a:ctx.pos = l:arg_start
-    let a:ctx.expand = 'syntax'
+    let a:ctx.expand = 'syntax_subcommand'
     return
   endif
 
