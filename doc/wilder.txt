@@ -6,12 +6,13 @@ wilder                                *wilder*
 
 1. Introduction                     |wilder-introduction|
 2. Install                          |wilder-install|
-3. Options                          |wilder-options|
-4. Pipeline                         |wilder-pipeline|
-5. Renderer                         |wilder-renderer|
-6. API                              |wilder-api|
-7. Deprecated                       |wilder-deprecated|
-8. Configurations                   |wilder-configurations|
+3. Lua configuration                |wilder-lua|
+4. Options                          |wilder-options|
+5. Pipeline                         |wilder-pipeline|
+6. Renderer                         |wilder-renderer|
+7. API                              |wilder-api|
+8. Deprecated                       |wilder-deprecated|
+9. Configurations                   |wilder-configurations|
 
 ==============================================================================
 1. Introduction                     *wilder-introduction*
@@ -25,7 +26,7 @@ Features include
 4. Customisable pipeline: e.g. choose between substring matching and fuzzy
    matching
 5. Async query support: use |python3| for faster and non-blocking queries
-6. Customisable themes
+6. Customisable UI and themes
 
 ==============================================================================
 2. Install                          *wilder-install*
@@ -42,7 +43,7 @@ Minimal configuration~
     call wilder#setup()
 <
 
-Keybindings cann be changed, see |wilder#setup()|.
+Keybindings can be changed, see |wilder#setup()|.
 
 To enable Python features in Vim, `yarp` needs to be installed.
 The following plugins are needed:
@@ -50,7 +51,32 @@ The following plugins are needed:
 - github.com/roxma/nvim-yarp
 
 ==============================================================================
-3. Options                          *wilder-options*
+3. Lua configuration                *wilder-lua*
+
+For Neovim 0.5+, the |wilder-api| supports Lua via a shim. The `wilder` module
+wraps the API methods and exposes it to Lua. Each API method in the form
+`wilder#foo()` has an equivalent Lua method `wilder.foo()`.
+
+For example, in Vim:
+>
+            call wilder#set_option('foo', 'bar')
+<
+in Lua:
+>
+            local wilder = require('wilder')
+            wilder.set_option('foo', 'bar')
+<
+
+The documentation here will only describe the Vim API, but translating the
+methods to Lua should be straightforward.
+
+Note: The Lua shim introduces a bit of overhead since Neovim has to do some
+translation of the arguments passed from VimScript to Lua and vice versa.
+Ultimately, most of the logic will be passed to the VimScript core so in
+general a Lua config will always be slower than a VimScript config.
+
+==============================================================================
+4. Options                          *wilder-options*
 
 Options can be set using the |wilder#set_option| function.
 
@@ -153,7 +179,7 @@ The options for `wilder` are:
             Default: None
 
 ==============================================================================
-4. Pipeline                         *wilder-pipeline*
+5. Pipeline                         *wilder-pipeline*
 
 The pipeline is used to get completions from a given query. Use
 |wilder-option-pipeline| to set the pipeline.
@@ -1130,7 +1156,7 @@ wilder#substitute_pipeline([{options}])
             See https://github.com/neovim/neovim/issues/9783.
 
 ==============================================================================
-5. Renderer                         *wilder-renderer*
+6. Renderer                         *wilder-renderer*
 
 The renderer is used to draw wilder and the completion candidates on the
 screen. Use |wilder-option-renderer| to set the renderer.
@@ -1197,7 +1223,6 @@ wilder#wildmenu_renderer([{options}])
 
             {options} is a dictionary with keys:
             `mode`
-            'popup' option is experimental~
             One of 'float', 'popup' or 'statusline'. The 'float' option
             requires Neovim 0.4+ with |api-floatwin|. The 'popup' option
             requires Vim 8.1+ with |popup|.
@@ -1274,15 +1299,15 @@ wilder#wildmenu_renderer([{options}])
 
             `left`
             Optional~
-            The items rendered on the left of the candidates.
-            See |wilder#wildmenu_renderer()-item|s.
+            The components rendered on the left of the candidates.
+            See |wilder#wildmenu_renderer()-component|s.
 
             Default: [wilder#wildmenu_previous_arrow()]
 
             `right`
             Optional~
-            The items rendered on the right of the candidates.
-            See |wilder#wildmenu_renderer()-item|s.
+            The components rendered on the right of the candidates.
+            See |wilder#wildmenu_renderer()-component|s.
 
             Default: [wilder#wildmenu_next_arrow()]
 
@@ -1427,7 +1452,7 @@ wilder#wildmenu_lightline_theme([{options}])
             The `highlight` object accepts 2 new keys:
                 `mode`
                 Optional~
-                The highlight group for the item which shows the current
+                The highlight group for the component which shows the current
                 mode and the |wilder#spinner()|.
 
                 Default: 'airline_a_bold' for Airline
@@ -1435,7 +1460,7 @@ wilder#wildmenu_lightline_theme([{options}])
 
                 `index`
                 Optional~
-                The highlight group for the |wilder#index()| item.
+                The highlight group for the |wilder#index()| component.
 
                 Default: 'airline_z_bold' for Airline
                          'LightlineRight_active_0' for Lightline
@@ -1443,7 +1468,7 @@ wilder#wildmenu_lightline_theme([{options}])
                 `left_arrow2`
                 Optional~
                 The highlight group for the left powerline symbol after the
-                mode item.
+                mode component.
 
                 Default: 'airline_b' for Airline
                          'LightlineLeft_active_1' for Lightline
@@ -1475,8 +1500,8 @@ wilder#wildmenu_lightline_theme([{options}])
 <
 
 
-                                    *wilder#wildmenu_renderer()-item*
-For |wilder#wildmenu_renderer()|, items can be of the following types:
+                                    *wilder#wildmenu_renderer()-component*
+For |wilder#wildmenu_renderer()|, component can be of the following types:
 
             String:
             The value of the string will be drawn. To change its highlight
@@ -1490,8 +1515,8 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
             the {hl} highlight group applied to it.
 
             Note that {selected_hl} when the chunk is in the form of
-            [{str}, {hl}, {selected_hl}] has no effect since the item cannot
-            be selected.
+            [{str}, {hl}, {selected_hl}] has no effect since the component
+            cannot be selected.
 
             Function:
             A function which takes a {ctx} and the |wilder-pipeline-result|
@@ -1515,7 +1540,7 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
 
                 `len`
                 Optional~
-                Used to determine the display width taken up by the item.
+                Used to determine the display width taken up by the component.
                 Can be of the following types:
 
                     Number:
@@ -1524,12 +1549,12 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
                     Function:
                     A function which takes a {ctx} and the pipeline result
                     {result} and returns the display width taken up by the
-                    item.
+                    component.
                     The keys of {ctx} are the same as the ones in the `render`
                     key of |wilder-renderer|.
 
                     Note: `ctx.page` is not available when determining the
-                    `len` of the item.
+                    `len` of the component.
 
                 Default: None
 
@@ -1555,15 +1580,15 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
 
                 `dynamic`
                 Optional~
-                Whether the item needs to update even when pipeline is not
-                done. For example, |wilder#wildmenu_spinner()| needs to set
-                this to 1 since the spinner frames need to be updated.
+                Whether the component needs to update even when pipeline is
+                not done. For example, |wilder#wildmenu_spinner()| needs to
+                set this to 1 since the spinner frames need to be updated.
 
                 Default: 0
 
             Function:
             A function which takes a {ctx} and the pipeline result {result}
-            and returns a item.
+            and returns a component.
 
             The keys of {ctx} are the same as the ones in the `render`
             key of |wilder-renderer|, with an additional `page` key which is a
@@ -1573,26 +1598,26 @@ For |wilder#wildmenu_renderer()|, items can be of the following types:
 
 Before drawing the results, the amount of space available needs to be
 calculated. This is done by calculating the total space taken by the
-items, and then subtracting that from the total space available.
+components, and then subtracting that from the total space available.
 
-For String items, it is the |strdisplaywidth()| of the string.
-For List items, it is the sum of the space used by
+For String components, it is the |strdisplaywidth()| of the string.
+For List components, it is the sum of the space used by
 |wilder-renderer-highlight-chunk|s.
-For Dictionary items, if it has no `len` key, the space taken by the `value`
-entry is calculated. Otherwise, the `len` key is used if it is a Number, or if
-it is a function, the result of calling the `len` entry is used.
-For Function items, the function is called, and the space used of the result
-is calculated.
+For Dictionary components, if it has no `len` key, the space taken by the
+`value` entry is calculated. Otherwise, the `len` key is used if it is a
+Number, or if it is a function, the result of calling the `len` entry is used.
+For Function components, the function is called, and the space used of the
+result is calculated.
 
-This means that when using Dictionary items, the `len` entry has to be
+This means that when using Dictionary components, the `len` entry has to be
 consistent with the `value` entry, otherwise the rendering will not be
 correct.
 
-The following items are provided:
+The following components are provided:
 
                                     *wilder#wildmenu_previous_arrow()*
 wilder#wildmenu_previous_arrow([{options}])
-                                    wilder#wildmenu_renderer() item~
+                                    wilder#wildmenu_renderer() component~
             Adds an arrow when there are candidates to the left which do not
             fit in the current view.
             Note Has to be used with |wilder#next_arrow()|, otherwise the
@@ -1613,7 +1638,7 @@ wilder#wildmenu_previous_arrow([{options}])
 
                                     *wilder#wildmenu_next_arrow()*
 wilder#wildmenu_next_arrow([{options}])
-                                    wilder#wildmenu_renderer() item~
+                                    wilder#wildmenu_renderer() component~
             Adds an arrow when there are additional candidates to the right
             which do not fit in the current view.
             Note Has to be used with |wilder#previous_arrow()|, otherwise the
@@ -1639,7 +1664,7 @@ wilder#wildmenu_next_arrow([{options}])
             Default: None
 
 wilder#wildmenu_index([{options}])  *wilder#wildmenu_index()*
-                                    wilder#wildmenu_renderer() item~
+                                    wilder#wildmenu_renderer() component~
             Adds the index of the currently selected candidate and the total
             number of candidates.
             For example, if there are 10 candidates and the 5th one is
@@ -1654,7 +1679,7 @@ wilder#wildmenu_index([{options}])  *wilder#wildmenu_index()*
 
                                     *wilder#wildmenu_spinner()*
 wilder#wildmenu_spinner([{options}])
-                                    wilder#wildmenu_renderer() item~
+                                    wilder#wildmenu_renderer() component~
             Adds a spinner which indicates whether the current pipeline is
             still running.
 
@@ -1662,15 +1687,15 @@ wilder#wildmenu_spinner([{options}])
             `frames`
             Optional~
             The frames to use for the spinner. Can be either a string or a
-            list of items. If it is a string, the string is split into
+            list of characters. If it is a string, the string is split into
             characters and each character is a frame.
 
             Default: ['-', '\', '|', '/'']
 
             `done`
             Optional~
-            The item to display when the pipeline is done, or when there is no
-            pipeline running, or when the `delay` timeout has not been
+            The string to display when the pipeline is done, or when there is
+            no pipeline running, or when the `delay` timeout has not been
             reached.
 
             Default: '·'
@@ -1689,7 +1714,7 @@ wilder#wildmenu_spinner([{options}])
 
                                     *wilder#wildmenu_powerline_separator()*
 wilder#wildmenu_powerline_separator({str}, {fg}, {bg}, [{name}])
-                                    wilder#wildmenu_renderer() item~
+                                    wilder#wildmenu_renderer() component~
             Draws a powerline-like separator.
             {str} should be the separator character.
             {fg} is the highlight group from which the |highlight-ctermfg| and
@@ -1701,14 +1726,15 @@ wilder#wildmenu_powerline_separator({str}, {fg}, {bg}, [{name}])
 
                                     *wilder#wildmenu_condition()*
 wilder#wildmenu_condition({predicate}, {if_true}, [{if_false}])
-                                    wilder#wildmenu_renderer() item~
-            Draws the given items based on the {predicate}.
+                                    wilder#wildmenu_renderer() component~
+            Draws the given components based on the {predicate}.
             {predicate} is a function which takes a {ctx} and the pipeline
             result {result} and returns true or false.
             The keys of {ctx} are the same as the ones in the `render` key of
             |wilder-renderer|.
-            If the result is true, {if_true} is used the item. Otherwise
-            {if_false} is used. If {if_false} is not given, no item is drawn.
+            If the result is true, {if_true} is used the component. Otherwise
+            {if_false} is used. If {if_false} is not given, no component is
+            drawn.
 
 
                                     *wilder#popupmenu_renderer()*
@@ -1782,15 +1808,15 @@ wilder#popupmenu_renderer([{options}])
 
             `left`
             Optional~
-            A list of columns to show on the left side of the popupmenu.
-            See |wilder#popupmenu_renderer()-column|s.
+            A list of components to show on the left side of the popupmenu.
+            See |wilder#popupmenu_renderer()-component|s.
 
             Default: [' ']
 
             `right`
             Optional~
-            A list of columns to show on the right side of the popupmenu.
-            See |wilder#popupmenu_renderer()-column|s.
+            A list of components to show on the right side of the popupmenu.
+            See |wilder#popupmenu_renderer()-component|s.
 
             Default: [' ', wilder#popupmenu_scrollbar()]
 
@@ -1856,7 +1882,7 @@ wilder#popupmenu_renderer([{options}])
 
                 `dynamic`
                 Optional~
-                Whether the item needs to update even when pipeline is not
+                Whether the component needs to update even when pipeline is not
                 done.
 
                 Default: 0
@@ -1879,7 +1905,6 @@ wilder#popupmenu_renderer([{options}])
 
             `empty_message`
             Optional~
-            Experimental~
             A String, Function, Dictionary or 0. Used to show a message in the
             popupmenu when there are no candidates. If 0, the popupmenu is
             closed instead.
@@ -1948,7 +1973,6 @@ wilder#popupmenu_renderer([{options}])
 
             `empty_message_first_draw_delay`
             Optional~
-            Experimental~
             A Number representing the time in milliseconds before drawing the
             first empty message. When using an async pipeline, the pipline
             will always return an initial empty result before the actual
@@ -2074,7 +2098,6 @@ wilder#popupmenu_renderer([{options}])
                                     *wilder#popupmenu_border_theme()*
 wilder#popupmenu_border_theme([{options}])
                                     Popupmenu renderer theme~
-                                    Experimental~
             Returns an object which can be passed to
             |wilder#popupmenu_renderer()| to apply a border around the
             popupmenu.
@@ -2136,15 +2159,106 @@ wilder#popupmenu_border_theme([{options}])
                   \ })))
 <
 
-                                    *wilder#popupmenu_renderer()-column*
-For |wilder#popupmenu_renderer()|, columns can be of the following types:
+                                    *wilder#popupmenu_palette_theme()*
+wilder#popupmenu_palette_theme([{options}])
+                                    Popupmenu renderer theme~
+                                    Experimental~
+            Returns a renderer which draws the results as a floating window in
+            the middle of the screen. In addition to drawing the candidates,
+            the palette also draws the cmdline prompt at the top or bottom of
+            the window.
 
+            The palette theme shares the same {options} as
+            |wilder#popupmenu_border_theme()| but with a few additional keys:
+            `highlights`
+            Optional~
+            The `highlights` dictionary accepts 2 new keys:
+                `prompt`
+                The highlight group for the cmdline prompt.
+
+                Default: 'Normal'
+
+                `prompt_cursor`
+                The highlight group for the cmdline cursor.
+
+                Default: 'Cursor'
+
+            Additionally, the defaults for the following highlights are
+            changed:
+                `default` - 'Normal'
+                `selected` - 'Visual'
+
+            `border`
+            Optional~
+            See the `border` option in |wilder#popupmenu_border_theme()|.
+
+            Default: 'single'
+
+            `prompt_border`
+            Optional~
+            A list of 3 strings representing the border separating the cmdline
+            prompt and the rest of the candidates.
+
+            The list should be in the form of [`left`, `middle`, `right`],
+            where `left` is the character to draw on the left
+            border, `right` is the character to draw on the right border and
+            `middle` is the character to repeat to draw the line separating
+            the prompt and the candidates.
+
+            Setting this option to ['', '', ''] omits the prompt border
+            entirely.
+
+            Default: ['├', '─', '┤'] if the `border` option is 'single' or
+                                     'rounded'
+                     ['█', '█', '█'] if the `border` option is 'solid'
+                     ['╠', '═', '╣'] if the `border` option is 'double'
+                     ['', '', ''] otherwise
+
+            `prompt_position`
+            'top' or 'bottom' indicating whether the cmdline prompt should be
+            drawn above or below the candidates.
+
+            Default: 'top'
+
+            `margin`
+            Optional~
+            A String or Number which represents the margin between the palette
+            and the top of the screen.
+
+            If it is a String, it can be 'auto', which positions the palette
+            in the center of the screen.
+            Otherwise it should be in the form of '{percent}%', where the
+            value used is the height of the editor * {percent} / 100.
+
+            If it is a Number, it indicates the margin is a fixed number of
+            rows.
+
+            Default: 'auto'
+
+            The defaults for the following options are changed as well:
+            `max_height`
+            `min_height`
+            If both are unset, `max_height` defaults to '75%' and `min_height`
+            defaults to '25%'.
+
+            `max_height`
+            `min_height`
+            If both are unset, both `max_width` and `min_width` default to
+            '75%'.
+            If only one of the options is unset, the unset option will default
+            to the value of the set option.
+
+            `empty_message`
+            Defaults to |wilder#popupmenu_empty_message()|.
+
+                                    *wilder#popupmenu_renderer()-component*
+|wilder#popupmenu_renderer()| components can be of the following types:
             String:
             The value of the string will be drawn. The `default` or `selected`
             highlight will be used. The string will be drawn on each row.
 
             The empty string ' ' can be used to give padding to the left or
-            right of the popupmenu.
+            right of the candidates.
 
             List:
             A |wilder-renderer-highlight-chunk|s or a list of chunks. If it is
@@ -2210,7 +2324,7 @@ For |wilder#popupmenu_renderer()|, columns can be of the following types:
 
                 `dynamic`
                 Optional~
-                Whether the item needs to update even when pipeline is not
+                Whether the component needs to update even when pipeline is not
                 done. For example, |wilder#popupmenu_spinner()| needs to set
                 this to 1 since the spinner frames need to be updated.
 
@@ -2417,7 +2531,6 @@ wilder#popupmenu_buffer_flags([{options}])
 
                                     *wilder#popupmenu_empty_message()*
 wilder#popupmenu_empty_message([{options}])
-                                Experimental~
             Returns an object which can be passed to the `empty_message`
             option of |wilder#popupmenu_renderer()|.
 
@@ -2433,7 +2546,7 @@ wilder#popupmenu_empty_message([{options}])
             used to draw the message.
 
             {ctx} and {result} are the same as the one passed to the
-            `empty_message` option in |wilder#popupmenu_renderer()|.
+            `empty_message` option.
 
             Default: ' No candidates found '
 
@@ -2446,12 +2559,11 @@ wilder#popupmenu_empty_message([{options}])
 
                                 *wilder#popupmenu_empty_message_with_spinner()*
 wilder#popupmenu_empty_message_with_spinner([{options}])
-                                Experimental~
             Returns an object which can be passed to the `empty_message`
             option of |wilder#popupmenu_renderer()|.
 
             {options} is the same as the options passed to
-            |wilder#popupmenu_empty_message|, except the `message` option is
+            |wilder#popupmenu_empty_message()|, except the `message` option is
             changed and there are additional keys:
             `message`
             Optional~
@@ -2468,7 +2580,7 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
             {spinner_hl} is the highlight to use for the spinner.
 
             {ctx} and {result} are the same as the one passed to the
-            `empty_message` option in |wilder#popupmenu_renderer()|.
+            `empty_message` option.
 
             Default: ' No candidates found '
 
@@ -2482,7 +2594,7 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
             `frames`
             Optional~
             The frames to use for the spinner. Can be either a string or a
-            list of items. If it is a string, the string is split into
+            list of characters. If it is a string, the string is split into
             characters and each character is a frame.
 
             Note the additional space on the left.
@@ -2491,8 +2603,8 @@ wilder#popupmenu_empty_message_with_spinner([{options}])
 
             `done`
             Optional~
-            The item to display when the pipeline is done, or when there is no
-            pipeline running, or when the `delay` timeout has not been
+            The string to display when the pipeline is done, or when there is
+            no pipeline running, or when the `delay` timeout has not been
             reached.
 
             Note the additional space on the left.
@@ -2569,7 +2681,7 @@ wilder#setup([{config}])            *wilder#setup()*
 
             For a no-op, set <fallback> to ''.
 
-            For Neovim 0.3+ and Vim with patchh 8.2.1978, the fallback
+            For Neovim 0.3+ and Vim with patch 8.2.1978, the fallback
             mappings can be disabled by setting {fallback} to 0.
 
             Disabling the fallback mapping allows a |<Cmd>| mapping to be used
@@ -3298,7 +3410,6 @@ wilder#lua_fzy_highlighter()        *wilder#lua_fzy_highlighter()*
                                     *wilder#highlighter_with_gradient()*
 wilder#highlighter_with_gradient({highlighter})
                                     Highlighter~
-                                    Experimental~
             Helper function which wraps {highlighter} and returns a
             highlighter that applies a gradient highlight to the original
             highlights.
@@ -3474,7 +3585,7 @@ wilder#devicons_get_hl_from_glyph_palette_vim([{options}])
             Default: 'Normal'
 
 ==============================================================================
-7. Deprecated                       *wilder-deprecated*
+8. Deprecated                       *wilder-deprecated*
 
 wilder#vim_substring()              *wilder#vim_substring()*
                                     Deprecated~
@@ -3591,7 +3702,7 @@ wilder#lightline_theme([{options}])
 
 
 ==============================================================================
-8. Configurations                   *wilder-configurations*
+9. Configurations                   *wilder-configurations*
 
 Here are some example configurations:
 
@@ -3656,6 +3767,40 @@ Use Popupmenu for : and Wildmenu for /~
           \ ':': wilder#popupmenu_renderer(),
           \ '/': wilder#wildmenu_renderer(),
           \ })
+<
+
+Lua Only Configuration~
+>
+    local wilder = require('wilder')
+    wilder.setup({modes = {':', '/', '?'}})
+    -- Disable Python remote plugin
+    wilder.set_option('use_python_remote_plugin', 0)
+    
+    wilder.set_option('pipeline', {
+      wilder.branch(
+        wilder.cmdline_pipeline({
+          fuzzy = 1,
+        }),
+        wilder.vim_search_pipeline()
+      )
+    })
+    
+    wilder.set_option('renderer', wilder.renderer_mux({
+      [':'] = wilder.popupmenu_renderer({
+        highlighter = wilder.basic_highlighter(),
+        left = {
+          ' ',
+          wilder.popupmenu_devicons()
+        },
+        right = {
+          ' ',
+          wilder.popupmenu_scrollbar()
+        },
+      }),
+      ['/'] = wilder.wildmenu_renderer({
+        highlighter = wilder.basic_highlighter(),
+      }),
+    }))
 <
 
 ==============================================================================
