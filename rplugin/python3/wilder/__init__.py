@@ -207,7 +207,7 @@ class Wilder(object):
             with TemporaryFile() as output:
                 with subprocess.Popen(
                         command, bufsize=0, stdin=subprocess.DEVNULL,
-                        stdout=output, stderr=subprocess.DEVNULL, cwd=path) as p:
+                        stdout=output, stderr=subprocess.PIPE, cwd=path) as p:
                     start_time = time.time()
                     while p.poll() is None:
                         if time.time() - start_time >= timeout_ms / 1000:
@@ -221,7 +221,7 @@ class Wilder(object):
                     if p.returncode is not 0:
                         # rg sets error code 2 for partial matches, which we are fine with
                         if command[0] is not 'rg' and p.returncode is not 2:
-                            result['error'] = 'non-zero return code %d ' % (p.returncode)
+                            result['error'] = 'return code %d: %s' % (p.returncode, p.stderr.read().decode('utf-8'))
                             return
 
                     output.seek(0)
