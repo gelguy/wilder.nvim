@@ -25,13 +25,15 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
 
   if !has_key(a:opts, 'highlights')
     let l:with_border.highlights = {}
+  else
+    let l:with_border.highlights = copy(a:opts.highlights)
   endif
 
   let l:top = get(a:opts, 'top', [])
-  let l:with_border.top = s:wrap_top_or_bottom(1, l:top, l:border_chars)
+  let l:with_border.top = wilder#renderer#popupmenu_border_theme#wrap_top_or_bottom(1, l:top, l:border_chars)
 
   let l:bottom = get(a:opts, 'bottom', [])
-  let l:with_border.bottom = s:wrap_top_or_bottom(0, l:bottom, l:border_chars)
+  let l:with_border.bottom = wilder#renderer#popupmenu_border_theme#wrap_top_or_bottom(0, l:bottom, l:border_chars)
 
   if has_key(a:opts, 'empty_message') &&
         \ a:opts.empty_message isnot 0 &&
@@ -40,12 +42,20 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
       let l:with_border.empty_message = copy(a:opts.empty_message)
       let l:Value = a:opts.empty_message.value
       let l:with_border.empty_message.value = {ctx, result ->
-            \ s:wrap_empty_message(ctx, result, l:Value, l:border_chars)}
+            \ s:wrap_message(ctx, result, l:Value, l:border_chars, 'empty_message')}
     else
       let l:with_border.empty_message = {ctx, result ->
-            \ s:wrap_empty_message(ctx, result, a:opts.empty_message, l:border_chars)}
+            \ s:wrap_message(ctx, result, a:opts.empty_message, l:border_chars, 'empty_message')}
     endif
   endif
+
+  if !has_key(a:opts, 'error_message')
+    let l:Error_message = wilder#renderer#component#popupmenu_error_message#()
+  else
+    let l:Error_message = a:opts.error_message
+  endif
+
+  let l:with_border.error_message = {ctx, error -> s:wrap_message(ctx, error, l:Error_message, l:border_chars, 'error')}
 
   if !has_key(a:opts, 'left') && !has_key(a:opts, 'right')
     let l:with_border.left = [' ']
@@ -75,7 +85,7 @@ function! wilder#renderer#popupmenu_border_theme#(opts) abort
   return l:with_border
 endfunction
 
-function! s:wrap_top_or_bottom(is_top, lines, border_chars) abort
+function! wilder#renderer#popupmenu_border_theme#wrap_top_or_bottom(is_top, lines, border_chars) abort
   let l:new_lines = []
   for l:Line in a:lines
     let l:New_line = s:wrap_with_border(l:Line, a:border_chars[3], a:border_chars[4])
@@ -183,7 +193,7 @@ function! s:make_top_or_bottom_border(ctx, is_top, border_chars) abort
   return [[l:left, l:border_hl], [l:middle_str, l:middle_hl], [l:right, l:border_hl]]
 endfunction
 
-function! s:wrap_empty_message(ctx, result, message, border_chars) abort
+function! s:wrap_message(ctx, result, message, border_chars, hl_key) abort
   let l:left = a:border_chars[3]
   let l:right = a:border_chars[4]
   let l:left_width = strdisplaywidth(l:left)
@@ -212,8 +222,8 @@ function! s:wrap_empty_message(ctx, result, message, border_chars) abort
     let l:message = wilder#render#truncate(l:max_width, l:message)
     let l:message .= repeat(' ', l:min_width - strdisplaywidth(l:message))
 
-    let l:empty_message_hl = get(a:ctx.highlights, 'empty_message', 'WarningMsg')
-    let l:Message = [[[l:message, l:empty_message_hl]]]
+    let l:hl = get(a:ctx.highlights, a:hl_key)
+    let l:Message = [[[l:message, l:hl]]]
 
     if l:min_height > 1
       let l:width = strdisplaywidth(l:message)
