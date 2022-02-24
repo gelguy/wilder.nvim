@@ -53,8 +53,9 @@ function! s:pre_hook(state, ctx) abort
   let &laststatus = 2
   let a:state.old_statusline = &statusline
 
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
+  endfor
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -68,6 +69,7 @@ function! s:post_hook(state, ctx) abort
     call timer_start(0, {-> execute('redrawstatus')})
   endif
 
-  call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
+  endfor
 endfunction
