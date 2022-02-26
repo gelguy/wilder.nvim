@@ -16,7 +16,7 @@ function! s:error_message(ctx, message) abort
 
   let l:i = 0
   while l:i < len(l:chars)
-    let [l:i, l:whitespace, l:word] = s:find_next_word(l:chars, l:i)
+    let [l:i, l:whitespace, l:word, l:new_line] = s:find_next_word(l:chars, l:i)
 
     let l:whitespace_width = strdisplaywidth(l:whitespace)
     let l:word_width = strdisplaywidth(l:word)
@@ -40,13 +40,17 @@ function! s:error_message(ctx, message) abort
       endif
     else
       " skip whitespace if at start of line
-      if !empty(l:line)
-        let l:line .= l:whitespace
-        let l:line_width += l:whitespace_width
-      endif
+      let l:line .= l:whitespace
+      let l:line_width += l:whitespace_width
 
       let l:line .= l:word
       let l:line_width += l:word_width
+    endif
+
+    if l:new_line
+      call add(l:lines, l:line)
+      let l:line = ''
+      let l:line_width = 0
     endif
   endwhile
 
@@ -83,23 +87,42 @@ endfunction
 
 function! s:find_next_word(chars, i) abort
   let l:whitespace = ''
+  let l:new_line = 0
 
   " find whitespace
   let l:i = a:i
-  while l:i < len(a:chars) &&
-        \ a:chars[l:i] =~# '\s'
-    let l:whitespace .= a:chars[l:i]
+  while l:i < len(a:chars)
+    let l:char = a:chars[l:i]
+    if l:char ==# "\<CR>" || l:char ==# "\<NL>"
+      let l:i += 1
+      let l:new_line = 1
+      break
+    elseif l:char !~# '\s'
+      break
+    endif
+
+    let l:whitespace .= l:char
     let l:i += 1
   endwhile
 
   let l:word = ''
-  while l:i < len(a:chars) &&
-        \ a:chars[l:i] =~# '\S'
-    let l:word .= a:chars[l:i]
-    let l:i += 1
-  endwhile
+  if !l:new_line
+    while l:i < len(a:chars)
+      let l:char = a:chars[l:i]
+      if l:char ==# "\<CR>" || l:char ==# "\<NL>"
+        let l:i += 1
+        let l:new_line = 1
+        break
+      elseif l:char !~# '\S'
+        break
+      endif
 
-  return [l:i, l:whitespace, l:word]
+      let l:word .= l:char
+      let l:i += 1
+    endwhile
+  endif
+
+  return [l:i, l:whitespace, l:word, l:new_line]
 endfunction
 
 function! s:split_word_into_lines(chars, start, end, max_width) abort
@@ -112,7 +135,14 @@ function! s:split_word_into_lines(chars, start, end, max_width) abort
     let l:char = a:chars[l:i]
     let l:width = strdisplaywidth(l:char)
 
-    if l:line_width + l:width > a:max_width
+    if l:char ==# "\<CR>" || l:char ==# "\<NL>"
+      call add(l:lines, l:line)
+      let l:line = ''
+      let l:line_width = 0
+
+      let l:i += 1
+      continue
+    elseif l:line_width + l:width > a:max_width
       call add(l:lines, l:line)
       let l:line = ''
       let l:line_width = 0
