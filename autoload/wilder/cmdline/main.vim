@@ -255,7 +255,7 @@ function! wilder#cmdline#main#do(ctx) abort
       if a:ctx.cmdline[a:ctx.pos] ==# '+'
         if l:allow_opt
           let a:ctx.pos += 1
-          let l:expand = 'option'
+          let l:expand = 'file_opt'
         else
           let l:expand = 'nothing'
         endif

@@ -415,6 +415,13 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'expression')
   elseif a:res.expand ==# 'environment'
     return getcompletion(l:expand_arg, 'environment')
+  elseif a:res.expand ==# 'file_opt'
+    let l:opts = ['bad', 'bin', 'enc', 'ff', 'nobin']
+    if a:res.cmd ==# 'read'
+      call insert(l:opts, 'edit', 2)
+    endif
+
+    return filter(l:opts, {_, x -> s:is_prefix(x, l:expand_arg)})
   elseif a:res.expand ==# 'function'
     return getcompletion(l:expand_arg, 'function')
   elseif a:res.expand ==# 'help'
