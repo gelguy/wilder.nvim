@@ -219,8 +219,19 @@ class Wilder(object):
                             break
 
                     if p.returncode is not 0:
-                        # rg sets error code 2 for partial matches, which we are fine with
-                        if command[0] is not 'rg' and p.returncode is not 2:
+                        has_error = False
+
+                        # rg sets error code 2 for partial matches (e.g. some files can't be read), which we are fine with
+                        if command[0] != 'rg' or p.returncode is not 2:
+                            has_error = True
+                        else:
+                            output.seek(0)
+                            # check if return code 2 is due to partial match by checking if stdout is populated
+                            # if stdout is empty, treat it as an error
+                            if not output.read(1):
+                                has_error = True
+
+                        if has_error:
                             result['error'] = 'return code %d: %s' % (p.returncode, p.stderr.read().decode('utf-8'))
                             return
 
