@@ -1,3 +1,13 @@
+if !has('nvim')
+  try
+    " cmdline completion only available in Vim 8.2+
+    call getcompletion('foo', 'cmdline')
+    let s:has_getcompletion_cmdline = 1
+  catch
+    let s:has_getcompletion_cmdline = 0
+  endtry
+endif
+
 let s:cmdline_cache = wilder#cache#mru_cache(30)
 
 function! wilder#cmdline#parse(cmdline) abort
@@ -577,15 +587,8 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
   endif
 
   " fallback to cmdline getcompletion
-  if has('nvim')
+  if has('nvim') || s:has_getcompletion_cmdline
     return getcompletion(a:res.cmdline, 'cmdline')
-  else
-    try
-      " cmdline completion only available in Vim 8.2+
-      return getcompletion(a:res.cmdline, 'cmdline')
-    catch
-      return []
-    endtry
   endif
 
   return []
