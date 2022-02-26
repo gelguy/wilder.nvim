@@ -70,16 +70,18 @@ function! s:error_message(ctx, message) abort
     endif
   endfor
 
+  let l:hl = a:ctx.highlights.error
+
   let l:chunkss = []
   for l:line in l:lines
     let l:line = wilder#render#truncate_and_pad(l:max_width, l:line)
-    let l:chunk = [l:line, a:ctx.highlights.error]
+    let l:chunk = [l:line, l:hl]
     call add(l:chunkss, [l:chunk])
   endfor
 
   if len(l:chunkss) < l:min_height
     let l:padding = repeat(' ', l:max_width)
-    let l:chunkss += repeat([[[padding]]], l:min_height - len(l:chunkss))
+    let l:chunkss += repeat([[[padding, l:hl]]], l:min_height - len(l:chunkss))
   endif
 
   return l:chunkss

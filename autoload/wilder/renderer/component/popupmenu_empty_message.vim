@@ -24,9 +24,11 @@ function! s:empty_message(state, ctx, result) abort
   let l:max_width = a:ctx.max_width
   let l:min_height = a:ctx.min_height
 
+  let l:hl = a:ctx.highlights.empty_message
+
   let l:message = a:state.message(a:ctx, a:result)
   if type(l:message) is v:t_string
-    let l:chunks = [[l:message, a:ctx.highlights.empty_message]]
+    let l:chunks = [[l:message, l:hl]]
   else
     let l:chunks = l:message
   endif
@@ -35,13 +37,13 @@ function! s:empty_message(state, ctx, result) abort
 
   if l:remaining_width > 0
     if a:state.horizontal ==# 'middle'
-      let l:chunks = [[repeat(' ', l:remaining_width / 2)]] + l:chunks
-      let l:chunks += [[repeat(' ', (l:remaining_width + 1) / 2)]]
+      let l:chunks = [[repeat(' ', l:remaining_width / 2), l:hl]] + l:chunks
+      let l:chunks += [[repeat(' ', (l:remaining_width + 1) / 2), l:hl]]
     elseif a:state.horizontal ==# 'left'
-      let l:chunks += [[repeat(' ', l:remaining_width)]]
+      let l:chunks += [[repeat(' ', l:remaining_width), l:hl]]
     else
       " right
-      let l:chunks = [[repeat(' ', l:remaining_width)]] + l:chunks
+      let l:chunks = [[repeat(' ', l:remaining_width), l:hl]] + l:chunks
     endif
   endif
 
@@ -50,7 +52,7 @@ function! s:empty_message(state, ctx, result) abort
   if l:min_height > 1
     " + 1 for the added space.
     let l:width = wilder#render#chunks_displaywidth(l:chunks)
-    let l:padding_rows = [[repeat(' ', l:width)]]
+    let l:padding_rows = [[repeat(' ', l:width), l:hl]]
     let l:min_height_rows = repeat([l:padding_rows], l:min_height - 1)
 
     if a:state.vertical ==# 'middle'

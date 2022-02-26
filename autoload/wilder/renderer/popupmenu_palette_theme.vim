@@ -68,7 +68,7 @@ function! wilder#renderer#popupmenu_palette_theme#(opts) abort
     let l:opts_without_prompt.empty_message = wilder#popupmenu_empty_message()
   endif
 
-  let l:hls = get(l:opts_without_prompt, 'highlights', {})
+  let l:hls = copy(get(l:opts_without_prompt, 'highlights', {}))
   let l:opts_without_prompt.highlights = l:hls
 
   if !has_key(l:hls, 'default')
