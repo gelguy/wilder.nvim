@@ -21,8 +21,9 @@ function! wilder#renderer#component#popupmenu_buffer_flags#(opts) abort
 
   let l:spacing = {}
   let l:icon_width = {}
-  for l:flag in ['%', '+', '-', 'a', 'u']
-    let l:width = strdisplaywidth(l:icons[l:flag])
+  for l:flag in ['%', '+', '-', 'a', 'u', 'A']
+    let l:icon = l:flag ==# 'A' ? l:icons['%'] : l:icons[l:flag]
+    let l:width = strdisplaywidth(l:icon)
     let l:icon_width[l:flag] = l:width
     let l:spacing[l:flag] = repeat(' ', l:width)
   endfor
@@ -169,6 +170,24 @@ function! s:get_str(flag, bufnr, icons, spacing) abort
 
     if a:bufnr == bufnr('#')
       return a:icons['#']
+    endif
+
+    return a:spacing['%']
+  endif
+
+  if a:flag ==# 'A'
+    if a:bufnr == bufnr('%')
+      return a:icons['%']
+    endif
+
+    if a:bufnr == bufnr('#')
+      return a:icons['#']
+    endif
+
+    if bufloaded(a:bufnr)
+      return !empty(win_findbuf(a:bufnr)) ?
+            \ a:icons['a'] :
+            \ a:icons['h']
     endif
 
     return a:spacing['%']
