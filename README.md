@@ -911,6 +911,8 @@ wilder.set_option('renderer', wilder.renderer_mux({
 
 ### Advanced config (for Neovim only or Vim with `yarp`)
 
+This is a good approximatiton of the configuration used in the GIF from the beginning of the README. The colorscheme used if `tokyonight`.
+
 - Requires `fd` from [sharkdp/fd](https://github.com/sharkdp/fd)  (see `:h wilder#python_file_finder_pipeline()` on using other commands)
 - Requires `cpsm` from [nixprime/cpsm](https://github.com/nixprime/cpsm)
 - Requires `fzy-lua-native` from [romgrk/fzy-lua-native](https://github.com/romgrk/fzy-lua-native)

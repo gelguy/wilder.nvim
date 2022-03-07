@@ -845,16 +845,16 @@ wilder#cmdline_pipeline([{options}])
             true.
 
             The keys of {data} are:
-            `cmdline.expand`
-            The type of expansion, similar to |getcompletion()|.
+                `cmdline.expand`
+                The type of expansion, similar to |getcompletion()|.
 
-            `cmdline.command`
-            The cmdline command, if any.
+                `cmdline.command`
+                The cmdline command, if any.
 
-            `cmdline.arg`
-            The cmdline argument being completed.
+                `cmdline.arg`
+                The cmdline argument being completed.
 
-            Default: None
+                Default: None
 
             `hide_in_substitute`
             When true, hides wilder when in a |:substitute| command.
@@ -889,6 +889,14 @@ wilder#cmdline_pipeline([{options}])
             PCRE2.
 
             Default: 0
+
+            `sort_buffers_lastused`
+            Optional~
+            When true, when completing buffer names, sorts the buffers by
+            their `lastused` timestamp from `getbufinfo()`. The `lastused`
+            sorting happens after `fuzzy_filter` is applied.
+
+            Default: 1
 
             `debounce`
             Optional~
@@ -2503,6 +2511,13 @@ wilder#popupmenu_buffer_flags([{options}])
 
               `u`
               Shows ' ' if the buffer is 'buflisted' and 'u' otherwise.
+
+              `A`
+              A combination of the `%` and `a` flags.
+              Shows '%' if the buffer is the |current-file|, '#' if the buffer
+              is the |alternate-file|,  'a' if the buffer is an
+              |active-buffer|, 'h' if the buffer is a |hidden-buffer| and ' '
+              otherwise (|inactive-buffer|).
 
             Default: '1u%a-+ '
 
