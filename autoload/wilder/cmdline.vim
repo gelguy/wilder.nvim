@@ -1,13 +1,3 @@
-if !has('nvim')
-  try
-    " cmdline completion only available in Vim 8.2+
-    call getcompletion('foo', 'cmdline')
-    let s:has_getcompletion_cmdline = 1
-  catch
-    let s:has_getcompletion_cmdline = 0
-  endtry
-endif
-
 let s:cmdline_cache = wilder#cache#mru_cache(30)
 
 function! wilder#cmdline#parse(cmdline) abort
@@ -384,19 +374,7 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'behave')
   elseif a:res.expand ==# 'buffer'
     let l:buffers = getcompletion(l:expand_arg, 'buffer')
-    let l:buffers = map(l:buffers, {_, x -> fnamemodify(x, ':~:.')})
-
-    let l:alt_file = expand('#')
-    if !empty(l:alt_file)
-      let l:alt_file = fnamemodify(l:alt_file, ':~:.')
-      let l:i = index(l:buffers, l:alt_file)
-
-      if l:i > 0
-        let l:buffers = [l:buffers[l:i]] + l:buffers[0 : l:i-1] + l:buffers[l:i+1 :]
-      endif
-    endif
-
-    return l:buffers
+    return map(l:buffers, {_, x -> fnamemodify(x, ':~:.')})
   elseif a:res.expand ==# 'checkhealth'
     return has('nvim') ? getcompletion(l:expand_arg, 'checkhealth') : []
   elseif a:res.expand ==# 'color'
@@ -593,8 +571,18 @@ function! wilder#cmdline#getcompletion(ctx, res) abort
     return getcompletion(l:expand_arg, 'var')
   endif
 
+  if !exists('s:has_get_completion_cmdline')
+    try
+      " cmdline completion only available in Vim 8.2+
+      call getcompletion('foo', 'cmdline')
+      let s:has_getcompletion_cmdline = 1
+    catch
+      let s:has_getcompletion_cmdline = 0
+    endtry
+  endif
+
   " fallback to cmdline getcompletion
-  if has('nvim') || s:has_getcompletion_cmdline
+  if s:has_getcompletion_cmdline
     return getcompletion(a:res.cmdline, 'cmdline')
   endif
 
@@ -1280,9 +1268,9 @@ function! wilder#cmdline#pipeline(opts) abort
 
   let l:Sorter = get(a:opts, 'sorter', get(a:opts, 'sort', 0))
 
-  let l:fuzzy = get(a:opts, 'fuzzy', 0)
-
   let l:set_pcre2_pattern = get(a:opts, 'set_pcre2_pattern', 0)
+
+  let l:sort_buffers_lastused = get(a:opts, 'sort_buffers_lastused', 1)
 
   let l:should_debounce = get(a:opts, 'debounce', 0) > 0
   if l:should_debounce
@@ -1363,6 +1351,7 @@ function! wilder#cmdline#pipeline(opts) abort
         \   l:getcompletion_pipeline,
         \ ),
         \ wilder#result({
+        \   'value': {ctx, xs, data -> l:sort_buffers_lastused ? s:sort_buffers_lastused(ctx, xs, data) : xs},
         \   'data': {ctx, data -> s:set_query(data)},
         \ }),
         \ ]
@@ -1379,6 +1368,81 @@ function! s:set_pcre2_pattern(data, fuzzy) abort
   endif
 
   return extend(l:data, {'pcre2.pattern': l:pcre2_pattern})
+endfunction
+
+function! s:sort_buffers_lastused(ctx, xs, data) abort
+  if get(a:data, 'cmdline.expand', '') !=# 'buffer'
+    return a:xs
+  endif
+
+  let l:bufinfos = getbufinfo()
+  let l:bufnr_to_x = {}
+
+  for l:x in a:xs
+    let l:bufname = fnamemodify(l:x, ':~')
+    let l:bufnr = bufnr('^' . l:x . '$')
+
+    let l:bufnr_to_x[l:bufnr] = l:x
+  endfor
+
+  let l:x_to_info = {}
+  let l:seen = {}
+
+  for l:info in l:bufinfos
+    let l:bufnr = l:info.bufnr
+
+    if !has_key(l:bufnr_to_x, l:bufnr)
+      continue
+    endif
+
+    let l:x = l:bufnr_to_x[l:bufnr]
+    let l:x_to_info[l:x] = l:info
+    let l:seen[l:bufnr] = 1
+  endfor
+
+  let l:xs = copy(a:xs)
+  let l:match_arg = get(a:data, 'cmdline.match_arg', '')
+
+  " add matching bufnr
+  if l:match_arg =~# '\d\+'
+    for l:info in l:bufinfos
+      let l:bufnr = l:info.bufnr
+      let l:bufname = l:info.name
+
+      if !l:info.listed ||
+            \ empty(l:bufname) ||
+            \ has_key(l:seen, l:bufnr)
+        continue
+      endif
+
+      if stridx(l:bufnr, l:match_arg) == 0
+        let l:bufname = fnamemodify(l:bufname, ':~:.')
+        let l:x_to_info[l:bufname] = l:info
+        call add(l:xs, l:bufname)
+      endif
+    endfor
+  endif
+
+  let l:current_bufnr = bufnr('%')
+
+  return sort(l:xs, {x1, x2 -> s:sort_buffers_lastused_func(x1, x2, l:x_to_info, l:current_bufnr)})
+endfunction
+
+function! s:sort_buffers_lastused_func(x1, x2, x_to_info, current_bufnr) abort
+  let l:info1 = get(a:x_to_info, a:x1, {})
+  let l:lastused1 = get(l:info1, 'lastused', 1000000000)
+  let l:info2 = get(a:x_to_info, a:x2, {})
+  let l:lastused2 = get(l:info2, 'lastused', 1000000000)
+
+  if get(l:info1, 'bufnr', -1) == a:current_bufnr
+    return 1
+  endif
+
+  if get(l:info2, 'bufnr', -1) == a:current_bufnr
+    return -1
+  endif
+
+  return l:lastused2 - l:lastused1
 endfunction
 
 function! s:set_query(data) abort
