@@ -40,19 +40,21 @@ function! s:new(opts) dict abort
     let self.state.dummy_buf = s:new_buf()
   endif
 
-  if index(popup_list(), self.state.win) == -1
-    let self.state.win = popup_create(self.state.buf, {
-          \ 'line': 1,
-          \ 'col': 1,
-          \ 'fixed': 1,
-          \ 'wrap': 0,
-          \ 'zindex': get(a:opts, 'zindex', 0),
-          \ 'scrollbar': 0,
-          \ 'cursorline': 0,
-          \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
-          \ })
-    call popup_hide(self.state.win)
-  endif
+  " popups are bound to a tab page, so we delete the current popup and open a
+  " new one in case we are in a different tab page.
+  call popup_close(self.state.win)
+
+  let self.state.win = popup_create(self.state.buf, {
+        \ 'line': 1,
+        \ 'col': 1,
+        \ 'fixed': 1,
+        \ 'wrap': 0,
+        \ 'zindex': get(a:opts, 'zindex', 0),
+        \ 'scrollbar': 0,
+        \ 'cursorline': 0,
+        \ 'highlight': get(a:opts, 'normal_highlight', 'Normal'),
+        \ })
+  call popup_hide(self.state.win)
 endfunction
 
 function! s:new_buf() abort
@@ -77,7 +79,6 @@ function! s:show() dict abort
   call popup_show(self.state.win)
 endfunction
 
-" Floating windows can't be hidden so we close the window.
 function! s:hide() dict abort
   call popup_hide(self.state.win)
 endfunction
