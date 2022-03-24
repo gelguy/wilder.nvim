@@ -1143,8 +1143,8 @@ wilder#substitute_pipeline([{options}])
             Default: has('nvim') && !has('nvim-0.3.7')
 
             Note For Neovim < 0.3.7, you can set the `hide_in_replace` option
-            above to `1` add this snippet to your vimrc to disable inccommand
-            while in the {pattern} section.
+            above to `1` and add this snippet to your vimrc to disable
+            inccommand while in the {pattern} section.
 >
         function! s:save_inccommand(...)
           let s:saved_inccommand = &inccommand
@@ -2247,7 +2247,7 @@ wilder#popupmenu_palette_theme([{options}])
             `max_height`
             `min_height`
             If both are unset, `max_height` defaults to '75%' and `min_height`
-            defaults to '25%'.
+            defaults to 0.
 
             `max_height`
             `min_height`

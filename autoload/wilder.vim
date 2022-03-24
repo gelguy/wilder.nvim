@@ -756,7 +756,6 @@ function! wilder#popupmenu_palette_theme(...)
   return wilder#renderer#popupmenu_palette_theme#(l:args)
 endfunction
 
-
 function! s:find_function_script_file(f)
   try
     " ensure function is autoloaded
