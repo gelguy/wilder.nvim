@@ -86,7 +86,7 @@ function! s:_open_win() dict abort
   endif
 
   " Fix E5555 when re-showing wilder when inccommand is cancelled.
-  let l:buf = has('nvim-0.6') ? 0 : self.state.buf
+  let l:buf = has('nvim-0.7') && !has('nvim-0.7') ? 0 : self.state.buf
 
   let l:win_opts = {
         \ 'relative': 'editor',
@@ -105,7 +105,7 @@ function! s:_open_win() dict abort
 
   let self.state.window_state = 'showing'
 
-  if has('nvim-0.6')
+  if has('nvim-0.7') && !has('nvim-0.7')
     try
       call self._set_buf()
     catch
@@ -261,6 +261,12 @@ function! s:clear_all_highlights() dict abort
 endfunction
 
 function! s:need_timer() dict abort
+  if has('nvim-0.7')
+    " See https://github.com/neovim/neovim/issues/17810.
+    " Avoid calling nvim_buf_set_lines(), so assume timer is always needed.
+    return 1
+  endif
+
   try
     call nvim_buf_set_lines(self.state.dummy_buf, 0, -1, v:true, [])
   catch
