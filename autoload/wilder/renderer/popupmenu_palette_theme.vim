@@ -50,7 +50,7 @@ function! wilder#renderer#popupmenu_palette_theme#(opts) abort
   endif
 
   if !has_key(a:opts, 'max_height') && !has_key(a:opts, 'min_height')
-    let l:opts_without_prompt.min_height = '25%'
+    let l:opts_without_prompt.min_height = 0
     let l:opts_without_prompt.max_height = '75%'
   endif
 
