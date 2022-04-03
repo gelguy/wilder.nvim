@@ -7,7 +7,7 @@ function! wilder#renderer#popupmenu#(opts) abort
         \   'default': get(a:opts, 'hl', 'Pmenu'),
         \   'selected': get(a:opts, 'selected_hl', 'PmenuSel'),
         \   'error': get(a:opts, 'error_hl', 'ErrorMsg'),
-        \   'empty_message': get(a:opts, 'empty_message_hl', 'WarningMsg'),
+        \   'empty_message': 'WarningMsg',
         \ }, 'keep'),
         \ 'ellipsis': wilder#render#to_printable(get(a:opts, 'ellipsis', '...')),
         \ 'apply_incsearch_fix': get(a:opts, 'apply_incsearch_fix', has('nvim') && !has('nvim-0.5.1')),
@@ -19,6 +19,8 @@ function! wilder#renderer#popupmenu#(opts) abort
         \ 'bottom': get(a:opts, 'bottom', []),
         \ 'empty_message': get(a:opts, 'empty_message', 0),
         \ 'empty_message_first_draw_delay': get(a:opts, 'empty_message_first_draw_delay', 100),
+        \ 'error_message': get(a:opts, 'error_message', wilder#renderer#component#popupmenu_error_message#()),
+        \ 'position': get(a:opts, 'position', funcref('s:get_position')),
         \
         \ 'page': [-1, -1],
         \ 'buf': -1,
@@ -89,10 +91,6 @@ function! wilder#renderer#popupmenu#(opts) abort
           \ 'underline', 'bold')
   endif
 
-  if !has_key(l:state.highlights, 'empty_message')
-    let l:state.highlights.empty_message = 'WarningMsg'
-  endif
-
   if has_key(a:opts, 'highlighter')
     let l:Highlighter = a:opts['highlighter']
   elseif has_key(a:opts, 'apply_highlights')
@@ -153,18 +151,10 @@ function! s:render(state, ctx, result) abort
   let a:ctx.height = l:height
   let a:ctx.highlights = a:state.highlights
 
-  let l:need_timer = a:state.api.need_timer()
-
-  if has_key(a:ctx, 'error')
-    if l:need_timer
-      call timer_start(0, {-> s:draw_error(a:state, a:ctx)})
-    else
-      call s:draw_error(a:state, a:ctx)
-    endif
-    return
-  endif
-
-  if a:state.page == [-1, -1] && a:state.empty_message is 0
+  " Hide popupmenu if there is nothing to draw and empty message is not set
+  if a:state.page == [-1, -1] &&
+        \ !has_key(a:ctx, 'error') &&
+        \ a:state.empty_message is 0
     call a:state.api.hide()
     return
   endif
@@ -185,15 +175,16 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
-  " If empty message is not showing, check if we need to draw.
-  if a:state.page != [-1, -1] &&
+  " If error or empty message is not showing, check if we need to draw.
+  if !has_key(a:ctx, 'error') &&
+        \ a:state.page != [-1, -1] &&
         \ !wilder#renderer#pre_draw(a:state.left + a:state.right + a:state.top + a:state.bottom, a:ctx, a:result)
     return
   endif
 
   let a:state.render_id += 1
 
-  if l:need_timer
+  if a:state.api.need_timer()
     let l:render_id = a:state.render_id
     call timer_start(0, {-> s:render_lines_from_timer(l:render_id, a:state, a:ctx, a:result)})
   else
@@ -292,11 +283,17 @@ function! s:render_lines_from_timer(render_id, state, ctx, result)
 endfunction
 
 function! s:render_lines(state, ctx, result) abort
-  " +1 to account for the cmdline prompt.
-  let l:pos = get(a:result, 'pos', 0) + 1
-  let l:pos -= a:state.left_offset
-  if l:pos < 0
-    let l:pos = 0
+  if !has_key(a:ctx, 'error')
+    " +1 to account for the cmdline prompt.
+    let l:pos = get(a:result, 'pos', 0) + 1
+    let l:pos -= a:state.left_offset
+    if l:pos < 0
+      let l:pos = 0
+    endif
+  else
+    let l:cmdline = getcmdline()
+    let l:parsed = wilder#cmdline#parse(l:cmdline)
+    let l:pos = l:parsed.pos
   endif
 
   let l:selected = a:ctx.selected
@@ -305,10 +302,18 @@ function! s:render_lines(state, ctx, result) abort
   let [l:page_start, l:page_end] = a:state.page
 
   if a:state.page != [-1, -1]
+    " draw candidates
     let [l:lines, l:width] = s:make_lines(a:state, a:ctx, a:result)
     let l:lines = l:reverse ? reverse(l:lines) : l:lines
   else
-    let l:lines = s:make_empty_message(a:state, a:ctx, a:result, a:state.empty_message)
+    if has_key(a:ctx, 'error')
+      " draw error
+      let l:lines = s:make_message(a:state, a:ctx, a:state.error_message, s:empty_result, a:ctx.error, 'error')
+    else
+      " draw empty message
+      let l:lines = s:make_message(a:state, a:ctx, a:state.empty_message, a:result, a:result, 'empty_message')
+    endif
+
     let l:width = empty(l:lines) ?
           \ a:state.get_min_width(a:ctx, a:result) :
           \ wilder#render#chunks_displaywidth(l:lines[0])
@@ -352,20 +357,13 @@ function! s:render_lines(state, ctx, result) abort
 
   call a:state.api.show()
 
-  let l:col = l:pos % &columns
-
-  if !has('nvim')
-    if l:col + l:width > &columns
-      let l:col = &columns - l:width
-    endif
-    if l:col < 0
-      let l:col = 0
-    endif
-  endif
-
-  let l:cmdheight = wilder#renderer#get_cmdheight()
   let l:height = len(l:lines)
-  let l:row = &lines - l:cmdheight - l:height
+  let l:max_height = a:state.get_max_height(a:ctx, a:result)
+  if l:max_height > &lines
+    let l:max_height = &lines
+  endif
+  let [l:row, l:col] = a:state.position(a:ctx, l:pos,
+        \ {'height': l:height, 'width': l:width, 'max_height': l:max_height})
 
   call a:state.api.move(l:row, l:col, l:height, l:width)
   call a:state.api.set_option('wrap', v:false)
@@ -386,7 +384,7 @@ function! s:render_lines(state, ctx, result) abort
 
     call a:state.api.set_line(l:i, l:text)
 
-    " Don't apply selected for top lines or empty message.
+    " Don't apply selected for top lines or error or empty message.
     if l:page_start == -1 ||
           \ (!l:reverse && l:i < l:top_height) ||
           \ (l:reverse && l:i >= l:top_height + l:lines_height)
@@ -450,11 +448,16 @@ function! s:make_lines(state, ctx, result) abort
 
   let l:height = a:ctx.height
 
-  let l:left_column_chunks = map(repeat([0], l:height), {-> []})
-  call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result)
+  if l:height > 0
+    let l:left_column_chunks = map(repeat([0], l:height), {-> []})
+    call s:draw_columns(l:left_column_chunks, a:state.left, a:ctx, a:result)
 
-  let l:right_column_chunks = map(repeat([0], l:height), {-> []})
-  call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result)
+    let l:right_column_chunks = map(repeat([0], l:height), {-> []})
+    call s:draw_columns(l:right_column_chunks, a:state.right, a:ctx, a:result)
+  else
+    let l:left_column_chunks = []
+    let l:right_column_chunks = []
+  endif
 
   " [[left_column, chunks, right_column]]
   let l:raw_lines = repeat([0], l:height)
@@ -683,7 +686,7 @@ function! s:pre_hook(state, ctx) abort
         \ 'pumblend': get(a:state, 'pumblend', -1)
         \ })
 
-  for l:Component in [a:state.empty_message] +
+  for l:Component in [a:state.empty_message, a:state.error_message] +
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
     call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
   endfor
@@ -695,7 +698,7 @@ endfunction
 function! s:post_hook(state, ctx) abort
   call a:state.api.hide()
 
-  for l:Component in [a:state.empty_message] +
+  for l:Component in [a:state.empty_message, a:state.error_message] +
         \ a:state.left + a:state.right + a:state.top + a:state.bottom
     call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
   endfor
@@ -705,32 +708,37 @@ function! s:post_hook(state, ctx) abort
   let a:state.active = 0
 endfunction
 
-function! s:draw_error(state, ctx) abort
-  call a:state.api.show()
+function! s:make_error_message(state, ctx, error, error_message) abort
+  let l:min_width = a:state.get_min_width(a:ctx, s:empty_result)
+  let l:max_width = a:state.get_max_width(a:ctx, s:empty_result)
+  let l:min_height = a:state.get_min_height(a:ctx, s:empty_result)
+  let l:max_height = a:state.get_max_height(a:ctx, s:empty_result)
 
-  let l:error = wilder#render#to_printable(a:ctx.error)
-  let [l:height, l:width] = s:get_error_dimensions(a:state, a:ctx, l:error)
+  let l:height_used = len(a:state.top) + len(a:state.bottom)
+  let l:max_height -= l:height_used
+  let l:min_height -= l:height_used
 
-  let l:cmdheight = wilder#renderer#get_cmdheight()
-  let l:row = &lines - l:cmdheight - l:height
+  if l:max_width < l:min_width
+    let l:max_width = l:min_width
+  endif
+  if l:max_height < l:min_height
+    let l:max_height = l:min_height
+  endif
 
-  call a:state.api.move(l:row, 0, l:height, l:width)
-  call a:state.api.set_option('wrap', v:true)
-  call a:state.api.clear_all_highlights()
-  call a:state.api.delete_all_lines()
+  let l:ctx = copy(a:ctx)
 
-  let l:hl = a:ctx.highlights['error']
+  let l:ctx.min_width = l:min_width
+  let l:ctx.max_width = l:max_width
+  let l:ctx.min_height = l:min_height
+  let l:ctx.max_height = l:max_height
 
-  call a:state.api.set_line(0, l:error)
-  call a:state.api.add_highlight(l:hl, 0, 0, len(l:error))
-
-  redraw
+  return a:error_message(l:ctx, a:ctx.error)
 endfunction
 
-function! s:make_empty_message(state, ctx, result, empty_essage) abort
-  let l:Empty_message = a:state.empty_message
-  if type(l:Empty_message) is v:t_dict
-    let l:Empty_message = l:Empty_message.value
+function! s:make_message(state, ctx, func, result, arg, hl_key) abort
+  let l:Message = a:func
+  if type(l:Message) is v:t_dict
+    let l:Message = l:Message.value
   endif
 
   let l:min_width = a:state.get_min_width(a:ctx, a:result)
@@ -749,7 +757,7 @@ function! s:make_empty_message(state, ctx, result, empty_essage) abort
     let l:max_height = l:min_height
   endif
 
-  if type(l:Empty_message) is v:t_func
+  if type(l:Message) is v:t_func
     let l:ctx = copy(a:ctx)
 
     let l:ctx.min_width = l:min_width
@@ -757,18 +765,18 @@ function! s:make_empty_message(state, ctx, result, empty_essage) abort
     let l:ctx.min_height = l:min_height
     let l:ctx.max_height = l:max_height
 
-    let l:Empty_message = l:Empty_message(l:ctx, a:result)
+    let l:Message = l:Message(l:ctx, a:arg)
   endif
 
-  if type(l:Empty_message) is v:t_string
-    let l:hl = a:ctx.highlights.empty_message
-    let l:Empty_message = s:make_empty_message_from_string(l:Empty_message, l:min_width, l:max_width, l:min_height, l:hl)
+  if type(l:Message) is v:t_string
+    let l:hl = a:ctx.highlights[a:hl_key]
+    let l:Message = s:make_message_from_string(l:Message, l:min_width, l:max_width, l:min_height, l:hl)
   endif
 
-  return l:Empty_message
+  return l:Message
 endfunction
 
-function! s:make_empty_message_from_string(message, min_width, max_width, min_height, hl) abort
+function! s:make_message_from_string(message, min_width, max_width, min_height, hl) abort
   let l:message = a:message
 
   let l:message = wilder#render#truncate(a:max_width, l:message)
@@ -842,7 +850,22 @@ function! s:get_height_or_width_from_option(opt, default, is_height) abort
   return {-> s:clamp(a:default, a:is_height)}
 endfunction
 
-function! s:get_width_from_option(opt, default) abort
+function! s:get_position(ctx, pos, dimensions) abort
+  let l:col = a:pos % &columns
+
+  if !has('nvim')
+    if l:col + a:dimensions.width > &columns
+      let l:col = &columns - a:dimensions.width
+    endif
+    if l:col < 0
+      let l:col = 0
+    endif
+  endif
+
+  let l:cmdheight = wilder#renderer#get_cmdheight()
+  let l:row = &lines - l:cmdheight - a:dimensions.height
+
+  return [l:row, l:col]
 endfunction
 
 function! wilder#renderer#popupmenu#iterate_candidates(ctx, result, f) abort

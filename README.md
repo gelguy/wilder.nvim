@@ -21,6 +21,7 @@
 ## Install
 
 With [Shougo/dein.nvim](https://github.com/Shougo/dein.nvim)
+
 ```vim
 call dein#add('gelguy/wilder.nvim')
 
@@ -32,6 +33,7 @@ endif
 ```
 
 With [junegunn/vim-plug](https://github.com/junegunn/vim-plug)
+
 ```vim
 if has('nvim')
   function! UpdateRemotePlugins(...)
@@ -48,7 +50,17 @@ else
   Plug 'roxma/nvim-yarp'
   Plug 'roxma/vim-hug-neovim-rpc'
 endif
+```
 
+With [wbthomason/packer.nvim](https://github.com/wbthomason/packer.nvim)
+
+```lua
+use {
+  'gelguy/wilder.nvim',
+  config = function()
+    -- config goes here
+  end,
+}
 ```
 
 ## Minimal config
@@ -61,7 +73,7 @@ call wilder#setup({'modes': [':', '/', '?']})
 ```
 
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
-When searching using `/`, suggestions will be provided. The default uses substring matching.
+When searching using `/`, suggestions from the current buffer will be provided. Substring matching is used by default.
 
 Use `<Tab>` to cycle through the list forwards, and `<S-Tab>` to move backwards.
 
@@ -76,6 +88,7 @@ call wilder#setup({
       \ 'reject_key': '<Up>',
       \ })
 ```
+
 Ideally `next_key` should be set to be the same as `&wildchar`.
 Otherwise there might be a conflict when `wildmenu` is active at the same time as `wilder`.
 
@@ -89,6 +102,21 @@ call wilder#setup({
 
 Pressing `<Tab>` (or whichever key `next_key` is set to) will activate `wilder`.
 
+## Lua config (Experimental)
+
+For Neovim 0.5+, configuration in Lua is also supported. Note that this is experimental.
+
+```lua
+local wilder = require('wilder')
+wilder.setup({modes = {':', '/', '?'}})
+```
+
+For every `wilder#foo()` method, the `wilder` Lua module exposes a `wilder.foo()` method in Lua.
+All function arguments are the same and only needs to be translated to the Lua equivalent.
+
+Note: this is achieved by using a Vim Script to Lua wrapper shim which introduces some overhead.
+The core logic is still written in Vim Script so a Lua configuration is in general not more performant than a Vim Script configuration.
+
 ## Customising the pipeline
 
 ![Search](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/search.png)
@@ -97,17 +125,23 @@ Use `wilder#set_option('pipeline', <pipeline>)` to customise the pipeline.
 The pipeline is a list of functions (referred to as pipes) which are executed
 in order, passing the result of the previous function to the next one.
 
-For example, in Neovim, to use fuzzy matching instead of substring matching:
+For example, in Neovim or Vim with `yarp`, to use fuzzy matching instead of substring matching:
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 " For Neovim or Vim with yarp
 " For wild#cmdline_pipeline():
 "   'language'   : set to 'python' to use python
-"   'fuzzy'      : set fuzzy searching
+"   'fuzzy'      : 0 - turns off fuzzy matching
+"                : 1 - turns on fuzzy matching
+"                : 2 - partial fuzzy matching (match does not have to begin with the same first letter)
 " For wild#python_search_pipeline():
 "   'pattern'    : can be set to wilder#python_fuzzy_delimiter_pattern() for stricter fuzzy matching
 "   'sorter'     : omit to get results in the order they appear in the buffer
 "   'engine'     : can be set to 're2' for performance, requires pyre2 to be installed
+"                : see :h wilder#python_search() for more details
 call wilder#set_option('pipeline', [
       \   wilder#branch(
       \     wilder#cmdline_pipeline({
@@ -123,7 +157,39 @@ call wilder#set_option('pipeline', [
       \ ])
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('pipeline', {
+  wilder.branch(
+    wilder.cmdline_pipeline({
+      -- sets the language to use, 'vim' and 'python' are supported
+      language = 'python',
+      -- 0 turns off fuzzy matching
+      -- 1 turns on fuzzy matching
+      -- 2 partial fuzzy matching (match does not have to begin with the same first letter)
+      fuzzy = 1,
+    }),
+    wilder.python_search_pipeline({
+      -- can be set to wilder#python_fuzzy_delimiter_pattern() for stricter fuzzy matching
+      pattern = wilder.python_fuzzy_pattern(),
+      -- omit to get results in the order they appear in the buffer
+      sorter = wilder.python_difflib_sorter(),
+      -- can be set to 're2' for performance, requires pyre2 to be installed
+      -- see :h wilder#python_search() for more details
+      engine = 're',
+    })
+  ),
+})
+```
+
+</details>
+
 `wilder#branch()` is a higher-order pipe which is able to provide control flow given its own lists of pipelines.
+Note: For Lua, `wilder.branch()` takes a variadic list of arguments and so cannot have a trailing comma.
 
 See the docs at `:h wilder-pipeline` for a more details. 
 
@@ -133,6 +199,9 @@ See the docs at `:h wilder-pipeline` for a more details.
 
 When getting file completions, fuzzily search and match through all files under the project directory.
 Has to be placed above `wilder#cmdline_pipeline()`.
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 " 'file_command' : for ripgrep : ['rg', '--files']
@@ -153,6 +222,32 @@ call wilder#set_option('pipeline', [
       \ ])
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('pipeline', {
+  wilder.branch(
+    wilder.python_file_finder_pipeline({
+      -- to use ripgrep : {'rg', '--files'}
+      -- to use fd      : {'fd', '-tf'}
+      file_command = {'find', '.', '-type', 'f', '-printf', '%P\n'}, 
+      -- to use fd      : {'fd', '-td'}
+      dir_command = {'find', '.', '-type', 'd', '-printf', '%P\n'},
+      -- use {'cpsm_filter'} for performance, requires cpsm vim plugin
+      -- found at https://github.com/nixprime/cpsm
+      filters = {'fuzzy_filter', 'difflib_sorter'},
+    }),
+    wilder.cmdline_pipeline(),
+    wilder.python_search_pipeline()
+  ),
+})
+```
+
+</details>
+
 To optimise for performance, the `file_command`, `dir_command` and `filters` options can be customised.
 See `:h wilder#python_file_finder_pipeline()` for more details.
 
@@ -169,6 +264,9 @@ By default, `wilder` tries its best to look like the default wildmenu.
 For Neovim 0.4+, a floating window is used. For Vim 8.1+ with popup support, a popup window is used.
 Otherwise the statusline is used. Note: When using the statusline, the wildmenu will only show on the statusline of the current window.
 
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " 'highlighter' : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
@@ -176,11 +274,28 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.wildmenu_renderer({
+  -- highlighter applies highlighting to the candidates
+  highlighter = wilder.basic_highlighter(),
+}))
+```
+
+</details>
+
 ##### Minimal theme
 
 An alternative theme which shows a spinner and the current number of items:
 
 ![Wildmenu Minimal](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/wildmenu_minimal.png)
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
@@ -191,11 +306,30 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.wildmenu_renderer({
+  highlighter = wilder.basic_highlighter(),
+  separator = ' · ',
+  left = {' ', wilder.wildmenu_spinner(), ' '},
+  right = {' ', wilder.wildmenu_index()},
+}))
+```
+
+</details>
+
 ##### Airline/Lightline theme
 
 For Airline and Lightline users, `wilder#wildmenu_airline_theme()` and `wilder#wildmenu_lightline_theme()` can be used.
 
 ![Wildmenu Airline](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/wildmenu_airline.png)
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 " Use wilder#wildmenu_lightline_theme() if using Lightline
@@ -208,6 +342,25 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer(
       \ })))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.wildmenu_renderer(
+  -- use wilder.wildmenu_lightline_theme() if using Lightline
+  wilder.wildmenu_airline_theme({
+    -- highlights can be overriden, see :h wilder#wildmenu_renderer()
+    highlights = {default = 'StatusLine'},
+    highlighter = wilder.basic_highlighter(),
+    separator = ' · ',
+  })
+))
+```
+
+</details>
+
 ### Popupmenu renderer
 
 ![Popupmenu](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/popupmenu.png)
@@ -216,6 +369,9 @@ For Neovim 0.4+ or Vim 8.1+ with popup support,
 `wilder#popupmenu_renderer()` can be used to draw the results on a popupmenu, similar to `wildoptions+=pum`.
 The implementation for Vim is still experimental.
 
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " 'highlighter' : applies highlighting to the candidates
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
@@ -223,41 +379,91 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer({
+  -- highlighter applies highlighting to the candidates
+  highlighter = wilder.basic_highlighter(),
+}))
+```
+
+</details>
+
 Use `wilder#renderer_mux()` to choose which renderer to use for different cmdline modes.
 This is helpful since the popupmenu might overlap the current window when searching with `/`.
 
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 call wilder#set_option('renderer', wilder#renderer_mux({
-      \ ':': wilder#popupmenu_renderer({
-      \   ... settings ...
-      \ }),
-      \ '/': wilder#wildmenu_renderer({
-      \   ... settings ...
-      \ }),
+      \ ':': wilder#popupmenu_renderer(),
+      \ '/': wilder#wildmenu_renderer(),
       \ }))
 ```
+
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.renderer_mux({
+  [':'] = wilder.popupmenu_renderer({
+    highlighter = wilder.basic_highlighter(),
+  }),
+  ['/'] = wilder.wildmenu_renderer({
+    highlighter = wilder.basic_highlighter(),
+  }),
+}))
+```
+
+</details>
 
 ![Popupmenu pumblend](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/22e0a7608df7dfd44bd5f607c41af34d0ac9225d/pumblend.png)
 
 For Neovim, the `pumblend` option can be set to change the transparency of the popupmenu. By default, the value of the `&pumblend` option is used.
 To disable transparency, set the value to `0`.
 
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ 'pumblend': 20,
-      \ ... other options ...
       \ }))
 ```
 
-##### Popupmenu borders (Experimental)
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer({
+  pumblend = 20,
+}))
+```
+
+</details>
+
+##### Popupmenu borders
 
 ![Popupmenu Border](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/popupmenu_border.png)
 
 Use `wilder#popupmenu_border_theme()` to add a border around the popup menu.
 
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " 'border'            : 'single', 'double', 'rounded' or 'solid'
-                      : can also be a list of 8 characters
+"                     : can also be a list of 8 characters,
+"                     : see :h wilder#popupmenu_border_theme() for more details
 " 'highlights.border' : highlight to use for the border`
 call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_border_theme({
       \ 'highlights': {
@@ -267,16 +473,39 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_bo
       \ })))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer(
+  wilder.popupmenu_border_theme({
+    highlights = {
+      border = 'Normal', -- highlight to use for the border
+    },
+    -- 'single', 'double', 'rounded' or 'solid'
+    -- can also be a list of 8 characters, see :h wilder#popupmenu_border_theme() for more details
+    border = 'rounded',
+  })
+))
+```
+
+</details>
+
 ##### Fill up entire width like Emacs helm
 
 ![Helm](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/helm.png)
 
 Set the `min_width` option to `100%`.
 
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " wilder#popupmenu_border_theme() is optional.
 " 'min_height' : sets the minimum height of the popupmenu
-               : can also be a number
+"              : can also be a number
 " 'max_height' : set to the same as 'min_height' to set the popupmenu to a fixed height
 " 'reverse'    : if 1, shows the candidates from bottom to top
 call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_border_theme({
@@ -287,7 +516,23 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_bo
       \ })))
 ```
 
-Note this is temporary, a `wilder#ivy/helm_renderer()` will be added in the future.
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer(
+  wilder.popupmenu_border_theme({
+    highlighter = wilder.basic_highlighter(),
+    min_width = '100%', -- minimum height of the popupmenu, can also be a number
+    min_height = '50%', -- to set a fixed height, set max_height to the same value
+    reverse = 0,        -- if 1, shows the candidates from bottom to top
+  })
+))
+```
+
+</details>
 
 ##### Devicons for popupmenu
 
@@ -296,6 +541,9 @@ Note this is temporary, a `wilder#ivy/helm_renderer()` will be added in the futu
 Supports `ryanoasis/vim-devicons`, `kyazdani42/nvim-web-devicons` and `lambdalisue/nerdfont.vim` by default.
 To use other plugins, the `get_icon` option can be changed.
 See `:h wilder#popupmenu_devicons` for more details.
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 call wilder#set_option('renderer', wilder#popupmenu_renderer({
@@ -309,6 +557,69 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer({
+  highlighter = wilder.basic_highlighter(),
+  left = {' ', wilder.popupmenu_devicons()},
+  right = {' ', wilder.popupmenu_scrollbar()},
+}))
+```
+
+</details>
+
+### Command Palette (Experimental)
+
+![Palette](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/6ffb5b116ce298e1d6c9411fe08457e0cffbe4aa/palette4.gif)
+
+`wilder#popupmenu_palette_theme()` can be used to draw the popupmenu in the middle of the screen, similar to a command palette.
+
+<details>
+<summary>Vim Script</summary>
+
+```vim
+" 'border'            : 'single', 'double', 'rounded' or 'solid'
+"                     : can also be a list of 8 characters,
+"                     : see :h wilder#popupmenu_palette_theme() for more details
+" 'max_height'        : max height of the palette
+" 'min_height'        : set to the same as 'max_height' for a fixed height window
+" 'prompt_position'   : 'top' or 'bottom' to set the location of the prompt
+" 'reverse'           : set to 1 to reverse the order of the list
+"                     : use in combination with 'prompt_position'
+call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_palette_theme({
+      \ 'border': 'rounded',
+      \ 'max_height': '75%',
+      \ 'min_height': 0,
+      \ 'prompt_position': 'top',
+      \ 'reverse': 0,
+      \ })))
+```
+
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer(
+  wilder.popupmenu_palette_theme({
+    -- 'single', 'double', 'rounded' or 'solid'
+    -- can also be a list of 8 characters, see :h wilder#popupmenu_palette_theme() for more details
+    border = 'rounded',
+    max_height = '75%',      -- max height of the palette
+    min_height = 0,          -- set to the same as 'max_height' for a fixed height window
+    prompt_position = 'top', -- 'top' or 'bottom' to set the location of the prompt
+    reverse = 0,             -- set to 1 to reverse the order of the list, use in combination with 'prompt_position'
+  })
+))
+```
+
+</details>
+
 ### Better highlighting
 
 ![Popupmenu Fuzzy](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/popupmenu_fuzzy.png)
@@ -320,6 +631,10 @@ The `highlights.accent` option sets the highlight group to use for the matched c
 `wilder#make_hl()` is a helper method which creates a new highlight group based on the attributes of an existing one.
 
 Basic configuration for both Vim and Neovim:
+
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " Create the WilderAccent highlight by overriding the guifg attribute of Pmenu
 " and return the name of the highlight
@@ -341,7 +656,13 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
+</details>
+
 For Neovim or Vim with `yarp`:
+
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " For python_cpsm_highlighter : requires cpsm vim plugin found at
 "                               https://github.com/nixprime/cpsm
@@ -356,7 +677,13 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
+</details>
+
 For Neovim:
+
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 " For lua_pcre2_highlighter : requires `luarocks install pcre2`
 " For lua_fzy_highlighter   : requires fzy-lua-native vim plugin found
@@ -372,11 +699,34 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
-#### Gradient highlighting (Experimental)
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer({
+  highlighter = {
+    wilder.lua_pcre2_highlighter(), -- requires `luarocks install pcre2`
+    wilder.lua_fzy_highlighter(),   -- requires fzy-lua-native vim plugin found
+                                    -- at https://github.com/romgrk/fzy-lua-native
+  },
+  highlights = {
+    accent = wilder.make_hl('WilderAccent', 'Pmenu', {{a = 1}, {a = 1}, {foreground = '#f4468f'}}),
+  },
+}))
+```
+
+</details>
+
+#### Gradient highlighting
 
 ![Gradient](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/gradient_with_border.png)
 
 `wilder#highlighter_with_gradient()` wraps other highlighters and applies a gradient highlight.
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 let s:scale = ['#f4468f', '#fd4a85', '#ff507a', '#ff566f', '#ff5e63',
@@ -400,6 +750,36 @@ call wilder#set_option('renderer', wilder#popupmenu_renderer({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+local gradient = {
+  '#f4468f', '#fd4a85', '#ff507a', '#ff566f', '#ff5e63',
+  '#ff6658', '#ff704e', '#ff7a45', '#ff843d', '#ff9036',
+  '#f89b31', '#efa72f', '#e6b32e', '#dcbe30', '#d2c934',
+  '#c8d43a', '#bfde43', '#b6e84e', '#aff05b'
+}
+
+for i, fg in ipairs(gradient) do
+  gradient[i] = wilder.make_hl('WilderGradient' .. i, 'Pmenu', {{a = 1}, {a = 1}, {foreground = fg}})
+end
+
+wilder.set_option('renderer', wilder.popupmenu_renderer({
+  highlights = {
+    gradient = gradient, -- must be set
+    -- selected_gradient key can be set to apply gradient highlighting for the selected candidate.
+  },
+  highlighter = wilder.highlighter_with_gradient({
+    wilder.basic_highlighter(), -- or wilder.lua_fzy_highlighter(),
+  }),
+}))
+```
+
+</details>
+
 A nice set of color scales can be found at [d3-scale-chromatic](https://observablehq.com/@d3/color-schemes?collection=@d3/d3-scale-chromatic).
 Use the dropdown to select `discrete(<x>)` for a smaller list of colors.
 Click on a scale to copy it as a string.
@@ -409,6 +789,10 @@ Note: Gradient highlighting slows down performance by a lot.
 # Example configs
 
 ### Basic config (for both Vim and Neovim)
+
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 call wilder#setup({'modes': [':', '/', '?']})
 
@@ -424,7 +808,34 @@ call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+local wilder = require('wilder')
+wilder.setup({modes = {':', '/', '?'}})
+
+wilder.set_option('pipeline', {
+  wilder.branch(
+    wilder.cmdline_pipeline(),
+    wilder.search_pipeline()
+  ),
+})
+
+wilder.set_option('renderer', wilder.wildmenu_renderer({
+  highlighter = wilder.basic_highlighter(),
+}))
+```
+
+</details>
+
 ### Fuzzy config (for Neovim or Vim with `yarp`)
+
+<details>
+<summary>Vim Script</summary>
+
 ```vim
 call wilder#setup({'modes': [':', '/', '?']})
 
@@ -455,43 +866,90 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }))
 ```
 
-### Neovim Python-less config
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+local wilder = require('wilder')
+wilder.setup({modes = {':', '/', '?'}})
+
+wilder.set_option('pipeline', {
+  wilder.branch(
+    wilder.cmdline_pipeline({
+      fuzzy = 1,
+      set_pcre2_pattern = 1,
+    }),
+    wilder.python_search_pipeline({
+      pattern = 'fuzzy',
+    })
+  ),
+})
+
+local highlighters = {
+  wilder.pcre2_highlighter(),
+  wilder.basic_highlighter(),
+}
+
+wilder.set_option('renderer', wilder.renderer_mux({
+  [':'] = wilder.popupmenu_renderer({
+    highlighter = highlighters,
+  }),
+  ['/'] = wilder.wildmenu_renderer({
+    highlighter = highlighters,
+  }),
+}))
+```
+
+</details>
+
+### Neovim Lua only config
 
 - Requires `fzy-lua-native` from [romgrk/fzy-lua-native](https://github.com/romgrk/fzy-lua-native)
 
-```vim
-call wilder#setup({'modes': [':', '/', '?']})
-call wilder#set_option('use_python_remote_plugin', 0)
+<details>
+<summary>Lua</summary>
 
-call wilder#set_option('pipeline', [
-      \   wilder#branch(
-      \     wilder#cmdline_pipeline({
-      \       'fuzzy': 1,
-      \       'fuzzy_filter': wilder#lua_fzy_filter(),
-      \     }),
-      \     wilder#vim_search_pipeline(),
-      \   ),
-      \ ])
+```lua
+local wilder = require('wilder')
+wilder.setup({modes = {':', '/', '?'}})
+-- Disable Python remote plugin
+wilder.set_option('use_python_remote_plugin', 0)
 
-call wilder#set_option('renderer', wilder#renderer_mux({
-      \ ':': wilder#popupmenu_renderer({
-      \   'highlighter': wilder#lua_fzy_highlighter(),
-      \   'left': [
-      \     ' ',
-      \     wilder#popupmenu_devicons(),
-      \   ],
-      \   'right': [
-      \     ' ',
-      \     wilder#popupmenu_scrollbar(),
-      \   ],
-      \ }),
-      \ '/': wilder#wildmenu_renderer({
-      \   'highlighter': wilder#lua_fzy_highlighter(),
-      \ }),
-      \ }))
+wilder.set_option('pipeline', {
+  wilder.branch(
+    wilder.cmdline_pipeline({
+      fuzzy = 1,
+      fuzzy_filter = wilder.lua_fzy_filter(),
+    }),
+    wilder.vim_search_pipeline()
+  )
+})
+
+wilder.set_option('renderer', wilder.renderer_mux({
+  [':'] = wilder.popupmenu_renderer({
+    highlighter = wilder.lua_fzy_highlighter(),
+    left = {
+      ' ',
+      wilder.popupmenu_devicons()
+    },
+    right = {
+      ' ',
+      wilder.popupmenu_scrollbar()
+    },
+  }),
+  ['/'] = wilder.wildmenu_renderer({
+    highlighter = wilder.lua_fzy_highlighter(),
+  }),
+}))
 ```
 
+</details>
+
 ### Advanced config (for Neovim only or Vim with `yarp`)
+
+This is a good approximatiton of the configuration used in the GIF from the beginning of the README. The colorscheme used if `tokyonight`.
 
 - Requires `fd` from [sharkdp/fd](https://github.com/sharkdp/fd)  (see `:h wilder#python_file_finder_pipeline()` on using other commands)
 - Requires `cpsm` from [nixprime/cpsm](https://github.com/nixprime/cpsm)
@@ -499,6 +957,9 @@ call wilder#set_option('renderer', wilder#renderer_mux({
 - Requires `nvim-web-devicons` from [kyazdani42/nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons) or
   `vim-devicons` from [ryanoasis/vim-devicons](https://github.com/ryanoasis/vim-devicons) or
   `nerdfont.vim` from [lambdalisue/nerdfont.vim](https://github.com/lambdalisue/nerdfont.vim)
+
+<details>
+<summary>Vim Script</summary>
 
 ```vim
 call wilder#setup({'modes': [':', '/', '?']})
@@ -519,7 +980,7 @@ call wilder#set_option('pipeline', [
       \       }),
       \     }),
       \     wilder#cmdline_pipeline({
-      \       'fuzzy': 1,
+      \       'fuzzy': 2,
       \       'fuzzy_filter': has('nvim') ? wilder#lua_fzy_filter() : wilder#vim_fuzzy_filter(),
       \     }),
       \     [
@@ -571,6 +1032,93 @@ call wilder#set_option('renderer', wilder#renderer_mux({
       \ }))
 ```
 
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+local wilder = require('wilder')
+wilder.setup({modes = {':', '/', '?'}})
+
+wilder.set_option('pipeline', {
+  wilder.branch(
+    wilder.python_file_finder_pipeline({
+      file_command = function(ctx, arg)
+        if string.find(arg, '.') ~= nil then
+          return {'fdfind', '-tf', '-H'}
+        else
+          return {'fdfind', '-tf'}
+        end
+      end,
+      dir_command = {'fd', '-td'},
+      filters = {'cpsm_filter'},
+    }),
+    wilder.substitute_pipeline({
+      pipeline = wilder.python_search_pipeline({
+        skip_cmdtype_check = 1,
+        pattern = wilder.python_fuzzy_pattern({
+          start_at_boundary = 0,
+        }),
+      }),
+    }),
+    wilder.cmdline_pipeline({
+      fuzzy = 2,
+      fuzzy_filter = wilder.lua_fzy_filter(),
+    }),
+    {
+      wilder.check(function(ctx, x) return x == '' end),
+      wilder.history(),
+    },
+    wilder.python_search_pipeline({
+      pattern = wilder.python_fuzzy_pattern({
+        start_at_boundary = 0,
+      }),
+    })
+  ),
+})
+
+local highlighters = {
+  wilder.pcre2_highlighter(),
+  wilder.lua_fzy_highlighter(),
+}
+
+local popupmenu_renderer = wilder.popupmenu_renderer(
+  wilder.popupmenu_border_theme({
+    border = 'rounded',
+    empty_message = wilder.popupmenu_empty_message_with_spinner(),
+    highlighter = highlighters,
+    left = {
+      ' ',
+      wilder.popupmenu_devicons(),
+      wilder.popupmenu_buffer_flags({
+        flags = ' a + ',
+        icons = {['+'] = '', a = '', h = ''},
+      }),
+    },
+    right = {
+      ' ',
+      wilder.popupmenu_scrollbar(),
+    },
+  })
+)
+
+local wildmenu_renderer = wilder.wildmenu_renderer({
+  highlighter = highlighters,
+  separator = ' · ',
+  left = {' ', wilder.wildmenu_spinner(), ' '},
+  right = {' ', wilder.wildmenu_index()},
+})
+
+wilder.set_option('renderer', wilder.renderer_mux({
+  [':'] = popupmenu_renderer,
+  ['/'] = wildmenu_renderer,
+  substitute = wildmenu_renderer,
+}))
+```
+
+</details>
+
 # Tips
 
 ### Reducing input latency
@@ -584,7 +1132,7 @@ or by having a slow `highlighter`.
 The fastest configuration for `wilder` is to use the non-fuzzy pipelines and the default renderers.
 For Vim, the Python cmdline pipeline might be slow due to the overhead of the remote plugin.
 
-For searching, the Python pipeline is faster as it is async and Python's regex is faster than Vim's.
+For searching, the Python pipeline is faster as it is non-blocking and Python's regex is faster than Vim's.
 
 ```vim
 " Neovim or Vim with yarp
@@ -627,9 +1175,9 @@ increased input latency per character typed due to the rendering of intermediate
 " Debounce the whole pipeline
 call wilder#set_option('pipeline', [
       \ wilder#debounce(10),
-      \ wilder#branch([
+      \ wilder#branch(
       \   ...
-      \ ]),
+      \ ),
       \ ])
 
 " Or debounce individual pipelines
@@ -708,7 +1256,6 @@ The workaround can be disabled by setting:
 ```vim
 call wilder#set_option('renderer', wilder#wildmenu_renderer({
       \ 'apply_incsearch_fix': 0,
-      \ ... other options ...
       \ }))
 ```
 

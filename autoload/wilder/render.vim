@@ -147,15 +147,17 @@ function! wilder#render#to_printable(x) abort
   return l:res
 endfunction
 
-function! wilder#render#truncate(len, x) abort
-  return s:truncate_and_maybe_pad(a:len, a:x, 0)
+function! wilder#render#truncate(len, x, ...) abort
+  return s:truncate_and_maybe_pad(a:len, a:x, get(a:, 1, 0), 0)
 endfunction
 
-function! wilder#render#truncate_and_pad(len, x) abort
-  return s:truncate_and_maybe_pad(a:len, a:x, 1)
+function! wilder#render#truncate_and_pad(len, x, ...) abort
+  return s:truncate_and_maybe_pad(a:len, a:x, get(a:, 1, 0), 1)
 endfunction
 
-function! s:truncate_and_maybe_pad(len, x, should_pad) abort
+" direction 0 = truncate left
+"           1 = truncate right
+function! s:truncate_and_maybe_pad(len, x, direction, should_pad) abort
   if a:len <= 0
     return ''
   endif
@@ -163,15 +165,26 @@ function! s:truncate_and_maybe_pad(len, x, should_pad) abort
   let l:width = strdisplaywidth(a:x)
   if l:width > a:len
     let l:chars = split(a:x, '\zs')
-    let l:index = len(l:chars) - 1
 
-    while l:width > a:len && l:index >= 0
-      let l:width -= strdisplaywidth(l:chars[l:index])
+    if a:direction
+      let l:index = 0
+      while l:width > a:len && l:index < len(l:chars)
+        let l:width -= strdisplaywidth(l:chars[l:index])
 
-      let l:index -= 1
-    endwhile
+        let l:index += 1
+      endwhile
 
-    let l:str = join(l:chars[:l:index], '')
+      let l:str = join(l:chars[l:index :], '')
+    else
+      let l:index = len(l:chars) - 1
+      while l:width > a:len && l:index >= 0
+        let l:width -= strdisplaywidth(l:chars[l:index])
+
+        let l:index -= 1
+      endwhile
+
+      let l:str = join(l:chars[:l:index], '')
+    endif
   else
     let l:str = a:x
   endif
@@ -183,30 +196,53 @@ function! s:truncate_and_maybe_pad(len, x, should_pad) abort
   return l:str
 endfunction
 
-function! wilder#render#truncate_chunks(len, xs) abort
+function! wilder#render#truncate_chunks(len, xs, ...) abort
   if a:len <= 0
     return []
   endif
 
+  " direction 0 = truncate left
+  "           1 = truncate right
+  let l:direction = get(a:, 1, 0)
+
   let l:width = 0
   let l:res = []
-  let l:i = 0
 
-  while l:i < len(a:xs)
-    let l:chunk = a:xs[l:i]
-    let l:chunk_width = strdisplaywidth(l:chunk[0])
+  if l:direction
+    let l:i = len(a:xs) - 1
+    while l:i >= 0
+      let l:chunk = a:xs[l:i]
+      let l:chunk_width = strdisplaywidth(l:chunk[0])
 
-    if l:width + l:chunk_width > a:len
-      let l:truncated_chunk = [wilder#render#truncate(a:len - l:width, l:chunk[0])]
-      let l:truncated_chunk += l:chunk[1:]
-      call add(l:res, l:truncated_chunk)
-      return l:res
-    endif
+      if l:width + l:chunk_width > a:len
+        let l:truncated_chunk = [wilder#render#truncate(a:len - l:width, l:chunk[0], 1)]
+        let l:truncated_chunk += l:chunk[1:]
+        call insert(l:res, l:truncated_chunk)
+        return l:res
+      endif
 
-    call add(l:res, l:chunk)
-    let l:width += l:chunk_width
-    let l:i += 1
-  endwhile
+      call insert(l:res, l:chunk)
+      let l:width += l:chunk_width
+      let l:i -= 1
+    endwhile
+  else
+    let l:i = 0
+    while l:i < len(a:xs)
+      let l:chunk = a:xs[l:i]
+      let l:chunk_width = strdisplaywidth(l:chunk[0])
+
+      if l:width + l:chunk_width > a:len
+        let l:truncated_chunk = [wilder#render#truncate(a:len - l:width, l:chunk[0])]
+        let l:truncated_chunk += l:chunk[1:]
+        call add(l:res, l:truncated_chunk)
+        return l:res
+      endif
+
+      call add(l:res, l:chunk)
+      let l:width += l:chunk_width
+      let l:i += 1
+    endwhile
+  endif
 
   return l:res
 endfunction
@@ -222,39 +258,3 @@ function! wilder#render#chunks_displaywidth(chunks) abort
 
   return l:width
 endfunction
-
-let s:high_control_characters = {
-      \ '': '^?',
-      \ '': '<80>',
-      \ '': '<81>',
-      \ '': '<82>',
-      \ '': '<83>',
-      \ '': '<84>',
-      \ '': '<85>',
-      \ '': '<86>',
-      \ '': '<87>',
-      \ '': '<88>',
-      \ '': '<89>',
-      \ '': '<8a>',
-      \ '': '<8b>',
-      \ '': '<8c>',
-      \ '': '<8d>',
-      \ '': '<8e>',
-      \ '': '<8f>',
-      \ '': '<90>',
-      \ '': '<91>',
-      \ '': '<92>',
-      \ '': '<93>',
-      \ '': '<94>',
-      \ '': '<95>',
-      \ '': '<96>',
-      \ '': '<97>',
-      \ '': '<98>',
-      \ '': '<99>',
-      \ '': '<9a>',
-      \ '': '<9b>',
-      \ '': '<9c>',
-      \ '': '<9d>',
-      \ '': '<9e>',
-      \ '': '<9f>',
-      \}

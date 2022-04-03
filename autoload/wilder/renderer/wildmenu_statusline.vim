@@ -14,8 +14,9 @@ function! s:render(state, ctx, result) abort
     return
   endif
 
+  let l:width = &laststatus == 3 ? &columns : winwidth(0)
   let l:chunks = wilder#renderer#wildmenu#make_hl_chunks(
-        \ a:state, winwidth(0), a:ctx, a:result)
+        \ a:state, l:width, a:ctx, a:result)
 
   call s:render_chunks(l:chunks, a:state.highlights['default'], a:state.apply_incsearch_fix)
 endfunction
@@ -50,11 +51,12 @@ endfunction
 
 function! s:pre_hook(state, ctx) abort
   let a:state.old_laststatus = &laststatus
-  let &laststatus = 2
+  let &laststatus = &laststatus == 3 ? 3 : 2
   let a:state.old_statusline = &statusline
 
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_pre_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_pre_hook(a:ctx, l:Component)
+  endfor
 endfunction
 
 function! s:post_hook(state, ctx) abort
@@ -68,6 +70,7 @@ function! s:post_hook(state, ctx) abort
     call timer_start(0, {-> execute('redrawstatus')})
   endif
 
-  call wilder#renderer#wildmenu#item_post_hook(a:state.left, a:ctx)
-  call wilder#renderer#wildmenu#item_post_hook(a:state.right, a:ctx)
+  for l:Component in a:state.left + a:state.right
+    call wilder#renderer#call_component_post_hook(a:ctx, l:Component)
+  endfor
 endfunction

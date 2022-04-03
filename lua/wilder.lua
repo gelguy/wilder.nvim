@@ -131,6 +131,7 @@ for _, f in pairs({
   'lightline_theme',
   'wildmenu_lightline_theme',
   'popupmenu_border_theme',
+  'popupmenu_palette_theme',
   'findfile',
   'fruzzy_path',
   'cpsm_path',
@@ -150,6 +151,16 @@ for _, f in pairs({
   _M[f] = function(...)
     return require('wilder.shim').call('wilder#' .. f, ...)
   end
+end
+
+_M['lua_fzy_filter'] = function()
+  return function(ctx, xs, q)
+    return require('wilder.internal').fzy_filter(xs, q)
+  end
+end
+
+_M['lua_fzy_filt'] = function(ctx, opts, xs, query)
+  return require('wilder.internal').fzy_filter(xs, q)
 end
 
 return _M
