@@ -463,7 +463,7 @@ Use `wilder#popupmenu_border_theme()` to add a border around the popup menu.
 ```vim
 " 'border'            : 'single', 'double', 'rounded' or 'solid'
 "                     : can also be a list of 8 characters,
-"                     : see :h wilder#popupmenu_renderer() for more details
+"                     : see :h wilder#popupmenu_border_theme() for more details
 " 'highlights.border' : highlight to use for the border`
 call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_border_theme({
       \ 'highlights': {
@@ -485,7 +485,7 @@ wilder.set_option('renderer', wilder.popupmenu_renderer(
       border = 'Normal', -- highlight to use for the border
     },
     -- 'single', 'double', 'rounded' or 'solid'
-    -- can also be a list of 8 characters, see :h wilder#popupmenu_renderer() for more details
+    -- can also be a list of 8 characters, see :h wilder#popupmenu_border_theme() for more details
     border = 'rounded',
   })
 ))
@@ -572,15 +572,53 @@ wilder.set_option('renderer', wilder.popupmenu_renderer({
 
 </details>
 
-### Palette renderer (Experimental)
+### Command Palette (Experimental)
 
-![Palette](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/3be41ed723b5eb31928787ee25e5545c08a96061/popupmenu.png)
+![Palette](https://gist.githubusercontent.com/gelguy/018d7fb1d5292500b2f9bc6d209a7972/raw/6ffb5b116ce298e1d6c9411fe08457e0cffbe4aa/palette4.gif)
 
-For Neovim 0.4+ or Vim 8.1+ with popup support,
-`wilder#popupmenu_renderer()` can be used to draw the results on a popupmenu, similar to `wildoptions+=pum`.
-The implementation for Vim is still experimental.
+`wilder#popupmenu_palette_theme()` can be used to draw the popupmenu in the middle of the screen, similar to a command palette.
 
+<details>
+<summary>Vim Script</summary>
 
+```vim
+" 'border'            : 'single', 'double', 'rounded' or 'solid'
+"                     : can also be a list of 8 characters,
+"                     : see :h wilder#popupmenu_palette_theme() for more details
+" 'max_height'        : max height of the palette
+" 'min_height'        : set to the same as 'max_height' for a fixed height window
+" 'prompt_position'   : 'top' or 'bottom' to set the location of the prompt
+" 'reverse'           : set to 1 to reverse the order of the list
+"                     : use in combination with 'prompt_position'
+call wilder#set_option('renderer', wilder#popupmenu_renderer(wilder#popupmenu_palette_theme({
+      \ 'border': 'rounded',
+      \ 'max_height': '75%',
+      \ 'min_height': 0,
+      \ 'prompt_position': 'top',
+      \ 'reverse': 0,
+      \ })))
+```
+
+</details>
+
+<details>
+<summary>Lua</summary>
+
+```lua
+wilder.set_option('renderer', wilder.popupmenu_renderer(
+  wilder.popupmenu_palette_theme({
+    -- 'single', 'double', 'rounded' or 'solid'
+    -- can also be a list of 8 characters, see :h wilder#popupmenu_palette_theme() for more details
+    border = 'rounded',
+    max_height = '75%',      -- max height of the palette
+    min_height = 0,          -- set to the same as 'max_height' for a fixed height window
+    prompt_position = 'top', -- 'top' or 'bottom' to set the location of the prompt
+    reverse = 0,             -- set to 1 to reverse the order of the list, use in combination with 'prompt_position'
+  })
+))
+```
+
+</details>
 
 ### Better highlighting
 
