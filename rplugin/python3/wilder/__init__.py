@@ -232,7 +232,10 @@ class Wilder(object):
                                 has_error = True
 
                         if has_error:
-                            result['error'] = 'return code %d: %s' % (p.returncode, p.stderr.read().decode('utf-8'))
+                            pattern = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+                            error = p.stderr.read().decode('utf-8')
+                            error = pattern.sub('', error)
+                            result['error'] = '%s return code %d:\n%s' % (command, p.returncode, error)
                             return
 
                     output.seek(0)
