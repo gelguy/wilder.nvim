@@ -32,7 +32,7 @@ function! s:error_message(ctx, message) abort
 
       " word does not fit in 1 line
       if l:word_width > l:line_width
-        let [l:split_word, l:line, l:line_width] = s:split_word_into_lines(l:chars, l:i - len(l:word), l:i, l:max_width)
+        let [l:split_word, l:line, l:line_width] = s:split_word_into_lines(l:chars, l:i - len(l:word) - 1, l:i, l:max_width)
         let l:lines += l:split_word
       else
         let l:line = l:word
@@ -131,10 +131,22 @@ function! s:split_word_into_lines(chars, start, end, max_width) abort
   let l:lines = []
   let l:line = ''
   let l:line_width = 0
+  let l:seen_non_whitespace = 0
 
   let l:i = a:start
   while l:i < a:end
     let l:char = a:chars[l:i]
+
+    " trim leading whitespace
+    if l:char =~# '\s'
+      if !l:seen_non_whitespace
+        let l:i += 1
+        continue
+      endif
+    else
+      let l:seen_non_whitespace = 1
+    endif
+
     let l:width = strdisplaywidth(l:char)
 
     if l:char ==# "\<CR>" || l:char ==# "\<NL>"
