@@ -398,6 +398,9 @@ class Wilder(object):
         try:
             res = set()
             wildignore_list = wildignore_opt.split(',')
+            is_file_in_path = expand_type == 'file_in_path'
+            if is_file_in_path:
+                seen_file_names = set()
 
             checker = EventChecker(event)
             for directory in directories:
@@ -406,13 +409,20 @@ class Wilder(object):
                 if not directory:
                     continue
 
+                has_wildcard = has_wildcard or '*' in directory
                 if has_wildcard:
                     tail = os.path.basename(expand_arg)
                     show_hidden = tail.startswith('.')
                     pattern = ''
-                    wildcard = os.path.join(directory, expand_arg)
+                    if expand_arg:
+                        wildcard = os.path.join(directory, expand_arg)
+                        if expand_type == 'file_in_path' and expand_arg[-1] != '*':
+                            wildcard += '*'
+                    else:
+                        wildcard = directory
                     wildcard = os.path.expandvars(wildcard)
 
+                    self.echomsg(str(wildcard) + ':' + expand_arg)
                     it = glob.iglob(wildcard, recursive=True)
                 else:
                     if add_dot:
@@ -462,10 +472,21 @@ class Wilder(object):
                         if has_wildcard and Path(entry) == Path(path_prefix):
                             continue
 
+                        # iglob and scandir return different types
+                        entry_name = str(entry) if has_wildcard else entry.name
+
+                        if is_file_in_path:
+                            file_name = os.path.basename(entry_name)
+                            # add the base file name if not added already, otherwise add the full path
+                            if file_name in seen_file_names:
+                                entry_name = str(entry) if has_wildcard else entry.path
+                            else:
+                                entry_name = file_name
+                                seen_file_names.add(file_name)
+
                         if entry.is_dir():
-                            res.add((str(entry) if has_wildcard else entry.name) + os.sep)
-                        else:
-                            res.add(str(entry) if has_wildcard else entry.name)
+                            entry_name += os.sep
+                        res.add(entry_name)
                     except OSError:
                         pass
             res = sorted(res)

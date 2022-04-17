@@ -734,6 +734,10 @@ function! wilder#cmdline#replace(ctx, x, data) abort
 endfunction
 
 function! wilder#cmdline#draw_path(ctx, x, data) abort
+  if get(a:data, 'cmdline.expand', '') ==# 'file_in_path'
+    return a:x
+  endif
+
   let l:path_prefix = get(a:data, 'cmdline.path_prefix', '')
   return a:x[len(l:path_prefix) :]
 endfunction
