@@ -144,7 +144,7 @@ class Wilder(object):
                 return
 
             if 'error' in result:
-                self.reject(ctx, 'python_file_finder: ' + result['error'])
+                self.reject(ctx, 'python_file_finder: %s %s' % (command, result['error']))
                 return
 
             candidates = result['files']
@@ -235,14 +235,14 @@ class Wilder(object):
                             pattern = re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
                             error = p.stderr.read().decode('utf-8')
                             error = pattern.sub('', error)
-                            result['error'] = '%s return code %d:\n%s' % (command, p.returncode, error)
+                            result['error'] = 'return code %d:\n%s' % (p.returncode, error)
                             return
 
                     output.seek(0)
                     buff = output.read()
                     result['files'] = [line.decode('utf-8') for line in buff.splitlines()]
         except Exception as e:
-            result['error'] = str(e)
+            result['error'] = repr(e)
         finally:
             result['done'].set()
 
