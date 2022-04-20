@@ -361,7 +361,9 @@ class Wilder(object):
             if not directories:
                 path_opt = self.nvim.eval('&path')
                 directories = path_opt.split(',')
-                directories += [self.nvim.eval('expand("%:h")')]
+
+            directories = list(map(lambda d: self.nvim.eval('expand("%:p:h")') if d == '.' else d, directories))
+            directories = list(map(lambda d: cwd if d == '' else d, directories))
         elif expand_type == 'shellcmd':
             directories = []
             if expand_arg:
@@ -380,7 +382,7 @@ class Wilder(object):
         else:
             directories = [cwd]
 
-        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories, add_dot])
+        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories, add_dot, cwd])
 
     def get_file_completion_handler(self,
                                     event,
@@ -391,7 +393,8 @@ class Wilder(object):
                                     path_prefix,
                                     wildignore_opt,
                                     directories,
-                                    add_dot):
+                                    add_dot,
+                                    cwd):
         if event.is_set():
             return
 
@@ -401,6 +404,7 @@ class Wilder(object):
             is_file_in_path = expand_type == 'file_in_path'
             if is_file_in_path:
                 seen_file_names = set()
+            visited_directories = set()
 
             checker = EventChecker(event)
             for directory in directories:
@@ -409,20 +413,24 @@ class Wilder(object):
                 if not directory:
                     continue
 
+                if any(d for d in visited_directories if os.path.samefile(directory, d)):
+                    continue
+
+                visited_directories.add(directory)
+
                 has_wildcard = has_wildcard or '*' in directory
                 if has_wildcard:
                     tail = os.path.basename(expand_arg)
                     show_hidden = tail.startswith('.')
                     pattern = ''
-                    if expand_arg:
+                    if is_file_in_path and directory == '**':
+                        wildcard = os.path.join(cwd, '**')
+                    elif expand_arg:
                         wildcard = os.path.join(directory, expand_arg)
-                        if expand_type == 'file_in_path' and expand_arg[-1] != '*':
-                            wildcard += '*'
                     else:
                         wildcard = directory
                     wildcard = os.path.expandvars(wildcard)
 
-                    self.echomsg(str(wildcard) + ':' + expand_arg)
                     it = glob.iglob(wildcard, recursive=True)
                 else:
                     if add_dot:
@@ -470,6 +478,8 @@ class Wilder(object):
                             elif not has_wildcard and not os.access(entry, os.X_OK):
                                 continue
                         if has_wildcard and Path(entry) == Path(path_prefix):
+                            continue
+                        if is_file_in_path and directory == '**' and Path(entry) == Path(cwd):
                             continue
 
                         # iglob and scandir return different types
