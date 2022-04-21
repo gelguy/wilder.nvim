@@ -413,7 +413,7 @@ class Wilder(object):
                 if not directory:
                     continue
 
-                if any(d for d in visited_directories if os.path.samefile(directory, d)):
+                if directory in visited_directories:
                     continue
 
                 visited_directories.add(directory)
@@ -501,8 +501,8 @@ class Wilder(object):
                         pass
             res = sorted(res)
 
-            head = os.path.dirname(expand_arg)
             if not has_wildcard:
+                head = os.path.dirname(expand_arg)
                 res = list(map(lambda f: os.path.join(head, f) if head else f, res))
 
             if expand_arg == '.':
