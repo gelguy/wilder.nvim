@@ -65,7 +65,7 @@ function! s:new_buf() abort
   call bufload(l:buf)
 
   call setbufvar(l:buf, '&buftype', 'nofile')
-  call setbufvar(l:buf, '&bufhidden', 1)
+  call setbufvar(l:buf, '&bufhidden', 'hide')
   call setbufvar(l:buf, '&swapfile', 0)
   call setbufvar(l:buf, '&undolevels', -1)
 
