@@ -344,26 +344,13 @@ class Wilder(object):
 
         cwd = self.nvim.eval('getcwd()')
         wildignore_opt = self.nvim.eval('&wildignore')
+        current_file_dir = self.nvim.eval('expand("%:p:h")')
 
         add_dot = False
 
         if expand_type == 'file_in_path':
-            directories = []
-            if expand_arg:
-                if expand_arg[0:2] == './':
-                    directories = [cwd]
-                else:
-                    relpath = os.path.relpath(expand_arg, cwd)
-                    if relpath[0:2] == '..':
-                        add_dot = True
-                        directories = [cwd]
-
-            if not directories:
-                path_opt = self.nvim.eval('&path')
-                directories = path_opt.split(',')
-
-            directories = list(map(lambda d: self.nvim.eval('expand("%:p:h")') if d == '.' else d, directories))
-            directories = list(map(lambda d: cwd if d == '' else d, directories))
+            path_opt = self.nvim.eval('&path')
+            directories = path_opt.split(',')
         elif expand_type == 'shellcmd':
             directories = []
             if expand_arg:
@@ -382,7 +369,7 @@ class Wilder(object):
         else:
             directories = [cwd]
 
-        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories, add_dot, cwd])
+        self.run_in_background(self.get_file_completion_handler, args + [wildignore_opt, directories, add_dot, cwd, current_file_dir])
 
     def get_file_completion_handler(self,
                                     event,
@@ -394,22 +381,30 @@ class Wilder(object):
                                     wildignore_opt,
                                     directories,
                                     add_dot,
-                                    cwd):
+                                    cwd,
+                                    current_file_dir):
         if event.is_set():
             return
 
         try:
-            res = set()
+            original_has_wildcard = has_wildcard
+            res = list()
+            seen_files = set()
             wildignore_list = wildignore_opt.split(',')
             is_file_in_path = expand_type == 'file_in_path'
-            if is_file_in_path:
-                seen_file_names = set()
             visited_directories = set()
 
             checker = EventChecker(event)
             for directory in directories:
                 if checker.check():
                     return
+
+                if is_file_in_path:
+                    if not directory:
+                        directory = cwd
+                    elif directory == '.':
+                        directory = current_file_dir
+
                 if not directory:
                     continue
 
@@ -418,13 +413,16 @@ class Wilder(object):
 
                 visited_directories.add(directory)
 
-                has_wildcard = has_wildcard or '*' in directory
+                has_wildcard = original_has_wildcard or '*' in directory
                 if has_wildcard:
                     tail = os.path.basename(expand_arg)
                     show_hidden = tail.startswith('.')
                     pattern = ''
-                    if is_file_in_path and directory == '**':
-                        wildcard = os.path.join(cwd, '**')
+                    if is_file_in_path:
+                        if directory == '**':
+                            wildcard = os.path.join(cwd, '**')
+                        else:
+                            wildcard = directory
                     elif expand_arg:
                         wildcard = os.path.join(directory, expand_arg)
                     else:
@@ -439,7 +437,10 @@ class Wilder(object):
                         path = os.path.join(directory, expand_arg)
                     head, tail = os.path.split(path)
                     show_hidden = tail.startswith('.')
-                    pattern = tail + '*'
+                    if is_file_in_path:
+                        pattern = ''
+                    else:
+                        pattern = tail + '*'
 
                     try:
                         it = os.scandir(head)
@@ -482,26 +483,25 @@ class Wilder(object):
                         if is_file_in_path and directory == '**' and Path(entry) == Path(cwd):
                             continue
 
-                        # iglob and scandir return different types
-                        entry_name = str(entry) if has_wildcard else entry.name
-
                         if is_file_in_path:
-                            file_name = os.path.basename(entry_name)
-                            # add the base file name if not added already, otherwise add the full path
-                            if file_name in seen_file_names:
-                                entry_name = str(entry) if has_wildcard else entry.path
-                            else:
-                                entry_name = file_name
-                                seen_file_names.add(file_name)
+                            # iglob and scandir return different types
+                            entry_name = str(entry) if has_wildcard else entry.path
+                            entry_name = self.get_path_relative_to_cwd(entry_name, cwd)
+                        else:
+                            entry_name = str(entry) if has_wildcard else entry.name
 
                         if entry.is_dir():
                             entry_name += os.sep
-                        res.add(entry_name)
+                        if entry_name in seen_files:
+                            continue
+                        seen_files.add(entry_name)
+
+                        res.append(entry_name)
                     except OSError:
                         pass
             res = sorted(res)
 
-            if not has_wildcard:
+            if not original_has_wildcard and not is_file_in_path:
                 head = os.path.dirname(expand_arg)
                 res = list(map(lambda f: os.path.join(head, f) if head else f, res))
 
@@ -519,10 +519,19 @@ class Wilder(object):
     def is_descendant_path(self, p1, p2):
         return os.path.relpath(p2, p1)[0:2] != '..'
 
-    def get_basename(self, f):
-        if f.endswith(os.sep) or f.endswith('/'):
-            return os.path.basename(f[:-1])
+    def get_basename(self, f, is_dir):
+        if is_dir:
+            return os.path.basename(f[:-1]) + os.sep
         return os.path.basename(f)
+
+    def get_path_relative_to_cwd(self, p, cwd):
+        if not self.is_descendant_path(cwd, p):
+            return p
+
+        p = os.path.relpath(p, cwd)
+        if not p.startswith('/'):
+            p = os.path.join('.', p)
+        return p
 
     @neovim.function('_wilder_python_get_help_tags', sync=False, allow_nested=True)
     def _get_help_tags(self, args):

@@ -102,6 +102,14 @@ function! wilder#cmdline#prepare_file_completion(ctx, res, fuzzy)
   let l:res = copy(a:res)
   let l:arg = l:res.arg
 
+  if l:res.expand ==# 'file_in_path'
+    let l:res.fuzzy_char = ''
+    let l:res.expand_arg = l:arg
+    let l:res.match_arg = l:arg
+
+    return l:res
+  endif
+
   " Remove backslash preceding spaces.
   let l:arg = substitute(l:arg, '\\ ', ' ', 'g')
 
@@ -1123,6 +1131,10 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \ wilder#subpipeline({ctx, res -> [
         \   {ctx, res -> s:getcompletion(ctx, res, l:fuzzy, l:use_python)},
         \   wilder#result({
+        \     'value': {ctx, xs, data -> l:fuzzy == 0 ?
+        \       s:filter_file_in_path(ctx, xs, data) : xs},
+        \   }),
+        \   wilder#result({
         \     'value': {ctx, xs -> get(res, 'relative_to_home_dir', 0) ?
         \       map(xs, {i, x -> fnamemodify(x, ':~')}) : xs},
         \   }),
@@ -1188,6 +1200,15 @@ function! wilder#cmdline#getcompletion_pipeline(opts) abort
         \   l:completion_subpipeline,
         \ ),
         \ ]
+endfunction
+
+function! s:filter_file_in_path(ctx, xs, data) abort
+  if get(a:data, 'cmdline.expand', '') !=# 'file_in_path'
+    return a:xs
+  endif
+
+  let l:arg = get(a:data, 'cmdline.arg', '')
+  return filter(a:xs, {_, x -> stridx(x, l:arg) != -1})
 endfunction
 
 function! s:get_lua_completion(ctx, res, fuzzy) abort
