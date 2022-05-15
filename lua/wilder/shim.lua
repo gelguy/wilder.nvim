@@ -6,9 +6,9 @@ local function unwrap_function(f)
   local index = f.index
   local prox = newproxy(true)
   local prox_mt = getmetatable(prox)
-  prox_mt.__gc = function()
+  prox_mt.__gc = vim.schedule_wrap(function()
     vim.call('wilder#lua#unref_wrapped_function', index)
-  end
+  end)
   f[prox] = true
 
   return function(...)
