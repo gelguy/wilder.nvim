@@ -23,6 +23,8 @@ function! wilder#renderer#popupmenu_palette_theme#(opts) abort
 
   if has_key(a:opts, 'prompt_border')
     let l:prompt_border_chars = a:opts.prompt_border
+  elseif !has_key(a:opts, 'border')
+    let l:prompt_border_chars = ['├', '─', '┤']
   elseif has_key(a:opts, 'border') &&
         \ type(a:opts.border) is v:t_string
     if a:opts.border ==# 'solid'
