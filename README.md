@@ -1199,7 +1199,7 @@ Set up an `autocmd` to defer initialisation to the first `CmdlineEnter`:
 
 ```vim
 " ++once supported in Nvim 0.4+ and Vim 8.1+
-autocmd CmdlineEnter * ++once call s:wilder_init() | call s:wilder#main#start()
+autocmd CmdlineEnter * ++once call s:wilder_init() | call wilder#main#start()
 
 function! s:wilder_init() abort
   call wilder#setup(...)
