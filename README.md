@@ -72,6 +72,8 @@ Start with the following minimal configuration in your `init.vim` or `.vimrc`:
 call wilder#setup({'modes': [':', '/', '?']})
 ```
 
+Be aware that `call wilder#setup` should be after `call plug#end()` if you use vim-plug.
+
 When in `:` cmdline mode, `wildmenu` suggestions will be automatically provided.
 When searching using `/`, suggestions from the current buffer will be provided. Substring matching is used by default.
 
