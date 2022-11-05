@@ -274,7 +274,7 @@ Returning a function {f} in a pipe will cause the pipeline to be suspended.
 The function is called a thunk. The thunk will then be called with a new
 {ctx}. Thunks can be used to call async code.
 
-After the async code has finished running, |wilder#resolve()| should be caled
+After the async code has finished running, |wilder#resolve()| should be called
 with {ctx} and the result {x} as arguments. The original {ctx} from the parent
 function can be ignored. The pipeline will then be resumed, and the {x} value
 will be passed on to the next pipe.
