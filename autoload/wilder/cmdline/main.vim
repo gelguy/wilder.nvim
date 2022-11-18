@@ -667,6 +667,9 @@ function! wilder#cmdline#main#do(ctx) abort
   elseif a:ctx.cmd ==# 'lua'
     let a:ctx.expand = 'lua'
     return
+  else
+    call s:move_pos_to_last_arg(a:ctx)
+    return
   endif
 endfunction
 
