@@ -20,7 +20,7 @@
 
 ## Install
 
-With [Shougo/dein.nvim](https://github.com/Shougo/dein.nvim)
+With [Shougo/dein.vim](https://github.com/Shougo/dein.vim)
 
 ```vim
 call dein#add('gelguy/wilder.nvim')
