@@ -254,7 +254,7 @@ Example:
     call wilder#set_option('pipeline', [
       \ {ctx, x -> empty(x) ? v:false : x},
       \ {ctx, x -> MyCompletionFunction(x)},
-      \ ]
+      \ ])
 <
 This pipeline will terminate early if the cmdline is empty.
 Since this is a common pattern, it is provided as the |wilder#check()|
@@ -295,7 +295,7 @@ Example:
     call wilder#set_option('pipeline', [
       \ {_, x -> {ctx -> timer_start(100, {-> wilder#resolve(ctx, x)})}},
       \ {ctx, x -> MyCompletionFunction(x)},
-      \ ]
+      \ ])
 <
 This will call `MyCompletionFunction` after a 100 millisecond delay.
 
@@ -475,7 +475,7 @@ wilder#branch({list_of_pipelines})  *wilder#branch()*
                   \   ],
                   \   wilder#search_pipeline(),
                   \ ),
-                  \ ]
+                  \ ])
 <
             This pipeline will return completions from the history if {x} is
             empty.
@@ -500,7 +500,7 @@ wilder#subpipeline({f})             *wilder#subpipeline()*
                   \   wilder#history(),
                   \   {ctx, h -> wilder#vim_fuzzy_filt(ctx, {}, h, x)},
                   \ ]})
-                  \ ]),
+                  \ ])
 <
             This pipeline will return completions from the history is {x}
             which are fuzzily filtered using |wilder#vim_fuzzy_filt()|
@@ -3508,12 +3508,12 @@ wilder#renderer_mux({args})         *wilder#renderer_mux()*
                   \ ['substitute', 0],
                   \ [':', wilder#popupmenu_renderer()],
                   \ ['/', wilder#wildmenu_renderer()],
-                  \ ])
+                  \ ]))
 
             wilder#set_option('renderer, wilder#renderer_mux({
                   \ ':': wilder#popupmenu_renderer(),
                   \ '/': wilder#wildmenu_renderer(),
-                  \ })
+                  \ }))
 <
 
                            *wilder#devicons_get_icon_from_nvim_web_devicons()*
@@ -3781,7 +3781,7 @@ Use Popupmenu for : and Wildmenu for /~
     wilder#set_option('renderer, wilder#renderer_mux({
           \ ':': wilder#popupmenu_renderer(),
           \ '/': wilder#wildmenu_renderer(),
-          \ })
+          \ }))
 <
 
 Lua Only Configuration~
@@ -3790,7 +3790,7 @@ Lua Only Configuration~
     wilder.setup({modes = {':', '/', '?'}})
     -- Disable Python remote plugin
     wilder.set_option('use_python_remote_plugin', 0)
-    
+
     wilder.set_option('pipeline', {
       wilder.branch(
         wilder.cmdline_pipeline({
@@ -3799,7 +3799,7 @@ Lua Only Configuration~
         wilder.vim_search_pipeline()
       )
     })
-    
+
     wilder.set_option('renderer', wilder.renderer_mux({
       [':'] = wilder.popupmenu_renderer({
         highlighter = wilder.basic_highlighter(),
