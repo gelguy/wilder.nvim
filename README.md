@@ -1048,9 +1048,9 @@ wilder.set_option('pipeline', {
     wilder.python_file_finder_pipeline({
       file_command = function(ctx, arg)
         if string.find(arg, '.') ~= nil then
-          return {'fdfind', '-tf', '-H'}
+          return {'fd', '-tf', '-H'}
         else
-          return {'fdfind', '-tf'}
+          return {'fd', '-tf'}
         end
       end,
       dir_command = {'fd', '-td'},
