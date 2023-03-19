@@ -117,7 +117,7 @@ function! wilder#cmdline#main#do(ctx) abort
 
         " this should check for [a-zA-Z] only, but the Vim implementation
         " skips over wildcards. This matters for commands which accept
-        " non-alphanumeric arugments e.g. 'e*' would be parsed as an 'edit'
+        " non-alphanumeric arguments e.g. 'e*' would be parsed as an 'edit'
         " command with a '*' argument otherwise. These commands typically
         " don't need a space between the command and argument e.g. 'e++opt'
         " is a valid command.
@@ -565,7 +565,7 @@ function! wilder#cmdline#main#do(ctx) abort
         \ a:ctx.cmd ==# 'lexpr' ||
         \ a:ctx.cmd ==# 'laddexpr' ||
         \ a:ctx.cmd ==# 'lgetexpr'
-    "TODO call has extra arugments
+    "TODO call has extra arguments
     call wilder#cmdline#let#do(a:ctx)
     return
   elseif a:ctx.cmd ==# 'unlet'
