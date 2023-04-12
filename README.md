@@ -57,6 +57,7 @@ With [wbthomason/packer.nvim](https://github.com/wbthomason/packer.nvim)
 ```lua
 use {
   'gelguy/wilder.nvim',
+  run = ':UpdateRemotePlugins',
   config = function()
     -- config goes here
   end,
