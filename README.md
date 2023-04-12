@@ -63,6 +63,16 @@ use {
 }
 ```
 
+With [folke/lazy.nvim](https://github.com/folke/lazy.nvim)
+
+```lua
+{
+    "gelguy/wilder.nvim",
+    keys = { "/", "?", ":" },
+    build = ":UpdateRemotePlugins"
+}
+```
+
 ## Minimal config
 
 Start with the following minimal configuration in your `init.vim` or `.vimrc`:
@@ -193,7 +203,7 @@ wilder.set_option('pipeline', {
 `wilder#branch()` is a higher-order pipe which is able to provide control flow given its own lists of pipelines.
 Note: For Lua, `wilder.branch()` takes a variadic list of arguments and so cannot have a trailing comma.
 
-See the docs at `:h wilder-pipeline` for a more details. 
+See the docs at `:h wilder-pipeline` for a more details.
 
 #### File finder pipeline (Neovim or Vim with `yarp`)
 
@@ -235,7 +245,7 @@ wilder.set_option('pipeline', {
     wilder.python_file_finder_pipeline({
       -- to use ripgrep : {'rg', '--files'}
       -- to use fd      : {'fd', '-tf'}
-      file_command = {'find', '.', '-type', 'f', '-printf', '%P\n'}, 
+      file_command = {'find', '.', '-type', 'f', '-printf', '%P\n'},
       -- to use fd      : {'fd', '-td'}
       dir_command = {'find', '.', '-type', 'd', '-printf', '%P\n'},
       -- use {'cpsm_filter'} for performance, requires cpsm vim plugin
