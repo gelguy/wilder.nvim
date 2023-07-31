@@ -62,12 +62,13 @@ function! s:new_buf() abort
   set shortmess+=F
 
   let l:buf = bufadd('[Wilder Popup ' . s:index . ']')
-  call bufload(l:buf)
 
   call setbufvar(l:buf, '&buftype', 'nofile')
   call setbufvar(l:buf, '&bufhidden', 'hide')
   call setbufvar(l:buf, '&swapfile', 0)
   call setbufvar(l:buf, '&undolevels', -1)
+
+  call bufload(l:buf)
 
   let &shortmess = l:old_shortmess
 
