@@ -23,7 +23,7 @@ Features include
 1. Automatically provides completions as you type
 2. |:| cmdline support: autocomplete commands, expressions, filenames, etc.
 3. |/| search support: get completions as you type your search query
-4. Customisable pipeline: e.g. choose between substring matching and fuzzy
+4. Customisable pipeline: e.g., choose between substring matching and fuzzy
    matching
 5. Async query support: use |python3| for faster and non-blocking queries
 6. Customisable UI and themes
@@ -34,7 +34,7 @@ Features include
 Requirements:
 
 - Vim 8.1+ or Neovim 0.3+
-- Certain features (e.g. async, cmdline completion) are only enabled in Neovim
+- Certain features (e.g., async, cmdline completion) are only enabled in Neovim
   or with `yarp` enabled.
 - Default async search needs Python 3 enabled
 
@@ -217,7 +217,7 @@ and how theye are handled.
 
 A pipe can throw an exception which will also cause the pipeline to stop.
 
-wilder provides some built-in pipes Combine these pipes with your own
+wilder provides some built-in pipes. Combine these pipes with your own
 functions to create a custom pipeline. In particular, use |wilder#branch| to
 add control flow to your pipeline. See |wilder-pipeline-pipe|s for the list of
 pipes.
@@ -246,7 +246,7 @@ subsequent pipes.
                                     *wilder-pipeline-v:false*
 Returning the |v:false| in a pipe will cause the pipeline to stop and return
 |v:false|. |v:false| indicates to wilder to not continue on with the pipeline,
-and treat it as though there are no completions. use this to return early from
+and treat it as though there are no completions. Use this to return early from
 a pipeline based on certain conditions.
 
 Example:
@@ -502,8 +502,8 @@ wilder#subpipeline({f})             *wilder#subpipeline()*
                   \ ]})
                   \ ]),
 <
-            This pipeline will return completions from the history is {x}
-            which are fuzzily filtered using |wilder#vim_fuzzy_filt()|
+            This pipeline will return completions from the history which are
+            then fuzzily filtered using |wilder#vim_fuzzy_filt()|.
 
                                     *wilder#history()*
 wilder#history([{max_num}, [{cmdtype}]])
@@ -569,10 +569,10 @@ wilder#python_fuzzy_delimiter_pattern([{options}])
             string into characters. Each character either follows directly
             from the previous one, or is the start of a delimited region.
             The start of a delimited region is either
-            1. a `delimiter` character followed by a character
+            1. A `delimiter` character followed by a character
             2. An uppercase character
 
-            e.g.
+            e.g.,
             `fb` matches `FooBar`, `foo_bar`, `fooBar`
                  but not `foobar` since `bar` is not delimited
 
@@ -797,7 +797,7 @@ wilder#cmdline_pipeline([{options}])
             have to start with the first character of the query. If 2, the
             candidates do not have to start with the first character.
 
-            Note: Fuzzy matching does not work in some cases, e.g.  when
+            Note: Fuzzy matching does not work in some cases, e.g.,  when
             completing filenames with |wildcards| or user-defined command
             completions |:command-completion|.
 
@@ -1005,7 +1005,7 @@ wilder#python_file_finder_pipeline([{options}])
 
             To never use the cache, use {ctx -> localtime()}.
 
-            To never invalidate the cache, a constant can be returned, e.g.
+            To never invalidate the cache, a constant can be returned, e.g.,
             {ctx -> 1}.
 
             To programatically invalidate the cache, the following snippet can
@@ -1365,7 +1365,7 @@ wilder#wildmenu_renderer([{options}])
             {data} is the dictionary from |wilder-pipeline-result-data|.
 
             Note: Highlighting is slow and will result in noticeable input
-            delay. For best performance, use the Lua highlighters e.g.
+            delay. For best performance, use the Lua highlighters, e.g.,
             |wilder#lua_fzy_highlighter()|. Python highlighters have high RPC
             overhead and should be avoided.
 
@@ -2279,7 +2279,7 @@ wilder#popupmenu_palette_theme([{options}])
             {result} and returns a String or a List. See above on how the
             String and List values are used.
 
-            In addition, the List can be nested to 3 levels, e.g.
+            In addition, the List can be nested to 3 levels, e.g.,
             [[['column1', 'hl']], [['column2', 'hl']]]. In this case, list[i]
             represents the i-th row and the list of highlight chunks are used
             to draw the row.
@@ -2300,7 +2300,7 @@ wilder#popupmenu_palette_theme([{options}])
                 The number of rows to draw. `height` can exceed the number of
                 candidates shown due to the `min_height` option in the
                 renderer. The function would typically add empty spaces as
-                padding e.g. [[repeat(' ', {width})]] to the rows which are
+                padding, e.g., [[repeat(' ', {width})]] to the rows which are
                 not drawn.
 
             Dictionary:
@@ -2956,8 +2956,8 @@ wilder#make_temp_hl({name}, {args}, [, {args1}, ..., {argsN}])
             Same as |wilder#make_hl()|, except the highlight groups are not
             recreated each time wilder is started.
 
-            This should be used for highlights which are dynamically created
-            e.g. in a pre-hook.
+            This should be used for highlights which are dynamically created,
+            e.g., in a pre-hook.
 
                                     *wilder#hl_with_attr()*
 wilder#hl_with_attr({name}, {hl_group}, {attr} [, ..., {attrN}])
@@ -3011,8 +3011,8 @@ wilder#vim_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             A {candidate} is matched if it contains all the characters in
             {query} and in the same order.
 
-            e.g. `foobar` will match `fbr`
-                 `foobar` will not match `frb`
+            e.g., `foobar` will match `fbr`
+                  `foobar` will not match `frb`
 
             Options contains no keys.
 
@@ -3031,8 +3031,8 @@ wilder#python_fuzzy_filt({ctx}, {opts}, {candidates}, {query})
             A {candidate} is matched if it contains all the characters in
             {query} and in the same order.
 
-            e.g. `foobar` will match `fbr`
-                 `foobar` will not match `frb`
+            e.g., `foobar` will match `fbr`
+                  `foobar` will not match `frb`
 
             Options contains no keys.
 
@@ -3350,7 +3350,7 @@ wilder#pcre2_highlighter([{opts}])  *wilder#pcre2_highlighter()*
             Otherwise, uses a Python |remote-plugin| function to retrieve the
             results.
 
-            The Lua pcre2 package is required this option is set to 'lua'.
+            The Lua pcre2 package is required if this option is set to 'lua'.
             The pcre2 package source can be found at
             https://github.com/mah0x211/lua-pcre2 and can be installed with
             `luarocks install pcre2`.
@@ -3479,7 +3479,7 @@ wilder#renderer_mux({args})         *wilder#renderer_mux()*
             {args} can either be a Dictionary or a List.
 
             If {args} is a Dictionary, it should be in the form {{key}:
-            {rendderer}} where the keys represent a cmdtype e.g. '/', ':' or
+            {rendderer}} where the keys represent a cmdtype, e.g., '/', ':' or
             '?'. The renderer with key equal to |getcmdtype()| will be the
             used.
 
