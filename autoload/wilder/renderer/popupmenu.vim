@@ -863,6 +863,12 @@ function! s:get_position(ctx, pos, dimensions) abort
   endif
 
   let l:cmdheight = wilder#renderer#get_cmdheight()
+  if exists('&winborder')
+    if &winborder !=# '' && &winborder !=# 'none'
+      let l:cmdheight += 2
+    endif
+  endif
+
   let l:row = &lines - l:cmdheight - a:dimensions.height
 
   return [l:row, l:col]
